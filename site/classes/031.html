@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Búsqueda de texto: índice invertido, análisis y relevancia. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>031 — Búsqueda de texto: índice invertido, análisis y relevancia · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 06 · Grafos, columnas, tiempo y búsqueda</span>
+</nav>
+<main class="content">
+<h1 id="031--búsqueda-de-texto-índice-invertido-análisis-y-relevancia">031 — Búsqueda de texto: índice invertido, análisis y relevancia</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>06 — Grafos, columnas, tiempo y búsqueda</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>opensearch</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>índice invertido</code> · <code>analizador</code> · <code>TF-IDF</code> · <code>BM25</code> · <code>precisión y exhaustividad</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Entender cómo se busca texto: qué es un índice invertido, qué hace el analizador y cómo se ordena por relevancia. Es también la base de comparación honesta para la búsqueda vectorial de la parte 12.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Construir a mano un índice invertido y explicar su costo.</li>
+<li>Describir la cadena de análisis y por qué debe ser la misma al indexar y al consultar.</li>
+<li>Calcular una puntuación BM25 y explicar cada uno de sus términos.</li>
+<li>Medir relevancia con precisión, exhaustividad y NDCG.</li>
+<li>Decidir entre la búsqueda de texto del motor relacional y un motor de búsqueda dedicado.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-índice-invertido">El índice invertido</h3>
+<p>Un índice normal va de documento a contenido. El <strong>invertido</strong> va de término a documentos:</p>
+<pre><code class="language-text">documentos:
+  d1 &quot;Bases de datos relacionales&quot;
+  d2 &quot;Bases de datos distribuidas&quot;
+  d3 &quot;Sistemas distribuidos&quot;
+
+índice invertido (tras analizar):
+  base        -&gt; d1, d2
+  dato        -&gt; d1, d2
+  relacional  -&gt; d1
+  distribuido -&gt; d2, d3
+  sistema     -&gt; d3
+</code></pre>
+<p>Buscar «datos distribuidos» es intersecar las listas de <code>dato</code> y <code>distribuido</code> → <code>{d2}</code>. La operación es una intersección de listas ordenadas: costo proporcional a la longitud de la lista más corta, no al número de documentos.</p>
+<p>Cada término guarda además la frecuencia y las posiciones dentro del documento, lo que permite puntuar y buscar frases exactas.</p>
+<h3 id="el-analizador">El analizador</h3>
+<p>Convierte texto en términos, y <strong>debe ser el mismo al indexar y al consultar</strong>. Si no lo es, se busca algo que nunca se indexó.</p>
+<pre><code class="language-text">&quot;Las Bases de Datos Relacionales&quot;
+  → normalización de caracteres  → &quot;Las Bases de Datos Relacionales&quot;
+  → segmentación                 → [Las, Bases, de, Datos, Relacionales]
+  → minúsculas                   → [las, bases, de, datos, relacionales]
+  → vacías (español)             → [bases, datos, relacionales]
+  → sin acentos                  → [bases, datos, relacionales]
+  → lematización (español)       → [base, dato, relacional]
+</code></pre>
+<p>Cada paso es una decisión con consecuencias. Quitar acentos hace que «canción» encuentre «cancion», y también que «peso» encuentre «pesó». Eliminar palabras vacías ahorra espacio y hace imposible buscar la frase «ser o no ser».</p>
+<h3 id="bm25">BM25</h3>
+<p>Robertson y Zaragoza formalizan la función de ranking que sigue siendo la referencia:</p>
+<pre><code class="language-text">score(D,Q) = Σ_{t∈Q}  IDF(t) ·  ( f(t,D) · (k1+1) ) / ( f(t,D) + k1·(1 - b + b·|D|/avgdl) )
+
+IDF(t) = ln( (N - n(t) + 0,5) / (n(t) + 0,5) + 1 )
+</code></pre>
+<p>Los tres componentes, en lenguaje llano:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Qué expresa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IDF(t)</code></td>
+<td>Un término raro discrimina más que uno común</td>
+</tr>
+<tr>
+<td><code>f(t,D)</code> con saturación</td>
+<td>Repetir un término 20 veces no vale 20 veces más que una</td>
+</tr>
+<tr>
+<td><code>\|D\|/avgdl</code> con <code>b</code></td>
+<td>Un documento largo tiene más ocurrencias por azar: se penaliza</td>
+</tr>
+</tbody>
+</table></div>
+<p>Valores habituales: <code>k1 = 1,2</code> (saturación), <code>b = 0,75</code> (normalización por longitud).</p>
+<p>La saturación es lo que distingue BM25 de TF-IDF puro y lo que impide el relleno de palabras clave.</p>
+<h3 id="medir-relevancia">Medir relevancia</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Qué mide</th>
+<th>Cuándo usarla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Precisión@k</td>
+<td>De los k devueltos, cuántos son relevantes</td>
+<td>El usuario mira solo los primeros</td>
+</tr>
+<tr>
+<td>Exhaustividad@k</td>
+<td>De los relevantes, cuántos aparecen en los k</td>
+<td>Cobertura (legal, cumplimiento)</td>
+</tr>
+<tr>
+<td>MRR</td>
+<td>Posición del primer resultado relevante</td>
+<td>Hay una única respuesta correcta</td>
+</tr>
+<tr>
+<td>NDCG@k</td>
+<td>Ganancia acumulada descontada por posición</td>
+<td>Relevancia graduada, no binaria</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sin un conjunto de consultas con juicios de relevancia, «mejoré la búsqueda» es una opinión. Construir ese conjunto —30 a 100 consultas reales con sus resultados esperados— es el trabajo que hace evaluable todo lo demás, y es el mismo requisito de la clase 061.</p>
+<pre><code class="language-mermaid">flowchart LR
+    D[&quot;Documento&quot;] --&gt; A[&quot;Analizador&quot;]
+    A --&gt; I[&quot;Índice invertido&lt;br/&gt;término → posteo&quot;]
+    Q[&quot;Consulta&quot;] --&gt; A2[&quot;El MISMO analizador&quot;]
+    A2 --&gt; M[&quot;Intersección de listas&quot;]
+    I --&gt; M
+    M --&gt; S[&quot;Puntuación BM25&quot;]
+    S --&gt; R[&quot;Resultados ordenados&quot;]
+    R --&gt; E[&quot;Evaluación:&lt;br/&gt;P@k · R@k · NDCG&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Colección de 3 cursos, buscamos «bases distribuidas».</p>
+<pre><code class="language-text">N = 3 documentos, longitud media avgdl = 3,33 términos
+d1 [base, dato, relacional]     |d1| = 3
+d2 [base, dato, distribuido]    |d2| = 3
+d3 [sistema, distribuido]       |d3| = 2
+</code></pre>
+<p><strong>IDF:</strong></p>
+<pre><code class="language-text">n(base)        = 2  →  IDF = ln((3-2+0,5)/(2+0,5) + 1) = ln(1,6)  = 0,470
+n(distribuido) = 2  →  IDF = 0,470
+</code></pre>
+<p><strong>Puntuación de d2</strong> (<code>k1=1,2</code>, <code>b=0,75</code>, <code>f=1</code> para ambos términos, <code>|d2|=3</code>):</p>
+<pre><code class="language-text">denominador = 1 + 1,2·(1 - 0,75 + 0,75·3/3,33) = 1 + 1,2·(0,25 + 0,676) = 2,111
+por término = 0,470 · (1 · 2,2) / 2,111 = 0,490
+score(d2)   = 0,490 + 0,490 = 0,980
+</code></pre>
+<p><strong>Puntuación de d3</strong> (solo contiene <code>distribuido</code>, <code>|d3|=2</code>):</p>
+<pre><code class="language-text">denominador = 1 + 1,2·(0,25 + 0,75·2/3,33) = 1 + 1,2·(0,25 + 0,450) = 1,840
+score(d3)   = 0,470 · 2,2 / 1,840 = 0,562
+</code></pre>
+<p>Orden final: <strong>d2 (0,980) &gt; d3 (0,562) &gt; d1 (0,470)</strong>. d2 gana por contener ambos términos; d3 supera a d1 pese a tener un solo término coincidente porque es más corto y ese término aporta lo mismo.</p>
+<p><strong>En un motor real:</strong></p>
+<pre><code class="language-json">POST /cursos/_search
+{ &quot;query&quot;: { &quot;multi_match&quot;: {
+      &quot;query&quot;: &quot;bases distribuidas&quot;,
+      &quot;fields&quot;: [&quot;nombre^3&quot;, &quot;descripcion&quot;],
+      &quot;type&quot;: &quot;best_fields&quot; } },
+  &quot;highlight&quot;: { &quot;fields&quot;: { &quot;descripcion&quot;: {} } } }
+</code></pre>
+<p><code>nombre^3</code> triplica el peso del título: una decisión de negocio expresada en el ranking.</p>
+<p><strong>Alternativa en PostgreSQL</strong>, que evita añadir un sistema:</p>
+<pre><code class="language-sql">ALTER TABLE courses ADD COLUMN busqueda tsvector
+  GENERATED ALWAYS AS (
+    setweight(to_tsvector('spanish', coalesce(nombre,'')), 'A') ||
+    setweight(to_tsvector('spanish', coalesce(descripcion,'')), 'B')
+  ) STORED;
+CREATE INDEX courses_busqueda ON courses USING gin (busqueda);
+
+SELECT id, nombre, ts_rank(busqueda, query) AS score
+FROM courses, plainto_tsquery('spanish', 'bases distribuidas') query
+WHERE busqueda @@ query ORDER BY score DESC LIMIT 10;
+</code></pre>
+<p><strong>Comparación honesta:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Capacidad</th>
+<th>PostgreSQL <code>tsvector</code></th>
+<th>OpenSearch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Índice invertido</td>
+<td>Sí (GIN)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Lematización en español</td>
+<td>Sí</td>
+<td>Sí, con más opciones</td>
+</tr>
+<tr>
+<td>BM25</td>
+<td>No: <code>ts_rank</code> es más simple</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Tolerancia a erratas</td>
+<td>Con <code>pg_trgm</code></td>
+<td>Nativa (<em>fuzzy</em>)</td>
+</tr>
+<tr>
+<td>Sugerencias y autocompletado</td>
+<td>Manual</td>
+<td>Nativo</td>
+</tr>
+<tr>
+<td>Facetas</td>
+<td><code>GROUP BY</code></td>
+<td>Nativas</td>
+</tr>
+<tr>
+<td>Escala horizontal</td>
+<td>Limitada</td>
+<td>Diseñada para ello</td>
+</tr>
+<tr>
+<td>Sistemas que operar</td>
+<td><strong>Cero adicionales</strong></td>
+<td>Uno más</td>
+</tr>
+</tbody>
+</table></div>
+<p>Criterio: si la búsqueda es una funcionalidad secundaria sobre menos de unos millones de documentos, PostgreSQL basta y ahorra un sistema entero. Si la búsqueda <strong>es</strong> el producto, el motor dedicado se justifica.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Herramienta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LIKE 'prefijo%'</code></td>
+<td>Índice B-Tree ordinario</td>
+</tr>
+<tr>
+<td><code>LIKE '%infijo%'</code></td>
+<td>Trigramas (<code>pg_trgm</code>)</td>
+</tr>
+<tr>
+<td>Palabras con lematización</td>
+<td><code>tsvector</code> o motor de búsqueda</td>
+</tr>
+<tr>
+<td>Ranking por relevancia</td>
+<td>BM25 (motor dedicado)</td>
+</tr>
+<tr>
+<td>Erratas y sinónimos</td>
+<td>Motor dedicado</td>
+</tr>
+<tr>
+<td>Similitud semántica</td>
+<td>Vectores (parte 12)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Analizadores distintos al indexar y al consultar.</strong> Cero resultados sin ningún error.</li>
+<li><strong><code>LIKE '%x%'</code> sobre tablas grandes.</strong> Barrido completo; ningún B-Tree ayuda.</li>
+<li><strong>Ajustar pesos sin conjunto de evaluación.</strong> Se mejora una consulta y se empeoran diez.</li>
+<li><strong>Eliminar palabras vacías y luego querer buscar frases.</strong></li>
+<li><strong>Idioma del analizador equivocado.</strong> El lematizador inglés destroza el español.</li>
+<li><strong>Confundir puntuación con probabilidad.</strong> BM25 no está acotada ni es comparable entre consultas.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los cambios de relevancia se hacen a ciegas si no hay medición: alguien se queja, se ajusta un peso, se rompe otra cosa y nadie lo sabe. El conjunto de consultas juzgadas es el activo que convierte la búsqueda en ingeniería.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Construye a mano el índice invertido de 5 documentos de tu dominio.</li>
+<li>Calcula BM25 para una consulta de dos términos y ordena los resultados.</li>
+<li>Implementa la búsqueda en PostgreSQL y en OpenSearch sobre los mismos datos.</li>
+<li>Construye 20 consultas juzgadas y mide P@5 y NDCG@10 en ambos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué la saturación de la frecuencia de término mejora el ranking frente a TF-IDF puro?</li>
+<li>Da un caso donde eliminar acentos empeore los resultados en español.</li>
+<li>Calcula el IDF de un término presente en 999 de 1 000 documentos e interpreta el valor.</li>
+<li>Justifica con cifras si tu caso necesita un motor de búsqueda dedicado.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/06-vector-search/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
+  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
+<li><strong>OpenSearch Project</strong> (2026). <a href="https://docs.opensearch.org/latest/">OpenSearch Documentation</a>.<br />
+  Índice invertido, analizadores, relevancia y búsqueda k-NN.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

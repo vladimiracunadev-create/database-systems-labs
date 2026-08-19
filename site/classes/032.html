@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Analítica columnar: por qué el formato cambia el orden de magnitud. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>032 — Analítica columnar: por qué el formato cambia el orden de magnitud · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 06 · Grafos, columnas, tiempo y búsqueda</span>
+</nav>
+<main class="content">
+<h1 id="032--analítica-columnar-por-qué-el-formato-cambia-el-orden-de-magnitud">032 — Analítica columnar: por qué el formato cambia el orden de magnitud</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>06 — Grafos, columnas, tiempo y búsqueda</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>clickhouse</code>, <code>duckdb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>almacenamiento columnar</code> · <code>compresión</code> · <code>ejecución vectorizada</code> · <code>poda de particiones</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Explicar por qué un motor columnar responde en segundos lo que un motor por filas tarda minutos, y qué se paga a cambio. La respuesta está en el formato, la compresión y la forma de ejecutar.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Calcular la E/S de una consulta analítica en formato por filas y por columnas.</li>
+<li>Explicar por qué la compresión es mucho más eficaz por columnas.</li>
+<li>Describir la ejecución vectorizada y su relación con la caché de la CPU.</li>
+<li>Elegir clave de ordenamiento y granularidad de índice disperso.</li>
+<li>Justificar el conteo aproximado y calcular su error.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-formato-manda">El formato manda</h3>
+<pre><code class="language-text">Tabla: 20 columnas, 100 millones de filas, fila media 200 bytes → 20 GB
+
+Consulta: SELECT periodo, AVG(nota) FROM enrollments GROUP BY periodo
+Columnas necesarias: periodo (8 B) + nota (8 B) = 16 B por fila
+
+Por filas:     hay que leer las páginas completas          → ~20 GB
+Por columnas:  solo dos columnas                           → ~1,6 GB
+Con compresión columnar (factor típico 8×)                 → ~0,2 GB
+</code></pre>
+<p><strong>Factor 100</strong> de E/S para el mismo SQL y los mismos datos. Ninguna optimización de consulta compite con eso.</p>
+<h3 id="por-qué-comprime-tanto-mejor">Por qué comprime tanto mejor</h3>
+<p>En formato por filas, bytes contiguos pertenecen a columnas distintas: un entero, un texto, una fecha. La entropía local es alta y el compresor genérico saca poco.</p>
+<p>Por columnas, los valores contiguos son del mismo tipo y a menudo del mismo rango, lo que habilita codificaciones específicas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Codificación</th>
+<th>Cuándo</th>
+<th>Ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Diccionario</td>
+<td>Pocos valores distintos</td>
+<td>300 períodos en 100 M de filas → 2 bytes por fila</td>
+</tr>
+<tr>
+<td>Longitud de secuencia</td>
+<td>Valores repetidos contiguos</td>
+<td>Datos ordenados por esa columna</td>
+</tr>
+<tr>
+<td>Delta</td>
+<td>Valores crecientes</td>
+<td>Marcas de tiempo, identificadores</td>
+</tr>
+<tr>
+<td>Delta-of-delta</td>
+<td>Incrementos regulares</td>
+<td>Series a intervalo fijo</td>
+</tr>
+<tr>
+<td>Bit-packing</td>
+<td>Rango pequeño conocido</td>
+<td>Nota de 1,0 a 7,0 en un decimal → 6 bits</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla práctica: <strong>la clave de ordenamiento decide la compresión</strong>. Ordenar por una columna de baja cardinalidad hace que sus valores queden contiguos y la codificación por longitud de secuencia rinda al máximo.</p>
+<h3 id="ejecución-vectorizada">Ejecución vectorizada</h3>
+<p>Un motor por filas ejecuta un árbol de operadores fila a fila: por cada fila, una llamada virtual por operador. Con 100 millones de filas y 5 operadores, son 500 millones de llamadas.</p>
+<p>Un motor vectorizado procesa <strong>lotes</strong> de ~1 024–2 048 valores por llamada. Consecuencias:</p>
+<ul>
+<li>Se amortiza el coste de la llamada entre miles de valores.</li>
+<li>El bucle interior opera sobre un arreglo contiguo, que cabe en la caché L1/L2.</li>
+<li>El compilador puede autovectorizar con instrucciones SIMD.</li>
+</ul>
+<p>Es la razón por la que DuckDB y ClickHouse superan a un motor por filas incluso cuando todos los datos están en memoria: la ventaja no es solo de E/S.</p>
+<h3 id="índice-disperso-y-poda">Índice disperso y poda</h3>
+<p>ClickHouse no indexa cada fila: guarda una marca cada <code>index_granularity</code> filas (8 192 por defecto) con el valor mínimo y máximo del bloque. Es un índice <strong>disperso</strong>.</p>
+<pre><code class="language-sql">CREATE TABLE enrollments (
+  periodo    LowCardinality(String),
+  course_id  UInt32,
+  student_id UInt32,
+  nota       Decimal(2,1),
+  registrada_en DateTime
+) ENGINE = MergeTree
+ORDER BY (periodo, course_id, registrada_en);
+</code></pre>
+<p><code>ORDER BY</code> aquí <strong>no</strong> es orden de salida: es el orden físico de almacenamiento y define el índice primario. Una consulta con <code>WHERE periodo = '2026-1'</code> descarta bloques enteros sin leerlos. Con 100 M de filas repartidas en 300 períodos, la poda elimina el 99,7 % de los datos antes de descomprimir nada.</p>
+<p><code>LowCardinality(String)</code> aplica codificación por diccionario explícita: para columnas con menos de ~10 000 valores distintos, reduce el tamaño y acelera los agrupamientos.</p>
+<h3 id="conteo-aproximado">Conteo aproximado</h3>
+<p>Contar valores distintos exactamente exige recordar todos los vistos. HyperLogLog (Flajolet et al.) lo estima con memoria prácticamente constante:</p>
+<pre><code class="language-text">memoria     ≈ 12 KB
+error medio ≈ 1,04 / √m,  con m = 2^14 = 16 384 registros
+            ≈ 0,81 %
+</code></pre>
+<pre><code class="language-sql">SELECT uniq(student_id)      FROM enrollments;   -- aproximado, ~12 KB
+SELECT uniqExact(student_id) FROM enrollments;   -- exacto, memoria proporcional a la cardinalidad
+</code></pre>
+<p>Con 50 millones de estudiantes distintos, <code>uniqExact</code> necesita gigabytes; <code>uniq</code> responde con 12 KB y un error inferior al 1 %. Para un panel, ese error es irrelevante; para una factura, no. <strong>La decisión es del negocio, y debe estar escrita.</strong></p>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta analítica&quot;] --&gt; P[&quot;1. Poda por índice disperso&lt;br/&gt;descarta bloques&quot;]
+    P --&gt; C[&quot;2. Leer solo las columnas&lt;br/&gt;necesarias&quot;]
+    C --&gt; D[&quot;3. Descomprimir&lt;br/&gt;(a menudo se opera comprimido)&quot;]
+    D --&gt; V[&quot;4. Ejecución vectorizada&lt;br/&gt;lotes de ~2 048&quot;]
+    V --&gt; A[&quot;5. Agregación&lt;br/&gt;exacta o aproximada&quot;]
+    A --&gt; R[&quot;Resultado&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«promedio de nota y número de estudiantes distintos por período»</em> sobre 100 millones de inscripciones.</p>
+<p><strong>PostgreSQL (por filas), sin índice útil:</strong></p>
+<pre><code class="language-text">Barrido secuencial de enrollments      → 20 GB leídos
+HashAggregate sobre 100 M filas
+Tiempo: minutos
+</code></pre>
+<p><strong>ClickHouse:</strong></p>
+<pre><code class="language-sql">SELECT periodo, avg(nota) AS promedio, uniq(student_id) AS estudiantes
+FROM enrollments GROUP BY periodo ORDER BY periodo;
+</code></pre>
+<pre><code class="language-text">Columnas leídas: periodo (diccionario), nota, student_id
+Bytes leídos tras compresión: ~0,4 GB
+Agregación vectorizada + HyperLogLog
+Tiempo: segundos
+</code></pre>
+<p><strong>Y la consulta inversa</strong>, un solo registro:</p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
+</code></pre>
+<ul>
+<li>PostgreSQL con índice: <strong>una</strong> búsqueda B-Tree, ~4 páginas, latencia inferior al milisegundo.</li>
+<li>ClickHouse: <code>student_id</code> no encabeza la clave de ordenamiento, así que no hay poda. Debe leer todos los bloques de todas las columnas seleccionadas.</li>
+</ul>
+<p>Esta asimetría es el punto central: <strong>no existe un motor bueno para todo</strong>. Es la razón de que OLTP y OLAP se separen (clase 054) y de que la persistencia poliglota exista (clase 062).</p>
+<p><strong>Efecto de la clave de ordenamiento, medido.</strong> La misma tabla con dos claves distintas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th><code>ORDER BY</code></th>
+<th style="text-align: right;">Tamaño en disco</th>
+<th><code>WHERE periodo=...</code></th>
+<th><code>WHERE student_id=...</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(periodo, course_id, registrada_en)</code></td>
+<td style="text-align: right;">1,2 GB</td>
+<td>Poda al 0,3 %</td>
+<td>Sin poda</td>
+</tr>
+<tr>
+<td><code>(student_id, registrada_en)</code></td>
+<td style="text-align: right;">2,8 GB</td>
+<td>Sin poda</td>
+<td>Poda al 0,001 %</td>
+</tr>
+</tbody>
+</table></div>
+<p>El tamaño difiere porque ordenar por <code>periodo</code> agrupa valores repetidos y la codificación por longitud de secuencia rinde mucho más. <strong>La clave de ordenamiento afecta simultáneamente al tamaño y a qué consultas son rápidas</strong>: es la decisión de diseño más importante en un motor columnar, equivalente a la clave de partición en columnas anchas (clase 029).</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Por filas (OLTP)</th>
+<th>Columnar (OLAP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leer una fila entera</td>
+<td>Excelente</td>
+<td>Malo</td>
+</tr>
+<tr>
+<td>Leer 2 columnas de millones de filas</td>
+<td>Malo</td>
+<td>Excelente</td>
+</tr>
+<tr>
+<td>Insertar una fila</td>
+<td>Excelente</td>
+<td>Malo (por lotes)</td>
+</tr>
+<tr>
+<td>Actualizar una fila</td>
+<td>Excelente</td>
+<td>Muy costoso</td>
+</tr>
+<tr>
+<td>Compresión</td>
+<td>2–3×</td>
+<td>8–30×</td>
+</tr>
+<tr>
+<td>Transacciones</td>
+<td>Completas</td>
+<td>Limitadas</td>
+</tr>
+<tr>
+<td>Índices secundarios</td>
+<td>Muchos</td>
+<td>Pocos, dispersos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Usar un motor columnar como OLTP.</strong> Cada <code>UPDATE</code> puntual reescribe partes de muchas columnas.</li>
+<li><strong>Insertar fila a fila en ClickHouse.</strong> Genera miles de fragmentos pequeños y la fusión no da abasto; hay que insertar por lotes.</li>
+<li><strong>Elegir <code>ORDER BY</code> sin mirar las consultas.</strong> Se pierde la poda y la compresión a la vez.</li>
+<li><strong><code>SELECT *</code> en columnar.</strong> Anula la única ventaja del formato.</li>
+<li><strong>Presentar cifras aproximadas como exactas.</strong> <code>uniq</code> no es <code>uniqExact</code>.</li>
+<li><strong>Suponer que la compresión es gratis.</strong> Cuesta CPU al escribir; se recupera con creces en lectura.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Migrar informes de un motor por filas a uno columnar suele dar mejoras de uno o dos órdenes de magnitud, y añade un sistema que sincronizar con el origen (clase 056). Antes de eso, conviene comprobar qué consigue DuckDB sobre exportaciones Parquet: a menudo basta y no añade servicio alguno.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Toma tu consulta analítica más pesada y calcula los bytes que lee en formato por filas.</li>
+<li>Exporta los datos a Parquet y ejecútala con DuckDB; mide bytes y tiempo.</li>
+<li>Prueba dos claves de ordenamiento distintas y compara tamaño y poda.</li>
+<li>Sustituye un conteo exacto por uno aproximado, mide el error real y decide si es aceptable.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Calcula la E/S de una consulta tuya en ambos formatos, con cifras reales.</li>
+<li>¿Por qué ordenar por una columna de baja cardinalidad reduce el tamaño total?</li>
+<li>Explica por qué la ejecución vectorizada ayuda incluso con todos los datos en memoria.</li>
+<li>Da una métrica de tu negocio donde el error del 1 % de HyperLogLog sea inaceptable.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>ClickHouse, Inc.</strong> (2026). <a href="https://clickhouse.com/docs/">ClickHouse Documentation</a>.<br />
+  Motores de tabla, claves de ordenamiento y vistas materializadas.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
+<li><strong>Michael Stonebraker, Samuel Madden, Daniel J. Abadi, Stavros Harizopoulos, Nabil Hachem, Pat Helland</strong> (2007). <a href="https://cs.brown.edu/courses/cs227/archives/2008/Papers/OLTP/hstore.pdf">The End of an Architectural Era (It's Time for a Complete Rewrite)</a>. VLDB.<br />
+  Mide en qué gasta el tiempo realmente un motor OLTP tradicional.</li>
+<li><strong>Philippe Flajolet, Eric Fusy, Olivier Gandouet, Frederic Meunier</strong> (2007). <a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf">HyperLogLog: The Analysis of a Near-Optimal Cardinality Estimation Algorithm</a>. Analysis of Algorithms (AofA).<br />
+  Conteo aproximado de distintos con memoria prácticamente constante.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

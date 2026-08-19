@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Álgebra relacional: selección, proyección, producto y reunión. Parte 02: Modelo relacional y álgebra.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>011 — Álgebra relacional: selección, proyección, producto y reunión · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 02 · Modelo relacional y álgebra</span>
+</nav>
+<main class="content">
+<h1 id="011--álgebra-relacional-selección-proyección-producto-y-reunión">011 — Álgebra relacional: selección, proyección, producto y reunión</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>02 — Modelo relacional y álgebra</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>selección</code> · <code>proyección</code> · <code>producto cartesiano</code> · <code>reunión natural</code> · <code>división</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Dominar los operadores del álgebra relacional para poder razonar sobre una consulta <strong>antes</strong> de ejecutarla: cuántas filas puede producir, qué la hace cara y por qué el optimizador puede reordenarla sin cambiar el resultado.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Escribir y leer expresiones con σ, π, ×, ⋈, ∪, −, ρ y ÷.</li>
+<li>Estimar a mano la cardinalidad de cada operador.</li>
+<li>Aplicar las equivalencias que usa el optimizador y explicar por qué son válidas.</li>
+<li>Traducir entre álgebra y SQL en ambos sentidos.</li>
+<li>Resolver una consulta de división relacional, que SQL no ofrece directamente.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-operadores">Los operadores</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operador</th>
+<th>Símbolo</th>
+<th>Qué hace</th>
+<th>Cardinalidad del resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selección</td>
+<td>σ<sub>cond</sub>(R)</td>
+<td>Filtra tuplas</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Proyección</td>
+<td>π<sub>attrs</sub>(R)</td>
+<td>Se queda con atributos; elimina duplicados</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Producto cartesiano</td>
+<td>R × S</td>
+<td>Cada tupla con cada tupla</td>
+<td>|R| · |S|</td>
+</tr>
+<tr>
+<td>Reunión natural</td>
+<td>R ⋈ S</td>
+<td>Producto filtrado por igualdad en atributos comunes</td>
+<td>0 … |R|·|S|</td>
+</tr>
+<tr>
+<td>Unión</td>
+<td>R ∪ S</td>
+<td>Tuplas de ambas (mismo esquema)</td>
+<td>≤ |R| + |S|</td>
+</tr>
+<tr>
+<td>Diferencia</td>
+<td>R − S</td>
+<td>Las de R que no están en S</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Renombrado</td>
+<td>ρ<sub>x</sub>(R)</td>
+<td>Cambia nombres</td>
+<td>|R|</td>
+</tr>
+<tr>
+<td>División</td>
+<td>R ÷ S</td>
+<td>Tuplas de R asociadas a <strong>todas</strong> las de S</td>
+<td>≤ |R|</td>
+</tr>
+</tbody>
+</table></div>
+<p>Selección, proyección, producto, unión y diferencia forman el conjunto <strong>completo</strong>: los demás se derivan. La reunión es <code>π(σ(R × S))</code>; la intersección es <code>R − (R − S)</code>.</p>
+<h3 id="la-cardinalidad-decide-el-costo">La cardinalidad decide el costo</h3>
+<p>El número que hay que vigilar es el producto cartesiano. Con <code>students</code> (2 000) y <code>courses</code> (300), <code>students × courses</code> produce <strong>600 000</strong> tuplas. La reunión natural sobre <code>enrollments</code> produce, como mucho, tantas como inscripciones haya. Esta diferencia es el motivo de la primera regla de optimización.</p>
+<h3 id="equivalencias-que-aplica-el-optimizador">Equivalencias que aplica el optimizador</h3>
+<pre><code class="language-text">E1  σ_c1(σ_c2(R))            ≡  σ_c1 ∧ c2(R)          conmutar y fusionar filtros
+E2  σ_c(R × S)               ≡  R ⋈_c S               empujar el filtro dentro
+E3  σ_c(R ⋈ S)               ≡  σ_c(R) ⋈ S            si c solo usa atributos de R
+E4  π_a(σ_c(R))              ≡  π_a(σ_c(π_a ∪ attrs(c)(R)))   proyección temprana
+E5  (R ⋈ S) ⋈ T              ≡  R ⋈ (S ⋈ T)           asociatividad
+E6  R ⋈ S                    ≡  S ⋈ R                 conmutatividad
+</code></pre>
+<p>Las dos primeras son el corazón de la optimización: <strong>filtrar antes de combinar</strong>. E5 y E6 dan al planificador libertad para elegir el orden de reunión, que es el problema combinatorio que resuelve el optimizador por costos (clase 042).</p>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph L[&quot;Plan ingenuo&quot;]
+        A1[&quot;students × courses&lt;br/&gt;600 000 tuplas&quot;] --&gt; A2[&quot;× enrollments&quot;]
+        A2 --&gt; A3[&quot;σ periodo='2026-1'&quot;]
+        A3 --&gt; A4[&quot;π nombre&quot;]
+    end
+    subgraph R[&quot;Plan optimizado (E2, E3)&quot;]
+        B1[&quot;σ periodo='2026-1' (courses)&lt;br/&gt;40 tuplas&quot;] --&gt; B2[&quot;⋈ enrollments&lt;br/&gt;por course_id&quot;]
+        B2 --&gt; B3[&quot;⋈ students&lt;br/&gt;por student_id&quot;]
+        B3 --&gt; B4[&quot;π nombre&quot;]
+    end
+    L -- &quot;mismas filas,&lt;br/&gt;coste incomparable&quot; --&gt; R
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«nombres de los estudiantes inscritos en algún curso del período 2026-1»</em>.</p>
+<p><strong>Álgebra, forma ingenua:</strong></p>
+<pre><code class="language-text">π_nombre( σ_periodo='2026-1' (students × enrollments × courses) )
+</code></pre>
+<p><strong>Traza de cardinalidad</strong> con 2 000 estudiantes, 240 000 inscripciones y 300 cursos:</p>
+<pre><code class="language-text">students × enrollments            = 2 000 · 240 000 = 480 000 000
+(...) × courses                   = 480 000 000 · 300 = 1,44 · 10^11
+</code></pre>
+<p>Materializar eso es imposible. Ningún motor lo hace: por eso existe el optimizador.</p>
+<p><strong>Álgebra, forma optimizada</strong> (aplicando E2 y E3):</p>
+<pre><code class="language-text">π_nombre( students ⋈_id=student_id ( enrollments ⋈_course_id=id ( σ_periodo='2026-1'(courses) ) ) )
+</code></pre>
+<pre><code class="language-text">σ periodo (courses)               = 40 cursos
+⋈ enrollments                     ≈ 240 000 · (40/300) = 32 000
+⋈ students                        = 32 000
+π nombre (elimina duplicados)     ≈ 6 000 estudiantes distintos
+</code></pre>
+<p>De 1,44 · 10¹¹ a 32 000. <strong>Las dos expresiones devuelven exactamente el mismo conjunto</strong>; esa equivalencia demostrada es lo que autoriza al motor a reescribir.</p>
+<p><strong>SQL correspondiente:</strong></p>
+<pre><code class="language-sql">SELECT DISTINCT s.nombre
+FROM students s
+JOIN enrollments e ON e.student_id = s.id
+JOIN courses     c ON c.id = e.course_id
+WHERE c.periodo = '2026-1';
+</code></pre>
+<p>El <code>DISTINCT</code> es la proyección relacional; sin él, SQL devuelve un nombre por inscripción (32 000 filas en vez de 6 000). Es la desviación de la clase 010 hecha visible.</p>
+<p><strong>División relacional.</strong> Pregunta: <em>«estudiantes inscritos en TODOS los cursos obligatorios»</em>. SQL no tiene operador; la formulación canónica es doble negación —«no existe curso obligatorio que este estudiante no haya cursado»—:</p>
+<pre><code class="language-sql">SELECT s.id, s.nombre
+FROM students s
+WHERE NOT EXISTS (
+  SELECT 1 FROM courses c
+  WHERE c.obligatorio = 1
+    AND NOT EXISTS (
+      SELECT 1 FROM enrollments e
+      WHERE e.student_id = s.id AND e.course_id = c.id
+    )
+);
+</code></pre>
+<p>Alternativa por conteo, más legible y con el mismo resultado si <code>(student_id, course_id)</code> es único:</p>
+<pre><code class="language-sql">SELECT e.student_id
+FROM enrollments e
+JOIN courses c ON c.id = e.course_id AND c.obligatorio = 1
+GROUP BY e.student_id
+HAVING COUNT(DISTINCT e.course_id) = (SELECT COUNT(*) FROM courses WHERE obligatorio = 1);
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Álgebra</th>
+<th>SQL</th>
+<th>Nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>σ</td>
+<td><code>WHERE</code></td>
+<td>Antes de agrupar</td>
+</tr>
+<tr>
+<td>π</td>
+<td><code>SELECT DISTINCT</code></td>
+<td>Sin <code>DISTINCT</code> no es proyección relacional</td>
+</tr>
+<tr>
+<td>×</td>
+<td><code>CROSS JOIN</code></td>
+<td>Rara vez intencional</td>
+</tr>
+<tr>
+<td>⋈</td>
+<td><code>JOIN ... ON</code> / <code>NATURAL JOIN</code></td>
+<td><code>NATURAL</code> es frágil ante columnas nuevas</td>
+</tr>
+<tr>
+<td>∪</td>
+<td><code>UNION</code></td>
+<td><code>UNION ALL</code> no es la unión de conjuntos</td>
+</tr>
+<tr>
+<td>−</td>
+<td><code>EXCEPT</code></td>
+<td><code>MINUS</code> en Oracle</td>
+</tr>
+<tr>
+<td>÷</td>
+<td>—</td>
+<td>Doble <code>NOT EXISTS</code> o conteo</td>
+</tr>
+<tr>
+<td>ρ</td>
+<td><code>AS</code></td>
+<td>Necesario en autorreuniones</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Olvidar la condición de reunión.</strong> Un <code>JOIN</code> sin <code>ON</code> es un producto cartesiano: no da error, da un resultado enorme y erróneo.</li>
+<li><strong>Creer que <code>JOIN</code> multiplica filas por error.</strong> Multiplica porque la cardinalidad del lado derecho lo permite; el modelo lo predice.</li>
+<li><strong>Traducir π como <code>SELECT</code> sin <code>DISTINCT</code>.</strong> Cambia el resultado, no solo el rendimiento.</li>
+<li><strong>Suponer que el orden de los <code>JOIN</code> en el texto es el orden de ejecución.</strong> Por E5 y E6 el motor elige; en SQL solo lo fijan construcciones explícitas.</li>
+<li><strong>Resolver una división con <code>IN</code>.</strong> <code>IN</code> responde «alguno», no «todos».</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Estimar cardinalidades a mano es la habilidad que distingue leer un plan de mirarlo. Cuando <code>EXPLAIN</code> dice «filas estimadas: 12» y la realidad son 3 millones, se sabe dónde mirar precisamente porque se sabe cómo debería haberse propagado la cardinalidad.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Escribe en álgebra una consulta real de tu trabajo, en su forma ingenua.</li>
+<li>Aplica E1–E4 paso a paso y anota la cardinalidad estimada en cada nivel.</li>
+<li>Ejecuta ambas versiones en SQL y compara el plan y el tiempo.</li>
+<li>Formula una pregunta de tu dominio que exija división relacional y resuélvela de las dos formas.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Demuestra con un contraejemplo que E3 no vale si la condición usa atributos de ambas relaciones.</li>
+<li>¿Por qué la intersección no es un operador primitivo?</li>
+<li>Da una consulta donde omitir <code>DISTINCT</code> produzca un total inflado en un informe, con números.</li>
+<li>Explica por qué la formulación de división con <code>HAVING COUNT</code> exige unicidad de <code>(student_id, course_id)</code>.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

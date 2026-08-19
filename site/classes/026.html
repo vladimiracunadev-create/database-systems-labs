@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Consultas, índices y agregación sobre documentos. Parte 05: Documentos y clave-valor.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>026 — Consultas, índices y agregación sobre documentos · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 05 · Documentos y clave-valor</span>
+</nav>
+<main class="content">
+<h1 id="026--consultas-índices-y-agregación-sobre-documentos">026 — Consultas, índices y agregación sobre documentos</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>05 — Documentos y clave-valor</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>mongodb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>índice compuesto</code> · <code>canalización de agregación</code> · <code>índice multiclave</code> · <code>cobertura</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Consultar documentos con la misma disciplina que se consulta SQL: sabiendo qué índice se usa, cuántos documentos se examinan y por qué una etapa de la canalización es cara.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Leer un plan de MongoDB y distinguir <code>COLLSCAN</code> de <code>IXSCAN</code>.</li>
+<li>Aplicar la regla ESR para ordenar las claves de un índice compuesto.</li>
+<li>Reconocer una consulta cubierta y qué la habilita.</li>
+<li>Ordenar las etapas de una canalización de agregación para reducir el trabajo.</li>
+<li>Prever el efecto de los índices multiclave y parciales.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="leer-el-plan">Leer el plan</h3>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
+              .explain(&quot;executionStats&quot;)
+</code></pre>
+<p>Los tres números que importan:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Significa</th>
+<th>Objetivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nReturned</code></td>
+<td>Documentos devueltos</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>totalKeysExamined</code></td>
+<td>Entradas de índice leídas</td>
+<td>Cercano a <code>nReturned</code></td>
+</tr>
+<tr>
+<td><code>totalDocsExamined</code></td>
+<td>Documentos leídos</td>
+<td>Cercano a <code>nReturned</code>; <strong>0</strong> si la consulta está cubierta</td>
+</tr>
+</tbody>
+</table></div>
+<p>Diagnóstico rápido: si <code>totalDocsExamined</code> es mucho mayor que <code>nReturned</code>, falta índice o el que hay no sirve. Es el mismo razonamiento de selectividad de la clase 039, con otro vocabulario.</p>
+<h3 id="la-regla-esr">La regla ESR</h3>
+<p>Para un índice compuesto, el orden de las claves debe ser:</p>
+<ol>
+<li><strong>E</strong>quality — campos comparados por igualdad.</li>
+<li><strong>S</strong>ort — campos por los que se ordena.</li>
+<li><strong>R</strong>ange — campos comparados por rango.</li>
+</ol>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, nota: {$gte: 4.0}}).sort({registrada_en: -1})
+db.enrollments.createIndex({course_id: 1, registrada_en: -1, nota: 1})
+//                          E              S                  R
+</code></pre>
+<p>Poner el rango antes que el orden obliga al motor a ordenar en memoria el resultado del rango. Es la misma razón por la que en un B-Tree relacional el rango «rompe» el uso de las columnas siguientes (clase 039): una vez que se recorre un intervalo, las claves posteriores ya no están ordenadas globalmente.</p>
+<h3 id="consulta-cubierta">Consulta cubierta</h3>
+<p>Si todos los campos que la consulta necesita —filtro, orden y proyección— están en el índice, el motor no toca los documentos:</p>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;}, {_id: 0, student_id: 1, nota: 1})
+db.enrollments.createIndex({course_id: 1, student_id: 1, nota: 1})
+// totalDocsExamined: 0
+</code></pre>
+<p>Hay que excluir <code>_id</code> explícitamente si no está en el índice, porque se devuelve por omisión.</p>
+<h3 id="tipos-de-índice">Tipos de índice</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Para qué</th>
+<th>Cuidado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple / compuesto</td>
+<td>Lo habitual</td>
+<td>Orden ESR</td>
+</tr>
+<tr>
+<td><strong>Multiclave</strong></td>
+<td>Campo que es un arreglo</td>
+<td>Una entrada por elemento; solo un campo de arreglo por índice</td>
+</tr>
+<tr>
+<td><strong>Parcial</strong></td>
+<td>Subconjunto de documentos</td>
+<td>Solo se usa si la consulta implica el filtro del índice</td>
+</tr>
+<tr>
+<td><strong>TTL</strong></td>
+<td>Expiración automática</td>
+<td>Borra en segundo plano, con retraso</td>
+</tr>
+<tr>
+<td>Texto</td>
+<td>Búsqueda léxica básica</td>
+<td>Uno por colección; para búsqueda seria, parte 06</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="canalización-de-agregación">Canalización de agregación</h3>
+<p>El orden de las etapas determina cuánto trabajo se hace:</p>
+<pre><code class="language-javascript">// MAL: agrupa 5 millones y luego descarta
+db.enrollments.aggregate([
+  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}},
+  {$match: {_id: &quot;curso-bd&quot;}}
+])
+
+// BIEN: filtra primero, con índice
+db.enrollments.aggregate([
+  {$match: {course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;}},
+  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}}
+])
+</code></pre>
+<p>Es la equivalencia E2 de la clase 011 —empujar el filtro— aplicada a mano. El optimizador de MongoDB reordena algunos casos, pero no todos: cualquier etapa que calcule campos nuevos (<code>$addFields</code>, <code>$project</code>) bloquea el movimiento de las etapas posteriores.</p>
+<p>Regla: <strong><code>$match</code> y <code>$limit</code> lo antes posible; <code>$lookup</code> y <code>$unwind</code> lo más tarde posible.</strong></p>
+<pre><code class="language-mermaid">flowchart LR
+    M[&quot;$match&lt;br/&gt;usa índice&quot;] --&gt; S[&quot;$sort&lt;br/&gt;usa índice si sigue al match&quot;]
+    S --&gt; L[&quot;$limit&quot;]
+    L --&gt; P[&quot;$project&lt;br/&gt;reduce el tamaño&quot;]
+    P --&gt; G[&quot;$group&lt;br/&gt;en memoria&quot;]
+    G --&gt; LK[&quot;$lookup&lt;br/&gt;lo más tarde posible&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Consulta: <em>«las 20 inscripciones activas más recientes del curso, con nota, ordenadas por fecha»</em>, sobre 5 millones de documentos.</p>
+<p><strong>Sin índice adecuado:</strong></p>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
+              .sort({registrada_en: -1}).limit(20).explain(&quot;executionStats&quot;)
+</code></pre>
+<pre><code class="language-text">stage:                COLLSCAN
+totalDocsExamined:    5 000 000
+totalKeysExamined:    0
+nReturned:            20
+executionTimeMillis:  4 210
+SORT: in-memory, 38 MB    ← cerca del límite de 100 MB
+</code></pre>
+<p>Cinco millones de documentos leídos para devolver 20. Además el ordenamiento se hace en memoria; superados los 100 MB, MongoDB aborta la consulta salvo que se permita el uso de disco.</p>
+<p><strong>Con índice ESR:</strong></p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1})
+</code></pre>
+<pre><code class="language-text">stage:                IXSCAN → FETCH → LIMIT
+totalKeysExamined:    20
+totalDocsExamined:    20
+nReturned:            20
+executionTimeMillis:  1
+SORT: ninguno    ← el índice ya entrega el orden
+</code></pre>
+<p>De 5 000 000 a 20 documentos examinados. La desaparición de la etapa <code>SORT</code> es tan importante como la reducción de lecturas: el índice ya está ordenado por <code>registrada_en</code> dentro de cada <code>(course_id, estado)</code>.</p>
+<p><strong>Hacerla cubierta.</strong> Si la interfaz solo necesita <code>student_id</code> y <code>nota</code>:</p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1, student_id: 1, nota: 1})
+db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;},
+                    {_id: 0, student_id: 1, nota: 1, registrada_en: 1})
+              .sort({registrada_en: -1}).limit(20)
+// totalDocsExamined: 0
+</code></pre>
+<p>El índice es más ancho —más espacio y más costo por escritura— y a cambio la consulta no toca la colección. Compensa cuando esa consulta domina el tráfico; no compensa si es una de veinte.</p>
+<p><strong>Índice parcial.</strong> Si el 90 % de las inscripciones están activas, un índice parcial no aporta mucho. Si solo el 5 % está en estado <code>pendiente</code> y esa es la consulta caliente:</p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, registrada_en: -1},
+                           {partialFilterExpression: {estado: &quot;pendiente&quot;}})
+</code></pre>
+<p>El índice pasa de 5 millones de entradas a 250 000: cabe en memoria y se mantiene más barato. Requisito: la consulta debe incluir <code>estado: "pendiente"</code> explícitamente, o el motor no puede usarlo.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Señal en el plan</th>
+<th>Corrección</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sin índice útil</td>
+<td><code>COLLSCAN</code></td>
+<td>Crear índice siguiendo ESR</td>
+</tr>
+<tr>
+<td>Índice mal ordenado</td>
+<td><code>IXSCAN</code> + <code>SORT</code> en memoria</td>
+<td>Reordenar claves</td>
+</tr>
+<tr>
+<td>Muchos documentos por resultado</td>
+<td><code>totalDocsExamined ≫ nReturned</code></td>
+<td>Añadir campos del filtro al índice</td>
+</tr>
+<tr>
+<td>Proyección pequeña y repetida</td>
+<td><code>totalDocsExamined &gt; 0</code></td>
+<td>Índice cubriente</td>
+</tr>
+<tr>
+<td>Filtro muy selectivo y raro</td>
+<td>Índice enorme</td>
+<td>Índice parcial</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Un índice por campo.</strong> Los índices compuestos sirven a más consultas; el motor rara vez combina dos índices con eficacia.</li>
+<li><strong>Ignorar el orden ESR.</strong> Provoca ordenamientos en memoria y el límite de 100 MB.</li>
+<li><strong><code>$lookup</code> al principio de la canalización.</strong> Multiplica el trabajo de todas las etapas siguientes.</li>
+<li><strong>Índices que nadie usa.</strong> Revisa <code>$indexStats</code>; cada índice se mantiene en cada escritura.</li>
+<li><strong>Índice multiclave sobre arreglos largos.</strong> Multiplica las entradas por la longitud del arreglo.</li>
+<li><strong>Olvidar <code>_id: 0</code> en una consulta que se quiere cubierta.</strong> Basta para que deje de serlo.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>El síntoma habitual —«MongoDB se puso lento al crecer»— casi siempre significa que los índices dejaron de caber en memoria. Vigilar el tamaño total de los índices frente a la RAM disponible es más predictivo que cualquier métrica de CPU.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Toma la consulta más frecuente de tu dominio y captura su <code>explain</code> sin índice.</li>
+<li>Diseña el índice con la regla ESR y vuelve a capturar.</li>
+<li>Conviértela en consulta cubierta y compara los tres números del plan.</li>
+<li>Mide el tamaño de los índices con <code>$indexStats</code> y elimina los que no se usan.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué el rango va al final en la regla ESR?</li>
+<li>¿Qué condiciones exactas debe cumplir una consulta cubierta?</li>
+<li>Explica el efecto de un <code>$lookup</code> colocado antes de un <code>$match</code> selectivo.</li>
+<li>Da un caso de tu dominio donde un índice parcial reduzca el tamaño más de un 80 %.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>MongoDB, Inc.</strong> (2026). <a href="https://www.mongodb.com/docs/manual/">MongoDB Manual</a>.<br />
+  Modelo documental, índices, agregación y transacciones multi-documento.</li>
+<li><strong>Shannon Bradshaw, Eoin Brazil, Kristina Chodorow</strong> (2019). <a href="https://www.oreilly.com/library/view/mongodb-the-definitive/9781491954454/">MongoDB: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-5446-1.<br />
+  Modelado documental, índices y canalización de agregación.</li>
+<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
+  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

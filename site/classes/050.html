@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Control de acceso: privilegio mínimo, roles y seguridad por fila. Parte 10: Operación, seguridad y gobierno.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>050 — Control de acceso: privilegio mínimo, roles y seguridad por fila · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 10 · Operación, seguridad y gobierno</span>
+</nav>
+<main class="content">
+<h1 id="050--control-de-acceso-privilegio-mínimo-roles-y-seguridad-por-fila">050 — Control de acceso: privilegio mínimo, roles y seguridad por fila</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>10 — Operación, seguridad y gobierno</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>privilegio mínimo</code> · <code>rol</code> · <code>seguridad por fila</code> · <code>separación de funciones</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Declarar quién puede ver y hacer qué, en el motor y no solo en la aplicación. El control de acceso que vive únicamente en el código se salta con una consola y unas credenciales.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Diseñar roles con privilegio mínimo y separación de funciones.</li>
+<li>Distinguir privilegios de objeto, de columna y de fila.</li>
+<li>Implementar seguridad por fila para multiinquilino.</li>
+<li>Reconocer los riesgos de <code>SECURITY DEFINER</code> y del rol <code>PUBLIC</code>.</li>
+<li>Auditar los privilegios efectivos de una base.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="privilegio-mínimo">Privilegio mínimo</h3>
+<p>Cada actor recibe <strong>solo</strong> lo que necesita. NIST SP 800-53 lo formaliza como control AC-6; OWASP lo sitúa como A01 (control de acceso roto), la categoría número uno de su Top 10.</p>
+<p>La estructura habitual separa el <strong>rol</strong> (permisos) del <strong>usuario</strong> (identidad):</p>
+<pre><code class="language-sql">-- Roles por función, sin capacidad de conectarse
+CREATE ROLE app_lectura   NOLOGIN;
+CREATE ROLE app_escritura NOLOGIN;
+CREATE ROLE app_migracion NOLOGIN;
+
+GRANT USAGE ON SCHEMA public TO app_lectura, app_escritura, app_migracion;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_lectura;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_escritura;
+GRANT ALL ON SCHEMA public TO app_migracion;
+
+-- Los futuros objetos también, o el rol se queda obsoleto en la próxima migración
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO app_lectura;
+
+-- Usuarios: identidades que se conectan
+CREATE USER svc_api        LOGIN PASSWORD '...' IN ROLE app_escritura;
+CREATE USER svc_informes   LOGIN PASSWORD '...' IN ROLE app_lectura;
+CREATE USER svc_migraciones LOGIN PASSWORD '...' IN ROLE app_migracion;
+</code></pre>
+<p>Tres cuentas con tres alcances distintos. Si se filtran las credenciales de <code>svc_informes</code>, el atacante lee; no borra.</p>
+<p><strong><code>ALTER DEFAULT PRIVILEGES</code> es imprescindible:</strong> sin él, cada tabla nueva creada por una migración queda invisible para el rol de lectura, y alguien acaba «arreglándolo» con un <code>GRANT ALL</code>.</p>
+<h3 id="errores-estructurales-de-postgresql-por-defecto">Errores estructurales de PostgreSQL por defecto</h3>
+<pre><code class="language-sql">-- Hasta PG 14, cualquiera podía crear objetos en el esquema public
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- Cualquiera puede conectarse a cualquier base
+REVOKE CONNECT ON DATABASE mi_base FROM PUBLIC;
+</code></pre>
+<p><code>PUBLIC</code> no es «los administradores»: es <strong>todo rol existente</strong>. Los CIS Benchmarks incluyen ambas revocaciones entre sus controles de configuración endurecida.</p>
+<h3 id="seguridad-por-fila">Seguridad por fila</h3>
+<p>Los privilegios de tabla son de todo o nada. Para multiinquilino hace falta filtrar por fila <strong>en el motor</strong>:</p>
+<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;   -- aplicar también al dueño
+
+CREATE POLICY inquilino_aislado ON enrollments
+  USING       (tenant_id = current_setting('app.tenant_id')::int)
+  WITH CHECK  (tenant_id = current_setting('app.tenant_id')::int);
+</code></pre>
+<ul>
+<li><code>USING</code> filtra lo que se <strong>lee</strong> (y lo que se puede actualizar o borrar).</li>
+<li><code>WITH CHECK</code> valida lo que se <strong>escribe</strong>: sin él, un inquilino podría insertar filas atribuidas a otro.</li>
+</ul>
+<p>La aplicación fija la variable al tomar la conexión del agrupador:</p>
+<pre><code class="language-python">with pool.connection() as conn:
+    conn.execute(&quot;SELECT set_config('app.tenant_id', %s, true)&quot;, (tenant,))
+    # `true` = local a la transacción: se limpia al terminar, y una conexión
+    # reutilizada del agrupador no hereda el inquilino de la petición anterior.
+</code></pre>
+<p>El tercer argumento <code>true</code> es la diferencia entre un aislamiento correcto y una fuga entre inquilinos con agrupadores de conexiones.</p>
+<p><strong>Advertencia:</strong> la seguridad por fila <strong>no</strong> se aplica a superusuarios ni a roles con <code>BYPASSRLS</code>. La aplicación nunca debe conectarse como superusuario, aquí menos que nunca.</p>
+<h3 id="security-definer"><code>SECURITY DEFINER</code></h3>
+<p>Una función <code>SECURITY DEFINER</code> se ejecuta con los privilegios de quien la creó, no de quien la llama. Es útil y es la vía habitual de escalada de privilegios si se escribe mal:</p>
+<pre><code class="language-sql">CREATE FUNCTION resumen_curso(cid int) RETURNS TABLE(...) AS $$
+  SELECT ... FROM enrollments WHERE course_id = cid;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, public;
+</code></pre>
+<p><code>SET search_path</code> es obligatorio: sin él, quien llama puede crear un objeto en un esquema propio que sombree al real y hacer que la función ejecute su código con privilegios ajenos.</p>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;Petición&quot;] --&gt; A[&quot;Autenticación&lt;br/&gt;quién eres&quot;]
+    A --&gt; C[&quot;Conexión con usuario&lt;br/&gt;de mínimo privilegio&quot;]
+    C --&gt; R[&quot;Roles: qué operaciones&quot;]
+    R --&gt; O[&quot;Privilegios de objeto&lt;br/&gt;tabla, columna&quot;]
+    O --&gt; RLS[&quot;Política por fila&lt;br/&gt;qué filas&quot;]
+    RLS --&gt; D[(&quot;Datos&quot;)]
+    RLS -.-&gt;|&quot;no se aplica a&quot;| SU[&quot;superusuario · BYPASSRLS&quot;]
+    O --&gt; AUD[&quot;Registro de auditoría&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Plataforma multiinquilino: cada institución ve solo sus datos. Además, los docentes ven las notas de sus cursos y los estudiantes solo las propias.</p>
+<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;
+
+-- Aislamiento entre instituciones: se aplica SIEMPRE, encima de todo lo demás
+CREATE POLICY p_inquilino ON enrollments
+  AS RESTRICTIVE
+  USING (tenant_id = current_setting('app.tenant_id')::int);
+
+-- Un estudiante ve sus propias inscripciones
+CREATE POLICY p_estudiante ON enrollments
+  FOR SELECT TO rol_estudiante
+  USING (student_id = current_setting('app.user_id')::int);
+
+-- Un docente ve las de los cursos que dicta
+CREATE POLICY p_docente ON enrollments
+  FOR SELECT TO rol_docente
+  USING (EXISTS (SELECT 1 FROM teaching t
+                 WHERE t.course_id = enrollments.course_id
+                   AND t.teacher_id = current_setting('app.user_id')::int));
+
+-- Y solo el docente puede calificar, solo sus cursos
+CREATE POLICY p_docente_califica ON enrollments
+  FOR UPDATE TO rol_docente
+  USING      (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
+                        AND t.teacher_id = current_setting('app.user_id')::int))
+  WITH CHECK (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
+                        AND t.teacher_id = current_setting('app.user_id')::int));
+</code></pre>
+<p><strong>Cómo se combinan las políticas</strong> —esto es lo que se entiende mal—:</p>
+<ul>
+<li>Las políticas <strong>permisivas</strong> (por defecto) se combinan con <strong>OR</strong>: basta que una permita.</li>
+<li>Las <strong>restrictivas</strong> se combinan con <strong>AND</strong>: todas deben permitir.</li>
+</ul>
+<p>Por eso <code>p_inquilino</code> es <code>RESTRICTIVE</code>: garantiza que ninguna política permisiva futura pueda saltarse el aislamiento entre instituciones. Si fuera permisiva, añadir mañana una política de «administrador ve todo» abriría un agujero entre inquilinos.</p>
+<p><strong>Privilegios de columna</strong> para datos sensibles:</p>
+<pre><code class="language-sql">REVOKE SELECT ON students FROM app_lectura;
+GRANT  SELECT (id, nombre, email) ON students TO app_lectura;   -- sin RUT ni dirección
+</code></pre>
+<p><strong>Verificación, que es lo que convierte esto en ingeniería:</strong></p>
+<pre><code class="language-sql">SET app.tenant_id = '1';
+SET app.user_id   = '11';
+SET ROLE rol_estudiante;
+
+SELECT count(*) FROM enrollments;             -- solo las del estudiante 11
+SELECT count(*) FROM enrollments WHERE student_id &lt;&gt; 11;   -- debe ser 0
+INSERT INTO enrollments (tenant_id, student_id, course_id) VALUES (2, 11, 1);
+-- ERROR: new row violates row-level security policy
+RESET ROLE;
+</code></pre>
+<p>Estas comprobaciones deben ser <strong>pruebas automatizadas</strong>. Una política de seguridad sin prueba es una intención.</p>
+<p><strong>Auditoría de privilegios efectivos:</strong></p>
+<pre><code class="language-sql">SELECT grantee, table_name, string_agg(privilege_type, ', ') AS privilegios
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
+GROUP BY grantee, table_name ORDER BY grantee, table_name;
+
+SELECT rolname, rolsuper, rolbypassrls, rolcreatedb FROM pg_roles
+WHERE rolsuper OR rolbypassrls;    -- debe ser una lista muy corta y conocida
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Mecanismo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servicio que solo lee</td>
+<td>Rol con <code>SELECT</code></td>
+</tr>
+<tr>
+<td>Ocultar columnas sensibles</td>
+<td>Privilegios de columna o vista</td>
+</tr>
+<tr>
+<td>Aislar inquilinos</td>
+<td>Política restrictiva por fila</td>
+</tr>
+<tr>
+<td>Un usuario ve solo lo suyo</td>
+<td>Política permisiva por fila</td>
+</tr>
+<tr>
+<td>Operación privilegiada acotada</td>
+<td><code>SECURITY DEFINER</code> con <code>search_path</code> fijo</td>
+</tr>
+<tr>
+<td>Saber quién hizo qué</td>
+<td>Registro de auditoría</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>La aplicación se conecta como superusuario.</strong> Ignora toda la seguridad por fila.</li>
+<li><strong>Un solo usuario para todo.</strong> Una filtración lo compromete todo.</li>
+<li><strong><code>set_config</code> sin <code>local = true</code>.</strong> El inquilino persiste en la conexión reutilizada del agrupador: fuga entre inquilinos.</li>
+<li><strong>Política sin <code>WITH CHECK</code>.</strong> Se puede escribir en el ámbito de otro.</li>
+<li><strong>Olvidar <code>ALTER DEFAULT PRIVILEGES</code>.</strong> Las tablas nuevas quedan mal permisionadas.</li>
+<li><strong><code>PUBLIC</code> con privilegios.</strong> Aplica a todos los roles.</li>
+<li><strong><code>SECURITY DEFINER</code> sin <code>search_path</code>.</strong> Escalada de privilegios.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las filtraciones de datos multiinquilino rara vez son un fallo del motor: son un <code>WHERE tenant_id = ?</code> que faltaba en una consulta nueva. La seguridad por fila hace que ese olvido sea imposible, porque el filtro deja de depender de que alguien lo escriba.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Diseña tres roles con privilegio mínimo para tu sistema.</li>
+<li>Implementa el aislamiento entre inquilinos con una política restrictiva.</li>
+<li>Escribe pruebas automatizadas que intenten leer y escribir fuera del ámbito.</li>
+<li>Audita los privilegios efectivos y los roles con <code>BYPASSRLS</code>.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué la política de inquilino debe ser restrictiva y no permisiva?</li>
+<li>Explica la fuga que produce <code>set_config</code> sin ámbito local en un agrupador.</li>
+<li>¿Qué añade <code>WITH CHECK</code> que <code>USING</code> no cubre?</li>
+<li>Da un caso donde <code>SECURITY DEFINER</code> sea necesario y cómo lo asegurarías.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL: Row Security Policies</a>.<br />
+  Control de acceso por fila declarado en el propio motor.</li>
+<li><strong>NIST</strong> (2020). <a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final">NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems</a>.<br />
+  Controles de auditoria, cifrado y acceso aplicables a bases de datos.</li>
+<li><strong>Center for Internet Security</strong> (2026). <a href="https://www.cisecurity.org/cis-benchmarks">CIS Benchmarks</a>.<br />
+  Guias de configuración endurecida para PostgreSQL, MySQL, MongoDB y otros.</li>
+<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
+  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

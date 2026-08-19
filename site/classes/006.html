@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Entidad-relación, cardinalidad y participación. Parte 01: Modelado conceptual y requisitos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>006 — Entidad-relación, cardinalidad y participación · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 01 · Modelado conceptual y requisitos</span>
+</nav>
+<main class="content">
+<h1 id="006--entidad-relación-cardinalidad-y-participación">006 — Entidad-relación, cardinalidad y participación</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>01 — Modelado conceptual y requisitos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>entidad débil</code> · <code>cardinalidad</code> · <code>participación total</code> · <code>atributo de relación</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Representar el dominio con el modelo entidad-relación de Chen y, sobre todo, leer un diagrama con precisión: qué dice exactamente una cardinalidad y qué obliga una participación total.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Distinguir entidad, relación, atributo y entidad débil.</li>
+<li>Leer y escribir cardinalidades sin ambigüedad (mínimo y máximo, en ambos sentidos).</li>
+<li>Traducir participación total en una restricción concreta del esquema.</li>
+<li>Convertir cualquier relación N:M en tablas, sabiendo qué se gana y qué se pierde.</li>
+<li>Detectar las relaciones ternarias falsas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-vocabulario-de-chen">El vocabulario de Chen</h3>
+<p>Chen (1976) propuso el modelo entidad-relación para unificar las vistas de red, jerárquica y relacional. Sus piezas:</p>
+<ul>
+<li><strong>Entidad:</strong> cosa distinguible del dominio (un estudiante, un curso).</li>
+<li><strong>Conjunto de entidades:</strong> todas las del mismo tipo. Es lo que suele acabar siendo una tabla.</li>
+<li><strong>Relación:</strong> asociación entre entidades (un estudiante <em>inscribe</em> un curso).</li>
+<li><strong>Atributo:</strong> propiedad de una entidad o de una relación. La nota es atributo de la <strong>relación</strong> inscripción, no del estudiante ni del curso, y esto se olvida constantemente.</li>
+<li><strong>Entidad débil:</strong> no tiene identidad propia; se identifica por la entidad fuerte de la que depende (una línea de factura respecto de la factura).</li>
+</ul>
+<h3 id="cardinalidad-cuatro-números-no-dos">Cardinalidad: cuatro números, no dos</h3>
+<p>Una cardinalidad completa declara <strong>cuatro</strong> valores: mínimo y máximo en cada sentido. La notación abreviada «1:N» solo declara dos y por eso genera discusiones.</p>
+<p>Para «estudiante inscribe curso»:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Sentido</th>
+<th style="text-align: right;">Mínimo</th>
+<th style="text-align: right;">Máximo</th>
+<th>Lectura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>estudiante → curso</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
+<td>Un estudiante puede no tener cursos, o tener muchos</td>
+</tr>
+<tr>
+<td>curso → estudiante</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
+<td>Un curso puede no tener inscritos, o tener muchos</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cambiar el mínimo de 0 a 1 en el segundo sentido significa «no existen cursos sin inscritos», y eso <strong>no</strong> se puede expresar con una clave foránea: exige una restricción diferida o una comprobación en la aplicación. Esa es la diferencia práctica entre participación parcial y total.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Concepto</th>
+<th>Notación</th>
+<th>Cómo se implementa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Participación parcial (mín. 0)</td>
+<td>línea simple</td>
+<td>Clave foránea que admite nulo, o simple ausencia de filas</td>
+</tr>
+<tr>
+<td>Participación total (mín. 1)</td>
+<td>línea doble</td>
+<td><code>NOT NULL</code> en el lado N, o restricción diferida si el lado 1 la exige</td>
+</tr>
+<tr>
+<td>Máximo 1</td>
+<td>flecha / <code>1</code></td>
+<td>Clave única</td>
+</tr>
+<tr>
+<td>Máximo N</td>
+<td><code>N</code></td>
+<td>Sin restricción de unicidad</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="la-regla-de-traducción">La regla de traducción</h3>
+<pre><code class="language-mermaid">erDiagram
+    STUDENT ||--o{ ENROLLMENT : &quot;inscribe&quot;
+    COURSE  ||--o{ ENROLLMENT : &quot;recibe&quot;
+    TEACHER ||--o{ TEACHING   : &quot;dicta&quot;
+    COURSE  ||--o{ TEACHING   : &quot;es dictado por&quot;
+    STUDENT {
+        int  id PK
+        text nombre
+    }
+    COURSE {
+        int  id PK
+        text nombre
+        text periodo
+    }
+    ENROLLMENT {
+        int     student_id PK,FK
+        int     course_id  PK,FK
+        numeric nota
+        text    registrada_en
+    }
+    TEACHING {
+        int teacher_id PK,FK
+        int course_id  PK,FK
+    }
+</code></pre>
+<p>Reglas, en orden:</p>
+<ol>
+<li><strong>1:N</strong> → clave foránea en el lado N. No hace falta tabla nueva.</li>
+<li><strong>N:M</strong> → tabla puente cuya clave primaria es la pareja de claves foráneas. Los atributos de la relación viven ahí.</li>
+<li><strong>1:1</strong> → clave foránea con restricción <code>UNIQUE</code> en el lado con participación total.</li>
+<li><strong>Entidad débil</strong> → clave primaria compuesta por la clave de la entidad fuerte más un discriminador, con <code>ON DELETE CASCADE</code>.</li>
+</ol>
+<h3 id="relaciones-ternarias-casi-siempre-son-falsas">Relaciones ternarias: casi siempre son falsas</h3>
+<p>Una relación ternaria genuina es aquella cuya semántica <strong>no</strong> se recupera con tres binarias. El ejemplo clásico: «el proveedor P suministra la pieza Z para el proyecto Y». Saber que P suministra Z, que P trabaja en Y y que Z se usa en Y <strong>no</strong> implica el hecho ternario.</p>
+<p>En la mayoría de los modelos de gestión, sin embargo, lo que parece ternario es una entidad que aún no se ha nombrado. «Profesor dicta curso en aula» no es ternario: es la entidad <code>sesión</code>, con su horario y su capacidad. Antes de dibujar un rombo con tres patas, busca el sustantivo que falta.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Requisito: <em>«Un curso lo puede dictar más de un profesor, y un profesor dicta varios cursos. Todo curso debe tener al menos un profesor asignado.»</em></p>
+<p><strong>Cardinalidades completas:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Sentido</th>
+<th style="text-align: right;">Mín</th>
+<th style="text-align: right;">Máx</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>curso → profesor</td>
+<td style="text-align: right;"><strong>1</strong></td>
+<td style="text-align: right;">N</td>
+</tr>
+<tr>
+<td>profesor → curso</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
+</tr>
+</tbody>
+</table></div>
+<p>El mínimo 1 del primer sentido es participación total del lado <code>course</code>. Traducción:</p>
+<pre><code class="language-sql">CREATE TABLE teaching (
+  course_id  INTEGER NOT NULL REFERENCES courses(id)  ON DELETE CASCADE,
+  teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
+  PRIMARY KEY (course_id, teacher_id)
+);
+</code></pre>
+<p>Esto garantiza N:M y evita duplicados. <strong>No</strong> garantiza «todo curso tiene al menos un profesor»: se puede insertar un curso y no insertar nunca su fila en <code>teaching</code>.</p>
+<p>Las tres formas honestas de cerrar ese hueco, con su costo:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Mecanismo</th>
+<th>Garantía</th>
+<th>Costo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restricción diferida al final de la transacción</td>
+<td>Total, en el motor</td>
+<td>Solo en motores que la soportan (PostgreSQL sí; SQLite y MySQL, no de esta forma)</td>
+</tr>
+<tr>
+<td>Comprobación en la aplicación al crear el curso</td>
+<td>Depende del cliente</td>
+<td>Cualquier otro cliente la salta</td>
+</tr>
+<tr>
+<td>Invariante auditada periódicamente</td>
+<td>Detecta, no impide</td>
+<td>Barata y honesta; deja ventana de inconsistencia</td>
+</tr>
+</tbody>
+</table></div>
+<p>Consulta de la invariante, útil en cualquier motor:</p>
+<pre><code class="language-sql">SELECT c.id, c.nombre
+FROM courses c
+LEFT JOIN teaching t ON t.course_id = c.id
+WHERE t.course_id IS NULL;
+</code></pre>
+<p>Cero filas significa que la participación total se cumple ahora mismo. Es exactamente el tipo de comprobación que el laboratorio ejecuta como invariante.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Construcción</th>
+<th style="text-align: right;">Tablas resultantes</th>
+<th>¿Puede el motor garantizar el mínimo 1?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1:N con participación parcial</td>
+<td style="text-align: right;">2</td>
+<td>Sí (<code>NULL</code> permitido)</td>
+</tr>
+<tr>
+<td>1:N con participación total en N</td>
+<td style="text-align: right;">2</td>
+<td>Sí (<code>NOT NULL</code>)</td>
+</tr>
+<tr>
+<td>1:N con participación total en 1</td>
+<td style="text-align: right;">2</td>
+<td>Solo con restricción diferida</td>
+</tr>
+<tr>
+<td>N:M</td>
+<td style="text-align: right;">3</td>
+<td>No, sin restricción diferida</td>
+</tr>
+<tr>
+<td>1:1</td>
+<td style="text-align: right;">2</td>
+<td>Sí, con <code>UNIQUE</code> + <code>NOT NULL</code> en un lado</td>
+</tr>
+<tr>
+<td>Entidad débil</td>
+<td style="text-align: right;">2</td>
+<td>Sí (clave compuesta + cascada)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Poner los atributos de la relación en una de las entidades.</strong> La nota en <code>students</code> obliga a un estudiante a tener una sola nota en toda su vida académica.</li>
+<li><strong>Leer «1:N» sin preguntar por los mínimos.</strong> La mitad de la información de la cardinalidad está en el mínimo, y es la mitad que genera reglas de negocio.</li>
+<li><strong>Creer que la clave foránea garantiza la participación total.</strong> Garantiza que si hay referencia, existe; no que haya referencia.</li>
+<li><strong>Inventar relaciones ternarias.</strong> Busca primero el sustantivo que falta.</li>
+<li><strong>Usar <code>ON DELETE CASCADE</code> por comodidad.</strong> En una tabla puente es razonable; sobre datos históricos borra evidencia que quizá deba conservarse.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las cardinalidades mal declaradas se manifiestan meses después como filas huérfanas, informes que no cuadran y consultas que devuelven duplicados. Una cardinalidad es una promesa: si el motor no puede hacerla cumplir, hay que decir explícitamente quién la vigila.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Sobre el dominio del repositorio:</p>
+<ol>
+<li>Dibuja el diagrama con las cuatro cardinalidades completas de cada relación.</li>
+<li>Identifica una participación total que el esquema actual <strong>no</strong> garantiza.</li>
+<li>Escribe la consulta de invariante que la audita y ejecútala.</li>
+<li>Propón el mecanismo que la haría cumplir y declara su costo.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica con un ejemplo del dominio por qué la nota es atributo de la relación y no de la entidad.</li>
+<li>Da una relación ternaria genuina de tu experiencia y demuestra que no se descompone en tres binarias.</li>
+<li>¿Qué diferencia práctica hay entre <code>ON DELETE CASCADE</code> y <code>ON DELETE RESTRICT</code> en la tabla <code>teaching</code>?</li>
+<li>Un modelo declara participación total en ambos lados de una relación 1:1. ¿Cómo se inserta la primera fila?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Peter Pin-Shan Chen</strong> (1976). <a href="https://dl.acm.org/doi/10.1145/320434.320440">The Entity-Relationship Model - Toward a Unified View of Data</a>. ACM TODS 1(1). DOI <a href="https://doi.org/10.1145/320434.320440">10.1145/320434.320440</a>.<br />
+  Origen del diagrama entidad-relación.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

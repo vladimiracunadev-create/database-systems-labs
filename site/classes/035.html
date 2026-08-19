@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Bloqueo en dos fases, MVCC e instantaneas. Parte 07: Transacciones, concurrencia y recuperación.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>035 — Bloqueo en dos fases, MVCC e instantaneas · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 07 · Transacciones, concurrencia y recuperación</span>
+</nav>
+<main class="content">
+<h1 id="035--bloqueo-en-dos-fases-mvcc-e-instantaneas">035 — Bloqueo en dos fases, MVCC e instantaneas</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>07 — Transacciones, concurrencia y recuperación</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>2PL</code> · <code>versión de fila</code> · <code>instantánea</code> · <code>interbloqueo</code> · <code>vacuum</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Conocer los dos mecanismos con que los motores implementan el aislamiento —bloqueo y versiones— porque determinan qué operaciones se estorban entre sí y cómo se resuelve un interbloqueo.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar el bloqueo en dos fases y por qué garantiza serializabilidad.</li>
+<li>Leer una matriz de compatibilidad de bloqueos.</li>
+<li>Describir cómo MVCC decide qué versión de fila ve cada transacción.</li>
+<li>Diagnosticar un interbloqueo y prevenirlo.</li>
+<li>Explicar por qué MVCC necesita recolección de versiones muertas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="bloqueo-en-dos-fases-2pl">Bloqueo en dos fases (2PL)</h3>
+<p>Dos reglas:</p>
+<ol>
+<li><strong>Fase de crecimiento:</strong> la transacción adquiere bloqueos y no libera ninguno.</li>
+<li><strong>Fase de decrecimiento:</strong> libera bloqueos y no adquiere ninguno.</li>
+</ol>
+<p>En la práctica se usa <strong>2PL estricto</strong>: todos los bloqueos se liberan en el <code>COMMIT</code>. Eso evita además las lecturas sucias y las reversiones en cascada.</p>
+<p>Matriz de compatibilidad, para bloqueos de fila:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tiene ↓ / Pide →</th>
+<th>Compartido (S)</th>
+<th>Exclusivo (X)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Compartido (S)</strong></td>
+<td>Compatible</td>
+<td>Espera</td>
+</tr>
+<tr>
+<td><strong>Exclusivo (X)</strong></td>
+<td>Espera</td>
+<td>Espera</td>
+</tr>
+</tbody>
+</table></div>
+<p>La consecuencia práctica en un motor con bloqueo puro (SQL Server en <code>READ COMMITTED</code> clásico): <strong>los lectores bloquean a los escritores</strong>. Un informe largo puede detener las escrituras.</p>
+<h3 id="mvcc">MVCC</h3>
+<p>En lugar de bloquear para leer, el motor guarda <strong>varias versiones</strong> de cada fila. Cada transacción ve una instantánea coherente.</p>
+<p>En PostgreSQL, cada fila lleva <code>xmin</code> (transacción que la creó) y <code>xmax</code> (la que la borró o actualizó). Una transacción con instantánea <code>S</code> ve una versión si:</p>
+<pre><code class="language-text">xmin está confirmada y es visible en S,  y
+xmax no existe, o no está confirmada, o no es visible en S
+</code></pre>
+<p>Un <code>UPDATE</code> no modifica: inserta una versión nueva y marca <code>xmax</code> en la anterior.</p>
+<p><strong>La regla que resume MVCC: los lectores no bloquean a los escritores y los escritores no bloquean a los lectores.</strong> Los escritores sí se bloquean entre sí sobre la misma fila.</p>
+<p>Precio: las versiones muertas ocupan espacio hasta que <code>VACUUM</code> las recupera, y una transacción abierta impide recuperarlas (clase 033).</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Mecanismo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>MVCC con versiones en la propia tabla + <code>VACUUM</code></td>
+</tr>
+<tr>
+<td>MySQL InnoDB</td>
+<td>MVCC con versiones en el segmento de deshacer + bloqueo de siguiente clave</td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td>MVCC con segmentos de deshacer</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Bloqueo por defecto; MVCC con <code>READ_COMMITTED_SNAPSHOT</code></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>Instantánea por archivo; un escritor</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="bloqueo-de-siguiente-clave">Bloqueo de siguiente clave</h3>
+<p>MVCC evita los fantasmas en lectura, pero no basta para escrituras que dependen de un rango. InnoDB añade el <strong>bloqueo de siguiente clave</strong>: bloquea el registro y el hueco anterior en el índice, impidiendo insertar en ese rango.</p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE course_id = 42 FOR UPDATE;
+-- bloquea las filas existentes Y los huecos: nadie puede insertar con course_id = 42
+</code></pre>
+<p>Efecto secundario importante: si la consulta <strong>no</strong> usa un índice, InnoDB bloquea todas las filas examinadas, que pueden ser la tabla entera. Un <code>FOR UPDATE</code> sin índice adecuado convierte una operación puntual en un bloqueo global.</p>
+<h3 id="interbloqueo">Interbloqueo</h3>
+<pre><code class="language-text">T1: bloquea fila A ... pide fila B
+T2: bloquea fila B ... pide fila A
+</code></pre>
+<p>Ciclo de espera. El motor lo detecta y <strong>aborta una</strong> de las transacciones (la «víctima»). No es un error del motor: es su forma correcta de resolverlo.</p>
+<p>Prevención, en orden de eficacia:</p>
+<ol>
+<li><strong>Acceder siempre a los recursos en el mismo orden.</strong> Si toda transacción bloquea las cuentas por identificador ascendente, no puede haber ciclo.</li>
+<li><strong>Transacciones cortas.</strong> Menos ventana para el ciclo.</li>
+<li><strong>Bloquear lo mínimo.</strong> <code>FOR UPDATE</code> solo sobre lo que se va a escribir, y con índice.</li>
+<li><strong>Reintentar.</strong> La víctima debe reintentar con retroceso; es parte del contrato.</li>
+</ol>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph P[&quot;2PL (bloqueo)&quot;]
+        L1[&quot;Leer: bloqueo S&quot;] --&gt; L2[&quot;Escribir: bloqueo X&quot;]
+        L2 --&gt; L3[&quot;COMMIT: liberar todo&quot;]
+        L1 -.-&gt;|&quot;lector bloquea&lt;br/&gt;a escritor&quot;| X1[&quot;Contención&quot;]
+    end
+    subgraph M[&quot;MVCC&quot;]
+        V1[&quot;Leer: instantánea&lt;br/&gt;sin bloqueo&quot;] --&gt; V2[&quot;Escribir: versión nueva&lt;br/&gt;+ bloqueo de fila&quot;]
+        V2 --&gt; V3[&quot;COMMIT&quot;]
+        V3 --&gt; V4[&quot;VACUUM recupera&lt;br/&gt;versiones muertas&quot;]
+    end
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<h3 id="interbloqueo-reproducible">Interbloqueo reproducible</h3>
+<pre><code class="language-text">Sesión A                                 Sesión B
+BEGIN;
+UPDATE cuentas SET saldo=saldo-100
+  WHERE id=1;                            BEGIN;
+                                         UPDATE cuentas SET saldo=saldo-50
+                                           WHERE id=2;
+UPDATE cuentas SET saldo=saldo+100
+  WHERE id=2;      -- espera a B
+                                         UPDATE cuentas SET saldo=saldo+50
+                                           WHERE id=1;   -- espera a A → CICLO
+</code></pre>
+<p>PostgreSQL detecta el ciclo en ~1 s (<code>deadlock_timeout</code>) y aborta una:</p>
+<pre><code class="language-text">ERROR:  deadlock detected
+DETAIL: Process 1234 waits for ShareLock on transaction 5678; blocked by process 5679.
+HINT:   See server log for query details.
+</code></pre>
+<p><strong>Corrección por orden canónico:</strong></p>
+<pre><code class="language-python">def transferir(conn, origen, destino, monto):
+    # Bloquear siempre por id ascendente: dos transferencias cruzadas
+    # (1→2 y 2→1) piden los mismos bloqueos en el mismo orden y no hay ciclo.
+    primero, segundo = sorted([origen, destino])
+    with conn.transaction():
+        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (primero,))
+        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (segundo,))
+        conn.execute(&quot;UPDATE cuentas SET saldo = saldo - %s WHERE id = %s&quot;, (monto, origen))
+        conn.execute(&quot;UPDATE cuentas SET saldo = saldo + %s WHERE id = %s&quot;, (monto, destino))
+</code></pre>
+<p>Con el orden canónico, una de las dos espera y ambas terminan. Sin él, una muere y hay que reintentarla.</p>
+<h3 id="mvcc-en-acción">MVCC en acción</h3>
+<pre><code class="language-sql">-- Sesión A
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM enrollments;   -- 240 000
+
+-- Sesión B (concurrente)
+INSERT INTO enrollments VALUES (...);   -- 1 000 filas
+COMMIT;
+
+-- Sesión A, otra vez
+SELECT COUNT(*) FROM enrollments;   -- 240 000  ← sigue viendo su instantánea
+COMMIT;
+SELECT COUNT(*) FROM enrollments;   -- 241 000
+</code></pre>
+<p>Ninguna de las dos sesiones esperó a la otra. Ese es todo el valor de MVCC.</p>
+<p><strong>El precio, medido.</strong> Durante la transacción de A, las versiones antiguas no se pueden recuperar:</p>
+<pre><code class="language-sql">SELECT relname, n_dead_tup, last_autovacuum FROM pg_stat_user_tables
+WHERE relname = 'enrollments';
+</code></pre>
+<p>Con 2 000 actualizaciones por segundo y una transacción de A abierta 30 minutos, se acumulan ~3,6 millones de versiones muertas que ningún vacuum puede retirar hasta que A termine. La tabla crece, los barridos leen páginas casi vacías y el rendimiento cae de forma sostenida.</p>
+<p><strong>Diagnóstico de transacciones largas:</strong></p>
+<pre><code class="language-sql">SELECT pid, state, now() - xact_start AS duracion, query
+FROM pg_stat_activity
+WHERE state &lt;&gt; 'idle' AND xact_start IS NOT NULL
+ORDER BY duracion DESC LIMIT 5;
+</code></pre>
+<p>Es la primera consulta que ejecutar cuando una base «crece sin motivo».</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>2PL puro</th>
+<th>MVCC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lector frente a escritor</td>
+<td>Se bloquean</td>
+<td>No se bloquean</td>
+</tr>
+<tr>
+<td>Escritor frente a escritor</td>
+<td>Se bloquean</td>
+<td>Se bloquean</td>
+</tr>
+<tr>
+<td>Coste en espacio</td>
+<td>Bajo</td>
+<td>Versiones + recolección</td>
+</tr>
+<tr>
+<td>Interbloqueos</td>
+<td>Frecuentes</td>
+<td>Menos, pero existen</td>
+</tr>
+<tr>
+<td>Lecturas consistentes</td>
+<td>Con bloqueo largo</td>
+<td>Gratis, por instantánea</td>
+</tr>
+<tr>
+<td>Problema operativo típico</td>
+<td>Contención</td>
+<td>Hinchazón por transacción larga</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong><code>SELECT ... FOR UPDATE</code> sin índice.</strong> Bloquea todas las filas examinadas.</li>
+<li><strong>Orden de acceso inconsistente.</strong> Fabrica interbloqueos evitables.</li>
+<li><strong>No reintentar la víctima.</strong> El interbloqueo llega al usuario como error.</li>
+<li><strong>Transacciones largas en un motor MVCC.</strong> Impiden la recolección.</li>
+<li><strong>Suponer que MVCC elimina el bloqueo.</strong> Los escritores siguen compitiendo por la misma fila.</li>
+<li><strong>Bloquear el padre cuando bastaba una sentencia atómica.</strong></li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los interbloqueos aumentan de golpe tras un despliegue que cambió el orden de las escrituras. Registrar el grafo de espera y el orden de acceso de cada transacción convierte un problema intermitente en uno reproducible.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Provoca un interbloqueo con dos sesiones y captura el mensaje del motor.</li>
+<li>Corrígelo con orden canónico y demuestra que ya no ocurre.</li>
+<li>Mide <code>n_dead_tup</code> antes, durante y después de una transacción larga.</li>
+<li>Compara el mismo escenario en un motor con bloqueo y en uno con MVCC.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué el 2PL estricto evita las reversiones en cascada?</li>
+<li>Explica con <code>xmin</code>/<code>xmax</code> por qué la sesión A sigue viendo 240 000 filas.</li>
+<li>¿Qué bloquea exactamente <code>FOR UPDATE</code> sobre una consulta sin índice en InnoDB?</li>
+<li>Da dos transacciones de tu sistema que podrían formar un ciclo y define su orden canónico.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
+  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/mvcc.html">PostgreSQL: Concurrency Control</a>.<br />
+  Niveles de aislamiento tal como los implementa PostgreSQL, no como los define la norma.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

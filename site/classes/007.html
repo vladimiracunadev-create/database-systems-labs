@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Claves, identidad y el debate natural frente a sustituta. Parte 01: Modelado conceptual y requisitos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>007 — Claves, identidad y el debate natural frente a sustituta · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 01 · Modelado conceptual y requisitos</span>
+</nav>
+<main class="content">
+<h1 id="007--claves-identidad-y-el-debate-natural-frente-a-sustituta">007 — Claves, identidad y el debate natural frente a sustituta</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="006.html">← Anterior</a> · <a href="008.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>01 — Modelado conceptual y requisitos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>clave candidata</code> · <code>clave primaria</code> · <code>clave sustituta</code> · <code>identidad estable</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Decidir cómo se identifica una fila. Es la decisión de modelado más difícil de revertir: cambiar una clave primaria a los tres años obliga a tocar todas las tablas que la referencian y todos los sistemas que la almacenaron.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Distinguir superclave, clave candidata, clave primaria y clave alternativa.</li>
+<li>Aplicar los tres criterios de una buena clave: unicidad, no nulidad e inmutabilidad.</li>
+<li>Argumentar a favor y en contra de la clave sustituta con casos concretos.</li>
+<li>Conservar las claves naturales como restricciones <code>UNIQUE</code> aunque no sean primarias.</li>
+<li>Elegir entre entero secuencial y UUID con un criterio de rendimiento, no de gusto.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="vocabulario-preciso">Vocabulario preciso</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Definición</th>
+<th>Ejemplo en el dominio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Superclave</td>
+<td>Conjunto de atributos que identifica unívocamente</td>
+<td><code>(id, nombre)</code></td>
+</tr>
+<tr>
+<td>Clave candidata</td>
+<td>Superclave mínima: quitarle un atributo destruye la unicidad</td>
+<td><code>(id)</code>, <code>(email)</code></td>
+</tr>
+<tr>
+<td>Clave primaria</td>
+<td>La candidata elegida como identificador oficial</td>
+<td><code>(id)</code></td>
+</tr>
+<tr>
+<td>Clave alternativa</td>
+<td>Las candidatas no elegidas</td>
+<td><code>(email)</code> con <code>UNIQUE</code></td>
+</tr>
+<tr>
+<td>Clave sustituta</td>
+<td>Valor sin significado de negocio, generado por el sistema</td>
+<td><code>id</code> autoincremental</td>
+</tr>
+<tr>
+<td>Clave natural</td>
+<td>Valor con significado de negocio</td>
+<td>RUT, ISBN, código de curso</td>
+</tr>
+</tbody>
+</table></div>
+<p>Date subraya un punto que se pierde: elegir una clave primaria <strong>no</strong> autoriza a olvidar las demás candidatas. Si <code>email</code> identifica de forma única, esa restricción debe declararse con <code>UNIQUE</code> aunque la primaria sea <code>id</code>. Omitirla convierte una regla del dominio en un accidente.</p>
+<h3 id="los-tres-criterios">Los tres criterios</h3>
+<p>Una clave debe ser:</p>
+<ol>
+<li><strong>Única</strong> en todo el conjunto, no «casi siempre distinta».</li>
+<li><strong>No nula</strong>, siempre conocida en el momento de insertar.</li>
+<li><strong>Inmutable</strong>: si cambia, deja de identificar a la misma cosa.</li>
+</ol>
+<p>El tercero es el que descarta casi todas las claves naturales. El correo cambia. El nombre cambia. El RUT se corrige por errores de digitación. El código de producto se reestructura cuando el catálogo crece. Karwin cataloga como antipatrón usar como clave un valor que el negocio puede reasignar.</p>
+<h3 id="el-caso-a-favor-de-la-sustituta">El caso a favor de la sustituta</h3>
+<ul>
+<li>Inmutable por construcción: nada del negocio la puede cambiar.</li>
+<li>Estrecha: 4 u 8 bytes frente a una cadena; importa mucho porque <strong>la clave primaria se copia en cada clave foránea y en cada índice secundario</strong>.</li>
+<li>Uniforme: todas las tablas se referencian igual, lo que simplifica el código genérico.</li>
+</ul>
+<h3 id="el-caso-en-contra">El caso en contra</h3>
+<ul>
+<li>Añade una columna sin significado y una reunión más para leer algo comprensible.</li>
+<li>Permite insertar duplicados lógicos si nadie declaró la restricción <code>UNIQUE</code> natural. Este es el fallo real: no es culpa de la sustituta, es culpa de omitir la clave natural.</li>
+<li>En tablas puente (<code>enrollments</code>) suele sobrar: la pareja de claves foráneas ya es una clave candidata perfecta e inmutable.</li>
+</ul>
+<h3 id="entero-secuencial-frente-a-uuid">Entero secuencial frente a UUID</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Entero secuencial</th>
+<th>UUID v4</th>
+<th>UUID v7 / ULID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tamaño</td>
+<td>4–8 bytes</td>
+<td>16 bytes</td>
+<td>16 bytes</td>
+</tr>
+<tr>
+<td>Localidad de inserción en B-Tree</td>
+<td>Excelente (siempre al final)</td>
+<td>Mala (inserciones dispersas)</td>
+<td>Buena (prefijo temporal)</td>
+</tr>
+<tr>
+<td>Generable en el cliente</td>
+<td>No</td>
+<td>Sí</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Filtra información</td>
+<td>Sí: revela volumen y orden</td>
+<td>No</td>
+<td>Revela el instante</td>
+</tr>
+<tr>
+<td>Colisión entre sistemas</td>
+<td>Segura</td>
+<td>Improbable</td>
+<td>Improbable</td>
+</tr>
+</tbody>
+</table></div>
+<p>El punto no obvio es el de la localidad. Un B-Tree con claves crecientes concentra las inserciones en la página más a la derecha, que está en memoria. Con UUID v4, cada inserción cae en una página distinta al azar: con una tabla mayor que el buffer, cada inserción puede convertirse en una lectura de disco más una escritura. Es la razón técnica —no estética— por la que UUID v7 existe.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;¿Hay un atributo natural&lt;br/&gt;único, no nulo e inmutable?&quot;] --&gt;|&quot;No&quot;| S[&quot;Clave sustituta&quot;]
+    A --&gt;|&quot;Sí&quot;| B{&quot;¿Es estrecho y estable&lt;br/&gt;ante cambios legales&lt;br/&gt;o comerciales?&quot;}
+    B --&gt;|&quot;No&quot;| S
+    B --&gt;|&quot;Sí&quot;| C{&quot;¿Se referencia desde&lt;br/&gt;muchas tablas?&quot;}
+    C --&gt;|&quot;Sí&quot;| S
+    C --&gt;|&quot;No&quot;| N[&quot;Clave natural&quot;]
+    S --&gt; U[&quot;Declarar SIEMPRE la clave&lt;br/&gt;natural como UNIQUE&quot;]
+    N --&gt; U
+    U --&gt; V{&quot;¿Se generan filas en&lt;br/&gt;varios sistemas a la vez?&quot;}
+    V --&gt;|&quot;Sí&quot;| W[&quot;UUID v7 / ULID&quot;]
+    V --&gt;|&quot;No&quot;| X[&quot;Entero secuencial&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Modelamos estudiantes con RUT chileno.</p>
+<p><strong>Opción A — RUT como clave primaria:</strong></p>
+<pre><code class="language-sql">CREATE TABLE students (
+  rut    TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE enrollments (
+  student_rut TEXT REFERENCES students(rut),
+  course_id   INTEGER,
+  nota        NUMERIC(2,1)
+);
+</code></pre>
+<p>Falla los tres criterios en distinto grado:</p>
+<ul>
+<li><em>Unicidad</em>: se sostiene, salvo por RUT provisionales de estudiantes extranjeros — que existen y se repiten.</li>
+<li><em>No nulidad</em>: falla en la preinscripción, cuando el RUT todavía no se ha entregado.</li>
+<li><em>Inmutabilidad</em>: falla al corregir un dígito verificador mal digitado. Y esa corrección obliga a un <code>UPDATE</code> en cascada sobre todas las tablas hijas.</li>
+</ul>
+<p>Además, cada fila de <code>enrollments</code> almacena una cadena de ~12 bytes en lugar de 4. Con 2 millones de inscripciones: 24 MB frente a 8 MB solo en esa columna, replicado en cada índice que la incluya.</p>
+<p><strong>Opción B — sustituta con natural preservada:</strong></p>
+<pre><code class="language-sql">CREATE TABLE students (
+  id     INTEGER PRIMARY KEY,
+  rut    TEXT UNIQUE,                    -- clave candidata, admite nulo transitorio
+  nombre TEXT NOT NULL
+);
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p>Corregir un RUT es ahora un <code>UPDATE</code> de una fila. La regla de negocio «no hay dos estudiantes con el mismo RUT» sigue vigente porque está declarada con <code>UNIQUE</code>, no porque sea la primaria.</p>
+<p>Obsérvese la decisión en <code>enrollments</code>: la clave primaria es <strong>natural compuesta</strong>, no sustituta. Aquí sí lo es, porque <code>(student_id, course_id)</code> es única, no nula, inmutable y ya está presente; añadir un <code>enrollment_id</code> sería una columna que nadie consulta y un índice más que mantener.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Elección defendible</th>
+<th>Motivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entidad de negocio central</td>
+<td>Sustituta + natural <code>UNIQUE</code></td>
+<td>Las naturales de negocio mutan</td>
+</tr>
+<tr>
+<td>Tabla puente sin atributos propios</td>
+<td>Natural compuesta</td>
+<td>Ya es única e inmutable</td>
+</tr>
+<tr>
+<td>Catálogo estable normalizado (ISO, monedas)</td>
+<td>Natural</td>
+<td>El código <em>es</em> el estándar y no cambia</td>
+</tr>
+<tr>
+<td>Datos generados en varios nodos</td>
+<td>UUID v7 / ULID</td>
+<td>Evita coordinación para asignar identificadores</td>
+</tr>
+<tr>
+<td>Tabla de eventos de alto volumen</td>
+<td>Entero secuencial</td>
+<td>Localidad de inserción en el índice</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Poner una sustituta y olvidar el <code>UNIQUE</code> natural.</strong> Es la causa número uno de duplicados lógicos en producción.</li>
+<li><strong>Exponer la clave sustituta secuencial en URL públicas.</strong> Revela volumen (<code>/pedido/1043</code> dice cuántos pedidos hay) y facilita el conteo por terceros.</li>
+<li><strong>Usar UUID v4 como clave primaria agrupada en tablas grandes.</strong> Degrada la inserción por pérdida de localidad; v7 resuelve el problema sin renunciar a generar en el cliente.</li>
+<li><strong>Claves compuestas de cuatro o cinco columnas.</strong> Se copian enteras en cada índice secundario y en cada clave foránea.</li>
+<li><strong>Reutilizar identificadores de filas borradas.</strong> Rompe cualquier referencia externa, informe histórico o registro de auditoría.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Un cambio de clave primaria en un sistema con integraciones no es una migración: es una negociación con cada consumidor externo que guardó ese identificador. Elegir bien al principio cuesta una tarde; elegir mal cuesta un trimestre.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Localiza en un esquema real una clave primaria que pueda cambiar por decisión de negocio.</li>
+<li>Documenta qué tablas y qué sistemas externos se verían afectados por ese cambio.</li>
+<li>Propón la migración a sustituta conservando la natural como <code>UNIQUE</code>.</li>
+<li>Estima el ahorro o el costo en bytes de índice con el volumen real de tus datos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da una clave natural de tu dominio que cumpla los tres criterios y justifica por qué la elegirías.</li>
+<li>¿Por qué el ancho de la clave primaria afecta al tamaño de índices que no la incluyen explícitamente?</li>
+<li>Explica el problema de localidad de UUID v4 con una traza de inserciones sobre un B-Tree.</li>
+<li>En <code>enrollments</code> se eligió clave natural compuesta. Da un requisito futuro que obligaría a añadir una sustituta.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Bill Karwin</strong> (2010). <a href="https://pragprog.com/titles/bksqla/sql-antipatterns/">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a>. Pragmatic Bookshelf. ISBN 978-1-934356-55-5.<br />
+  Catálogo de errores de modelado con su corrección y cuando el antipatron es aceptable.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="006.html">← Anterior</a> · <a href="008.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="SQLite y DuckDB: motores embebidos, transaccional frente a analítico. Parte 04: Motores relacionales y dialectos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>023 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 04 · Motores relacionales y dialectos</span>
+</nav>
+<main class="content">
+<h1 id="023--sqlite-y-duckdb-motores-embebidos-transaccional-frente-a-analítico">023 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="022.html">← Anterior</a> · <a href="024.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>04 — Motores relacionales y dialectos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>sqlite</code>, <code>duckdb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>motor embebido</code> · <code>tipado dinamico</code> · <code>almacenamiento columnar</code> · <code>vectorización</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Entender los motores embebidos y, con ellos, la diferencia fundamental entre un sistema transaccional y uno analítico. SQLite y DuckDB comparten arquitectura y resuelven problemas opuestos.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar qué significa «embebido» y qué desaparece al no haber servidor.</li>
+<li>Describir el tipado dinámico de SQLite y cuándo muerde.</li>
+<li>Justificar por qué SQLite admite un solo escritor y qué habilita el modo WAL.</li>
+<li>Explicar por qué el almacenamiento columnar cambia el orden de magnitud en analítica.</li>
+<li>Elegir entre ambos según la carga de trabajo.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="embebido">Embebido</h3>
+<p>No hay proceso servidor ni protocolo de red: el motor es una biblioteca enlazada al programa. Lo que desaparece:</p>
+<ul>
+<li>La latencia de red (microsegundos en vez de milisegundos por consulta).</li>
+<li>La autenticación y los permisos por usuario: quien puede leer el archivo, lo puede todo.</li>
+<li>El acceso concurrente entre máquinas.</li>
+<li>La administración: no hay nada que arrancar ni que parchear por separado.</li>
+</ul>
+<p>Lo que <strong>no</strong> desaparece: transacciones, índices, planificador, registro anticipado y recuperación. SQLite implementa todo eso en menos de un megabyte, y por eso es el mejor motor para estudiar un gestor completo.</p>
+<h3 id="tipado-dinámico-de-sqlite">Tipado dinámico de SQLite</h3>
+<p>SQLite no tiene tipos de columna en el sentido habitual: tiene <strong>afinidades</strong>. Una columna declarada <code>INTEGER</code> acepta texto.</p>
+<pre><code class="language-sql">CREATE TABLE t (n INTEGER);
+INSERT INTO t VALUES ('hola');     -- se acepta
+SELECT typeof(n) FROM t;           -- 'text'
+</code></pre>
+<p>Desde la versión 3.37 existen las tablas <code>STRICT</code>, que restauran el comportamiento esperado:</p>
+<pre><code class="language-sql">CREATE TABLE t (n INTEGER) STRICT;
+INSERT INTO t VALUES ('hola');     -- error: cannot store TEXT value in INTEGER column
+</code></pre>
+<p><strong>Recomendación del repositorio:</strong> usar <code>STRICT</code> siempre que la versión lo permita. El tipado laxo es una fuente de datos sucios que después nadie sabe de dónde salieron.</p>
+<p>Tampoco hay tipos de fecha: se usa texto ISO-8601, número Julian o entero Unix. El repositorio usa texto ISO-8601 en UTC con <code>CHECK</code> de formato, porque es legible y ordenable lexicográficamente.</p>
+<h3 id="un-solo-escritor">Un solo escritor</h3>
+<p>SQLite serializa las escrituras a nivel de base de datos completa. En modo de registro por reversión (<code>rollback journal</code>), un escritor bloquea también a los lectores. En modo <strong>WAL</strong>:</p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;
+</code></pre>
+<ul>
+<li>Los lectores no bloquean al escritor y el escritor no bloquea a los lectores.</li>
+<li>Sigue habiendo <strong>un solo escritor a la vez</strong>.</li>
+<li>Requiere memoria compartida, así que no funciona bien sobre sistemas de archivos en red.</li>
+</ul>
+<p>Configuración habitual para una aplicación real:</p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;
+PRAGMA synchronous  = NORMAL;    -- FULL es más seguro; NORMAL es seguro con WAL ante caída de proceso
+PRAGMA foreign_keys = ON;        -- ¡por conexión!
+PRAGMA busy_timeout = 5000;      -- esperar en vez de fallar con SQLITE_BUSY
+</code></pre>
+<p><code>busy_timeout</code> es el que más incidencias evita: sin él, cualquier colisión de escritura devuelve un error inmediato al cliente.</p>
+<h3 id="duckdb-la-misma-forma-el-problema-opuesto">DuckDB: la misma forma, el problema opuesto</h3>
+<p>DuckDB es también embebido y también SQL, pero está construido para analítica:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>SQLite</th>
+<th>DuckDB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Almacenamiento</td>
+<td>Por filas</td>
+<td><strong>Por columnas</strong></td>
+</tr>
+<tr>
+<td>Ejecución</td>
+<td>Fila a fila</td>
+<td><strong>Vectorizada</strong> (lotes de ~2 048 valores)</td>
+</tr>
+<tr>
+<td>Carga objetivo</td>
+<td>Muchas transacciones pequeñas</td>
+<td>Pocas consultas que barren mucho</td>
+</tr>
+<tr>
+<td>Escritura concurrente</td>
+<td>Un escritor</td>
+<td>Un escritor</td>
+</tr>
+<tr>
+<td>Lectura de Parquet/CSV</td>
+<td>No nativa</td>
+<td>Nativa, sin importar</td>
+</tr>
+<tr>
+<td>Uso típico</td>
+<td>Aplicación, móvil, borde</td>
+<td>Análisis local, transformación</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Por qué el formato columnar cambia el orden de magnitud.</strong> Para <code>SELECT AVG(nota) FROM enrollments</code> sobre una tabla de 20 columnas y 10 millones de filas:</p>
+<ul>
+<li><strong>Por filas:</strong> para leer una columna hay que leer las páginas que contienen las filas enteras. Si la fila ocupa 200 bytes y la nota 8, se leen ~2 GB para usar 80 MB.</li>
+<li><strong>Por columnas:</strong> la columna <code>nota</code> está contigua. Se leen ~80 MB, y además comprime mucho mejor porque los valores contiguos son homogéneos.</li>
+</ul>
+<p>Factor 25 en E/S por el mismo SQL y los mismos datos. A eso se añade la ejecución vectorizada, que procesa lotes en vez de fila a fila y aprovecha mejor la caché de la CPU.</p>
+<pre><code class="language-mermaid">flowchart TD
+    C[&quot;¿Qué carga tengo?&quot;] --&gt; A{&quot;¿Muchas escrituras&lt;br/&gt;pequeñas y concurrentes?&quot;}
+    A -- &quot;Sí&quot; --&gt; B{&quot;¿Varios procesos&lt;br/&gt;o máquinas?&quot;}
+    B -- &quot;Sí&quot; --&gt; S[&quot;PostgreSQL / MySQL&quot;]
+    B -- &quot;No&quot; --&gt; SL[&quot;SQLite + WAL&quot;]
+    A -- &quot;No&quot; --&gt; D{&quot;¿Consultas que barren&lt;br/&gt;muchas filas y pocas columnas?&quot;}
+    D -- &quot;Sí&quot; --&gt; E{&quot;¿Cabe en una&lt;br/&gt;máquina?&quot;}
+    E -- &quot;Sí&quot; --&gt; DD[&quot;DuckDB&quot;]
+    E -- &quot;No&quot; --&gt; CH[&quot;ClickHouse / almacén (parte 11)&quot;]
+    D -- &quot;No&quot; --&gt; SL
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Misma pregunta analítica, dos motores. 10 millones de inscripciones.</p>
+<pre><code class="language-sql">SELECT c.periodo, COUNT(*) AS inscritos, AVG(e.nota) AS promedio
+FROM enrollments e JOIN courses c ON c.id = e.course_id
+GROUP BY c.periodo ORDER BY c.periodo;
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Datos leídos</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>Todas las páginas de <code>enrollments</code> (filas completas)</td>
+<td>Barrido por filas, agregación por hash</td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>Solo <code>course_id</code> y <code>nota</code></td>
+<td>Barrido columnar comprimido, agregación vectorizada</td>
+</tr>
+</tbody>
+</table></div>
+<p>La diferencia no está en la calidad del código de cada motor: está en el formato. SQLite no puede leer solo dos columnas porque no están separadas físicamente.</p>
+<p><strong>Y el caso inverso</strong>, una carga transaccional:</p>
+<pre><code class="language-sql">BEGIN;
+INSERT INTO enrollments (student_id, course_id) VALUES (:s, :c);
+UPDATE courses SET inscritos = inscritos + 1 WHERE id = :c;
+COMMIT;
+</code></pre>
+<p>Repetido 100 000 veces con parámetros distintos, SQLite es netamente superior: escribir una fila en formato columnar obliga a tocar tantos bloques como columnas tenga la tabla. DuckDB está diseñado para cargas por lotes, no para transacciones pequeñas.</p>
+<p><strong>Conclusión operativa:</strong> no es que uno sea mejor. Es que el formato de almacenamiento <strong>es</strong> la decisión, y determina qué carga sale barata. Esta es la misma idea que reaparece en la clase 032 (analítica columnar) y en la 054 (OLTP frente a OLAP).</p>
+<p><strong>Interoperabilidad.</strong> DuckDB lee archivos SQLite y Parquet directamente:</p>
+<pre><code class="language-sql">INSTALL sqlite; LOAD sqlite;
+SELECT COUNT(*) FROM sqlite_scan('school.db', 'enrollments');
+SELECT * FROM read_parquet('notas/*.parquet') WHERE periodo = '2026-1';
+</code></pre>
+<p>Patrón muy útil: la aplicación escribe en SQLite y el análisis se hace con DuckDB sobre el mismo archivo, sin ETL ni servidor.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>SQLite</th>
+<th>DuckDB</th>
+<th>PostgreSQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Proceso servidor</td>
+<td>No</td>
+<td>No</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Escritores concurrentes</td>
+<td>1</td>
+<td>1</td>
+<td>Muchos</td>
+</tr>
+<tr>
+<td>Formato</td>
+<td>Filas</td>
+<td>Columnas</td>
+<td>Filas</td>
+</tr>
+<tr>
+<td>Bueno en</td>
+<td>OLTP pequeño</td>
+<td>OLAP local</td>
+<td>OLTP general</td>
+</tr>
+<tr>
+<td>Control de acceso</td>
+<td>Del archivo</td>
+<td>Del archivo</td>
+<td>Por rol y fila</td>
+</tr>
+<tr>
+<td>Réplica</td>
+<td>No nativa</td>
+<td>No</td>
+<td>Sí</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Olvidar <code>PRAGMA foreign_keys = ON</code>.</strong> Se aplica por conexión; sin él, las claves foráneas son decorativas.</li>
+<li><strong>No activar WAL en aplicaciones con lectores concurrentes.</strong> Los lectores se bloquean sin necesidad.</li>
+<li><strong>SQLite en un sistema de archivos en red.</strong> El bloqueo no es fiable; es la vía rápida a la corrupción.</li>
+<li><strong>No usar tablas <code>STRICT</code>.</strong> El tipado laxo deja entrar datos que después hay que limpiar.</li>
+<li><strong>Usar DuckDB como base transaccional.</strong> No es su carga; el formato columnar castiga la escritura fila a fila.</li>
+<li><strong>Sin <code>busy_timeout</code>.</strong> Errores <code>SQLITE_BUSY</code> esporádicos que parecen aleatorios.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Una parte grande de los sistemas que usan PostgreSQL solo por costumbre funcionarían mejor con SQLite: menos operación, menos latencia, respaldo trivial (copiar un archivo). El criterio es la concurrencia de escritura y el número de máquinas, no el tamaño de los datos.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Ejecuta la misma consulta analítica sobre el mismo conjunto en SQLite y en DuckDB, y mide.</li>
+<li>Ejecuta la misma carga transaccional en ambos y mide.</li>
+<li>Activa WAL en SQLite y demuestra con dos conexiones que un lector no bloquea al escritor.</li>
+<li>Crea una tabla <code>STRICT</code> y demuestra qué inserción deja de aceptarse.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Qué garantías se pierden al no tener proceso servidor, y cuáles se conservan?</li>
+<li>Explica con números por qué el formato columnar reduce la E/S de una consulta analítica.</li>
+<li>¿Por qué el modo WAL no permite dos escritores simultáneos?</li>
+<li>Da un sistema real de tu experiencia que hoy usa un servidor y podría usar SQLite, y defiende la decisión.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/optoverview.html">SQLite: Query Optimizer Overview</a>.<br />
+  Como decide SQLite usar un índice; útil para leer EXPLAIN QUERY PLAN.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="022.html">← Anterior</a> · <a href="024.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

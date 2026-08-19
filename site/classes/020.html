@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Portabilidad: qué exige la norma y qué añade cada motor. Parte 04: Motores relacionales y dialectos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>020 — Portabilidad: qué exige la norma y qué añade cada motor · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 04 · Motores relacionales y dialectos</span>
+</nav>
+<main class="content">
+<h1 id="020--portabilidad-qué-exige-la-norma-y-qué-añade-cada-motor">020 — Portabilidad: qué exige la norma y qué añade cada motor</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>04 — Motores relacionales y dialectos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code>, <code>sqlite</code>, <code>sql-server</code>, <code>oracle-database</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>norma frente a producto</code> · <code>matriz de portabilidad</code> · <code>extensión propietaria</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Escribir SQL que sobreviva a un cambio de motor, y saber exactamente dónde se paga por no hacerlo. La portabilidad total no existe; la portabilidad <em>gestionada</em> sí.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar por qué ningún motor implementa la norma completa.</li>
+<li>Construir una matriz de portabilidad para tu propio código.</li>
+<li>Aislar las divergencias en una capa en vez de esparcirlas.</li>
+<li>Decidir cuándo usar una extensión propietaria a sabiendas.</li>
+<li>Distinguir divergencia sintáctica de divergencia semántica, que es mucho peor.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="qué-es-la-norma-y-qué-no">Qué es la norma y qué no</h3>
+<p>ISO/IEC 9075 define SQL en varias partes y con niveles de conformidad. La realidad es que <strong>ningún producto implementa la norma completa</strong> y todos añaden extensiones. La norma no es un contrato de compatibilidad: es un vocabulario común.</p>
+<p>Lo estable en la práctica —el «núcleo portable»— es aproximadamente:</p>
+<p><code>CREATE TABLE</code> con tipos básicos · <code>PRIMARY KEY</code>, <code>FOREIGN KEY</code>, <code>UNIQUE</code>, <code>CHECK</code>, <code>NOT NULL</code> · <code>SELECT/FROM/WHERE/GROUP BY/HAVING/ORDER BY</code> · <code>INNER</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>FULL JOIN</code> · <code>UNION</code>, <code>INTERSECT</code>, <code>EXCEPT</code> · subconsultas y <code>EXISTS</code> · CTE y <code>WITH RECURSIVE</code> · funciones de ventana · <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> · <code>BEGIN</code>/<code>COMMIT</code>/<code>ROLLBACK</code>.</p>
+<p>Lo que <strong>no</strong> es portable, aunque lo parezca: tipos de fecha y hora, funciones de cadena, autoincremento, <code>LIMIT</code>, <code>UPSERT</code>, tipos JSON, expresiones regulares, <code>TOP</code>/<code>FETCH</code>, y —la peor— la colación.</p>
+<h3 id="sintáctica-frente-a-semántica">Sintáctica frente a semántica</h3>
+<p>Esta distinción es la que decide cuánto duele una migración.</p>
+<ul>
+<li><strong>Divergencia sintáctica:</strong> el mismo concepto se escribe distinto. Falla al ejecutar, se ve enseguida, se arregla una vez.</li>
+<li><strong>Divergencia semántica:</strong> la misma sintaxis hace cosas distintas. <strong>No falla</strong>: devuelve otro resultado. Se descubre en un informe, meses después.</li>
+</ul>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Divergencia</th>
+<th>Tipo</th>
+<th>Consecuencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LIMIT</code> frente a <code>FETCH FIRST</code> frente a <code>TOP</code></td>
+<td>Sintáctica</td>
+<td>Error de sintaxis</td>
+</tr>
+<tr>
+<td><code>AUTO_INCREMENT</code> / <code>SERIAL</code> / <code>IDENTITY</code></td>
+<td>Sintáctica</td>
+<td>Error en DDL</td>
+</tr>
+<tr>
+<td>Concatenación <code>\|\|</code> frente a <code>CONCAT()</code></td>
+<td>Sintáctica</td>
+<td>Error, salvo en MySQL donde <code>\|\|</code> es <code>OR</code></td>
+</tr>
+<tr>
+<td>Comparación de texto sensible o no a mayúsculas</td>
+<td><strong>Semántica</strong></td>
+<td>Resultados distintos, sin error</td>
+</tr>
+<tr>
+<td>División entera frente a decimal</td>
+<td><strong>Semántica</strong></td>
+<td>Números distintos</td>
+</tr>
+<tr>
+<td>Cadena vacía tratada como nulo (Oracle)</td>
+<td><strong>Semántica</strong></td>
+<td>Filas que aparecen o desaparecen</td>
+</tr>
+<tr>
+<td>Redondeo a la mitad</td>
+<td><strong>Semántica</strong></td>
+<td>Descuadres contables</td>
+</tr>
+</tbody>
+</table></div>
+<p>El caso de <code>||</code> en MySQL merece atención: con el modo <code>PIPES_AS_CONCAT</code> desactivado, <code>'a' || 'b'</code> se evalúa como <code>'a' OR 'b'</code> → <code>0</code>. No es un error; es un resultado equivocado.</p>
+<h3 id="estrategias">Estrategias</h3>
+<pre><code class="language-mermaid">flowchart TD
+    S[&quot;SQL de la aplicación&quot;] --&gt; D{&quot;¿La construcción&lt;br/&gt;está en el núcleo portable?&quot;}
+    D -- &quot;Sí&quot; --&gt; OK[&quot;Escribirla directamente&quot;]
+    D -- &quot;No&quot; --&gt; N{&quot;¿Hay equivalente&lt;br/&gt;portable razonable?&quot;}
+    N -- &quot;Sí&quot; --&gt; E[&quot;Usar el equivalente&lt;br/&gt;aunque sea más largo&quot;]
+    N -- &quot;No&quot; --&gt; V{&quot;¿Aporta valor real&lt;br/&gt;(rendimiento, corrección)?&quot;}
+    V -- &quot;No&quot; --&gt; E
+    V -- &quot;Sí&quot; --&gt; A[&quot;Extensión propietaria&lt;br/&gt;aislada tras una función&lt;br/&gt;+ anotada en la matriz&quot;]
+</code></pre>
+<p>La regla operativa: <strong>usar extensiones está permitido; esparcirlas por todo el código, no</strong>. Una extensión aislada en un único punto es una decisión reversible; la misma extensión en 200 consultas es una migración de trimestre.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Consulta «los 10 estudiantes con mejor promedio», en cinco dialectos.</p>
+<pre><code class="language-sql">-- Núcleo portable (norma SQL:2008, soportado hoy por PostgreSQL, SQL Server, Oracle, MariaDB 10.6+)
+SELECT s.id, s.nombre, AVG(e.nota) AS promedio
+FROM students s JOIN enrollments e ON e.student_id = s.id
+GROUP BY s.id, s.nombre
+ORDER BY promedio DESC, s.id
+FETCH FIRST 10 ROWS ONLY;
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Cláusula de límite</th>
+<th>¿Acepta <code>FETCH FIRST</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td><code>LIMIT 10</code></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>MySQL / MariaDB</td>
+<td><code>LIMIT 10</code></td>
+<td>Solo MariaDB reciente</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><code>LIMIT 10</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td><code>TOP 10</code> u <code>OFFSET ... FETCH</code></td>
+<td>Sí, con <code>ORDER BY</code></td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td><code>FETCH FIRST 10 ROWS ONLY</code> (12c+)</td>
+<td>Sí</td>
+</tr>
+</tbody>
+</table></div>
+<p>Como SQLite y MySQL no aceptan <code>FETCH FIRST</code>, el mínimo común denominador real hoy es <code>LIMIT</code>, que <strong>no</strong> está en la norma. Conclusión honesta: la portabilidad se negocia contra el conjunto de motores que uno realmente soporta, no contra la norma.</p>
+<p><strong>Ahora la divergencia semántica</strong>, mucho más peligrosa:</p>
+<pre><code class="language-sql">SELECT * FROM students WHERE email = 'ANA@EJEMPLO.CL';
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Colación por defecto</th>
+<th>¿Encuentra <code>ana@ejemplo.cl</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MySQL 8</td>
+<td><code>utf8mb4_0900_ai_ci</code></td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Del sistema, sensible</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><code>BINARY</code></td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Suele ser <code>_CI_AS</code></td>
+<td><strong>Sí</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Una aplicación desarrollada sobre MySQL y desplegada sobre PostgreSQL deja de encontrar usuarios al iniciar sesión, sin ningún error en los registros. La defensa no es configurar la colación: es <strong>normalizar al escribir</strong>.</p>
+<pre><code class="language-sql">CREATE TABLE students (
+  id     INTEGER PRIMARY KEY,
+  email  TEXT NOT NULL CHECK (email = lower(email)),
+  UNIQUE (email)
+);
+</code></pre>
+<p>El <code>CHECK</code> convierte una suposición implícita en una regla comprobada por el motor, en cualquier motor.</p>
+<p><strong>Aritmética:</strong></p>
+<pre><code class="language-sql">SELECT 7 / 2;
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL, Oracle, SQL Server</td>
+<td><code>3</code> (división entera)</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td><code>3.5</code></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><code>3</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Escribir <code>7.0 / 2</code> o <code>CAST(7 AS NUMERIC) / 2</code> elimina la ambigüedad en todos.</p>
+<p><strong>Inserción idempotente (<code>UPSERT</code>)</strong>, ninguna forma es portable:</p>
+<pre><code class="language-sql">-- PostgreSQL, SQLite
+INSERT INTO t (id, v) VALUES (1,'x') ON CONFLICT (id) DO UPDATE SET v = excluded.v;
+-- MySQL
+INSERT INTO t (id, v) VALUES (1,'x') ON DUPLICATE KEY UPDATE v = VALUES(v);
+-- Norma (SQL Server, Oracle): MERGE
+</code></pre>
+<p>Esta es la construcción que más justifica una capa de aislamiento: se usa constantemente y se escribe distinto en todos.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Escribir portable</th>
+<th>Usar extensiones libremente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Velocidad de desarrollo</td>
+<td>Menor</td>
+<td>Mayor</td>
+</tr>
+<tr>
+<td>Costo de migrar</td>
+<td>Bajo</td>
+<td>Alto o prohibitivo</td>
+</tr>
+<tr>
+<td>Rendimiento</td>
+<td>A veces peor</td>
+<td>Mejor si la extensión existe por algo</td>
+</tr>
+<tr>
+<td>Riesgo semántico</td>
+<td>Bajo si se normaliza</td>
+<td>Alto</td>
+</tr>
+<tr>
+<td>Recomendación</td>
+<td>Núcleo portable por defecto</td>
+<td>Extensiones aisladas y documentadas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Suponer que «SQL es SQL».</strong> El núcleo común es más pequeño de lo que parece.</li>
+<li><strong>Confiar en la colación por defecto.</strong> Es la divergencia semántica más frecuente y la más silenciosa.</li>
+<li><strong>Depender de la división entera o del redondeo.</strong> Cambia entre motores.</li>
+<li><strong>Usar <code>||</code> en MySQL sin activar <code>PIPES_AS_CONCAT</code>.</strong> Devuelve <code>0</code>.</li>
+<li><strong>Probar solo en el motor de desarrollo.</strong> Si producción usa otro, la matriz no se ha comprobado, se ha imaginado.</li>
+<li><strong>Portabilidad como dogma.</strong> Renunciar a <code>jsonb</code> o a índices parciales «por si acaso» cuesta más de lo que ahorra.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La migración de motor rara vez se decide por gusto: llega por licencias, por costo de nube o por una adquisición. El código que la sobrevive es el que aisló las diferencias cuando no había ninguna urgencia.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Toma 10 consultas reales de tu proyecto y clasifícalas: núcleo portable, divergencia sintáctica o semántica.</li>
+<li>Ejecuta las 10 en dos motores del <code>docker-compose</code> y captura las diferencias.</li>
+<li>Escribe la matriz de portabilidad resultante, con la construcción y su equivalente en cada motor.</li>
+<li>Aísla la construcción menos portable tras una única función y demuestra que el resto del código no cambia.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da un ejemplo propio de divergencia semántica y explica por qué es peor que una sintáctica.</li>
+<li>¿Por qué <code>LIMIT</code> es más portable en la práctica que <code>FETCH FIRST</code>, pese a no estar en la norma?</li>
+<li>Escribe el <code>UPSERT</code> de tu dominio en tres dialectos.</li>
+<li>Justifica un caso donde usarías una extensión propietaria a sabiendas, y cómo la documentarías.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>Oracle</strong> (2026). <a href="https://dev.mysql.com/doc/">MySQL Reference Manual</a>.<br />
+  Dialecto y comportamiento del motor InnoDB.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Respaldo y restauración: solo cuenta lo que se ha restaurado. Parte 10: Operación, seguridad y gobierno.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>048 — Respaldo y restauración: solo cuenta lo que se ha restaurado · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 10 · Operación, seguridad y gobierno</span>
+</nav>
+<main class="content">
+<h1 id="048--respaldo-y-restauración-solo-cuenta-lo-que-se-ha-restaurado">048 — Respaldo y restauración: solo cuenta lo que se ha restaurado</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="047.html">← Anterior</a> · <a href="049.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>10 — Operación, seguridad y gobierno</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>mongodb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>RPO</code> · <code>RTO</code> · <code>recuperación a un punto en el tiempo</code> · <code>prueba de restauración</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Convertir la copia de seguridad en una garantía verificada. Una copia que nunca se ha restaurado no es una copia: es una carpeta que ocupa espacio.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Definir RPO y RTO y derivarlos de una exigencia de negocio.</li>
+<li>Distinguir copia lógica, física y recuperación a un punto en el tiempo.</li>
+<li>Diseñar un plan que cubra los cinco modos de pérdida.</li>
+<li>Ejecutar y cronometrar una restauración completa.</li>
+<li>Explicar por qué una réplica no es una copia de seguridad.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="rpo-y-rto">RPO y RTO</h3>
+<ul>
+<li><strong>RPO (objetivo de punto de recuperación):</strong> cuántos datos se acepta perder, en tiempo. Determina la frecuencia de copia y el modo de replicación.</li>
+<li><strong>RTO (objetivo de tiempo de recuperación):</strong> cuánto se acepta estar caído. Determina el tipo de copia y el procedimiento.</li>
+</ul>
+<p>Ambos salen de una conversación con el negocio, no de una preferencia técnica. La pregunta útil es concreta: <em>«si perdiéramos los datos de las últimas cuatro horas, ¿qué habría que rehacer y cuánto costaría?»</em>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>RPO</th>
+<th>Mecanismo necesario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24 h</td>
+<td>Copia diaria</td>
+</tr>
+<tr>
+<td>1 h</td>
+<td>Copia diaria + archivado de WAL cada hora</td>
+</tr>
+<tr>
+<td>5 min</td>
+<td>Archivado continuo de WAL</td>
+</tr>
+<tr>
+<td>~0</td>
+<td>Réplica síncrona <strong>más</strong> copias</td>
+</tr>
+</tbody>
+</table></div>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>RTO</th>
+<th>Mecanismo necesario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24 h</td>
+<td>Restaurar copia lógica</td>
+</tr>
+<tr>
+<td>1 h</td>
+<td>Copia física + WAL</td>
+</tr>
+<tr>
+<td>5 min</td>
+<td>Réplica en caliente con conmutación</td>
+</tr>
+<tr>
+<td>~0</td>
+<td>Multimaestro o activo-activo</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-cinco-modos-de-pérdida">Los cinco modos de pérdida</h3>
+<p>Un plan solo está completo si cubre los cinco:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Modo</th>
+<th>Cubre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fallo de hardware</td>
+<td>Réplica, RAID</td>
+</tr>
+<tr>
+<td>Corrupción de datos</td>
+<td>Copia + WAL desde antes de la corrupción</td>
+</tr>
+<tr>
+<td><strong>Error humano</strong> (<code>DROP TABLE</code>)</td>
+<td>Recuperación a un punto en el tiempo</td>
+</tr>
+<tr>
+<td><strong>Ataque</strong> (cifrado o borrado)</td>
+<td>Copia inmutable, fuera de línea o con retención bloqueada</td>
+</tr>
+<tr>
+<td>Desastre regional</td>
+<td>Copia en otra región</td>
+</tr>
+</tbody>
+</table></div>
+<p>Los dos marcados son los que la réplica <strong>no</strong> cubre, y son los más frecuentes. Un <code>DELETE</code> erróneo se replica en milisegundos a todas las réplicas. Un atacante con credenciales de administrador borra el primario y las réplicas.</p>
+<p><strong>Una réplica no es una copia de seguridad.</strong> Protege contra fallo de hardware y nada más.</p>
+<h3 id="tipos-de-copia">Tipos de copia</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Qué es</th>
+<th>Restauración</th>
+<th>Verificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Lógica</strong> (<code>pg_dump</code>)</td>
+<td>SQL o formato propio</td>
+<td>Lenta; reconstruye índices</td>
+<td>Fácil: se puede leer</td>
+</tr>
+<tr>
+<td><strong>Física</strong> (<code>pg_basebackup</code>)</td>
+<td>Archivos del clúster</td>
+<td>Rápida</td>
+<td>Requiere el mismo motor y versión mayor</td>
+</tr>
+<tr>
+<td><strong>PITR</strong></td>
+<td>Copia física + WAL archivado</td>
+<td>A cualquier instante</td>
+<td>La más completa</td>
+</tr>
+<tr>
+<td><strong>Instantánea de volumen</strong></td>
+<td>Copia del almacenamiento</td>
+<td>Muy rápida</td>
+<td>Debe ser atómica entre volúmenes</td>
+</tr>
+</tbody>
+</table></div>
+<p>La copia lógica tiene una ventaja subestimada: es legible y portable entre versiones mayores. La física es mucho más rápida de restaurar pero está atada al motor.</p>
+<h3 id="la-regla-3-2-1">La regla 3-2-1</h3>
+<p>Tres copias, en dos medios distintos, una fuera del sitio. En la práctica actual: primario + copia local + copia en almacenamiento de objetos de otra región, esta última con <strong>retención bloqueada</strong> para que ni siquiera un administrador comprometido pueda borrarla.</p>
+<pre><code class="language-mermaid">flowchart TD
+    P[(&quot;Primario&quot;)] --&gt; R[(&quot;Réplica&lt;br/&gt;fallo de hardware&quot;)]
+    P --&gt; B[&quot;Copia base&lt;br/&gt;diaria&quot;]
+    P --&gt; W[&quot;Archivado continuo&lt;br/&gt;de WAL&quot;]
+    B --&gt; L[&quot;Almacenamiento local&lt;br/&gt;RTO bajo&quot;]
+    B --&gt; O[&quot;Objetos, otra región&lt;br/&gt;desastre regional&quot;]
+    O --&gt; I[&quot;Retención bloqueada&lt;br/&gt;ataque&quot;]
+    W --&gt; PITR[&quot;PITR&lt;br/&gt;error humano&quot;]
+    L --&gt; T[&quot;PRUEBA MENSUAL&lt;br/&gt;restaurar y verificar&quot;]
+    O --&gt; T
+    T --&gt; M[&quot;Registrar RTO real&lt;br/&gt;y filas verificadas&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Requisito de negocio: <em>«no podemos perder más de 15 minutos de inscripciones y debemos volver en menos de 2 horas»</em>. → RPO = 15 min, RTO = 2 h.</p>
+<p><strong>Configuración:</strong></p>
+<pre><code class="language-bash"># postgresql.conf
+archive_mode = on
+archive_command = 'test ! -f /archivo/%f &amp;&amp; cp %p /archivo/%f'
+archive_timeout = 300          # fuerza cierre de segmento cada 5 min → RPO ≤ 5 min
+
+# copia base diaria
+pg_basebackup -D /copias/base-$(date +%F) -Ft -z -X stream -c fast
+</code></pre>
+<p><strong>Escenario: a las 14:37 alguien ejecuta <code>DELETE FROM enrollments;</code> sin <code>WHERE</code>.</strong></p>
+<p>Lo que <strong>no</strong> sirve:</p>
+<ul>
+<li>La réplica: recibió el <code>DELETE</code> en 12 ms.</li>
+<li>La copia de las 03:00 sin WAL: perdería 11 horas y media de trabajo.</li>
+</ul>
+<p>Lo que sirve:</p>
+<pre><code class="language-bash"># 1. Detener el servicio y preservar el estado actual (por si acaso)
+systemctl stop postgresql
+mv /var/lib/postgresql/16/main /var/lib/postgresql/16/main.roto
+
+# 2. Restaurar la copia base más reciente
+tar xzf /copias/base-2026-08-19/base.tar.gz -C /var/lib/postgresql/16/main
+
+# 3. Reproducir el WAL hasta JUSTO ANTES del error
+cat &gt; /var/lib/postgresql/16/main/postgresql.auto.conf &lt;&lt;'EOF'
+restore_command = 'cp /archivo/%f %p'
+recovery_target_time = '2026-08-19 14:36:30'
+recovery_target_action = 'pause'
+EOF
+touch /var/lib/postgresql/16/main/recovery.signal
+
+# 4. Arrancar; PostgreSQL reproduce y se detiene en el objetivo
+systemctl start postgresql
+</code></pre>
+<p><strong>Verificación antes de promover</strong> —este paso es el que casi nadie hace y el que evita restaurar sobre un estado equivocado—:</p>
+<pre><code class="language-sql">SELECT count(*) FROM enrollments;                       -- ¿coincide con lo esperado?
+SELECT max(registrada_en) FROM enrollments;             -- ¿llega hasta 14:36?
+SELECT * FROM enrollments ORDER BY registrada_en DESC LIMIT 5;
+</code></pre>
+<p>Solo si cuadra:</p>
+<pre><code class="language-sql">SELECT pg_wal_replay_resume();   -- o promover
+</code></pre>
+<p><strong>Cronometraje real de una prueba</strong> sobre 500 GB:</p>
+<pre><code class="language-text">Descarga de la copia desde otra región    38 min
+Descompresión y colocación                12 min
+Reproducción de 11 h de WAL               24 min
+Verificación de integridad y conteos       8 min
+                                        --------
+RTO real medido                           82 min      ✔ por debajo de las 2 h
+RPO real medido                       ≤ 5 min         ✔ por debajo de 15 min
+</code></pre>
+<p><strong>Sin esta medición, el RTO es una suposición.</strong> Y las suposiciones se descubren falsas el día del incidente, que es el peor día.</p>
+<p><strong>La prueba mensual, automatizada:</strong></p>
+<pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+INICIO=$(date +%s)
+
+restaurar_en_entorno_aislado /copias/base-mas-reciente
+esperar_a_que_acepte_conexiones
+
+# Comprobar contenido, no solo que el proceso arranque: una base
+# restaurada vacía arranca perfectamente.
+FILAS=$(psql -tAc &quot;SELECT count(*) FROM enrollments&quot;)
+test &quot;$FILAS&quot; -gt 1000000 || { echo &quot;::error::restauración vacía: $FILAS filas&quot;; exit 1; }
+psql -tAc &quot;SELECT count(*) FROM (
+             SELECT e.student_id FROM enrollments e
+             LEFT JOIN courses c ON c.id = e.course_id
+             WHERE c.id IS NULL) t&quot; | grep -qx 0 || { echo &quot;::error::integridad&quot;; exit 1; }
+
+echo &quot;RTO medido: $(( ($(date +%s) - INICIO) / 60 )) min · filas: $FILAS&quot;
+</code></pre>
+<p>El punto crítico está en el comentario: <strong>una base restaurada vacía arranca sin errores</strong>. Comprobar que el servicio responde no demuestra nada; hay que contar el contenido.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Amenaza</th>
+<th>Réplica</th>
+<th>Copia diaria</th>
+<th>PITR</th>
+<th>Copia inmutable externa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fallo de disco</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Corrupción lógica</td>
+<td><strong>No</strong></td>
+<td>Parcial</td>
+<td><strong>Sí</strong></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>DROP TABLE</code></td>
+<td><strong>No</strong></td>
+<td>Parcial</td>
+<td><strong>Sí</strong></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Cifrado por atacante</td>
+<td><strong>No</strong></td>
+<td><strong>No</strong></td>
+<td><strong>No</strong></td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td>Desastre regional</td>
+<td>Si es remota</td>
+<td>Si es remota</td>
+<td>Si es remota</td>
+<td><strong>Sí</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>No probar nunca la restauración.</strong> El fallo más grave y el más común.</li>
+<li><strong>Confundir réplica con copia.</strong> No cubre error humano ni ataque.</li>
+<li><strong>Copias en la misma cuenta y con los mismos permisos que el primario.</strong> Un atacante las borra también.</li>
+<li><strong>Verificar que el servicio arranca y no el contenido.</strong> Una base vacía arranca.</li>
+<li><strong>No cronometrar.</strong> El RTO declarado no coincide con el real.</li>
+<li><strong>Copias sin cifrar en almacenamiento de objetos.</strong> La fuga es tan grave como la pérdida.</li>
+<li><strong>Retener el WAL sin límite o sin vigilancia.</strong> Llena el disco del primario.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La métrica que resume la salud del plan es la fecha de la última restauración verificada. Si es de hace más de un mes, el plan es una hipótesis. Publicarla en el panel de operación cambia la conducta del equipo más que cualquier documento.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Deriva RPO y RTO de una conversación real de negocio, con la pregunta concreta.</li>
+<li>Configura archivado continuo y realiza una recuperación a un punto en el tiempo.</li>
+<li>Cronometra la restauración completa y compara con el RTO declarado.</li>
+<li>Automatiza la prueba mensual con verificación de contenido, no solo de arranque.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué una réplica no protege de un <code>DELETE</code> sin <code>WHERE</code>?</li>
+<li>Calcula el RPO real de tu configuración actual, en minutos.</li>
+<li>¿Qué comprobarías tras restaurar, antes de promover a producción?</li>
+<li>Diseña la protección de tus copias frente a un atacante con credenciales de administrador.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/backup.html">PostgreSQL: Backup and Restore</a>.<br />
+  Volcado lógico, copia de archivos y recuperación a un punto en el tiempo.</li>
+<li><strong>Laine Campbell, Charity Majors</strong> (2017). <a href="https://www.oreilly.com/library/view/database-reliability-engineering/9781491925935/">Database Reliability Engineering</a>. O'Reilly. ISBN 978-1-4919-2594-2.<br />
+  Operación, respaldos, objetivos de servicio y gestion de cambios.</li>
+<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
+  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="047.html">← Anterior</a> · <a href="049.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

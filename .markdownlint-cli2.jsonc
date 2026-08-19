@@ -1,0 +1,23 @@
+{
+  // El objetivo del lint aqui es la coherencia estructural, no el estilo
+  // tipografico: las reglas que solo generarian ruido en prosa tecnica larga
+  // estan desactivadas a proposito, cada una con su motivo.
+  "config": {
+    "MD013": false, // longitud de linea: la prosa se ajusta al sentido, no a 80 columnas
+    "MD033": false, // HTML en linea: hace falta para <br/> en tablas y para <sub>
+    "MD034": false, // URL desnuda: aparece dentro de bloques de codigo y de trazas
+    "MD036": false, // enfasis como encabezado: se usa en las tablas de decision
+    "MD060": false, // estilo de la fila separadora de tablas: puramente cosmetico
+    "MD024": { "siblings_only": true }, // encabezados repetidos bajo padres distintos
+    "MD029": { "style": "ordered" },
+    "MD046": { "style": "fenced" }
+  },
+  "globs": [
+    "**/*.md",
+    // `lesson.md` es un fragmento que el generador inserta bajo un `#`, no un
+    // documento autonomo: exigirle encabezado de primer nivel no tiene sentido.
+    "!**/lesson.md",
+    "!site/**",
+    "!node_modules/**"
+  ]
+}

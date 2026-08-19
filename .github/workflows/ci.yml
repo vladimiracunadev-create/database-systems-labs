@@ -1,0 +1,134 @@
+name: CI
+
+# Lo que decide si `main` esta en verde. Cuatro trabajos independientes, para
+# que un fallo de lint no oculte un fallo de contenido y al reves.
+#
+# El trabajo `artefactos` es el que evita la incoherencia clasica de este tipo
+# de repositorio: que el sitio publicado y las clases del repositorio digan
+# cosas distintas porque alguien edito una y no regenero la otra.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  estructura:
+    name: Estructura, fuentes y enlaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --quiet -r requirements.txt
+
+      - name: Validar el repositorio
+        run: python scripts/validate_repository.py --verbose
+
+      - name: Resumen del programa
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, yaml
+          c = yaml.safe_load(open("curriculum.yaml", encoding="utf-8"))
+          s = json.load(open("catalog/sources.json", encoding="utf-8"))
+          m = json.load(open("catalog/databases.json", encoding="utf-8"))
+          clases = [k for p in c["parts"] for k in p["classes"]]
+          citas = sum(len(k["sources"]) for k in clases)
+          print("### 📚 Programa\n")
+          print("| Métrica | Valor |")
+          print("|---|---:|")
+          print(f"| Partes | {len(c['parts'])} |")
+          print(f"| Clases | {len(clases)} |")
+          print(f"| Horas estimadas | {sum(k['hours'] for k in clases)} |")
+          print(f"| Fuentes en el registro | {len(s['sources'])} |")
+          print(f"| Citas totales | {citas} |")
+          print(f"| Fuentes por clase (media) | {citas / len(clases):.1f} |")
+          print(f"| Motores en catálogo | {len(m['systems'])} |")
+          PY
+
+  artefactos:
+    name: Artefactos regenerados
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --quiet -r requirements.txt
+
+      # `--check` no escribe: falla si el artefacto en el repositorio no
+      # coincide con el que produciria el generador ahora mismo.
+      - name: README de clase al día
+        run: python scripts/build_classes.py --check
+
+      - name: Sitio al día
+        run: python scripts/generate_site.py --check
+
+      - name: Comprobar que el sitio salió completo
+        run: |
+          set -euo pipefail
+          # Un sitio a medias se publica igual de bien que uno completo, asi que
+          # conviene contar antes de darlo por bueno.
+          for f in site/index.html site/fuentes.html site/motores.html \
+                   site/busqueda.json site/classes/001.html; do
+            [ -s "$f" ] || { echo "::error::falta o esta vacio: $f"; exit 1; }
+          done
+          CLASES=$(find site/classes -name '[0-9][0-9][0-9].html' | wc -l)
+          ESPERADAS=$(python -c "import yaml;c=yaml.safe_load(open('curriculum.yaml',encoding='utf-8'));print(sum(len(p['classes']) for p in c['parts']))")
+          echo "Páginas de clase: $CLASES (esperadas: $ESPERADAS)"
+          [ "$CLASES" -eq "$ESPERADAS" ] || { echo "::error::faltan páginas de clase"; exit 1; }
+          INDEXADAS=$(python -c "import json;print(len(json.load(open('site/busqueda.json',encoding='utf-8'))))")
+          [ "$INDEXADAS" -eq "$ESPERADAS" ] || { echo "::error::el índice de búsqueda no cubre todas las clases"; exit 1; }
+          echo "- Páginas de clase: **$CLASES**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Clases indexadas en el buscador: **$INDEXADAS**" >> "$GITHUB_STEP_SUMMARY"
+
+  markdown:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx --yes markdownlint-cli2
+
+  laboratorios:
+    name: Laboratorios (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Los laboratorios del nucleo no deben necesitar dependencias: si alguno
+      # empieza a necesitarlas, este trabajo lo delata.
+      - name: Laboratorio de fundamentos SQL
+        run: python labs/01-sql-foundations/run_lab.py
+
+      - name: Laboratorio de búsqueda vectorial
+        run: python labs/06-vector-search/run_vector_lab.py

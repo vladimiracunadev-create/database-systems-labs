@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="B-Tree: estructura, orden de columnas y selectividad. Parte 08: Almacenamiento, índices y planes.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>039 — B-Tree: estructura, orden de columnas y selectividad · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 08 · Almacenamiento, índices y planes</span>
+</nav>
+<main class="content">
+<h1 id="039--b-tree-estructura-orden-de-columnas-y-selectividad">039 — B-Tree: estructura, orden de columnas y selectividad</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>08 — Almacenamiento, índices y planes</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>B-Tree</code> · <code>prefijo más a la izquierda</code> · <code>selectividad</code> · <code>índice cubriente</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Dominar el índice B-Tree: cómo se recorre, por qué el orden de las columnas decide qué consultas sirve y cuándo el motor decide no usarlo.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Calcular la altura de un B-Tree y el número de páginas de una búsqueda.</li>
+<li>Aplicar la regla del prefijo más a la izquierda.</li>
+<li>Explicar por qué una condición de rango «detiene» el uso de las columnas siguientes.</li>
+<li>Estimar selectividad y predecir si el índice se usará.</li>
+<li>Diseñar índices cubrientes y medir su beneficio y su costo.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-estructura">La estructura</h3>
+<p>Bayer y McCreight (1972) definieron el B-Tree; los motores usan la variante B⁺: todos los datos en las hojas, hojas enlazadas entre sí para recorridos por rango.</p>
+<pre><code class="language-text">                    [ 200 | 500 ]                    raíz
+                   /      |      \
+          [50|120]   [300|400]   [700|900]           internos
+          /  |  \      /  |  \     /  |  \
+        hojas ordenadas, enlazadas: → → → →
+</code></pre>
+<p><strong>Altura:</strong></p>
+<pre><code class="language-text">entradas por página ≈ 8 192 / (tamaño de clave + puntero)
+con clave de 8 B + puntero 6 B: ≈ 585 entradas
+N = 10 000 000  →  altura = ⌈log₅₈₅ 10⁷⌉ = 3
+</code></pre>
+<p><strong>Tres páginas</strong> para localizar cualquier fila entre diez millones. Y en la práctica los niveles superiores están siempre en memoria, así que la búsqueda cuesta una o dos lecturas físicas.</p>
+<p>Los B-Tree son <strong>muy planos</strong>: multiplicar los datos por 585 añade un solo nivel.</p>
+<h3 id="el-prefijo-más-a-la-izquierda">El prefijo más a la izquierda</h3>
+<p>Un índice sobre <code>(a, b, c)</code> ordena por <code>a</code>, luego por <code>b</code>, luego por <code>c</code>. Sirve para:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th>¿Usa el índice?</th>
+<th>Hasta dónde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WHERE a = 1</code></td>
+<td>Sí</td>
+<td><code>a</code></td>
+</tr>
+<tr>
+<td><code>WHERE a = 1 AND b = 2</code></td>
+<td>Sí</td>
+<td><code>a</code>, <code>b</code></td>
+</tr>
+<tr>
+<td><code>WHERE a = 1 AND b = 2 AND c = 3</code></td>
+<td>Sí</td>
+<td>todo</td>
+</tr>
+<tr>
+<td><code>WHERE b = 2</code></td>
+<td><strong>No</strong> (o barrido de índice)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>WHERE a = 1 AND c = 3</code></td>
+<td>Parcial</td>
+<td>solo <code>a</code>; filtra <code>c</code> después</td>
+</tr>
+<tr>
+<td><code>ORDER BY a, b</code></td>
+<td>Sí, sin ordenar</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ORDER BY b</code></td>
+<td>No</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>La analogía exacta es la guía telefónica ordenada por apellido y luego por nombre: buscar por nombre sin apellido no aprovecha el orden.</p>
+<h3 id="el-rango-detiene-el-índice">El rango detiene el índice</h3>
+<p>Regla que Winand desarrolla como concepto central:</p>
+<pre><code class="language-sql">-- índice (course_id, registrada_en, nota)
+WHERE course_id = 42 AND registrada_en &gt; '2026-01-01' AND nota = 6.0
+</code></pre>
+<p>El motor puede usar <code>course_id</code> (igualdad) y <code>registrada_en</code> (rango), pero <strong>no</strong> <code>nota</code>: dentro del rango de fechas, las notas no están ordenadas globalmente. <code>nota</code> se aplica como filtro sobre las filas leídas.</p>
+<p>De ahí la regla de diseño: <strong>igualdades primero, luego la columna de orden, y el rango al final</strong>. Es exactamente la regla ESR de MongoDB de la clase 026, con otro nombre.</p>
+<h3 id="selectividad">Selectividad</h3>
+<pre><code class="language-text">selectividad = filas que cumplen / filas totales
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Selectividad</th>
+<th>Uso probable del índice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt; 1 %</td>
+<td>Casi seguro</td>
+</tr>
+<tr>
+<td>1 – 5 %</td>
+<td>Probable</td>
+</tr>
+<tr>
+<td>5 – 20 %</td>
+<td>Depende del ancho de fila y la correlación</td>
+</tr>
+<tr>
+<td>&gt; 20 %</td>
+<td>Barrido secuencial</td>
+</tr>
+</tbody>
+</table></div>
+<p>Un índice sobre una columna booleana con reparto 50/50 casi nunca se usa: leer la mitad de la tabla por accesos aleatorios es peor que leerla entera en secuencial (clase 038).</p>
+<p><strong>Excepción importante:</strong> el índice <strong>parcial</strong> sobre el valor raro sí sirve.</p>
+<pre><code class="language-sql">CREATE INDEX enrollments_pendientes ON enrollments (course_id)
+WHERE estado = 'pendiente';    -- solo el 2 % de las filas
+</code></pre>
+<h3 id="índice-cubriente">Índice cubriente</h3>
+<p>Si el índice contiene todas las columnas que la consulta necesita, el motor no toca la tabla:</p>
+<pre><code class="language-sql">CREATE INDEX enr_cubriente ON enrollments (course_id, registrada_en) INCLUDE (nota);
+</code></pre>
+<p><code>INCLUDE</code> (PostgreSQL 11+, SQL Server) añade columnas <strong>solo a las hojas</strong>: no participan en el orden ni engordan los nodos internos. Es más barato que añadirlas a la clave.</p>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta&quot;] --&gt; S{&quot;Selectividad&lt;br/&gt;del filtro&quot;}
+    S -- &quot;&gt; 20 %&quot; --&gt; SEQ[&quot;Barrido secuencial&quot;]
+    S -- &quot;&lt; 5 %&quot; --&gt; I{&quot;¿El índice cubre&lt;br/&gt;todas las columnas?&quot;}
+    I -- &quot;Sí&quot; --&gt; C[&quot;Barrido de índice solo&lt;br/&gt;0 accesos a la tabla&quot;]
+    I -- &quot;No&quot; --&gt; B{&quot;¿Muchas filas&lt;br/&gt;coincidentes?&quot;}
+    B -- &quot;Sí&quot; --&gt; BM[&quot;Barrido de mapa de bits:&lt;br/&gt;ordena antes de leer datos&quot;]
+    B -- &quot;No&quot; --&gt; IX[&quot;Búsqueda por índice&quot;]
+    S -- &quot;5-20 %&quot; --&gt; COR{&quot;¿Las filas están&lt;br/&gt;físicamente correlacionadas?&quot;}
+    COR -- &quot;Sí&quot; --&gt; IX
+    COR -- &quot;No&quot; --&gt; SEQ
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Consulta frecuente sobre 5 000 000 de inscripciones:</p>
+<pre><code class="language-sql">SELECT student_id, nota
+FROM enrollments
+WHERE course_id = 42 AND estado = 'activa' AND registrada_en &gt;= '2026-01-01'
+ORDER BY registrada_en DESC
+LIMIT 20;
+</code></pre>
+<p><strong>Datos del dominio:</strong> 300 cursos (16 667 filas por curso), 85 % activas, la mitad posteriores a esa fecha.</p>
+<p><strong>Índice 1 — ingenuo, una columna:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i1 ON enrollments (course_id);
+</code></pre>
+<pre><code class="language-text">Búsqueda por índice: 16 667 entradas
+Acceso a la tabla:   16 667 lecturas (posiblemente aleatorias)
+Filtro:              estado y fecha, descarta ~58 %
+Orden:               7 000 filas ordenadas en memoria
+LIMIT 20
+</code></pre>
+<p><strong>Índice 2 — orden equivocado:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i2 ON enrollments (registrada_en, course_id, estado);
+</code></pre>
+<p>Peor: el rango va primero, así que el índice se recorre desde la fecha hasta el final —millones de entradas— filtrando <code>course_id</code> sobre cada una.</p>
+<p><strong>Índice 3 — igualdades, orden, rango:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i3 ON enrollments (course_id, estado, registrada_en DESC);
+</code></pre>
+<pre><code class="language-text">Descenso del árbol:        3 páginas
+Recorrido de hojas:        20 entradas (ya en el orden pedido, descendente)
+Acceso a la tabla:         20 filas
+Orden:                     NINGUNO (el índice lo entrega)
+</code></pre>
+<p><strong>16 667 → 20.</strong> Y desaparece el ordenamiento, que era el otro coste.</p>
+<p><strong>Índice 4 — cubriente:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i4 ON enrollments (course_id, estado, registrada_en DESC)
+       INCLUDE (student_id, nota);
+</code></pre>
+<pre><code class="language-text">Accesos a la tabla: 0
+</code></pre>
+<p><strong>Comparación medida:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Índice</th>
+<th style="text-align: right;">Entradas leídas</th>
+<th style="text-align: right;">Filas de tabla</th>
+<th>¿Ordena?</th>
+<th style="text-align: right;">Tamaño</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sin índice</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">5 000 000</td>
+<td>Sí</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>i1</td>
+<td style="text-align: right;">16 667</td>
+<td style="text-align: right;">16 667</td>
+<td>Sí</td>
+<td style="text-align: right;">107 MB</td>
+</tr>
+<tr>
+<td>i2</td>
+<td style="text-align: right;">~2 500 000</td>
+<td style="text-align: right;">2 500 000</td>
+<td>No</td>
+<td style="text-align: right;">214 MB</td>
+</tr>
+<tr>
+<td>i3</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">20</td>
+<td>No</td>
+<td style="text-align: right;">161 MB</td>
+</tr>
+<tr>
+<td>i4</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;"><strong>0</strong></td>
+<td>No</td>
+<td style="text-align: right;">268 MB</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>El costo del índice, que también hay que declarar.</strong> i4 pesa 268 MB y se mantiene en <strong>cada</strong> inserción, actualización y borrado de la tabla. Con 400 inscripciones diarias, es despreciable. Con 40 000 por segundo, no lo es: cada escritura toca el índice y compite por sus páginas.</p>
+<p>Regla: <strong>un índice es una apuesta de que se leerá más de lo que se escribirá</strong>. Los índices que no se usan solo cuestan.</p>
+<pre><code class="language-sql">SELECT indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes WHERE idx_scan = 0 ORDER BY pg_relation_size(indexrelid) DESC;
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Objetivo</th>
+<th>Diseño</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Igualdad en varias columnas</td>
+<td>Índice compuesto, las más selectivas antes</td>
+</tr>
+<tr>
+<td>Igualdad + orden</td>
+<td>Igualdades, luego la columna del <code>ORDER BY</code></td>
+</tr>
+<tr>
+<td>Rango</td>
+<td>Al final del índice</td>
+</tr>
+<tr>
+<td>Evitar acceso a la tabla</td>
+<td><code>INCLUDE</code> con las columnas proyectadas</td>
+</tr>
+<tr>
+<td>Valor poco frecuente</td>
+<td>Índice parcial</td>
+</tr>
+<tr>
+<td>Búsqueda por función</td>
+<td>Índice de expresión</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Un índice por columna.</strong> El motor rara vez combina dos con eficacia; un compuesto sirve a más consultas.</li>
+<li><strong>Rango antes que igualdad.</strong> Desperdicia el resto del índice.</li>
+<li><strong>Indexar columnas de baja cardinalidad.</strong> Salvo como índice parcial.</li>
+<li><strong>Función sobre la columna en el <code>WHERE</code>.</strong> <code>WHERE lower(email) = ...</code> no usa el índice sobre <code>email</code>; hace falta un índice de expresión.</li>
+<li><strong>Índices que nadie usa.</strong> Cuestan espacio y escrituras.</li>
+<li><strong>Ignorar el orden del <code>ORDER BY</code> en el índice.</strong> Un índice ascendente sirve para <code>DESC</code> en muchos motores, pero no siempre en índices compuestos con sentidos mixtos.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los índices se acumulan: cada incidencia añade uno y nadie retira los anteriores. Una revisión trimestral de índices no usados suele recuperar decenas de gigabytes y acelerar la escritura sin tocar una línea de código.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Elige tu consulta más frecuente y diseña el índice con la regla igualdad-orden-rango.</li>
+<li>Mide entradas leídas, filas de tabla y presencia de ordenamiento antes y después.</li>
+<li>Conviértelo en cubriente y compara tamaño frente a beneficio.</li>
+<li>Enumera los índices sin uso de tu base y calcula el espacio recuperable.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Calcula la altura de un B-Tree con 500 millones de filas y clave de 16 bytes.</li>
+<li>¿Por qué un índice sobre <code>(a, b)</code> no sirve para <code>WHERE b = 2</code>?</li>
+<li>Explica por qué un rango impide aprovechar las columnas posteriores.</li>
+<li>Da una consulta tuya donde el índice cubriente compense y otra donde no.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>R. Bayer, E. McCreight</strong> (1972). <a href="https://link.springer.com/article/10.1007/BF00288683">Organization and Maintenance of Large Ordered Indices</a>. Acta Informatica 1(3). DOI <a href="https://doi.org/10.1007/BF00288683">10.1007/BF00288683</a>.<br />
+  Artículo original del B-Tree.</li>
+<li><strong>Goetz Graefe</strong> (2011). <a href="https://www.nowpublishers.com/article/Details/DBS-028">Modern B-Tree Techniques</a>. Foundations and Trends in Databases 3(4). DOI <a href="https://doi.org/10.1561/1900000028">10.1561/1900000028</a>.<br />
+  Estado del arte del B-Tree: división, compresión y concurrencia.</li>
+<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
+  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

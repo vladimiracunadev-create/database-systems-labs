@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Integridad: restricciones, claves foraneas y acciones referenciales. Parte 02: Modelo relacional y álgebra.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>013 — Integridad: restricciones, claves foraneas y acciones referenciales · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 02 · Modelo relacional y álgebra</span>
+</nav>
+<main class="content">
+<h1 id="013--integridad-restricciones-claves-foraneas-y-acciones-referenciales">013 — Integridad: restricciones, claves foraneas y acciones referenciales</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>02 — Modelo relacional y álgebra</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>integridad de entidad</code> · <code>integridad referencial</code> · <code>CHECK</code> · <code>ON DELETE</code> · <code>aplazamiento</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Convertir las reglas del dominio en restricciones que el motor haga cumplir para todos los clientes. Una regla que vive solo en la aplicación es una regla que algún día alguien saltará.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Distinguir integridad de entidad, referencial, de dominio y definida por el usuario.</li>
+<li>Elegir la acción referencial correcta y justificar su efecto sobre los datos.</li>
+<li>Usar restricciones diferidas y saber qué motores las soportan.</li>
+<li>Reconocer qué reglas <strong>no</strong> puede expresar una restricción declarativa.</li>
+<li>Escribir la invariante que audita lo que el motor no puede garantizar.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-cuatro-tipos">Los cuatro tipos</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Qué garantiza</th>
+<th>Mecanismo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>De entidad</strong></td>
+<td>Toda fila es identificable; la clave no es nula</td>
+<td><code>PRIMARY KEY</code></td>
+</tr>
+<tr>
+<td><strong>Referencial</strong></td>
+<td>Toda referencia apunta a algo existente</td>
+<td><code>FOREIGN KEY</code></td>
+</tr>
+<tr>
+<td><strong>De dominio</strong></td>
+<td>Cada valor pertenece a su dominio</td>
+<td>Tipo + <code>CHECK</code> + <code>NOT NULL</code></td>
+</tr>
+<tr>
+<td><strong>Definida por el usuario</strong></td>
+<td>Reglas de negocio arbitrarias</td>
+<td><code>CHECK</code>, restricciones diferidas, disparadores</td>
+</tr>
+</tbody>
+</table></div>
+<p>Codd (1979) añadió al modelo original la discusión de los nulos y la integridad de entidad. La regla que de ahí se deriva es tajante: <strong>ningún componente de una clave primaria puede ser nulo</strong>, porque un identificador desconocido no identifica.</p>
+<h3 id="acciones-referenciales">Acciones referenciales</h3>
+<p>Al borrar o actualizar la fila referenciada, el motor puede hacer cinco cosas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Acción</th>
+<th>Efecto</th>
+<th>Cuándo es correcta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NO ACTION</code> / <code>RESTRICT</code></td>
+<td>Impide la operación</td>
+<td>Por defecto sensato: obliga a decidir explícitamente</td>
+</tr>
+<tr>
+<td><code>CASCADE</code></td>
+<td>Propaga el borrado o el cambio</td>
+<td>Composición real: líneas de una factura, tabla puente</td>
+</tr>
+<tr>
+<td><code>SET NULL</code></td>
+<td>Deja la referencia en nulo</td>
+<td>La relación es opcional y su ausencia tiene sentido</td>
+</tr>
+<tr>
+<td><code>SET DEFAULT</code></td>
+<td>Apunta a un valor por defecto</td>
+<td>Existe un «sin asignar» legítimo</td>
+</tr>
+</tbody>
+</table></div>
+<p>La diferencia entre <code>NO ACTION</code> y <code>RESTRICT</code> es sutil y real: <code>RESTRICT</code> comprueba de inmediato; <code>NO ACTION</code> puede diferirse al final de la sentencia o de la transacción, lo que permite reasignar filas dentro de la misma operación.</p>
+<p><strong>Regla de criterio:</strong> <code>CASCADE</code> en datos históricos o contables es casi siempre un error. Borrar un curso no debería borrar el registro de que alguien lo cursó y obtuvo una nota; eso destruye evidencia. La alternativa es el borrado lógico con una marca y una restricción parcial.</p>
+<h3 id="restricciones-diferidas">Restricciones diferidas</h3>
+<p>Algunas reglas son imposibles de satisfacer fila a fila. Un ciclo obligatorio —«todo departamento tiene un jefe, y todo jefe pertenece a un departamento»— no admite una primera inserción válida si las restricciones se comprueban de inmediato.</p>
+<pre><code class="language-sql">ALTER TABLE departments
+  ADD CONSTRAINT dept_jefe_fk FOREIGN KEY (jefe_id) REFERENCES employees(id)
+  DEFERRABLE INITIALLY DEFERRED;
+</code></pre>
+<p>Con esto, la comprobación ocurre en el <code>COMMIT</code>: dentro de la transacción el estado puede ser transitoriamente inconsistente, y al confirmar debe ser válido. Es exactamente la «C» de ACID (clase 033).</p>
+<p>Soporte real: PostgreSQL y Oracle lo ofrecen; MySQL no de esta forma; SQLite solo para claves foráneas declaradas como diferidas y con <code>PRAGMA foreign_keys = ON</code>.</p>
+<h3 id="lo-que-no-se-puede-declarar">Lo que no se puede declarar</h3>
+<pre><code class="language-mermaid">flowchart TD
+    R[&quot;Regla del dominio&quot;] --&gt; A{&quot;¿Afecta a una&lt;br/&gt;sola fila?&quot;}
+    A -- &quot;Sí&quot; --&gt; C[&quot;CHECK&quot;]
+    A -- &quot;No&quot; --&gt; B{&quot;¿Es unicidad o&lt;br/&gt;referencia?&quot;}
+    B -- &quot;Sí&quot; --&gt; U[&quot;UNIQUE / FOREIGN KEY&lt;br/&gt;(incluso parcial)&quot;]
+    B -- &quot;No&quot; --&gt; D{&quot;¿El motor tiene&lt;br/&gt;restricción de exclusión?&quot;}
+    D -- &quot;Sí&quot; --&gt; E[&quot;EXCLUDE USING gist&quot;]
+    D -- &quot;No&quot; --&gt; T{&quot;¿Basta con detectar,&lt;br/&gt;o hay que impedir?&quot;}
+    T -- &quot;Detectar&quot; --&gt; I[&quot;Invariante auditada&lt;br/&gt;+ alerta&quot;]
+    T -- &quot;Impedir&quot; --&gt; G[&quot;Disparador o bloqueo&lt;br/&gt;explícito · documentar el costo&quot;]
+</code></pre>
+<p>Ejemplos de reglas fuera del alcance de un <code>CHECK</code> estándar: «la suma de los porcentajes de un reparto es 100», «no hay dos reservas solapadas en la misma sala», «todo curso tiene al menos un profesor». La primera y la tercera exigen mirar varias filas; la segunda tiene solución declarativa solo en PostgreSQL, con restricciones de exclusión sobre rangos.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Reglas del dominio y su traducción:</p>
+<pre><code class="language-sql">CREATE TABLE courses (
+  id         INTEGER PRIMARY KEY,
+  nombre     TEXT    NOT NULL CHECK (length(trim(nombre)) &gt; 0),
+  periodo    TEXT    NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
+  cupo       INTEGER NOT NULL CHECK (cupo BETWEEN 1 AND 500),
+  UNIQUE (nombre, periodo)
+);
+
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+  course_id  INTEGER NOT NULL REFERENCES courses(id)  ON DELETE RESTRICT,
+  nota       NUMERIC(2,1) CHECK (nota IS NULL OR nota BETWEEN 1.0 AND 7.0),
+  estado     TEXT NOT NULL DEFAULT 'activa'
+             CHECK (estado IN ('activa','retirada','anulada')),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p>Qué garantiza cada línea, sin excepciones y para todo cliente:</p>
+<ul>
+<li><code>NOT NULL</code> en <code>nombre</code>: no hay cursos anónimos. El <code>CHECK</code> con <code>trim</code> impide además el nombre de solo espacios, que <code>NOT NULL</code> sí permite.</li>
+<li><code>UNIQUE (nombre, periodo)</code>: no hay dos «Bases de datos» en 2026-1. La regla de negocio queda escrita una vez.</li>
+<li><code>nota BETWEEN 1.0 AND 7.0</code> <strong>o nula</strong>: una inscripción sin calificar es válida; una nota de 9,5 no lo es. Sin el <code>OR nota IS NULL</code>, la restricción se evaluaría como <code>UNKNOWN</code> para nulos y <strong>los aceptaría igual</strong> — conviene escribirlo explícito para que el lector no dude.</li>
+<li><code>ON DELETE RESTRICT</code> en ambas: borrar un estudiante con inscripciones falla. Correcto: el historial académico es evidencia.</li>
+</ul>
+<p><strong>Lo que este esquema no garantiza:</strong> el cupo. La regla «no se puede inscribir más gente que el cupo» compara un conteo con un valor de otra tabla, y ningún <code>CHECK</code> estándar lo permite.</p>
+<p>Las tres soluciones, con su precio:</p>
+<pre><code class="language-sql">-- 1. Detección: barata, honesta, deja ventana de incumplimiento
+SELECT c.id, c.cupo, COUNT(e.student_id) AS inscritos
+FROM courses c JOIN enrollments e ON e.course_id = c.id AND e.estado = 'activa'
+GROUP BY c.id, c.cupo
+HAVING COUNT(e.student_id) &gt; c.cupo;
+</code></pre>
+<pre><code class="language-sql">-- 2. Prevención con bloqueo explícito, dentro de la transacción
+BEGIN;
+SELECT cupo FROM courses WHERE id = :curso FOR UPDATE;      -- serializa los inscritos de ESE curso
+INSERT INTO enrollments (student_id, course_id) VALUES (:est, :curso);
+-- comprobar el conteo y abortar si excede
+COMMIT;
+</code></pre>
+<pre><code class="language-sql">-- 3. Contador desnormalizado con disparador (clase 009), con su invariante
+</code></pre>
+<p>La opción 2 es correcta y tiene un costo declarado: todas las inscripciones al mismo curso se serializan. Con un curso muy demandado, eso es una cola. La opción 1 no impide nada pero cuesta cero en el camino de escritura. La decisión depende de si un cupo excedido es un incidente grave o algo que se corrige a mano.</p>
+<p><strong>Nota sobre SQLite:</strong> las claves foráneas no se aplican salvo que se active <code>PRAGMA foreign_keys = ON</code> en <strong>cada conexión</strong>. Es la causa más común de referencias colgantes en proyectos que usan SQLite; el laboratorio del repositorio lo activa explícitamente y comprueba con <code>PRAGMA foreign_key_check</code>.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Regla</th>
+<th>Declarativa</th>
+<th>Motor</th>
+<th>Costo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Valor en un rango</td>
+<td><code>CHECK</code></td>
+<td>Todos</td>
+<td>Nulo</td>
+</tr>
+<tr>
+<td>Unicidad condicional</td>
+<td>Índice único parcial</td>
+<td>PostgreSQL, SQLite</td>
+<td>Nulo</td>
+</tr>
+<tr>
+<td>Referencia válida</td>
+<td><code>FOREIGN KEY</code></td>
+<td>Todos (SQLite con pragma)</td>
+<td>Índice en el hijo</td>
+</tr>
+<tr>
+<td>Sin solapamiento de rangos</td>
+<td><code>EXCLUDE USING gist</code></td>
+<td>Solo PostgreSQL</td>
+<td>Índice GiST</td>
+</tr>
+<tr>
+<td>Ciclo obligatorio</td>
+<td><code>DEFERRABLE</code></td>
+<td>PostgreSQL, Oracle</td>
+<td>Nulo</td>
+</tr>
+<tr>
+<td>Suma de un grupo</td>
+<td>—</td>
+<td>Ninguno</td>
+<td>Disparador o invariante</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Dejar la validación solo en la aplicación.</strong> El script de migración, la consola y el próximo microservicio no la ejecutarán.</li>
+<li><strong><code>ON DELETE CASCADE</code> por comodidad.</strong> Sobre datos históricos destruye evidencia sin dejar rastro.</li>
+<li><strong>Olvidar <code>PRAGMA foreign_keys = ON</code> en SQLite.</strong> Las claves foráneas quedan como documentación decorativa.</li>
+<li><strong><code>CHECK</code> que ignora los nulos.</strong> Un <code>CHECK (nota BETWEEN 1 AND 7)</code> acepta nulos porque <code>UNKNOWN</code> no es falso.</li>
+<li><strong>No indexar la columna hija de una clave foránea.</strong> Cada borrado en el padre provoca un barrido completo del hijo.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los datos sucios llegan por el camino que nadie vigilaba: una carga masiva, un arreglo manual, un servicio nuevo. Las restricciones declaradas son el único control que se aplica a todos los caminos, incluidos los que aún no existen.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Elige tres reglas de negocio reales y decláralas como restricciones.</li>
+<li>Identifica una que el motor no pueda expresar y escribe su invariante.</li>
+<li>Implementa la prevención con bloqueo explícito y mide su efecto en concurrencia.</li>
+<li>Documenta qué acción referencial elegiste en cada clave foránea y por qué.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué un <code>CHECK</code> no rechaza los nulos y qué hay que escribir para que lo haga?</li>
+<li>Da un caso de tu dominio donde <code>CASCADE</code> destruiría información que debe conservarse.</li>
+<li>Explica con una traza por qué el ciclo obligatorio necesita restricciones diferidas.</li>
+<li>Elige entre detectar y prevenir para la regla del cupo, y defiende la elección con el costo de cada una.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>E. F. Codd</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/320107.320109">Extending the Database Relational Model to Capture More Meaning</a>. ACM TODS 4(4). DOI <a href="https://doi.org/10.1145/320107.320109">10.1145/320107.320109</a>.<br />
+  Introduce los valores nulos y la semántica de información faltante.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

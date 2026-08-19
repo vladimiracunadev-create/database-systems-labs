@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código. Parte 04: Motores relacionales y dialectos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 04 · Motores relacionales y dialectos</span>
+</nav>
+<main class="content">
+<h1 id="022--mysql-mariadb-sql-server-y-oracle-divergencias-que-rompen-código">022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>04 — Motores relacionales y dialectos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>mysql</code>, <code>mariadb</code>, <code>sql-server</code>, <code>oracle-database</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>colación</code> · <code>modo estricto</code> · <code>cadena vacia frente a nulo</code> · <code>identificador citado</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Conocer las divergencias concretas de MySQL/MariaDB, SQL Server y Oracle que rompen código escrito para otro motor — especialmente las que no producen ningún error.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Anticipar el comportamiento de MySQL en modo estricto y fuera de él.</li>
+<li>Explicar el tratamiento de la cadena vacía en Oracle y su efecto.</li>
+<li>Comparar los niveles de aislamiento por defecto de los cuatro motores.</li>
+<li>Identificar las diferencias de identificadores, citas y sensibilidad a mayúsculas.</li>
+<li>Construir una prueba que detecte divergencias semánticas antes de migrar.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="mysql--mariadb">MySQL / MariaDB</h3>
+<p><strong>Modo estricto.</strong> Históricamente MySQL truncaba y convertía en silencio en vez de fallar. Con <code>sql_mode</code> estricto (por defecto desde 5.7) rechaza; con él desactivado, sigue aceptando:</p>
+<pre><code class="language-sql">INSERT INTO t (n) VALUES (300);     -- columna TINYINT
+-- estricto: error 1264 out of range
+-- no estricto: guarda 127 y emite un aviso
+</code></pre>
+<p>Un aviso no detiene un despliegue. Comprobar <code>SELECT @@sql_mode</code> es el primer paso al recibir una base MySQL heredada.</p>
+<p><strong><code>ONLY_FULL_GROUP_BY</code>.</strong> Sin este modo, MySQL permite columnas en <code>SELECT</code> que no están en <code>GROUP BY</code> y devuelve <strong>un valor arbitrario</strong> del grupo. El resultado es plausible y erróneo. Está activo por defecto desde 5.7, pero muchas bases heredadas lo desactivan «porque rompía consultas» — consultas que ya estaban mal.</p>
+<p><strong>Colación.</strong> Por defecto insensible a mayúsculas y acentos (<code>utf8mb4_0900_ai_ci</code>), a diferencia de PostgreSQL. Es la divergencia semántica de la clase 020.</p>
+<p><strong>Motores de almacenamiento.</strong> InnoDB es transaccional; MyISAM no lo es. Una tabla MyISAM ignora las transacciones sin avisar: el <code>ROLLBACK</code> no revierte nada.</p>
+<p><strong>Aislamiento por defecto:</strong> <code>REPEATABLE READ</code>, distinto de casi todos los demás.</p>
+<h3 id="sql-server">SQL Server</h3>
+<p><strong>Aislamiento por defecto: <code>READ COMMITTED</code> con bloqueo</strong>, no con versiones. Los lectores bloquean a los escritores y viceversa, salvo que se active <code>READ_COMMITTED_SNAPSHOT</code>. Es la causa de bloqueos que no aparecen en PostgreSQL ni en Oracle.</p>
+<p><strong>Identificadores</strong> entre corchetes <code>[tabla]</code> además de comillas dobles. <strong>Colación</strong> definida en la instalación, la base y hasta la columna; lo habitual es insensible a mayúsculas.</p>
+<p><strong><code>TOP</code> y <code>OFFSET ... FETCH</code>:</strong> <code>TOP</code> es propietario; <code>OFFSET/FETCH</code> es la norma y exige <code>ORDER BY</code>.</p>
+<p><strong>Concatenación con nulos:</strong> por defecto <code>'a' + NULL</code> es <code>NULL</code>, igual que en la norma, pero el ajuste <code>CONCAT_NULL_YIELDS_NULL</code> podía cambiarlo en versiones antiguas.</p>
+<h3 id="oracle">Oracle</h3>
+<p><strong>La cadena vacía es <code>NULL</code>.</strong> Es la divergencia más severa de todo el ecosistema:</p>
+<pre><code class="language-sql">INSERT INTO t (s) VALUES ('');
+SELECT * FROM t WHERE s IS NULL;   -- devuelve la fila
+SELECT * FROM t WHERE s = '';      -- no devuelve nada
+</code></pre>
+<p>Código que distingue «vacío» de «desconocido» —lo cual es una distinción legítima del dominio— no se puede portar a Oracle sin reescribir el modelo.</p>
+<p><strong>Identificadores en mayúsculas</strong> salvo que se citen: <code>create table Alumno</code> crea <code>ALUMNO</code>, y <code>"Alumno"</code> es una tabla distinta.</p>
+<p><strong>Consistencia de lectura multiversión</strong> desde siempre, con la particularidad histórica del error «snapshot too old» cuando el segmento de deshacer se recicla durante una consulta larga.</p>
+<p><strong><code>DUAL</code>:</strong> las consultas sin tabla requieren <code>SELECT 1 FROM dual</code>.</p>
+<h3 id="tabla-comparativa">Tabla comparativa</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>PostgreSQL</th>
+<th>MySQL 8 (InnoDB)</th>
+<th>SQL Server</th>
+<th>Oracle</th>
+<th>SQLite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aislamiento por defecto</td>
+<td><code>READ COMMITTED</code> (MVCC)</td>
+<td><code>REPEATABLE READ</code></td>
+<td><code>READ COMMITTED</code> (bloqueo)</td>
+<td><code>READ COMMITTED</code> (MVCC)</td>
+<td><code>SERIALIZABLE</code> de hecho</td>
+</tr>
+<tr>
+<td><code>''</code> es <code>NULL</code></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+</tr>
+<tr>
+<td>Colación por defecto</td>
+<td>Sensible</td>
+<td><strong>Insensible</strong></td>
+<td>Suele ser insensible</td>
+<td>Sensible</td>
+<td><code>BINARY</code></td>
+</tr>
+<tr>
+<td>Identificadores sin citar</td>
+<td>minúsculas</td>
+<td>según el sistema de archivos</td>
+<td>insensible</td>
+<td><strong>MAYÚSCULAS</strong></td>
+<td>insensible</td>
+</tr>
+<tr>
+<td>Límite de filas</td>
+<td><code>LIMIT</code></td>
+<td><code>LIMIT</code></td>
+<td><code>TOP</code> / <code>FETCH</code></td>
+<td><code>FETCH FIRST</code></td>
+<td><code>LIMIT</code></td>
+</tr>
+<tr>
+<td>DDL transaccional</td>
+<td>Sí</td>
+<td><strong>No</strong></td>
+<td>Sí</td>
+<td>No</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Autoincremento</td>
+<td><code>GENERATED ... IDENTITY</code></td>
+<td><code>AUTO_INCREMENT</code></td>
+<td><code>IDENTITY</code></td>
+<td>secuencia / <code>IDENTITY</code></td>
+<td><code>AUTOINCREMENT</code></td>
+</tr>
+<tr>
+<td><code>7/2</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td>Índice parcial</td>
+<td>Sí</td>
+<td>No</td>
+<td>Filtrado, sí</td>
+<td>No (índice por función)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>CHECK</code> aplicado</td>
+<td>Sí</td>
+<td>Desde 8.0.16</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-mermaid">flowchart TD
+    M[&quot;Migrar entre motores&quot;] --&gt; A[&quot;1. Divergencias sintácticas&lt;br/&gt;fallan al ejecutar: baratas&quot;]
+    M --&gt; B[&quot;2. Divergencias semánticas&lt;br/&gt;NO fallan: caras&quot;]
+    B --&gt; B1[&quot;colación&quot;]
+    B --&gt; B2[&quot;'' frente a NULL&quot;]
+    B --&gt; B3[&quot;división entera&quot;]
+    B --&gt; B4[&quot;aislamiento por defecto&quot;]
+    B --&gt; B5[&quot;ONLY_FULL_GROUP_BY&quot;]
+    B1 --&gt; T[&quot;Prueba de equivalencia:&lt;br/&gt;mismas entradas, comparar salidas&quot;]
+    B2 --&gt; T
+    B3 --&gt; T
+    B4 --&gt; T
+    B5 --&gt; T
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Prueba de equivalencia que detecta divergencias <strong>antes</strong> de migrar. La idea es ejecutar el mismo conjunto de sentencias en dos motores y comparar las salidas exactas.</p>
+<pre><code class="language-sql">-- casos.sql : cada uno pensado para exponer una divergencia conocida
+SELECT '01-division'        AS caso, CAST(7/2 AS CHAR(10))                        AS valor;
+SELECT '02-colacion'        AS caso, CAST((SELECT COUNT(*) FROM students
+                                           WHERE email='ANA@EJEMPLO.CL') AS CHAR(10));
+SELECT '03-cadena-vacia'    AS caso, CASE WHEN '' IS NULL THEN 'es-null'
+                                          ELSE 'no-es-null' END;
+SELECT '04-concat'          AS caso, CAST(('a' || 'b') AS CHAR(10));
+SELECT '05-orden-nulos'     AS caso, CAST((SELECT nota FROM enrollments
+                                           ORDER BY nota LIMIT 1) AS CHAR(10));
+SELECT '06-redondeo'        AS caso, CAST(ROUND(2.5) AS CHAR(10));
+</code></pre>
+<p>Salidas observadas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Caso</th>
+<th>PostgreSQL</th>
+<th>MySQL 8</th>
+<th>SQLite</th>
+<th>Oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01 división</td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+</tr>
+<tr>
+<td>02 colación</td>
+<td><code>0</code></td>
+<td><code>1</code></td>
+<td><code>0</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>03 cadena vacía</td>
+<td><code>no-es-null</code></td>
+<td><code>no-es-null</code></td>
+<td><code>no-es-null</code></td>
+<td><code>es-null</code></td>
+</tr>
+<tr>
+<td>04 concatenación</td>
+<td><code>ab</code></td>
+<td><code>0</code></td>
+<td><code>ab</code></td>
+<td><code>ab</code></td>
+</tr>
+<tr>
+<td>05 orden de nulos</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> <strong>último</strong></td>
+</tr>
+<tr>
+<td>06 redondeo de 2,5</td>
+<td><code>2</code> (al par)</td>
+<td><code>3</code></td>
+<td><code>3</code></td>
+<td><code>3</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Seis líneas de SQL revelan seis formas distintas de obtener resultados incorrectos en silencio. El caso 06 es especialmente traicionero: PostgreSQL aplica redondeo bancario (al par más cercano) para <code>numeric</code>, y eso produce descuadres de céntimos frente a un sistema que redondea siempre hacia arriba.</p>
+<p><strong>Orden de los nulos:</strong> la norma deja la decisión al motor. La forma portable de fijarlo es escribirlo:</p>
+<pre><code class="language-sql">ORDER BY nota ASC NULLS LAST      -- PostgreSQL, Oracle, SQLite 3.30+
+ORDER BY (nota IS NULL), nota     -- portable a MySQL y SQL Server
+</code></pre>
+<p><strong>Interpretación:</strong> la migración no consiste en traducir sintaxis. Consiste en enumerar las divergencias semánticas que afectan a tu dominio y escribir una prueba por cada una. Esa prueba se ejecuta en CI contra los dos motores y es lo único que convierte «debería funcionar» en «funciona».</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Migración</th>
+<th>Dificultad dominante</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MySQL → PostgreSQL</td>
+<td>Colación, <code>ONLY_FULL_GROUP_BY</code>, tipos laxos, división</td>
+</tr>
+<tr>
+<td>PostgreSQL → MySQL</td>
+<td>Índices parciales, <code>jsonb</code>, tipos avanzados, DDL transaccional</td>
+</tr>
+<tr>
+<td>Oracle → PostgreSQL</td>
+<td>Cadena vacía, <code>DUAL</code>, PL/SQL, identificadores en mayúsculas</td>
+</tr>
+<tr>
+<td>SQL Server → PostgreSQL</td>
+<td>Aislamiento por bloqueo, <code>TOP</code>, T-SQL</td>
+</tr>
+<tr>
+<td>Cualquiera → SQLite</td>
+<td>Concurrencia de escritura, tipado dinámico</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Migrar comparando solo la sintaxis.</strong> Las divergencias caras no dan error.</li>
+<li><strong>Desactivar <code>ONLY_FULL_GROUP_BY</code> para que «funcione».</strong> Devuelve valores arbitrarios.</li>
+<li><strong>Suponer que <code>''</code> y <code>NULL</code> son distintos en Oracle.</strong></li>
+<li><strong>No fijar <code>NULLS FIRST/LAST</code>.</strong> Los informes ordenan distinto según el motor.</li>
+<li><strong>Ignorar el motor de almacenamiento en MySQL heredado.</strong> MyISAM no es transaccional.</li>
+<li><strong>Probar la migración solo con datos limpios.</strong> Las divergencias aparecen con nulos, vacíos y acentos.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Una migración de motor sin pruebas de equivalencia se descubre incompleta durante meses, en forma de incidencias sueltas que nadie relaciona entre sí. El conjunto de casos de esta clase es barato de escribir y es lo que convierte la migración en un proyecto con final.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Amplía el archivo de casos con cinco divergencias que afecten a tu dominio.</li>
+<li>Ejecútalo en dos motores del <code>docker-compose</code> y guarda ambas salidas.</li>
+<li>Escribe un comparador que falle si difieren y añádelo a la integración continua.</li>
+<li>Documenta, por cada divergencia, la corrección adoptada.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué <code>ONLY_FULL_GROUP_BY</code> desactivado produce informes erróneos y no errores?</li>
+<li>Explica qué código de tu dominio se rompería al migrar a Oracle por el tratamiento de la cadena vacía.</li>
+<li>¿Qué implica que SQL Server use bloqueo en <code>READ COMMITTED</code> para una consulta de informe larga?</li>
+<li>Escribe un <code>ORDER BY</code> con posición de nulos fijada que funcione en los cinco motores de la tabla.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Oracle</strong> (2026). <a href="https://dev.mysql.com/doc/">MySQL Reference Manual</a>.<br />
+  Dialecto y comportamiento del motor InnoDB.</li>
+<li><strong>MariaDB Foundation</strong> (2026). <a href="https://mariadb.com/docs/">MariaDB Documentation</a>.<br />
+  Divergencias respecto de MySQL relevantes para la portabilidad.</li>
+<li><strong>Microsoft</strong> (2026). <a href="https://learn.microsoft.com/sql/sql-server/">SQL Server Documentation</a>.<br />
+  T-SQL, niveles de aislamiento y almacen de consultas.</li>
+<li><strong>Oracle</strong> (2026). <a href="https://docs.oracle.com/en/database/">Oracle Database Documentation</a>.<br />
+  PL/SQL y modelo de consistencia de lectura de Oracle.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

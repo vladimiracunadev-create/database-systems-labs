@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Migraciones evolutivas sin ventana de caída. Parte 10: Operación, seguridad y gobierno.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>049 — Migraciones evolutivas sin ventana de caída · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 10 · Operación, seguridad y gobierno</span>
+</nav>
+<main class="content">
+<h1 id="049--migraciones-evolutivas-sin-ventana-de-caída">049 — Migraciones evolutivas sin ventana de caída</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>10 — Operación, seguridad y gobierno</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>expandir y contraer</code> · <code>doble escritura</code> · <code>relleno</code> · <code>compatibilidad hacia atras</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Cambiar el esquema mientras la aplicación sirve tráfico. La técnica se resume en una idea: nunca hacer un cambio incompatible; hacer dos compatibles con un periodo de convivencia en medio.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Aplicar el patrón expandir-migrar-contraer.</li>
+<li>Identificar qué operaciones DDL bloquean y por cuánto.</li>
+<li>Diseñar una doble escritura con relleno y verificación.</li>
+<li>Escribir migraciones idempotentes y reversibles.</li>
+<li>Reconocer el cambio que sí exige una ventana de parada.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="expandir-migrar-contraer">Expandir, migrar, contraer</h3>
+<p>Ambler y Sadalage formalizaron la técnica. Todo cambio incompatible se descompone en tres despliegues:</p>
+<pre><code class="language-text">1. EXPANDIR   Añadir lo nuevo sin quitar lo viejo. Ambas versiones del código funcionan.
+2. MIGRAR     Rellenar los datos nuevos. Cambiar el código para usarlos. Verificar.
+3. CONTRAER   Eliminar lo viejo, cuando ya nadie lo usa.
+</code></pre>
+<p>La regla que lo hace funcionar: <strong>en todo momento, la versión antigua y la nueva del código deben poder ejecutarse contra el mismo esquema</strong>. Durante un despliegue gradual conviven, y en una reversión también.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Cambio deseado</th>
+<th>Expandir</th>
+<th>Migrar</th>
+<th>Contraer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Renombrar columna</td>
+<td>Añadir la nueva</td>
+<td>Copiar + doble escritura + cambiar lecturas</td>
+<td>Eliminar la antigua</td>
+</tr>
+<tr>
+<td>Cambiar tipo</td>
+<td>Añadir columna con el tipo nuevo</td>
+<td>Convertir + doble escritura</td>
+<td>Eliminar la antigua</td>
+</tr>
+<tr>
+<td>Dividir tabla</td>
+<td>Crear la nueva + vista de compatibilidad</td>
+<td>Copiar + cambiar escrituras</td>
+<td>Eliminar la antigua</td>
+</tr>
+<tr>
+<td>Añadir <code>NOT NULL</code></td>
+<td>Añadir <code>CHECK NOT VALID</code></td>
+<td>Corregir nulos + <code>VALIDATE</code></td>
+<td>Convertir a <code>NOT NULL</code></td>
+</tr>
+<tr>
+<td>Añadir clave foránea</td>
+<td><code>NOT VALID</code></td>
+<td>Corregir huérfanos + <code>VALIDATE</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="qué-bloquea-y-por-cuánto">Qué bloquea y por cuánto</h3>
+<p>Este es el conocimiento operativo que evita incidentes:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operación</th>
+<th>PostgreSQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ADD COLUMN</code> sin valor por defecto</td>
+<td>Instantáneo (bloqueo breve)</td>
+</tr>
+<tr>
+<td><code>ADD COLUMN ... DEFAULT</code></td>
+<td>Instantáneo desde PG 11</td>
+</tr>
+<tr>
+<td><code>ADD COLUMN ... NOT NULL</code> sin defecto</td>
+<td><strong>Falla</strong> si hay filas</td>
+</tr>
+<tr>
+<td><code>DROP COLUMN</code></td>
+<td>Instantáneo (marca como borrada)</td>
+</tr>
+<tr>
+<td><code>ALTER TYPE</code> que exige conversión</td>
+<td><strong>Reescribe la tabla</strong>: bloqueo largo</td>
+</tr>
+<tr>
+<td><code>CREATE INDEX</code></td>
+<td><strong>Bloquea escrituras</strong></td>
+</tr>
+<tr>
+<td><code>CREATE INDEX CONCURRENTLY</code></td>
+<td>No bloquea; más lento; puede fallar y dejar un índice inválido</td>
+</tr>
+<tr>
+<td><code>ADD CONSTRAINT ... NOT VALID</code></td>
+<td>Instantáneo</td>
+</tr>
+<tr>
+<td><code>VALIDATE CONSTRAINT</code></td>
+<td>Barrido sin bloquear escrituras</td>
+</tr>
+<tr>
+<td><code>SET NOT NULL</code> con <code>CHECK</code> validado previo</td>
+<td>Instantáneo desde PG 12</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>La trampa de la cola de bloqueos.</strong> Un <code>ALTER TABLE</code> que necesita un bloqueo exclusivo espera a que terminen las transacciones en curso, y <strong>mientras espera bloquea a todas las que llegan detrás</strong>. Una consulta de informe de 10 minutos convierte un <code>ALTER</code> instantáneo en 10 minutos de indisponibilidad total de esa tabla.</p>
+<p>La defensa es siempre la misma:</p>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+ALTER TABLE ... ;   -- si no consigue el bloqueo en 3 s, falla y se reintenta después
+</code></pre>
+<p>En MySQL, además, hay que recordar que <strong>el DDL no es transaccional</strong> (clase 014): una migración de varios pasos que falla a la mitad no se revierte sola.</p>
+<pre><code class="language-mermaid">flowchart LR
+    V1[&quot;Código v1&lt;br/&gt;usa columna vieja&quot;] --&gt; E[&quot;EXPANDIR&lt;br/&gt;añadir columna nueva&lt;br/&gt;+ doble escritura&quot;]
+    E --&gt; V12[&quot;v1 y v2 conviven&lt;br/&gt;ambas funcionan&quot;]
+    V12 --&gt; M[&quot;MIGRAR&lt;br/&gt;rellenar por lotes&lt;br/&gt;+ verificar&quot;]
+    M --&gt; V2[&quot;Código v2&lt;br/&gt;lee la nueva&quot;]
+    V2 --&gt; W[&quot;Esperar: ¿reversión posible?&lt;br/&gt;días, no minutos&quot;]
+    W --&gt; C[&quot;CONTRAER&lt;br/&gt;eliminar la vieja&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Objetivo: renombrar <code>enrollments.nota</code> a <code>calificacion</code> y cambiar su tipo de <code>REAL</code> a <code>NUMERIC(2,1)</code>. Tabla de 5 millones de filas, 400 escrituras/s.</p>
+<p><strong>Lo que NO se puede hacer:</strong></p>
+<pre><code class="language-sql">ALTER TABLE enrollments RENAME COLUMN nota TO calificacion;
+</code></pre>
+<p>Instantáneo en el motor y <strong>catastrófico</strong>: todo el código desplegado que dice <code>nota</code> falla desde ese instante, incluidas las instancias que aún no se han actualizado.</p>
+<h3 id="paso-1--expandir">Paso 1 — Expandir</h3>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+ALTER TABLE enrollments ADD COLUMN calificacion NUMERIC(2,1);   -- instantáneo
+
+CREATE OR REPLACE FUNCTION sync_calificacion() RETURNS TRIGGER AS $$
+BEGIN
+  -- Doble escritura en ambos sentidos: el código viejo escribe `nota`,
+  -- el nuevo escribe `calificacion`, y ambos quedan sincronizados.
+  IF NEW.calificacion IS DISTINCT FROM OLD.calificacion THEN
+    NEW.nota := NEW.calificacion::real;
+  ELSIF NEW.nota IS DISTINCT FROM OLD.nota THEN
+    NEW.calificacion := NEW.nota::numeric(2,1);
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_calificacion BEFORE INSERT OR UPDATE ON enrollments
+FOR EACH ROW EXECUTE FUNCTION sync_calificacion();
+</code></pre>
+<p>Aquí no ha cambiado nada para el código existente. Se puede revertir sin consecuencias.</p>
+<h3 id="paso-2--rellenar-por-lotes">Paso 2 — Rellenar por lotes</h3>
+<p>Un <code>UPDATE</code> único de 5 millones de filas mantendría un bloqueo enorme, generaría 5 millones de versiones muertas y un WAL gigantesco.</p>
+<pre><code class="language-sql">DO $$
+DECLARE ultimo RECORD; n INTEGER;
+BEGIN
+  LOOP
+    WITH lote AS (
+      SELECT student_id, course_id FROM enrollments
+      WHERE calificacion IS NULL AND nota IS NOT NULL
+      ORDER BY student_id, course_id LIMIT 10000 FOR UPDATE SKIP LOCKED
+    )
+    UPDATE enrollments e SET calificacion = e.nota::numeric(2,1)
+    FROM lote l WHERE e.student_id = l.student_id AND e.course_id = l.course_id;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    EXIT WHEN n = 0;
+    COMMIT;             -- transacción corta por lote
+    PERFORM pg_sleep(0.1);   -- dar aire al autovacuum y a la réplica
+  END LOOP;
+END $$;
+</code></pre>
+<p><code>SKIP LOCKED</code> evita esperar a filas que la aplicación está modificando. La pausa evita que el relleno dispare el retraso de réplica (clase 043).</p>
+<h3 id="paso-3--verificar-antes-de-seguir">Paso 3 — Verificar antes de seguir</h3>
+<pre><code class="language-sql">SELECT count(*) FROM enrollments
+WHERE nota IS DISTINCT FROM calificacion::real;   -- debe ser 0
+</code></pre>
+<p><strong>Esta consulta es la puerta.</strong> Si no da cero, no se avanza.</p>
+<h3 id="paso-4--desplegar-el-código-que-lee-calificacion">Paso 4 — Desplegar el código que lee <code>calificacion</code></h3>
+<p>Despliegue gradual. Durante horas conviven instancias que leen una y otra columna; el disparador mantiene ambas correctas.</p>
+<h3 id="paso-5--esperar">Paso 5 — Esperar</h3>
+<p>Días, no minutos. Es la ventana en la que una reversión del código sigue siendo posible sin tocar la base.</p>
+<h3 id="paso-6--contraer">Paso 6 — Contraer</h3>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+DROP TRIGGER trg_sync_calificacion ON enrollments;
+ALTER TABLE enrollments DROP COLUMN nota;
+</code></pre>
+<p><strong>Resumen de la operación:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Paso</th>
+<th>Duración</th>
+<th>Bloqueo</th>
+<th>¿Reversible?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 Expandir</td>
+<td>&lt; 1 s</td>
+<td>Breve</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>2 Rellenar</td>
+<td>~2 h</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>3 Verificar</td>
+<td>minutos</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>4 Desplegar</td>
+<td>~30 min</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>5 Esperar</td>
+<td>días</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>6 Contraer</td>
+<td>&lt; 1 s</td>
+<td>Breve</td>
+<td><strong>No</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Cinco de seis pasos son reversibles. Solo el último no lo es, y para entonces ya se ha demostrado que nadie usa la columna vieja.</p>
+<h3 id="el-cambio-que-sí-exige-parada">El cambio que sí exige parada</h3>
+<p>No todo se puede hacer en caliente. Ejemplos honestos: cambiar la clave primaria de una tabla enorme referenciada por muchas otras, o una reorganización que exige reescribir el conjunto sin espacio para una copia. Ahí la decisión correcta es programar una ventana, comunicarla y ensayarla sobre una copia restaurada (clase 048), no forzar un procedimiento en caliente que se quedará a medias.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Enfoque</th>
+<th>Caída</th>
+<th>Riesgo</th>
+<th>Duración total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ALTER</code> directo</td>
+<td>Sí, mientras dure</td>
+<td>Alto</td>
+<td>Minutos</td>
+</tr>
+<tr>
+<td>Expandir-migrar-contraer</td>
+<td>Ninguna</td>
+<td>Bajo</td>
+<td>Días</td>
+</tr>
+<tr>
+<td>Tabla sombra + intercambio</td>
+<td>Segundos</td>
+<td>Medio</td>
+<td>Horas</td>
+</tr>
+<tr>
+<td>Herramienta en línea (<code>gh-ost</code>, <code>pt-osc</code>)</td>
+<td>Ninguna</td>
+<td>Medio</td>
+<td>Horas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong><code>RENAME COLUMN</code> en caliente.</strong> Rompe todo el código desplegado.</li>
+<li><strong><code>ALTER</code> sin <code>lock_timeout</code>.</strong> Una consulta larga bloquea la tabla entera.</li>
+<li><strong><code>UPDATE</code> masivo en una sola transacción.</strong> Hinchazón, WAL enorme, retraso de réplica.</li>
+<li><strong><code>CREATE INDEX</code> sin <code>CONCURRENTLY</code> en producción.</strong> Bloquea escrituras.</li>
+<li><strong>Contraer el mismo día que se despliega.</strong> No queda margen de reversión.</li>
+<li><strong>Migraciones no idempotentes.</strong> Un reintento tras un fallo parcial falla o duplica.</li>
+<li><strong>No verificar entre pasos.</strong> Se avanza sobre datos incompletos.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las migraciones son el cambio con mayor probabilidad de causar una caída, porque se prueban con datos de desarrollo y se ejecutan sobre datos de producción. Ensayarlas contra una copia restaurada del tamaño real es la práctica que más incidentes evita.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Elige un cambio incompatible real y descomponlo en los tres pasos.</li>
+<li>Implementa la doble escritura y demuestra que ambas versiones del código funcionan.</li>
+<li>Rellena por lotes midiendo el retraso de réplica durante el proceso.</li>
+<li>Escribe la consulta de verificación que actúa como puerta entre pasos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué <code>RENAME COLUMN</code> es peligroso si es instantáneo en el motor?</li>
+<li>Explica la cola de bloqueos y cómo <code>lock_timeout</code> la evita.</li>
+<li>¿Qué aporta <code>SKIP LOCKED</code> en un relleno por lotes?</li>
+<li>Da un cambio de tu esquema que sí exigiría una ventana de parada, y justifícalo.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Scott W. Ambler, Pramod J. Sadalage</strong> (2006). <a href="https://databaserefactoring.com/">Refactoring Databases: Evolutionary Database Design</a>. Addison-Wesley. ISBN 978-0-321-29353-4.<br />
+  Migraciones con período de transición y compatibilidad hacia atras.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

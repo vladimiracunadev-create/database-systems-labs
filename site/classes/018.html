@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="CTE, subconsultas y funciones de ventana. Parte 03: SQL en profundidad.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>018 — CTE, subconsultas y funciones de ventana · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 03 · SQL en profundidad</span>
+</nav>
+<main class="content">
+<h1 id="018--cte-subconsultas-y-funciones-de-ventana">018 — CTE, subconsultas y funciones de ventana</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>03 — SQL en profundidad</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>CTE</code> · <code>recursión</code> · <code>subconsulta correlacionada</code> · <code>partición de ventana</code> · <code>marco</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Resolver con SQL preguntas que exigen comparar una fila con su grupo, recorrer jerarquías o numerar dentro de particiones — sin sacar los datos a la aplicación para procesarlos allí.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Elegir entre subconsulta, CTE y función de ventana con criterio.</li>
+<li>Escribir funciones de ventana con <code>PARTITION BY</code>, <code>ORDER BY</code> y marco explícito.</li>
+<li>Distinguir <code>ROWS</code> de <code>RANGE</code> y explicar cuándo cambia el resultado.</li>
+<li>Escribir una CTE recursiva y acotarla para que termine.</li>
+<li>Resolver «el más reciente por grupo» de tres formas y compararlas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="las-tres-herramientas">Las tres herramientas</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Herramienta</th>
+<th>Qué aporta</th>
+<th>Coste típico</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subconsulta no correlacionada</td>
+<td>Se evalúa una vez</td>
+<td>Bajo</td>
+</tr>
+<tr>
+<td>Subconsulta correlacionada</td>
+<td>Se evalúa por fila del exterior</td>
+<td>Alto si no hay índice</td>
+</tr>
+<tr>
+<td>CTE (<code>WITH</code>)</td>
+<td>Nombra un resultado intermedio; permite recursión</td>
+<td>Depende de si el motor la materializa</td>
+</tr>
+<tr>
+<td>Función de ventana</td>
+<td>Calcula sobre un grupo <strong>sin colapsar filas</strong></td>
+<td>Un ordenamiento por partición</td>
+</tr>
+</tbody>
+</table></div>
+<p>La diferencia esencial entre agregado y ventana: <code>GROUP BY</code> <strong>reduce</strong> N filas a una; la función de ventana <strong>conserva</strong> las N y añade una columna con el valor del grupo. Por eso la ventana es la respuesta natural a «compara cada fila con su grupo».</p>
+<h3 id="anatomía-de-una-ventana">Anatomía de una ventana</h3>
+<pre><code class="language-sql">funcion() OVER (
+    PARTITION BY expr      -- grupos independientes
+    ORDER BY     expr      -- orden dentro del grupo
+    ROWS BETWEEN ... AND ...   -- marco: qué filas entran
+)
+</code></pre>
+<p>Familias de funciones:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Familia</th>
+<th>Funciones</th>
+<th>Necesita <code>ORDER BY</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Numeración</td>
+<td><code>ROW_NUMBER</code>, <code>RANK</code>, <code>DENSE_RANK</code>, <code>NTILE</code></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Desplazamiento</td>
+<td><code>LAG</code>, <code>LEAD</code>, <code>FIRST_VALUE</code>, <code>LAST_VALUE</code></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Agregación</td>
+<td><code>SUM</code>, <code>AVG</code>, <code>COUNT</code>, <code>MIN</code>, <code>MAX</code> sobre <code>OVER</code></td>
+<td>Opcional</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rows-frente-a-range-la-trampa-del-marco"><code>ROWS</code> frente a <code>RANGE</code>: la trampa del marco</h3>
+<p>Si hay <code>ORDER BY</code> y no se especifica marco, el implícito es:</p>
+<pre><code class="language-sql">RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+</code></pre>
+<p><code>RANGE</code> agrupa por <strong>valor</strong>: todas las filas con el mismo valor de ordenación entran juntas en el marco. <code>ROWS</code> cuenta <strong>filas físicas</strong>.</p>
+<p>Con notas <code>4.0, 5.0, 5.0, 6.0</code> y <code>SUM(nota) OVER (ORDER BY nota)</code>:</p>
+<pre><code class="language-text">RANGE (implícito)  -&gt;  4.0, 14.0, 14.0, 20.0
+ROWS  UNBOUNDED PRECEDING -&gt; 4.0,  9.0, 14.0, 20.0
+</code></pre>
+<p>Las dos filas empatadas en 5,0 reciben con <code>RANGE</code> el mismo acumulado (14,0), porque el marco incluye a ambas. Para un total acumulado fila a fila, hay que escribir <code>ROWS</code> explícitamente. Esta es la causa número uno de acumulados «raros» y no aparece hasta que hay empates.</p>
+<p>Lo mismo afecta a <code>LAST_VALUE</code>: con el marco implícito, «el último valor» es la fila actual, no el último del grupo. Hay que escribir <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>.</p>
+<h3 id="cte-recursiva">CTE recursiva</h3>
+<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, requiere_id, profundidad) AS (
+    SELECT curso_id, requiere_id, 1
+    FROM prerequisitos WHERE curso_id = :inicio
+  UNION ALL
+    SELECT p.curso_id, pr.requiere_id, p.profundidad + 1
+    FROM prereq p
+    JOIN prerequisitos pr ON pr.curso_id = p.requiere_id
+    WHERE p.profundidad &lt; 10                 -- cota obligatoria
+)
+SELECT DISTINCT requiere_id, MIN(profundidad) FROM prereq GROUP BY requiere_id;
+</code></pre>
+<p>Dos advertencias que no son opcionales:</p>
+<ul>
+<li><strong><code>UNION ALL</code> no elimina duplicados</strong>, así que un ciclo en los datos produce un bucle infinito. La cota de profundidad, o un <code>UNION</code> que sí deduplica, es obligatoria en datos no verificados.</li>
+<li>El cierre transitivo es exactamente lo que el cálculo relacional no expresa (clase 012). Si estas consultas dominan la carga, el modelo de grafos es la alternativa (clase 028).</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    P[&quot;¿Qué necesito?&quot;] --&gt; A{&quot;¿Colapsar filas&lt;br/&gt;a un resumen?&quot;}
+    A -- &quot;Sí&quot; --&gt; G[&quot;GROUP BY&quot;]
+    A -- &quot;No&quot; --&gt; B{&quot;¿Comparar cada fila&lt;br/&gt;con su grupo?&quot;}
+    B -- &quot;Sí&quot; --&gt; W[&quot;Función de ventana&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Profundidad&lt;br/&gt;variable?&quot;}
+    C -- &quot;Sí&quot; --&gt; R[&quot;CTE recursiva&lt;br/&gt;con cota&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Reutilizo el&lt;br/&gt;resultado intermedio?&quot;}
+    D -- &quot;Sí&quot; --&gt; CT[&quot;CTE&quot;]
+    D -- &quot;No&quot; --&gt; S[&quot;Subconsulta&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«la nota más reciente de cada estudiante en cada curso, junto con su diferencia respecto de la anterior»</em>.</p>
+<p><strong>Forma 1 — ventana (recomendada):</strong></p>
+<pre><code class="language-sql">WITH ordenadas AS (
+  SELECT student_id, course_id, nota, registrada_en,
+         ROW_NUMBER() OVER (PARTITION BY student_id, course_id
+                            ORDER BY registrada_en DESC, id DESC) AS rn,
+         LAG(nota)    OVER (PARTITION BY student_id, course_id
+                            ORDER BY registrada_en ASC,  id ASC)  AS nota_anterior
+  FROM notas
+)
+SELECT student_id, course_id, nota,
+       nota - nota_anterior AS variacion
+FROM ordenadas
+WHERE rn = 1;
+</code></pre>
+<p>Puntos clave:</p>
+<ul>
+<li>El <code>WHERE rn = 1</code> va en la CTE exterior porque las ventanas se calculan en el paso 5 y no se pueden filtrar en <code>WHERE</code> (clase 015).</li>
+<li>El desempate por <code>id</code> hace la selección <strong>determinista</strong> si dos registros comparten marca de tiempo. Sin él, dos ejecuciones pueden devolver notas distintas.</li>
+<li><code>LAG</code> usa orden ascendente porque «la anterior» es cronológicamente previa.</li>
+</ul>
+<p><strong>Forma 2 — subconsulta correlacionada:</strong></p>
+<pre><code class="language-sql">SELECT n.* FROM notas n
+WHERE n.registrada_en = (
+  SELECT MAX(n2.registrada_en) FROM notas n2
+  WHERE n2.student_id = n.student_id AND n2.course_id = n.course_id
+);
+</code></pre>
+<p>Legible, pero devuelve <strong>dos filas</strong> si hay empate en la marca de tiempo, y se evalúa una vez por fila del exterior.</p>
+<p><strong>Forma 3 — <code>DISTINCT ON</code> (solo PostgreSQL):</strong></p>
+<pre><code class="language-sql">SELECT DISTINCT ON (student_id, course_id) *
+FROM notas ORDER BY student_id, course_id, registrada_en DESC, id DESC;
+</code></pre>
+<p>La más corta y la más rápida en PostgreSQL, y no portable.</p>
+<p><strong>Comparación medida</strong> sobre 5 millones de filas de <code>notas</code> con índice en <code>(student_id, course_id, registrada_en)</code>:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Forma</th>
+<th>Recorridos</th>
+<th>Determinista ante empates</th>
+<th>Portable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ventana</td>
+<td>1 + ordenamiento por partición</td>
+<td>Sí, con desempate</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Correlacionada</td>
+<td>1 + 1 por fila (o índice)</td>
+<td>No</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>DISTINCT ON</code></td>
+<td>1</td>
+<td>Sí</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Acumulado con marco explícito</strong> — nota acumulada por estudiante:</p>
+<pre><code class="language-sql">SELECT student_id, registrada_en, nota,
+       SUM(nota) OVER (PARTITION BY student_id ORDER BY registrada_en, id
+                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado
+FROM notas;
+</code></pre>
+<p>Escribir <code>ROWS</code> es lo que garantiza que dos notas registradas en el mismo instante no compartan el mismo acumulado.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Pregunta</th>
+<th>Herramienta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Total por grupo»</td>
+<td><code>GROUP BY</code></td>
+</tr>
+<tr>
+<td>«Porcentaje de cada fila sobre su grupo»</td>
+<td><code>SUM() OVER (PARTITION BY ...)</code></td>
+</tr>
+<tr>
+<td>«Top N por grupo»</td>
+<td><code>ROW_NUMBER()</code> + filtro externo</td>
+</tr>
+<tr>
+<td>«Diferencia con la fila anterior»</td>
+<td><code>LAG</code></td>
+</tr>
+<tr>
+<td>«Todos los ancestros»</td>
+<td>CTE recursiva</td>
+</tr>
+<tr>
+<td>«¿Existe alguno?»</td>
+<td><code>EXISTS</code> (clase 016)</td>
+</tr>
+<tr>
+<td>«Media móvil de 7 días»</td>
+<td><code>AVG() OVER (... ROWS 6 PRECEDING)</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Filtrar una ventana en <code>WHERE</code>.</strong> No existe todavía; hace falta CTE o subconsulta.</li>
+<li><strong>Omitir el marco y esperar acumulado fila a fila.</strong> El implícito es <code>RANGE</code> y agrupa empates.</li>
+<li><strong><code>LAST_VALUE</code> sin marco completo.</strong> Devuelve la fila actual.</li>
+<li><strong>CTE recursiva sin cota.</strong> Un ciclo en los datos bloquea la sesión.</li>
+<li><strong><code>RANK</code> cuando se quería <code>ROW_NUMBER</code>.</strong> <code>RANK</code> deja huecos y repite posiciones en empates.</li>
+<li><strong>Ordenación no determinista.</strong> Sin desempate, el «más reciente» cambia entre ejecuciones.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Bajar 5 millones de filas a la aplicación para calcular un acumulado consume ancho de banda, memoria y tiempo, y produce un resultado que el motor habría calculado usando un índice ya existente. Las funciones de ventana son, en la práctica, la diferencia entre un informe de 200 ms y uno de 40 s.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Busca en tu código un cálculo por grupo que hoy se hace en la aplicación y llévalo a una ventana.</li>
+<li>Mide el volumen transferido antes y después.</li>
+<li>Escribe la misma consulta con <code>RANGE</code> y con <code>ROWS</code> y demuestra la diferencia con empates.</li>
+<li>Implementa una CTE recursiva sobre una jerarquía tuya, con cota, y prueba qué pasa al introducir un ciclo.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué no se puede filtrar <code>ROW_NUMBER()</code> en <code>WHERE</code>?</li>
+<li>Da un conjunto de datos donde <code>ROWS</code> y <code>RANGE</code> produzcan acumulados distintos.</li>
+<li>Explica por qué la subconsulta correlacionada puede devolver dos filas donde la ventana devuelve una.</li>
+<li>Escribe la cota de una CTE recursiva sobre tu jerarquía y justifica el valor elegido.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
+  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

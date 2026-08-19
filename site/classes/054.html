@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="OLTP frente a OLAP: por qué se separan. Parte 11: Analítica, integración y streaming.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>054 — OLTP frente a OLAP: por qué se separan · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 11 · Analítica, integración y streaming</span>
+</nav>
+<main class="content">
+<h1 id="054--oltp-frente-a-olap-por-qué-se-separan">054 — OLTP frente a OLAP: por qué se separan</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="053.html">← Anterior</a> · <a href="055.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>11 — Analítica, integración y streaming</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>duckdb</code>, <code>clickhouse</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>carga transaccional</code> · <code>carga analítica</code> · <code>contención</code> · <code>formato de almacenamiento</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Explicar por qué las cargas transaccionales y analíticas se separan, qué pasa cuando no se separan y cuándo esa separación es innecesaria.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Caracterizar ambas cargas por su patrón de acceso, no por su nombre.</li>
+<li>Explicar los tres conflictos concretos de ejecutarlas en el mismo motor.</li>
+<li>Ordenar las opciones de separación por costo creciente.</li>
+<li>Reconocer cuándo la separación no compensa.</li>
+<li>Situar HTAP y el enfoque de tabla externa.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="dos-cargas-dos-formas">Dos cargas, dos formas</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>OLTP</th>
+<th>OLAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unidad de trabajo</td>
+<td>Transacción de pocas filas</td>
+<td>Consulta que barre millones</td>
+</tr>
+<tr>
+<td>Columnas por consulta</td>
+<td>Casi todas de pocas filas</td>
+<td>Pocas de casi todas las filas</td>
+</tr>
+<tr>
+<td>Concurrencia</td>
+<td>Miles de sesiones</td>
+<td>Decenas</td>
+</tr>
+<tr>
+<td>Latencia objetivo</td>
+<td>Milisegundos</td>
+<td>Segundos a minutos</td>
+</tr>
+<tr>
+<td>Escrituras</td>
+<td>Continuas, pequeñas</td>
+<td>Por lotes</td>
+</tr>
+<tr>
+<td>Datos</td>
+<td>Actuales</td>
+<td>Históricos</td>
+</tr>
+<tr>
+<td>Consistencia</td>
+<td>Estricta</td>
+<td>Tolera desfase</td>
+</tr>
+<tr>
+<td>Formato óptimo</td>
+<td>Filas</td>
+<td><strong>Columnas</strong> (clase 032)</td>
+</tr>
+<tr>
+<td>Índices</td>
+<td>Muchos, selectivos</td>
+<td>Pocos, dispersos</td>
+</tr>
+</tbody>
+</table></div>
+<p>La incompatibilidad es física, no organizativa: <strong>el mismo dato no puede estar simultáneamente ordenado por filas y por columnas</strong> sin duplicarse.</p>
+<h3 id="los-tres-conflictos">Los tres conflictos</h3>
+<p><strong>1. Contención de recursos.</strong> Una consulta analítica lee millones de páginas y desaloja el conjunto de trabajo transaccional del buffer. Las consultas OLTP que iban a 2 ms pasan a 20 ms hasta que el caché se recalienta.</p>
+<p><strong>2. Bloqueos y versiones.</strong> En un motor MVCC, una consulta analítica de 40 minutos mantiene una instantánea abierta y <strong>bloquea la recolección de versiones muertas</strong> durante ese tiempo (clase 033). Con 2 000 escrituras/s, son 4,8 millones de versiones acumuladas.</p>
+<p><strong>3. Modelos de datos opuestos.</strong> El esquema normalizado que hace correcto el OLTP obliga a reuniones múltiples en el OLAP. El modelo dimensional que hace rápido el OLAP introduce redundancia inaceptable en el OLTP.</p>
+<p>Stonebraker et al. midieron además que un motor OLTP tradicional gasta la mayor parte de sus ciclos en gestión de bloqueos, registro y buffer —trabajo que la carga analítica no necesita en absoluto—.</p>
+<h3 id="las-opciones-de-menor-a-mayor-costo">Las opciones, de menor a mayor costo</h3>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Consultas analíticas&lt;br/&gt;sobre el OLTP&quot;] --&gt; B{&quot;¿Molestan al&lt;br/&gt;transaccional?&quot;}
+    B -- &quot;No&quot; --&gt; OK[&quot;No separar.&lt;br/&gt;Es la opción correcta&quot;]
+    B -- &quot;Sí&quot; --&gt; C[&quot;1. Réplica de solo lectura&lt;br/&gt;mismo motor, mismo esquema&quot;]
+    C --&gt; D{&quot;¿Suficiente?&quot;}
+    D -- &quot;Sí&quot; --&gt; OK2[&quot;Coste: una réplica&quot;]
+    D -- &quot;No&quot; --&gt; E[&quot;2. Exportar a Parquet&lt;br/&gt;+ DuckDB&quot;]
+    E --&gt; F{&quot;¿Suficiente?&quot;}
+    F -- &quot;Sí&quot; --&gt; OK3[&quot;Coste: un proceso de exportación&quot;]
+    F -- &quot;No&quot; --&gt; G[&quot;3. Almacén columnar&lt;br/&gt;+ modelo dimensional (clase 055)&quot;]
+    G --&gt; H[&quot;Coste: sistema, canal,&lt;br/&gt;modelo y equipo&quot;]
+</code></pre>
+<p><strong>La opción 1 resuelve el conflicto 1 y parcialmente el 2</strong>, y no el 3: el esquema sigue siendo el transaccional. Aun así, resuelve la mayoría de los casos reales y cuesta muy poco.</p>
+<p><strong>La opción 2</strong> es la más infravalorada. Una exportación nocturna a Parquet consultada con DuckDB (clase 023) da rendimiento columnar sin ningún servidor nuevo:</p>
+<pre><code class="language-sql">-- Sobre archivos Parquet, sin base de datos analítica
+SELECT periodo, count(*), avg(nota)
+FROM read_parquet('exportacion/enrollments/*.parquet')
+GROUP BY periodo;
+</code></pre>
+<p><strong>La opción 3</strong> se justifica cuando hay varias fuentes que integrar, histórico que conservar más allá del OLTP, o volúmenes que no caben en una máquina.</p>
+<h3 id="cuándo-no-separar">Cuándo no separar</h3>
+<p>Con menos de unos 100 GB y consultas analíticas fuera del horario punta, separar añade un canal que mantener, un desfase que explicar y un sistema que operar, a cambio de poco. La pregunta correcta es <strong>si la carga analítica está degradando la transaccional</strong>, medido, no supuesto.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Plataforma: 5 M de inscripciones, 300 consultas OLTP/s, y un panel de dirección que ejecuta 12 consultas analíticas cada mañana.</p>
+<p><strong>Sin separar, medición:</strong></p>
+<pre><code class="language-sql">-- panel de dirección, 08:00
+SELECT c.periodo, count(*), avg(e.nota),
+       count(DISTINCT e.student_id)
+FROM enrollments e JOIN courses c ON c.id = e.course_id
+GROUP BY c.periodo;
+</code></pre>
+<pre><code class="language-text">Duración:                       47 s
+Páginas leídas:                 65 790 (barrido completo)
+Efecto medido en el OLTP durante esos 47 s:
+  p99 de lectura:  4 ms  →  38 ms
+  aciertos de buffer:  99,2 %  →  71,4 %
+  filas muertas no recuperables: +94 000
+</code></pre>
+<p>El panel funciona. Y durante 47 segundos, cada mañana, todos los usuarios notan la plataforma lenta. <strong>Ese es el conflicto, cuantificado.</strong></p>
+<p><strong>Opción 1 — réplica de solo lectura:</strong></p>
+<pre><code class="language-text">El panel consulta la réplica. El OLTP no se entera.
+p99 durante el panel: 4 ms (sin cambio)
+Coste: una instancia más
+Nuevo problema: el retraso de réplica crece a 12 s durante el panel
+                → aceptable para un panel; hay que declararlo
+</code></pre>
+<p>Para este caso, <strong>aquí termina el problema</strong>. Es la respuesta correcta y cuesta una instancia.</p>
+<p><strong>Opción 2 — exportación a Parquet</strong>, si la réplica no bastara:</p>
+<pre><code class="language-bash"># Exportación nocturna incremental
+psql -c &quot;\copy (SELECT * FROM enrollments WHERE registrada_en &gt;= current_date - 1)
+         TO PROGRAM 'zstd &gt; exportacion/enrollments/$(date +%F).parquet.zst'&quot;
+</code></pre>
+<pre><code class="language-text">Consulta del panel sobre Parquet con DuckDB:  1,2 s   (frente a 47 s)
+Bytes leídos:                                 0,4 GB  (frente a 20 GB)
+Coste: un trabajo programado; ningún servidor nuevo
+Desfase: hasta 24 h — hay que decidir si es aceptable
+</code></pre>
+<p><strong>Opción 3 — almacén columnar.</strong> Se justificaría si hubiera que cruzar estas inscripciones con datos de facturación y de una plataforma externa, conservar diez años de histórico y servir a veinte analistas. Entonces el modelo dimensional (clase 055) y el canal de integración (clase 056) valen su costo.</p>
+<p><strong>La regla de decisión, con los números de este caso:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Coste operativo</th>
+<th>Latencia del panel</th>
+<th>Desfase</th>
+<th>¿Resuelve?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No separar</td>
+<td>0</td>
+<td>47 s</td>
+<td>0</td>
+<td>No: degrada el OLTP</td>
+</tr>
+<tr>
+<td>Réplica</td>
+<td>1 instancia</td>
+<td>47 s</td>
+<td>segundos</td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td>Parquet + DuckDB</td>
+<td>1 trabajo</td>
+<td>1,2 s</td>
+<td>horas</td>
+<td>Sí, y más rápido</td>
+</tr>
+<tr>
+<td>Almacén</td>
+<td>Sistema + equipo</td>
+<td>&lt; 1 s</td>
+<td>horas</td>
+<td>Sí, y desproporcionado aquí</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="htap">HTAP</h3>
+<p>Algunos sistemas mantienen ambas representaciones a la vez: filas para el OLTP y un almacén columnar sincronizado para el OLAP (índices columnares de SQL Server, TiFlash de TiDB, <code>pg_analytics</code> y similares). Evita el canal de integración a cambio de más recursos y más complejidad interna. Es una opción real, no una promesa, pero no elimina el compromiso: sigue habiendo dos copias del dato en dos formatos.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Decisión</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consultas analíticas ocasionales, &lt; 100 GB</td>
+<td>No separar</td>
+</tr>
+<tr>
+<td>Panel diario que degrada el OLTP</td>
+<td>Réplica de solo lectura</td>
+</tr>
+<tr>
+<td>Analítica pesada, una sola fuente</td>
+<td>Exportar a Parquet + DuckDB</td>
+</tr>
+<tr>
+<td>Varias fuentes, histórico largo, muchos analistas</td>
+<td>Almacén + modelo dimensional</td>
+</tr>
+<tr>
+<td>Necesidad de analítica sobre datos del segundo</td>
+<td>HTAP, con su costo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Montar un almacén sin haber medido la degradación.</strong> Coste alto para un problema que quizá no existe.</li>
+<li><strong>Consultas analíticas contra el primario.</strong> Contención y bloqueo de la recolección.</li>
+<li><strong>Ignorar el retraso de réplica durante el panel.</strong> El panel muestra datos más viejos de lo que cree.</li>
+<li><strong>Copiar el esquema OLTP al almacén.</strong> Se hereda la normalización y las reuniones.</li>
+<li><strong>Separar y no declarar el desfase.</strong> Dos cifras distintas y nadie sabe cuál es la buena.</li>
+<li><strong>Suponer que HTAP elimina el compromiso.</strong> Lo esconde, no lo elimina.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La conversación productiva no es «¿necesitamos un almacén de datos?», sino «¿cuánto degrada el OLTP nuestra carga analítica, y cuál es la opción más barata que lo resuelve?». Medir primero convierte una decisión de arquitectura en una decisión con evidencia.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Mide el p99 del OLTP con y sin la carga analítica en ejecución.</li>
+<li>Cuantifica el efecto sobre el buffer y sobre las versiones no recuperables.</li>
+<li>Prueba la opción 2 exportando a Parquet y consultando con DuckDB.</li>
+<li>Justifica con cifras qué opción elegirías y qué desfase declararías.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica los tres conflictos con datos de tu propio sistema.</li>
+<li>¿Por qué una consulta analítica larga impide recuperar versiones muertas?</li>
+<li>¿En qué caso la exportación a Parquet supera a una réplica de solo lectura?</li>
+<li>Da una situación donde no separar sea la decisión correcta, y defiéndela.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Michael Stonebraker, Samuel Madden, Daniel J. Abadi, Stavros Harizopoulos, Nabil Hachem, Pat Helland</strong> (2007). <a href="https://cs.brown.edu/courses/cs227/archives/2008/Papers/OLTP/hstore.pdf">The End of an Architectural Era (It's Time for a Complete Rewrite)</a>. VLDB.<br />
+  Mide en qué gasta el tiempo realmente un motor OLTP tradicional.</li>
+<li><strong>Ralph Kimball, Margy Ross</strong> (2013). <a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/">The Data Warehouse Toolkit</a>. 3.a ed. Wiley. ISBN 978-1-118-53080-1.<br />
+  Modelado dimensional, tablas de hechos y dimensiones de cambio lento.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="053.html">← Anterior</a> · <a href="055.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Grafos de propiedades y los recorridos que SQL hace mal. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>028 — Grafos de propiedades y los recorridos que SQL hace mal · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 06 · Grafos, columnas, tiempo y búsqueda</span>
+</nav>
+<main class="content">
+<h1 id="028--grafos-de-propiedades-y-los-recorridos-que-sql-hace-mal">028 — Grafos de propiedades y los recorridos que SQL hace mal</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>06 — Grafos, columnas, tiempo y búsqueda</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>neo4j</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>nodo</code> · <code>arista</code> · <code>recorrido de profundidad variable</code> · <code>reunión sin índice</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Reconocer las consultas para las que el modelo relacional paga un precio estructural —los recorridos de profundidad variable— y saber qué ofrece a cambio un motor de grafos.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Modelar un dominio como grafo de propiedades.</li>
+<li>Explicar por qué una reunión relacional cuesta más conforme aumenta la profundidad.</li>
+<li>Traducir entre Cypher y SQL recursivo.</li>
+<li>Medir la diferencia con un caso concreto y su traza de cardinalidad.</li>
+<li>Decidir cuándo el grafo <strong>no</strong> compensa.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-modelo-de-grafo-de-propiedades">El modelo de grafo de propiedades</h3>
+<p>Cuatro elementos:</p>
+<ul>
+<li><strong>Nodo:</strong> entidad, con una o más etiquetas (<code>:Estudiante</code>).</li>
+<li><strong>Arista:</strong> relación <strong>dirigida y con tipo</strong> (<code>-[:INSCRITO_EN]-&gt;</code>), que es un objeto de primera clase.</li>
+<li><strong>Propiedades:</strong> pares clave-valor, tanto en nodos como en aristas.</li>
+<li><strong>Recorrido:</strong> navegación siguiendo aristas.</li>
+</ul>
+<p>La diferencia estructural con el relacional: en un grafo, la arista <strong>es</strong> el dato. En el relacional, la relación se reconstruye en cada consulta buscando en un índice.</p>
+<h3 id="por-qué-la-profundidad-importa">Por qué la profundidad importa</h3>
+<p>Robinson, Webber y Eifrem lo llaman <em>adyacencia sin índice</em>: cada nodo guarda punteros directos a sus vecinos. Encontrar los vecinos de un nodo es seguir punteros, con costo proporcional al número de vecinos y <strong>no</strong> al tamaño del grafo.</p>
+<p>En el modelo relacional, cada nivel de profundidad es una reunión más. Con un índice B-Tree, cada reunión cuesta <code>O(log N)</code> por fila de entrada, y el número de filas de entrada se multiplica por el factor de ramificación en cada nivel.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Profundidad</th>
+<th>Relacional (con índice)</th>
+<th>Grafo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1 búsqueda de índice</td>
+<td>seguir punteros</td>
+</tr>
+<tr>
+<td>2</td>
+<td>R búsquedas</td>
+<td>seguir punteros</td>
+</tr>
+<tr>
+<td>3</td>
+<td>R² búsquedas</td>
+<td>seguir punteros</td>
+</tr>
+<tr>
+<td>k</td>
+<td>R^(k−1) búsquedas</td>
+<td>proporcional a los nodos visitados</td>
+</tr>
+</tbody>
+</table></div>
+<p>Con factor de ramificación R = 50 y profundidad 4: 125 000 búsquedas de índice contra el recorrido de la vecindad efectivamente alcanzada. La ventaja no está en el álgebra —ambos calculan lo mismo— sino en el acceso físico.</p>
+<h3 id="cypher">Cypher</h3>
+<pre><code class="language-cypher">MATCH (s:Estudiante {id: 11})-[:INSCRITO_EN]-&gt;(c:Curso)&lt;-[:INSCRITO_EN]-(otro:Estudiante)
+WHERE otro.id &lt;&gt; 11
+RETURN otro.nombre, count(c) AS cursos_en_comun
+ORDER BY cursos_en_comun DESC LIMIT 10
+</code></pre>
+<p>El patrón se <strong>dibuja</strong>. La misma consulta en SQL exige dos reuniones explícitas de <code>enrollments</code> consigo misma. Con profundidad variable, la diferencia se hace cualitativa:</p>
+<pre><code class="language-cypher">MATCH (a:Curso {id: 'bd'})-[:REQUIERE*1..5]-&gt;(pre:Curso)
+RETURN DISTINCT pre.id
+</code></pre>
+<p><code>*1..5</code> es profundidad variable. En SQL exige una CTE recursiva completa (clase 018), con su cota y su riesgo de ciclo.</p>
+<pre><code class="language-mermaid">flowchart LR
+    E1((&quot;Ana&quot;)) --&gt;|INSCRITO_EN| C1((&quot;BD&quot;))
+    E2((&quot;Luis&quot;)) --&gt;|INSCRITO_EN| C1
+    E2 --&gt;|INSCRITO_EN| C2((&quot;Redes&quot;))
+    E3((&quot;Sara&quot;)) --&gt;|INSCRITO_EN| C2
+    C1 --&gt;|REQUIERE| C3((&quot;Algoritmos&quot;))
+    C3 --&gt;|REQUIERE| C4((&quot;Programación I&quot;))
+    P1((&quot;Prof. Díaz&quot;)) --&gt;|DICTA| C1
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«todos los prerrequisitos de un curso, a cualquier profundidad, con su nivel»</em>.</p>
+<p><strong>SQL recursivo:</strong></p>
+<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, nivel) AS (
+    SELECT requiere_id, 1 FROM prerequisitos WHERE curso_id = 'bd'
+  UNION
+    SELECT p.requiere_id, pr.nivel + 1
+    FROM prereq pr JOIN prerequisitos p ON p.curso_id = pr.curso_id
+    WHERE pr.nivel &lt; 10
+)
+SELECT curso_id, MIN(nivel) AS nivel FROM prereq GROUP BY curso_id;
+</code></pre>
+<p><strong>Cypher:</strong></p>
+<pre><code class="language-cypher">MATCH path = (c:Curso {id:'bd'})-[:REQUIERE*1..10]-&gt;(pre:Curso)
+RETURN pre.id, min(length(path)) AS nivel
+</code></pre>
+<p>Ambas son correctas. La diferencia está en el trabajo físico. <strong>Traza con factor de ramificación 3 y profundidad 5:</strong></p>
+<pre><code class="language-text">nivel 1:     3 prerrequisitos    -&gt;    3 búsquedas de índice
+nivel 2:     9                   -&gt;    9
+nivel 3:    27                   -&gt;   27
+nivel 4:    81                   -&gt;   81
+nivel 5:   243                   -&gt;  243
+                                    ------
+total relacional:                     363 búsquedas de índice sobre `prerequisitos`
+total grafo:                          363 saltos de puntero
+</code></pre>
+<p>Con este tamaño, <strong>el relacional gana o empata</strong>: 363 búsquedas de índice sobre una tabla que cabe en memoria son microsegundos, y el motor relacional está mucho más optimizado. La ventaja del grafo aparece cuando la tabla de aristas no cabe en memoria y cada búsqueda de índice se convierte en una lectura de disco.</p>
+<p>Este matiz es el punto honesto de la clase: <strong>el grafo no es mágicamente más rápido</strong>. Gana cuando (a) la profundidad es alta y variable, (b) el grafo es grande y disperso, y (c) las consultas son de vecindad y no agregaciones globales.</p>
+<p><strong>Dónde el grafo pierde claramente:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th>Relacional</th>
+<th>Grafo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Promedio de notas por período»</td>
+<td>Agregación con índice</td>
+<td>Recorrido completo, sin ventaja</td>
+</tr>
+<tr>
+<td>«Los 100 cursos con más inscritos»</td>
+<td><code>GROUP BY</code> + índice</td>
+<td>Recorrido completo</td>
+</tr>
+<tr>
+<td>«Insertar 10 000 inscripciones»</td>
+<td><code>COPY</code> masivo</td>
+<td>Creación de nodos y aristas, más lenta</td>
+</tr>
+<tr>
+<td>«Camino más corto entre dos personas»</td>
+<td>CTE recursiva costosa</td>
+<td><strong>Ventaja clara</strong></td>
+</tr>
+<tr>
+<td>«Detección de comunidades»</td>
+<td>Prácticamente inviable</td>
+<td><strong>Ventaja clara</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Alternativa intermedia.</strong> Antes de añadir un motor nuevo al sistema (clase 062), conviene comprobar si el relacional basta con el índice adecuado:</p>
+<pre><code class="language-sql">CREATE INDEX prereq_curso ON prerequisitos(curso_id, requiere_id);
+</code></pre>
+<p>Un índice cubriente sobre la tabla de aristas hace que la CTE recursiva no toque la tabla base. En muchos dominios de tamaño medio, eso cierra la brecha entera y ahorra un sistema que operar.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Relacional</th>
+<th>Grafo de propiedades</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Relación como dato</td>
+<td>Fila en tabla puente</td>
+<td>Objeto de primera clase con propiedades</td>
+</tr>
+<tr>
+<td>Profundidad fija</td>
+<td>Excelente</td>
+<td>Bien</td>
+</tr>
+<tr>
+<td>Profundidad variable</td>
+<td>CTE recursiva, con cota</td>
+<td>Natural</td>
+</tr>
+<tr>
+<td>Agregación global</td>
+<td>Excelente</td>
+<td>Pobre</td>
+</tr>
+<tr>
+<td>Carga masiva</td>
+<td>Excelente</td>
+<td>Lenta</td>
+</tr>
+<tr>
+<td>Restricciones declarativas</td>
+<td>Ricas</td>
+<td>Limitadas (unicidad, existencia)</td>
+</tr>
+<tr>
+<td>Madurez operativa</td>
+<td>Muy alta</td>
+<td>Menor</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Adoptar un grafo porque el dominio «tiene relaciones».</strong> Todos los dominios las tienen; lo que importa es la profundidad variable.</li>
+<li><strong>Modelar propiedades como nodos.</strong> Un nodo por cada valor de atributo hincha el grafo sin aportar recorridos.</li>
+<li><strong>Aristas sin dirección pensada.</strong> La dirección es semántica: <code>REQUIERE</code> no es lo mismo en un sentido que en otro.</li>
+<li><strong>Recorridos sin cota.</strong> Un <code>*</code> sin límite superior en un grafo cíclico no termina.</li>
+<li><strong>Usar el grafo como almacén principal de datos tabulares.</strong> Los informes agregados serán lentos.</li>
+<li><strong>No medir el relacional con el índice adecuado antes de migrar.</strong></li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Añadir un motor de grafos añade un sistema que replicar, respaldar, asegurar y mantener sincronizado con el origen. Ese costo permanente debe compararse con la ganancia medida, no con la esperada (clase 062).</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Identifica en tu dominio una consulta de profundidad variable.</li>
+<li>Impleméntala con CTE recursiva y mide con el índice adecuado.</li>
+<li>Impleméntala en Cypher sobre los mismos datos y mide.</li>
+<li>Documenta a partir de qué profundidad y qué volumen el grafo compensa, con tus cifras.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica la adyacencia sin índice y por qué el tamaño total del grafo deja de importar.</li>
+<li>Calcula las búsquedas de índice de un recorrido de profundidad 6 con ramificación 10.</li>
+<li>Da una consulta de tu dominio donde el grafo sería claramente peor.</li>
+<li>¿Qué garantías de integridad pierdes al mover datos de un relacional a un grafo?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/02-polyglot-modeling/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Ian Robinson, Jim Webber, Emil Eifrem</strong> (2015). <a href="https://neo4j.com/graph-databases-book/">Graph Databases</a>. 2.a ed. O'Reilly. ISBN 978-1-4919-3089-2.<br />
+  Descarga gratuita. Modelado de grafos de propiedades y recorridos.</li>
+<li><strong>Neo4j, Inc.</strong> (2026). <a href="https://neo4j.com/docs/">Neo4j Documentation</a>.<br />
+  Cypher y modelo de grafo de propiedades.</li>
+<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
+  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

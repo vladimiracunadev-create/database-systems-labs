@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Independencia de datos y los tres niveles de esquema. Parte 00: Fundamentos, sistemas y método.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>003 — Independencia de datos y los tres niveles de esquema · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 00 · Fundamentos, sistemas y método</span>
+</nav>
+<main class="content">
+<h1 id="003--independencia-de-datos-y-los-tres-niveles-de-esquema">003 — Independencia de datos y los tres niveles de esquema</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">← Anterior</a> · <a href="004.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>00 — Fundamentos, sistemas y método</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>esquema conceptual</code> · <code>esquema físico</code> · <code>vista externa</code> · <code>independencia lógica</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Entender la idea que hizo posible la industria de las bases de datos: separar <strong>qué</strong> datos existen de <strong>cómo</strong> se almacenan. Sin independencia de datos, cada cambio de índice obligaría a reescribir la aplicación.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Describir los tres niveles de esquema y qué se declara en cada uno.</li>
+<li>Distinguir independencia física de independencia lógica con ejemplos propios.</li>
+<li>Explicar qué aportó exactamente Codd (1970) frente a los sistemas jerárquicos y de red.</li>
+<li>Identificar en tu propio código las fugas de independencia más comunes.</li>
+<li>Usar vistas como capa externa y conocer sus límites.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-argumento-de-codd">El argumento de Codd</h3>
+<p>Antes de 1970, los sistemas de gestión exponían al programador la estructura física: para recorrer datos había que seguir punteros entre registros en el orden en que estaban guardados. Cambiar el almacenamiento significaba reescribir programas.</p>
+<p>Codd propuso exponer los datos como <strong>relaciones</strong> —conjuntos de tuplas— y acceder a ellos <strong>por valor</strong>, nunca por posición ni por puntero. La consecuencia práctica está en el propio título del artículo: <em>large shared data banks</em>. Compartidos significa que muchos programas distintos, escritos en momentos distintos, usan los mismos datos; si cada uno dependiera de la disposición física, ninguno podría evolucionar.</p>
+<blockquote>
+<p>La independencia de datos no es una comodidad: es la condición para que un esquema sobreviva a las aplicaciones que lo usan.</p>
+</blockquote>
+<h3 id="los-tres-niveles">Los tres niveles</h3>
+<p>La arquitectura de tres esquemas (formulada por el comité ANSI/SPARC y recogida en Silberschatz) separa:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Qué describe</th>
+<th>Quién lo define</th>
+<th>Ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Externo</strong> (vistas)</td>
+<td>Lo que ve cada grupo de usuarios</td>
+<td>Diseñador de la aplicación</td>
+<td><code>VIEW notas_publicas</code> sin el RUT</td>
+</tr>
+<tr>
+<td><strong>Conceptual</strong> (lógico)</td>
+<td>Qué entidades, atributos y reglas existen</td>
+<td>Modelador de datos</td>
+<td>Tablas, claves, restricciones</td>
+</tr>
+<tr>
+<td><strong>Interno</strong> (físico)</td>
+<td>Cómo se guarda y se accede</td>
+<td>Motor y administrador</td>
+<td>Páginas, B-Tree, particiones, compresión</td>
+</tr>
+</tbody>
+</table></div>
+<p>De ahí salen dos independencias distintas, y conviene no confundirlas:</p>
+<ul>
+<li><strong>Independencia física:</strong> cambiar el nivel interno sin tocar el conceptual. Crear un índice, cambiar el tipo de índice, particionar una tabla o comprimirla no debería alterar ninguna consulta. Los motores relacionales la consiguen casi por completo.</li>
+<li><strong>Independencia lógica:</strong> cambiar el nivel conceptual sin tocar el externo. Dividir una tabla en dos no debería romper a los clientes si existe una vista que reconstruye la forma anterior. Se consigue <strong>parcialmente</strong>: es fácil para lectura y difícil para escritura, porque no toda vista es actualizable.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    U1[&quot;Aplicación A&quot;] --&gt; V1[&quot;Vista: notas_publicas&quot;]
+    U2[&quot;Aplicación B&quot;] --&gt; V2[&quot;Vista: ficha_docente&quot;]
+    V1 --&gt; C[&quot;Esquema conceptual&lt;br/&gt;students, courses, enrollments&quot;]
+    V2 --&gt; C
+    C --&gt; F[&quot;Esquema interno&lt;br/&gt;páginas, B-Tree, particiones&quot;]
+    F --&gt; D[(&quot;Almacenamiento&quot;)]
+    C -. &quot;independencia lógica&lt;br/&gt;(parcial)&quot; .-&gt; V1
+    F -. &quot;independencia física&lt;br/&gt;(casi total)&quot; .-&gt; C
+</code></pre>
+<h3 id="dónde-se-rompe-en-la-práctica">Dónde se rompe en la práctica</h3>
+<p>Date insiste en un punto incómodo: SQL debilita la independencia que el modelo relacional prometía. Las fugas más habituales:</p>
+<ul>
+<li><strong><code>SELECT *</code>.</strong> Fija implícitamente el número y el orden de las columnas. Añadir una columna rompe al cliente que lee por posición.</li>
+<li><strong>Depender del orden sin <code>ORDER BY</code>.</strong> El orden de las filas es una propiedad del plan físico, no del dato. Un índice nuevo cambia el orden observado.</li>
+<li><strong>Consultas que nombran índices o pistas del optimizador.</strong> Atan la aplicación al nivel interno.</li>
+<li><strong>Lógica de negocio en la aplicación en vez de en restricciones.</strong> Cada cliente nuevo debe reimplementarla, y alguno no lo hará.</li>
+<li><strong>Claves primarias con significado de negocio.</strong> Si la clave es el RUT y la ley cambia el formato, cambia el nivel conceptual entero (clase 007).</li>
+</ul>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Partimos de una tabla que mezcla dos conceptos:</p>
+<pre><code class="language-sql">CREATE TABLE students (
+  id       INTEGER PRIMARY KEY,
+  nombre   TEXT NOT NULL,
+  email    TEXT,
+  telefono TEXT
+);
+</code></pre>
+<p>Un requisito nuevo pide <strong>varios contactos por estudiante</strong>. El cambio conceptual correcto es dividir:</p>
+<pre><code class="language-sql">CREATE TABLE student_contacts (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  tipo       TEXT NOT NULL CHECK (tipo IN ('email','telefono')),
+  valor      TEXT NOT NULL,
+  PRIMARY KEY (student_id, tipo, valor)
+);
+</code></pre>
+<p>Sin capa externa, cada cliente que hacía <code>SELECT id, nombre, email FROM students</code> se rompe. Con capa externa, no:</p>
+<pre><code class="language-sql">CREATE VIEW students_v1 AS
+SELECT s.id,
+       s.nombre,
+       (SELECT c.valor FROM student_contacts c
+         WHERE c.student_id = s.id AND c.tipo = 'email'  LIMIT 1) AS email,
+       (SELECT c.valor FROM student_contacts c
+         WHERE c.student_id = s.id AND c.tipo = 'telefono' LIMIT 1) AS telefono
+FROM students s;
+</code></pre>
+<p>Los clientes antiguos siguen funcionando contra <code>students_v1</code>; los nuevos usan las tablas reales. Aquí está el límite honesto: la vista es <strong>legible pero no escribible</strong> sin ayuda. Un <code>UPDATE students_v1 SET email = ...</code> no tiene traducción única, porque la vista pierde información sobre cuál de los contactos actualizar. Para conseguir independencia lógica también en escritura hace falta un disparador <code>INSTEAD OF</code> que declare esa decisión de forma explícita.</p>
+<p>Traza del efecto: si tres aplicaciones consumían la tabla original, dividir sin vista genera 3 despliegues coordinados; dividir con vista genera 1 despliegue de base de datos y 3 migraciones independientes, cada una a su ritmo. Ese es todo el valor de la capa externa (y el fundamento de las migraciones sin caída de la clase 049).</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Cambio</th>
+<th>¿Rompe a los clientes sin capa externa?</th>
+<th>¿Con vista de compatibilidad?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Crear un índice</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Particionar una tabla</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Renombrar una columna</td>
+<td>Sí</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Dividir una tabla en dos</td>
+<td>Sí</td>
+<td>No, en lectura</td>
+</tr>
+<tr>
+<td>Cambiar el tipo de una columna</td>
+<td>Sí</td>
+<td>Depende de la conversión</td>
+</tr>
+<tr>
+<td>Añadir una columna</td>
+<td>Solo si se usa <code>SELECT *</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>«La independencia de datos es total.»</strong> La física casi lo es; la lógica solo en lectura y con trabajo explícito.</li>
+<li><strong>«Las vistas son lentas por definición.»</strong> El motor las expande en la fase de reescritura; una vista simple no añade coste. Lo que puede ser lento es la consulta que hay dentro.</li>
+<li><strong>«El orden de las filas se mantiene.»</strong> No existe orden sin <code>ORDER BY</code>. Cualquier código que dependa de él es un fallo latente.</li>
+<li><strong>«El nivel externo es cosmético.»</strong> Es el mecanismo con el que se cambia el esquema sin coordinar despliegues, y la base del control de acceso por columna.</li>
+<li><strong>«Codd inventó SQL.»</strong> Codd definió el modelo relacional; SQL llegó después (System R) y se apartó del modelo en varios puntos, empezando por permitir tablas con filas duplicadas.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Todo esquema de larga vida termina necesitando cambiar mientras hay clientes conectados. La diferencia entre un cambio de diez minutos y una madrugada completa es si la capa externa existía desde el principio. Es una decisión de diseño barata al inicio y carísima de añadir después.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Sobre el esquema del repositorio:</p>
+<ol>
+<li>Propón un cambio conceptual real (dividir, renombrar o extraer una entidad).</li>
+<li>Escribe la vista que preserva la interfaz anterior y demuestra con una consulta que el cliente antiguo sigue funcionando.</li>
+<li>Documenta qué operación de escritura deja de funcionar y qué haría falta para restaurarla.</li>
+<li>Estima cuántos despliegues coordinados evita la vista.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da un cambio de tu propio código que rompió clientes y clasifícalo: ¿fue una fuga de independencia física o lógica?</li>
+<li>¿Por qué <code>SELECT *</code> es una dependencia del nivel externo respecto del conceptual?</li>
+<li>Una vista con <code>GROUP BY</code> no es actualizable. Explica por qué en términos de información perdida.</li>
+<li>¿Qué garantiza y qué no garantiza la independencia física cuando se cambia un índice B-Tree por uno hash?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">← Anterior</a> · <a href="004.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

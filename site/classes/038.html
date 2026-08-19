@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Páginas, filas y buffer: por qué la entrada y salida manda. Parte 08: Almacenamiento, índices y planes.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>038 — Páginas, filas y buffer: por qué la entrada y salida manda · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 08 · Almacenamiento, índices y planes</span>
+</nav>
+<main class="content">
+<h1 id="038--páginas-filas-y-buffer-por-qué-la-entrada-y-salida-manda">038 — Páginas, filas y buffer: por qué la entrada y salida manda</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>08 — Almacenamiento, índices y planes</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>pagina</code> · <code>factor de bloque</code> · <code>buffer pool</code> · <code>localidad</code> · <code>lectura secuencial</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Bajar al nivel donde se paga el costo real: páginas, filas y memoria. Casi todas las decisiones de rendimiento se explican como «cuántas páginas hay que tocar».</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Calcular cuántas páginas ocupa una tabla y por qué importa.</li>
+<li>Explicar el factor de bloque y su efecto sobre los barridos.</li>
+<li>Describir el buffer y su política de reemplazo.</li>
+<li>Interpretar la tasa de aciertos y saber cuándo engaña.</li>
+<li>Estimar el costo de una consulta en páginas antes de ejecutarla.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-página">La página</h3>
+<p>La unidad de E/S no es la fila: es la <strong>página</strong> (8 KB en PostgreSQL, 16 KB en InnoDB por defecto, configurable en SQLite). Leer un byte cuesta lo mismo que leer la página entera.</p>
+<pre><code class="language-text">Página de 8 192 bytes
+  cabecera                      24 B
+  punteros a filas         4 B × N
+  espacio libre
+  filas (desde el final)
+  cabecera de fila             ~23 B en PostgreSQL
+</code></pre>
+<p><strong>Factor de bloque</strong> = filas por página:</p>
+<pre><code class="language-text">fila de 100 B (más 23 B de cabecera) = 123 B
+factor ≈ (8192 - 24) / (123 + 4) ≈ 64 filas por página
+</code></pre>
+<p>Con 1 000 000 de filas: <strong>15 625 páginas ≈ 122 MB</strong>. Ese número —no el de filas— determina el costo de un barrido.</p>
+<h3 id="el-ancho-de-la-fila-importa-más-de-lo-que-parece">El ancho de la fila importa más de lo que parece</h3>
+<p>Añadir una columna <code>TEXT</code> de 200 bytes a la tabla anterior:</p>
+<pre><code class="language-text">fila de 323 B → factor ≈ 25 filas por página
+1 000 000 de filas → 40 000 páginas ≈ 313 MB
+</code></pre>
+<p>El barrido pasa a costar <strong>2,6 veces más</strong>, incluso para consultas que no leen esa columna. Es el argumento físico a favor de sacar los campos grandes y poco consultados a una tabla aparte, y también la razón por la que el formato columnar gana en analítica (clase 032).</p>
+<p>PostgreSQL mitiga esto con TOAST: los valores grandes se comprimen y se mueven a una tabla auxiliar, dejando un puntero en la fila. Solo se leen si la consulta los pide.</p>
+<h3 id="el-buffer">El buffer</h3>
+<p>Caché de páginas en memoria compartida. La política habitual es una variante de LRU con protección contra barridos: un barrido secuencial de una tabla enorme no debe desalojar todo lo demás. PostgreSQL usa un anillo de buffers para barridos grandes por esa razón exacta.</p>
+<pre><code class="language-sql">SELECT relname,
+       heap_blks_read  AS leidas_disco,
+       heap_blks_hit   AS leidas_cache,
+       round(100.0 * heap_blks_hit /
+             NULLIF(heap_blks_hit + heap_blks_read, 0), 2) AS pct_aciertos
+FROM pg_statio_user_tables ORDER BY heap_blks_read DESC LIMIT 10;
+</code></pre>
+<p><strong>Dónde engaña la tasa de aciertos.</strong> Un 99 % suena excelente, pero:</p>
+<ul>
+<li>El sistema operativo tiene su propia caché: un «fallo» de PostgreSQL puede resolverse en RAM sin tocar el disco.</li>
+<li>Es un acumulado desde el arranque; un problema de la última hora queda diluido.</li>
+<li>Con un 99 % sobre 100 millones de accesos, el 1 % son un millón de lecturas físicas.</li>
+</ul>
+<p>Es una métrica de contexto, no un objetivo.</p>
+<h3 id="la-jerarquía">La jerarquía</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Latencia típica</th>
+<th>Relativo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caché L1</td>
+<td>~1 ns</td>
+<td>1</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>~100 ns</td>
+<td>100</td>
+</tr>
+<tr>
+<td>SSD NVMe</td>
+<td>~100 µs</td>
+<td>100 000</td>
+</tr>
+<tr>
+<td>Disco mecánico (aleatorio)</td>
+<td>~10 ms</td>
+<td>10 000 000</td>
+</tr>
+<tr>
+<td>Red (mismo centro)</td>
+<td>~500 µs</td>
+<td>500 000</td>
+</tr>
+</tbody>
+</table></div>
+<p>El salto de RAM a SSD es de tres órdenes de magnitud. Toda la ingeniería de un motor consiste en cruzarlo lo menos posible.</p>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta&quot;] --&gt; E[&quot;Ejecutor&quot;]
+    E --&gt; B{&quot;¿La página está&lt;br/&gt;en el buffer?&quot;}
+    B -- &quot;Sí (acierto)&quot; --&gt; H[&quot;~100 ns&quot;]
+    B -- &quot;No (fallo)&quot; --&gt; V{&quot;¿Hay buffer libre?&quot;}
+    V -- &quot;Sí&quot; --&gt; L[&quot;Leer del disco&lt;br/&gt;~100 µs&quot;]
+    V -- &quot;No&quot; --&gt; D[&quot;Desalojar una víctima&quot;]
+    D --&gt; S{&quot;¿Está sucia?&quot;}
+    S -- &quot;Sí&quot; --&gt; W[&quot;Escribirla primero&lt;br/&gt;(tras su registro WAL)&quot;]
+    S -- &quot;No&quot; --&gt; L
+    W --&gt; L
+    L --&gt; H
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Tabla <code>enrollments</code>: 5 000 000 de filas, fila de 80 bytes útiles.</p>
+<pre><code class="language-text">fila con cabecera ≈ 103 B
+factor de bloque  ≈ (8192-24)/(103+4) ≈ 76 filas/página
+páginas           = 5 000 000 / 76 ≈ 65 790
+tamaño            ≈ 65 790 · 8 KB ≈ 514 MB
+</code></pre>
+<p><strong>Consulta A — barrido secuencial:</strong></p>
+<pre><code class="language-sql">SELECT AVG(nota) FROM enrollments;
+</code></pre>
+<p>Toca las 65 790 páginas. En SSD con lectura secuencial a 1 GB/s: ~0,5 s. Si estuvieran en el buffer, ~0,05 s.</p>
+<p><strong>Consulta B — una fila por índice:</strong></p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
+</code></pre>
+<pre><code class="language-text">altura del B-Tree ≈ 3 niveles
+páginas de índice leídas: 3
+página de datos:          1
+total:                    4 páginas
+</code></pre>
+<p><strong>65 790 frente a 4.</strong> Cuatro órdenes de magnitud, y la diferencia entera está en cuántas páginas se tocan.</p>
+<p><strong>Consulta C — el caso intermedio, que es donde se decide:</strong></p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE course_id = 42;   -- devuelve 40 000 filas
+</code></pre>
+<p>Dos caminos:</p>
+<pre><code class="language-text">Barrido secuencial: 65 790 páginas, lectura SECUENCIAL
+Índice:             ~3 páginas de índice + hasta 40 000 lecturas ALEATORIAS de datos
+</code></pre>
+<p>Aquí la naturaleza del acceso manda. Una lectura secuencial de 65 790 páginas es más rápida que 40 000 aleatorias, porque el disco y el prelector trabajan a favor. <strong>Por eso el optimizador elige el barrido cuando la consulta devuelve una fracción grande de la tabla</strong> (clase 042): el umbral suele rondar el 5–20 % según el motor y la relación entre <code>random_page_cost</code> y <code>seq_page_cost</code>.</p>
+<p><strong>La corrección: correlación física.</strong> Si las filas del mismo curso estuvieran contiguas en disco, las 40 000 lecturas dejarían de ser aleatorias.</p>
+<pre><code class="language-sql">CLUSTER enrollments USING enrollments_course_idx;   -- PostgreSQL: reorganiza una vez
+</code></pre>
+<p>En InnoDB esto es automático: la tabla <strong>es</strong> el índice de clave primaria (índice agrupado), así que las filas con claves primarias contiguas están físicamente juntas. Es una diferencia arquitectónica con consecuencias directas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>PostgreSQL</th>
+<th>InnoDB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Organización</td>
+<td>Montón + índices separados</td>
+<td>Tabla agrupada por clave primaria</td>
+</tr>
+<tr>
+<td>Índice secundario apunta a</td>
+<td>Ubicación física de la fila</td>
+<td><strong>La clave primaria</strong></td>
+</tr>
+<tr>
+<td>Consecuencia</td>
+<td>Actualizar una fila puede exigir tocar todos los índices</td>
+<td>Un índice secundario cuesta una búsqueda extra en el primario</td>
+</tr>
+<tr>
+<td>Clave primaria ancha</td>
+<td>Coste moderado</td>
+<td>Se copia en <strong>cada</strong> índice secundario</td>
+</tr>
+</tbody>
+</table></div>
+<p>La última fila explica por qué en InnoDB una clave primaria ancha (un UUID en texto, una clave compuesta larga) infla todos los índices de la tabla.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Acceso</th>
+<th>Páginas tocadas</th>
+<th>Naturaleza</th>
+<th>Cuándo gana</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Barrido secuencial</td>
+<td>Todas</td>
+<td>Secuencial</td>
+<td>Se devuelve una fracción grande</td>
+</tr>
+<tr>
+<td>Búsqueda por índice</td>
+<td>log N + 1</td>
+<td>Aleatoria</td>
+<td>Muy selectiva</td>
+</tr>
+<tr>
+<td>Barrido de índice</td>
+<td>Páginas del índice</td>
+<td>Casi secuencial</td>
+<td>Consulta cubierta</td>
+</tr>
+<tr>
+<td>Barrido de mapa de bits</td>
+<td>Índice + datos ordenados</td>
+<td>Semialeatoria</td>
+<td>Selectividad intermedia</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Razonar en filas y no en páginas.</strong> El costo lo fija la página.</li>
+<li><strong>Columnas anchas en tablas muy consultadas.</strong> Encarecen todos los barridos.</li>
+<li><strong>Perseguir el 99,9 % de aciertos.</strong> Se compra RAM sin mirar el número absoluto de lecturas.</li>
+<li><strong>Suponer que el índice siempre gana.</strong> Con baja selectividad, pierde.</li>
+<li><strong>Clave primaria ancha en InnoDB.</strong> Se copia en todos los índices secundarios.</li>
+<li><strong>Medir con el caché caliente y presentarlo como mejora.</strong></li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Cuando una base «se pone lenta al crecer», casi siempre significa que el conjunto de trabajo dejó de caber en el buffer. El indicador que lo anticipa es el tamaño de las tablas e índices calientes frente a la memoria, no el uso de CPU.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Calcula el factor de bloque y el número de páginas de tu tabla más grande.</li>
+<li>Estima el costo en páginas de tus tres consultas más frecuentes y contrástalo con <code>EXPLAIN (BUFFERS)</code>.</li>
+<li>Mueve una columna ancha a una tabla aparte y mide el cambio en un barrido.</li>
+<li>Compara el tamaño de un índice secundario con clave primaria estrecha y con una ancha.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Calcula las páginas de una tabla de 20 M de filas de 250 bytes.</li>
+<li>¿Por qué 40 000 lecturas aleatorias pueden ser más lentas que 65 000 secuenciales?</li>
+<li>Explica la diferencia entre montón e índice agrupado y una consecuencia práctica de cada una.</li>
+<li>Da un caso donde una tasa de aciertos del 99 % siga siendo un problema.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

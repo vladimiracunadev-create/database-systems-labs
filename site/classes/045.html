@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="CAP, PACELC y lo que realmente se elige. Parte 09: Distribución, réplica y consistencia.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>045 — CAP, PACELC y lo que realmente se elige · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 09 · Distribución, réplica y consistencia</span>
+</nav>
+<main class="content">
+<h1 id="045--cap-pacelc-y-lo-que-realmente-se-elige">045 — CAP, PACELC y lo que realmente se elige</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>09 — Distribución, réplica y consistencia</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>cassandra</code>, <code>spanner</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>partición de red</code> · <code>disponibilidad</code> · <code>latencia frente a consistencia</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Enunciar CAP con precisión, entender por qué su lectura popular es engañosa y usar PACELC, que describe mejor el compromiso que se toma todos los días.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Enunciar el teorema CAP con las definiciones exactas de sus términos.</li>
+<li>Explicar por qué «elegir dos de tres» es una lectura incorrecta.</li>
+<li>Aplicar PACELC y situar motores reales en su clasificación.</li>
+<li>Determinar qué garantías sobreviven a una partición.</li>
+<li>Decidir el comportamiento de tu sistema durante una partición, por operación.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-enunciado-preciso">El enunciado preciso</h3>
+<p>Gilbert y Lynch (2002) demostraron formalmente la conjetura de Brewer. Los términos tienen definiciones estrictas que casi nunca se citan:</p>
+<ul>
+<li><strong>C (consistencia):</strong> <em>linealizabilidad</em>. Existe un orden total de las operaciones compatible con el tiempo real; toda lectura devuelve la última escritura confirmada.</li>
+<li><strong>A (disponibilidad):</strong> <strong>toda</strong> petición a un nodo <strong>no caído</strong> recibe respuesta correcta, en tiempo finito.</li>
+<li><strong>P (tolerancia a particiones):</strong> el sistema sigue funcionando aunque la red pierda arbitrariamente mensajes entre nodos.</li>
+</ul>
+<p><strong>Teorema:</strong> ningún sistema distribuido puede garantizar las tres simultáneamente.</p>
+<h3 id="por-qué-dos-de-tres-está-mal">Por qué «dos de tres» está mal</h3>
+<p>La red <strong>se particiona</strong>. No es una opción de diseño: es un hecho del mundo. Renunciar a P significaría suponer que la red nunca falla, lo cual no es un sistema distribuido sino una apuesta.</p>
+<p>Por tanto la elección real es binaria y <strong>solo durante la partición</strong>:</p>
+<ul>
+<li><strong>CP:</strong> rechazar peticiones que no puedan garantizar consistencia. Se pierde disponibilidad.</li>
+<li><strong>AP:</strong> responder con datos posiblemente obsoletos. Se pierde consistencia.</li>
+</ul>
+<p>Brewer lo aclaró él mismo en 2012: el teorema se aplica en el instante de la partición y las tres propiedades son continuas, no binarias. Además, la mayor parte del tiempo <strong>no hay partición</strong>, y ahí CAP no dice nada. Ese vacío es lo que PACELC llena.</p>
+<h3 id="pacelc">PACELC</h3>
+<p>Abadi (2012):</p>
+<pre><code class="language-text">if (P) then (A or C)      -- durante una partición: disponibilidad o consistencia
+else     (L or C)         -- en operación normal: latencia o consistencia
+</code></pre>
+<p>La segunda mitad es la que gobierna el 99,9 % del tiempo. Cada confirmación sincrónica a otra región cuesta una ida y vuelta: entre Santiago y Fráncfort, unos 200 ms. Ese costo se paga <strong>siempre</strong>, no solo cuando algo falla.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Sistema</th>
+<th>Con partición</th>
+<th>Sin partición</th>
+<th>Clasificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL (líder único, síncrono)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>PostgreSQL (líder único, asíncrono)</td>
+<td>C en el líder</td>
+<td>L</td>
+<td>PC/EL</td>
+</tr>
+<tr>
+<td>Cassandra (<code>ONE</code>)</td>
+<td>A</td>
+<td>L</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Cassandra (<code>QUORUM</code>)</td>
+<td>Configurable</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>DynamoDB (eventual)</td>
+<td>A</td>
+<td>L</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>DynamoDB (fuerte)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>MongoDB (<code>majority</code>)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>Spanner</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+</tbody>
+</table></div>
+<p>Dos observaciones que cambian la conversación:</p>
+<ol>
+<li><strong>La clasificación es por operación, no por producto.</strong> Cassandra es AP o CP según el nivel de consistencia de <strong>cada</strong> consulta.</li>
+<li><strong>Spanner es PC/EC</strong> y aun así ofrece alta disponibilidad, porque usa redes privadas con particiones extremadamente raras y consenso rápido (clase 047). No viola CAP: elige C y su disponibilidad práctica es alta porque P casi nunca ocurre.</li>
+</ol>
+<h3 id="qué-sobrevive-a-una-partición">Qué sobrevive a una partición</h3>
+<p>Bailis et al. clasifican qué garantías son alcanzables <strong>manteniendo la disponibilidad total</strong>:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Garantía</th>
+<th>¿Disponible bajo partición?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consistencia eventual</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Lectura de tus escrituras</td>
+<td>Sí (con sesión fijada)</td>
+</tr>
+<tr>
+<td>Lectura monótona</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Consistencia causal</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Aislamiento de instantánea</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>Serializabilidad</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>Linealizabilidad</td>
+<td><strong>No</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>La frontera es nítida: todo lo que exige un orden total acordado necesita coordinación, y la coordinación es lo primero que una partición rompe. Todo lo demás —incluida la consistencia causal, que es bastante fuerte— se puede sostener sin coordinar.</p>
+<pre><code class="language-mermaid">flowchart TD
+    P{&quot;¿Hay partición&lt;br/&gt;de red?&quot;}
+    P -- &quot;Sí&quot; --&gt; A{&quot;¿Responder con datos&lt;br/&gt;posiblemente obsoletos?&quot;}
+    A -- &quot;Sí&quot; --&gt; AP[&quot;AP: disponible,&lt;br/&gt;inconsistente&quot;]
+    A -- &quot;No&quot; --&gt; CP[&quot;CP: rechaza o espera,&lt;br/&gt;consistente&quot;]
+    P -- &quot;No (99,9 % del tiempo)&quot; --&gt; L{&quot;¿Coordinar en cada&lt;br/&gt;operación?&quot;}
+    L -- &quot;Sí&quot; --&gt; EC[&quot;EC: consistente,&lt;br/&gt;+latencia por ida y vuelta&quot;]
+    L -- &quot;No&quot; --&gt; EL[&quot;EL: rápido,&lt;br/&gt;consistencia más débil&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Plataforma educativa con nodos en Santiago y Fráncfort. La red entre regiones se corta 4 minutos.</p>
+<p><strong>Operación 1 — leer el catálogo de cursos.</strong></p>
+<p>Datos que cambian una vez al día. Servir la versión de hace unos minutos no daña a nadie.</p>
+<pre><code class="language-text">Decisión: AP. Se sirve desde la réplica local aunque esté desconectada.
+Consecuencia: un curso creado hace 3 minutos en Santiago no se ve en Fráncfort.
+Aceptable: sí, y se documenta.
+</code></pre>
+<p><strong>Operación 2 — inscribir en un curso con cupo limitado.</strong></p>
+<p>Si ambas regiones aceptan inscripciones sin coordinarse, el cupo se excede.</p>
+<pre><code class="language-text">Decisión: CP. Durante la partición, la región sin quórum rechaza.
+Consecuencia: 4 minutos sin inscripciones en Fráncfort.
+Aceptable: sí. Peor sería vender 50 plazas de un curso de 40.
+</code></pre>
+<p><strong>Operación 3 — registrar una nota.</strong></p>
+<p>Escritura de un solo autor por par (estudiante, curso). No hay conflicto posible.</p>
+<pre><code class="language-text">Decisión: AP con consistencia causal. Se acepta localmente y se reconcilia después.
+Consecuencia: la nota tarda en verse en la otra región.
+Aceptable: sí, porque no hay dos escritores compitiendo por el mismo dato.
+</code></pre>
+<p><strong>La tabla que resulta, y que es el entregable de esta clase:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operación</th>
+<th>Con partición</th>
+<th>Justificación</th>
+<th>Coste declarado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leer catálogo</td>
+<td>A</td>
+<td>Datos casi estáticos</td>
+<td>Hasta 5 min de desfase</td>
+</tr>
+<tr>
+<td>Inscribir con cupo</td>
+<td>C</td>
+<td>Recurso finito compartido</td>
+<td>Indisponible en la minoría</td>
+</tr>
+<tr>
+<td>Registrar nota</td>
+<td>A</td>
+<td>Un solo escritor por clave</td>
+<td>Visibilidad diferida</td>
+</tr>
+<tr>
+<td>Autenticar</td>
+<td>A</td>
+<td>Credenciales replicadas, cambios raros</td>
+<td>Un cambio de contraseña puede tardar</td>
+</tr>
+<tr>
+<td>Cambiar contraseña</td>
+<td>C</td>
+<td>Seguridad: no puede quedar la antigua</td>
+<td>Indisponible en la minoría</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Y el lado «else», que se paga siempre.</strong> Sin partición, la inscripción con <code>QUORUM</code> entre regiones cuesta:</p>
+<pre><code class="language-text">ida y vuelta Santiago-Fráncfort ≈ 200 ms
+inscripción con quórum global   ≈ 200 ms añadidos por operación
+</code></pre>
+<p>Ese es el <code>EC</code> de PACELC, y es la razón por la que casi todos los sistemas globales acaban con <strong>datos regionales</strong>: la inscripción se coordina solo dentro de la región del curso, no globalmente. Eso convierte una decisión de consistencia global en una local, y es el diseño que de verdad se usa.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Clasificación adecuada</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sesiones y preferencias</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Catálogo de productos</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Inventario con reserva</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>Movimientos contables</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>Métricas y telemetría</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Autenticación (lectura)</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Cambio de credenciales</td>
+<td>PC/EC</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>«Elegimos AP» como decisión de producto.</strong> Es por operación, no por sistema.</li>
+<li><strong>Renunciar a P.</strong> La red se particiona; no es opcional.</li>
+<li><strong>Usar «consistencia» de CAP y de ACID como sinónimos.</strong> Son cosas distintas: linealizabilidad frente a restricciones de integridad.</li>
+<li><strong>Ignorar el lado «else».</strong> El costo de latencia se paga siempre, la partición casi nunca.</li>
+<li><strong>Suponer que un producto tiene una clasificación fija.</strong> Depende del nivel de consistencia elegido.</li>
+<li><strong>Coordinar globalmente lo que podría coordinarse por región.</strong></li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La pregunta útil en una revisión de arquitectura no es «¿somos CP o AP?», sino «¿qué hace exactamente cada operación durante una partición, y quién decidió que eso era aceptable?». Esa tabla, escrita, vale más que cualquier etiqueta.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Enumera las operaciones críticas de tu sistema.</li>
+<li>Decide para cada una A o C durante la partición, con justificación de negocio.</li>
+<li>Calcula el costo de latencia del lado «else» en tu topología real.</li>
+<li>Identifica una operación que hoy se coordina globalmente y podría hacerlo por región.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Enuncia CAP con las definiciones exactas de C, A y P.</li>
+<li>¿Por qué Spanner puede ser PC/EC y tener alta disponibilidad práctica?</li>
+<li>Da una operación de tu sistema que hoy es AP sin que nadie lo haya decidido.</li>
+<li>¿Qué garantías transaccionales son inalcanzables manteniendo disponibilidad total?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Seth Gilbert, Nancy Lynch</strong> (2002). <a href="https://dl.acm.org/doi/10.1145/564585.564601">Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services</a>. ACM SIGACT News 33(2). DOI <a href="https://doi.org/10.1145/564585.564601">10.1145/564585.564601</a>.<br />
+  Demostración formal del teorema CAP y de su enunciado exacto.</li>
+<li><strong>Eric Brewer</strong> (2012). <a href="https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/">CAP Twelve Years Later: How the Rules Have Changed</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.37">10.1109/MC.2012.37</a>.<br />
+  El propio autor corrige la lectura simplista de elegir dos de tres.</li>
+<li><strong>Daniel J. Abadi</strong> (2012). <a href="https://www.cs.umd.edu/~abadi/papers/abadi-pacelc.pdf">Consistency Tradeoffs in Modern Distributed Database System Design</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.33">10.1109/MC.2012.33</a>.<br />
+  PACELC: el compromiso latencia-consistencia existe también sin particiones.</li>
+<li><strong>Peter Bailis, Aaron Davidson, Alan Fekete, Ali Ghodsi, Joseph M. Hellerstein, Ion Stoica</strong> (2014). <a href="https://www.vldb.org/pvldb/vol7/p181-bailis.pdf">Highly Available Transactions: Virtues and Limitations</a>. PVLDB 7(3).<br />
+  Qué garantías transaccionales sobreviven a una partición y cuáles no.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

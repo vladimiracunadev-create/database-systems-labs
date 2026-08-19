@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Privacidad, retención y gobierno del dato. Parte 10: Operación, seguridad y gobierno.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>053 — Privacidad, retención y gobierno del dato · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 10 · Operación, seguridad y gobierno</span>
+</nav>
+<main class="content">
+<h1 id="053--privacidad-retención-y-gobierno-del-dato">053 — Privacidad, retención y gobierno del dato</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="052.html">← Anterior</a> · <a href="054.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>10 — Operación, seguridad y gobierno</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mongodb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>minimización</code> · <code>limitación de finalidad</code> · <code>seudonimización</code> · <code>derecho de supresión</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Traducir las obligaciones de privacidad en decisiones de esquema. Minimización, retención y supresión no son cláusulas de un documento legal: son columnas, políticas y trabajos programados.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Aplicar minimización y limitación de finalidad al diseñar tablas.</li>
+<li>Distinguir anonimización de seudonimización y sus consecuencias legales.</li>
+<li>Implementar una política de retención con supresión verificable.</li>
+<li>Resolver el conflicto entre derecho de supresión y necesidad de conservar evidencia.</li>
+<li>Construir un registro de tratamiento a partir del propio esquema.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-principios-que-afectan-al-esquema">Los principios que afectan al esquema</h3>
+<p>El RGPD europeo y la Ley 19.628 chilena comparten principios cuya traducción técnica es directa:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Principio</th>
+<th>Traducción al esquema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Minimización</strong></td>
+<td>No crear la columna si no hay una finalidad declarada</td>
+</tr>
+<tr>
+<td><strong>Limitación de finalidad</strong></td>
+<td>El dato recogido para A no se usa para B sin nueva base legal</td>
+</tr>
+<tr>
+<td><strong>Limitación del plazo</strong></td>
+<td>Toda tabla con datos personales necesita política de retención</td>
+</tr>
+<tr>
+<td><strong>Exactitud</strong></td>
+<td>Debe existir un camino para rectificar</td>
+</tr>
+<tr>
+<td><strong>Integridad y confidencialidad</strong></td>
+<td>Cifrado, control de acceso (clase 050), auditoría</td>
+</tr>
+<tr>
+<td><strong>Responsabilidad proactiva</strong></td>
+<td>Hay que poder <strong>demostrarlo</strong>, no solo cumplirlo</td>
+</tr>
+</tbody>
+</table></div>
+<p>El último es el que más se subestima: la obligación incluye poder acreditar lo que se hace. Un registro de tratamiento generado desde el esquema es una forma barata de cumplirlo.</p>
+<h3 id="anonimización-frente-a-seudonimización">Anonimización frente a seudonimización</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>Seudonimización</th>
+<th>Anonimización</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué es</td>
+<td>Reemplazar identificadores por códigos, guardando la correspondencia</td>
+<td>Eliminar la posibilidad de reidentificar</td>
+</tr>
+<tr>
+<td>¿Sigue siendo dato personal?</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+</tr>
+<tr>
+<td>Reversible</td>
+<td>Sí, con la tabla de correspondencia</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Ejemplo</td>
+<td><code>student_id</code> en vez del RUT</td>
+<td>Agregados con supresión de celdas pequeñas</td>
+</tr>
+</tbody>
+</table></div>
+<p>Error frecuente y caro: llamar «anonimizado» a un conjunto seudonimizado. Reemplazar el nombre por un identificador <strong>no</strong> anonimiza: si quedan la fecha de nacimiento, la comuna y el sexo, la reidentificación es factible con datos externos.</p>
+<p>Anonimizar de verdad exige agregación con umbral, generalización o ruido:</p>
+<pre><code class="language-sql">-- Publicable: suprime los grupos demasiado pequeños para reidentificar
+SELECT comuna, extract(year FROM edad_rango) AS rango, count(*) AS n
+FROM v_estudiantes
+GROUP BY comuna, rango
+HAVING count(*) &gt;= 10;      -- k-anonimato con k = 10
+</code></pre>
+<h3 id="retención">Retención</h3>
+<p>Cada tabla con datos personales necesita responder cuatro preguntas: <strong>qué</strong> se guarda, <strong>para qué</strong>, <strong>cuánto tiempo</strong> y <strong>qué pasa después</strong>.</p>
+<p>Documentado en el propio esquema, para que no viva solo en una hoja de cálculo:</p>
+<pre><code class="language-sql">COMMENT ON TABLE  enrollments IS
+  'Datos personales: sí. Finalidad: gestión académica. '
+  'Retención: 5 años tras el egreso (obligación legal de certificación). '
+  'Después: seudonimizar student_id y conservar el agregado.';
+COMMENT ON COLUMN students.rut IS
+  'Identificador nacional. Base legal: obligación legal. '
+  'Acceso: rol_secretaria. Retención: igual que enrollments.';
+</code></pre>
+<h3 id="el-conflicto-de-la-supresión">El conflicto de la supresión</h3>
+<p>El derecho de supresión no es absoluto: cede ante obligaciones legales de conservación. Un estudiante puede pedir borrar su cuenta, y la institución debe conservar el registro académico.</p>
+<p>La solución de diseño es <strong>separar la identidad del hecho</strong>:</p>
+<pre><code class="language-mermaid">flowchart TD
+    P[&quot;Solicitud de supresión&quot;] --&gt; C{&quot;¿Hay obligación legal&lt;br/&gt;de conservar el hecho?&quot;}
+    C -- &quot;No&quot; --&gt; D[&quot;Borrado real,&lt;br/&gt;incluido en copias tras su rotación&quot;]
+    C -- &quot;Sí&quot; --&gt; S[&quot;Separar identidad del hecho&quot;]
+    S --&gt; S1[&quot;Borrar la fila de identidad&lt;br/&gt;(nombre, RUT, contacto)&quot;]
+    S --&gt; S2[&quot;Conservar el hecho&lt;br/&gt;con identificador seudónimo&quot;]
+    S1 --&gt; R[&quot;Registrar la supresión&lt;br/&gt;(evidencia de cumplimiento)&quot;]
+    S2 --&gt; R
+</code></pre>
+<pre><code class="language-sql">-- Identidad: se puede suprimir
+CREATE TABLE student_identity (
+  student_id INTEGER PRIMARY KEY REFERENCES students(id),
+  rut        TEXT UNIQUE,
+  nombre     TEXT NOT NULL,
+  email      TEXT,
+  suprimida_en TIMESTAMPTZ
+);
+
+-- Hechos académicos: se conservan, referencian solo al identificador interno
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p>Con esta separación, ejercer el derecho es borrar una fila de <code>student_identity</code>. El histórico académico sobrevive, referido a un identificador que ya no apunta a ninguna persona identificable.</p>
+<p><strong>Esta decisión hay que tomarla al diseñar.</strong> Si el RUT está copiado en quince tablas —y lo estará si es la clave primaria (clase 007)—, la supresión se convierte en un proyecto.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Inventario del dominio, que es el punto de partida de todo lo demás:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tabla.columna</th>
+<th>¿Personal?</th>
+<th>Finalidad</th>
+<th>Base legal</th>
+<th>Retención</th>
+<th>Acceso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>student_identity.rut</code></td>
+<td>Sí, identificador</td>
+<td>Certificación académica</td>
+<td>Obligación legal</td>
+<td>5 años tras egreso</td>
+<td><code>rol_secretaria</code></td>
+</tr>
+<tr>
+<td><code>student_identity.nombre</code></td>
+<td>Sí</td>
+<td>Emisión de certificados</td>
+<td>Contrato</td>
+<td>Ídem</td>
+<td><code>rol_secretaria</code>, <code>rol_docente</code></td>
+</tr>
+<tr>
+<td><code>student_identity.email</code></td>
+<td>Sí</td>
+<td>Comunicación</td>
+<td>Contrato</td>
+<td>Hasta baja + 1 año</td>
+<td><code>rol_secretaria</code></td>
+</tr>
+<tr>
+<td><code>enrollments.nota</code></td>
+<td>Sí, asociado</td>
+<td>Evaluación</td>
+<td>Contrato</td>
+<td>5 años tras egreso</td>
+<td><code>rol_docente</code> (solo sus cursos)</td>
+</tr>
+<tr>
+<td><code>access_log.ip</code></td>
+<td><strong>Sí</strong></td>
+<td>Seguridad</td>
+<td>Interés legítimo</td>
+<td><strong>90 días</strong></td>
+<td><code>rol_seguridad</code></td>
+</tr>
+<tr>
+<td><code>courses.nombre</code></td>
+<td>No</td>
+<td>—</td>
+<td>—</td>
+<td>Indefinida</td>
+<td>Público</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>access_log.ip</code> es el que se olvida: una dirección IP es dato personal en la mayoría de los marcos, y los registros de acceso suelen guardarse para siempre «por si acaso».</p>
+<p><strong>Retención automatizada:</strong></p>
+<pre><code class="language-sql">CREATE TABLE retencion_politica (
+  tabla       TEXT PRIMARY KEY,
+  columna_ts  TEXT NOT NULL,
+  dias        INTEGER NOT NULL,
+  accion      TEXT NOT NULL CHECK (accion IN ('borrar','seudonimizar')),
+  descripcion TEXT NOT NULL
+);
+
+INSERT INTO retencion_politica VALUES
+  ('access_log', 'ocurrido_en',  90, 'borrar',
+   'Registros de acceso: interés legítimo en seguridad, 90 días'),
+  ('notificaciones', 'enviada_en', 365, 'borrar',
+   'Historial de notificaciones enviadas');
+</code></pre>
+<pre><code class="language-sql">-- Ejecución diaria, por lotes para no bloquear (clase 049)
+DO $$
+DECLARE p RECORD; n INTEGER;
+BEGIN
+  FOR p IN SELECT * FROM retencion_politica WHERE accion = 'borrar' LOOP
+    LOOP
+      EXECUTE format(
+        'DELETE FROM %I WHERE ctid IN (
+           SELECT ctid FROM %I WHERE %I &lt; now() - make_interval(days =&gt; $1)
+           LIMIT 10000)', p.tabla, p.tabla, p.columna_ts) USING p.dias;
+      GET DIAGNOSTICS n = ROW_COUNT;
+      EXIT WHEN n = 0;
+      COMMIT;
+    END LOOP;
+  END LOOP;
+END $$;
+</code></pre>
+<p>Se usa <code>format</code> con <code>%I</code> (clase 051) porque el nombre de tabla no es parametrizable, y viene de una tabla de configuración controlada, no de una entrada de usuario.</p>
+<p><strong>Verificación, que es lo que acredita el cumplimiento:</strong></p>
+<pre><code class="language-sql">SELECT p.tabla, p.dias,
+       (SELECT count(*) FROM access_log
+        WHERE ocurrido_en &lt; now() - make_interval(days =&gt; p.dias)) AS fuera_de_plazo
+FROM retencion_politica p WHERE p.tabla = 'access_log';
+-- fuera_de_plazo debe ser 0
+</code></pre>
+<p><strong>El punto que casi siempre falta: las copias de seguridad.</strong> Borrar de la base no borra de las copias. Un dato suprimido hoy sigue en la copia de ayer, y en la de hace un mes.</p>
+<p>La posición defendible —y la que aceptan los reguladores— es: las copias tienen su propio ciclo de rotación, la supresión se completa cuando la última copia que contenía el dato ha expirado, y ese plazo está documentado.</p>
+<pre><code class="language-text">Retención de copias: 35 días
+→ La supresión se completa como máximo 35 días después de la solicitud.
+→ Se documenta en la respuesta al titular.
+→ Nadie restaura una copia parcialmente para reinsertar datos suprimidos.
+</code></pre>
+<p><strong>Registro de tratamiento generado desde el esquema:</strong></p>
+<pre><code class="language-sql">SELECT c.table_name, c.column_name,
+       col_description(format('%I.%I', c.table_schema, c.table_name)::regclass,
+                       c.ordinal_position) AS documentacion
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+ORDER BY c.table_name, c.ordinal_position;
+</code></pre>
+<p>Una columna con datos personales y sin comentario es un hallazgo de auditoría. Convertir eso en una comprobación de integración continua hace que la documentación no envejezca.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Objetivo</th>
+<th>Técnica</th>
+<th>Consecuencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reducir exposición</td>
+<td>No recoger el dato</td>
+<td>La más eficaz y la menos usada</td>
+</tr>
+<tr>
+<td>Permitir análisis sin identidad</td>
+<td>Seudonimización</td>
+<td>Sigue siendo dato personal</td>
+</tr>
+<tr>
+<td>Publicar datos abiertos</td>
+<td>Anonimización con k-anonimato</td>
+<td>Pérdida de detalle</td>
+</tr>
+<tr>
+<td>Cumplir plazos</td>
+<td>Retención automatizada</td>
+<td>Trabajo programado + verificación</td>
+</tr>
+<tr>
+<td>Atender supresión</td>
+<td>Separar identidad de hecho</td>
+<td>Decisión de diseño temprana</td>
+</tr>
+<tr>
+<td>Acreditar cumplimiento</td>
+<td>Documentación en el esquema</td>
+<td>Auditable y siempre al día</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Recoger «por si acaso».</strong> Cada columna es una obligación permanente.</li>
+<li><strong>Llamar anonimizado a lo seudonimizado.</strong> Error con consecuencias legales.</li>
+<li><strong>Registros de acceso eternos.</strong> Las IP son datos personales.</li>
+<li><strong>Identificador nacional como clave primaria.</strong> Lo esparce por todo el esquema.</li>
+<li><strong>Ignorar las copias en la supresión.</strong> El dato sigue ahí.</li>
+<li><strong>Política de retención sin verificación.</strong> Se rompe en silencio.</li>
+<li><strong>Borrado lógico llamado supresión.</strong> Marcar <code>borrado = true</code> no suprime nada.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La mayor parte del trabajo de cumplimiento se ahorra al diseñar: separar identidad de hechos, no recoger lo innecesario y documentar la finalidad de cada columna cuesta una tarde al inicio y evita un proyecto de meses cuando llega la primera solicitud o la primera auditoría.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Inventaría las columnas con datos personales de tu esquema, con finalidad y base legal.</li>
+<li>Documenta cada una con <code>COMMENT</code> y añade una comprobación en CI que exija comentario.</li>
+<li>Implementa una política de retención con su verificación.</li>
+<li>Diseña el procedimiento de supresión, incluido el plazo derivado de tus copias.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué la seudonimización no exime de las obligaciones de protección de datos?</li>
+<li>Da una columna de tu sistema que hoy no tendría base legal declarada.</li>
+<li>Explica cómo atiendes una supresión conservando una obligación legal.</li>
+<li>¿Cuándo se completa realmente una supresión, dado tu ciclo de copias?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/02-polyglot-modeling/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Union Europea</strong> (2016). <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Reglamento (UE) 2016/679 - Proteccion de datos personales</a>.<br />
+  Minimización, limitación de finalidad y derecho de supresión con efecto en el esquema.</li>
+<li><strong>Biblioteca del Congreso Nacional de Chile</strong> (1999). <a href="https://www.bcn.cl/leychile/navegar?idNorma=141599">Ley 19.628 sobre proteccion de la vida privada</a>.<br />
+  Marco chileno de datos personales aplicable a los proyectos del programa.</li>
+<li><strong>NIST</strong> (2024). <a href="https://www.nist.gov/cyberframework">NIST Cybersecurity Framework 2.0</a>. DOI <a href="https://doi.org/10.6028/NIST.CSWP.29">10.6028/NIST.CSWP.29</a>.<br />
+  Funciones Gobernar, Identificar, Proteger, Detectar, Responder y Recuperar.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="052.html">← Anterior</a> · <a href="054.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="La relación como conjunto: tuplas, dominios y acceso por valor. Parte 02: Modelo relacional y álgebra.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>010 — La relación como conjunto: tuplas, dominios y acceso por valor · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 02 · Modelo relacional y álgebra</span>
+</nav>
+<main class="content">
+<h1 id="010--la-relación-como-conjunto-tuplas-dominios-y-acceso-por-valor">010 — La relación como conjunto: tuplas, dominios y acceso por valor</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="009.html">← Anterior</a> · <a href="011.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>02 — Modelo relacional y álgebra</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>relación</code> · <code>tupla</code> · <code>dominio</code> · <code>acceso por valor</code> · <code>cierre</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Precisar qué es una relación en el sentido de Codd y en qué se aparta SQL de esa definición. Muchos comportamientos «raros» de SQL —duplicados, orden, nulos— se explican exactamente por ahí.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Definir relación, tupla, atributo y dominio sin recurrir a «tabla», «fila» y «columna».</li>
+<li>Enumerar las cuatro propiedades de una relación que SQL no respeta.</li>
+<li>Explicar el acceso por valor y por qué excluye punteros y posiciones.</li>
+<li>Justificar la propiedad de cierre y qué habilita.</li>
+<li>Detectar en código propio dependencias del orden físico.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-definición">La definición</h3>
+<p>Dada una lista de dominios <code>D1, …, Dn</code>, una <strong>relación</strong> es un subconjunto del producto cartesiano <code>D1 × … × Dn</code>. De ahí, por ser un conjunto matemático, se siguen cuatro propiedades:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Propiedad</th>
+<th>Significado</th>
+<th>¿SQL la respeta?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sin tuplas duplicadas</td>
+<td>Un conjunto no repite elementos</td>
+<td><strong>No.</strong> Una tabla sin clave admite filas idénticas</td>
+</tr>
+<tr>
+<td>Sin orden entre tuplas</td>
+<td>Un conjunto no está ordenado</td>
+<td><strong>No del todo:</strong> <code>ORDER BY</code> produce una lista, no una relación</td>
+</tr>
+<tr>
+<td>Sin orden entre atributos</td>
+<td>Se accede por nombre</td>
+<td><strong>No.</strong> <code>SELECT *</code> y <code>INSERT</code> sin lista de columnas dependen de la posición</td>
+</tr>
+<tr>
+<td>Valores atómicos del dominio</td>
+<td>Cada celda es un valor del dominio</td>
+<td><strong>Parcialmente.</strong> Admite nulos, que no pertenecen a ningún dominio</td>
+</tr>
+</tbody>
+</table></div>
+<p>Date insiste en que SQL implementa «tablas», no relaciones: una tabla es un multiconjunto (<em>bag</em>) con orden de columnas. Todas las sorpresas de la parte 03 —<code>UNION</code> frente a <code>UNION ALL</code>, <code>COUNT(*)</code> frente a <code>COUNT(col)</code>, el resultado de <code>NOT IN</code> con nulos— derivan de esa distancia.</p>
+<h3 id="acceso-por-valor">Acceso por valor</h3>
+<p>Codd exige que todo dato sea localizable por la terna <strong>(nombre de relación, valor de clave, nombre de atributo)</strong>. Nunca por posición física ni por puntero.</p>
+<p>Consecuencias que se usan a diario:</p>
+<ul>
+<li>Se puede reorganizar el almacenamiento sin tocar consultas (independencia física, clase 003).</li>
+<li>Se puede replicar y particionar sin cambiar la semántica.</li>
+<li>No existe «la tercera fila»: sin <code>ORDER BY</code> no hay tercera fila, y con <code>ORDER BY</code> sobre una columna no única tampoco está determinada.</li>
+</ul>
+<h3 id="cierre">Cierre</h3>
+<p>Todo operador relacional recibe relaciones y devuelve una relación. Eso permite componer sin límite: el resultado de una consulta puede ser la entrada de otra. En SQL se manifiesta en las subconsultas, las CTE y las vistas. Es lo que hace que el lenguaje sea composicional en lugar de un catálogo de comandos.</p>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph M[&quot;Modelo relacional (Codd)&quot;]
+        R1[&quot;Relación: conjunto&quot;] --&gt; P1[&quot;sin duplicados&quot;]
+        R1 --&gt; P2[&quot;sin orden&quot;]
+        R1 --&gt; P3[&quot;acceso por valor&quot;]
+        R1 --&gt; P4[&quot;cierre&quot;]
+    end
+    subgraph S[&quot;SQL (implementación)&quot;]
+        T1[&quot;Tabla: multiconjunto&quot;] --&gt; Q1[&quot;admite duplicados&quot;]
+        T1 --&gt; Q2[&quot;orden observable&quot;]
+        T1 --&gt; Q3[&quot;posición de columnas&quot;]
+        T1 --&gt; Q4[&quot;cierre conservado&quot;]
+    end
+    M -- &quot;se aparta en 3 de 4&quot; --&gt; S
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Creemos una tabla sin clave y observemos las tres desviaciones.</p>
+<pre><code class="language-sql">CREATE TABLE t (a INTEGER, b TEXT);
+INSERT INTO t VALUES (1,'x'), (1,'x'), (2,'y');
+SELECT COUNT(*) FROM t;              -- 3
+SELECT COUNT(*) FROM (SELECT DISTINCT a, b FROM t);  -- 2
+</code></pre>
+<p>Si <code>t</code> fuese una relación, ambas consultas darían <strong>2</strong>. Dan 3 y 2: <code>t</code> es un multiconjunto. La consecuencia inmediata:</p>
+<pre><code class="language-sql">SELECT a, b FROM t
+EXCEPT
+SELECT 1, 'x';
+</code></pre>
+<p>En SQL estándar <code>EXCEPT</code> elimina duplicados, así que el resultado es <code>(2,'y')</code>: se han borrado <strong>las dos</strong> filas <code>(1,'x')</code> con una sola tupla. Con <code>EXCEPT ALL</code> el resultado incluiría una <code>(1,'x')</code> superviviente. Dos operadores distintos porque el modelo subyacente no es un conjunto.</p>
+<p><strong>Desviación de orden.</strong> Sobre el dominio del repositorio:</p>
+<pre><code class="language-sql">SELECT nombre FROM students;
+</code></pre>
+<p>El orden que devuelve depende del plan. Si el motor decide un barrido secuencial, sale el orden de inserción; si decide recorrer un índice, sale el orden del índice. Añadir un índice puede cambiar el resultado observado sin cambiar ningún dato. Todo código que dependa de ese orden es un fallo latente que se activa el día que alguien optimiza.</p>
+<p><strong>Desviación de posición.</strong></p>
+<pre><code class="language-sql">INSERT INTO students VALUES (5, 'Ana');    -- depende del orden de columnas
+INSERT INTO students (id, nombre) VALUES (5, 'Ana');  -- acceso por nombre
+</code></pre>
+<p>La primera forma se rompe en silencio si alguien añade una columna en medio. La segunda es la que respeta el acceso por valor.</p>
+<p><strong>Traza del riesgo.</strong> Un <code>INSERT</code> posicional sobre una tabla de 6 columnas, tras insertar una columna nueva en la posición 3, no falla: desplaza los valores y guarda datos incorrectos con tipos compatibles. El error se descubre en un informe semanas después.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operación</th>
+<th>Semántica de conjunto</th>
+<th>Semántica de multiconjunto (SQL)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UNION</code></td>
+<td>Sin duplicados</td>
+<td><code>UNION</code> sin, <code>UNION ALL</code> con</td>
+</tr>
+<tr>
+<td><code>INTERSECT</code></td>
+<td>Sin duplicados</td>
+<td><code>INTERSECT</code> / <code>INTERSECT ALL</code></td>
+</tr>
+<tr>
+<td><code>EXCEPT</code></td>
+<td>Sin duplicados</td>
+<td><code>EXCEPT</code> / <code>EXCEPT ALL</code></td>
+</tr>
+<tr>
+<td>Proyección</td>
+<td>Elimina duplicados</td>
+<td>Los conserva salvo <code>DISTINCT</code></td>
+</tr>
+<tr>
+<td>Conteo</td>
+<td>Cardinalidad del conjunto</td>
+<td><code>COUNT(*)</code> cuenta repeticiones</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Suponer que el motor devuelve las filas «en orden».</strong> No hay orden sin <code>ORDER BY</code>, y con <code>ORDER BY</code> sobre columna no única el desempate tampoco está definido.</li>
+<li><strong>Usar <code>SELECT *</code> en código de producción.</strong> Ata el cliente a la posición y al número de columnas.</li>
+<li><strong>Proyectar sin pensar en duplicados.</strong> <code>SELECT ciudad FROM clientes</code> devuelve la ciudad repetida por cada cliente; casi nunca es lo que se quería.</li>
+<li><strong>Confundir <code>NULL</code> con un valor.</strong> No pertenece a ningún dominio: es una marca de información ausente (clase 019).</li>
+<li><strong>Crear tablas sin clave primaria.</strong> Sin ella no hay forma de referirse a una fila concreta ni de borrar un duplicado sin borrar el otro.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los tres apartamientos de SQL respecto del modelo son la causa de una familia entera de fallos de producción: informes con totales inflados por duplicados, procesos que dependen del orden, migraciones que desplazan columnas. Reconocer la causa común los convierte en un solo problema con una sola disciplina.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Encuentra en un esquema real una tabla sin clave primaria y demuestra con una consulta que contiene duplicados lógicos.</li>
+<li>Muestra una consulta de tu código que dependa del orden sin <code>ORDER BY</code>.</li>
+<li>Reproduce el efecto de <code>EXCEPT</code> frente a <code>EXCEPT ALL</code> con tus propios datos.</li>
+<li>Convierte un <code>INSERT</code> posicional en uno por nombre y explica qué fallo evitaste.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da una consulta cuyo resultado cambie al crear un índice, sin que cambien los datos, y explica por qué.</li>
+<li>¿Por qué <code>COUNT(*)</code> y <code>COUNT(DISTINCT ...)</code> difieren, y qué dice eso del modelo subyacente?</li>
+<li>Explica el acceso por valor y por qué prohíbe exponer identificadores de fila físicos.</li>
+<li>La propiedad de cierre habilita las CTE. Da una consulta tuya que sería imposible sin ella.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="009.html">← Anterior</a> · <a href="011.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

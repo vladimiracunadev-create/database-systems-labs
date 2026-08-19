@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Búsqueda híbrida: léxica más vectorial y filtrado por metadatos. Parte 12: Vectores, recuperación y RAG.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 12 · Vectores, recuperación y RAG</span>
+</nav>
+<main class="content">
+<h1 id="060--búsqueda-híbrida-léxica-más-vectorial-y-filtrado-por-metadatos">060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>12 — Vectores, recuperación y RAG</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>opensearch</code>, <code>qdrant</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>BM25</code> · <code>fusión de rangos</code> · <code>filtro previo</code> · <code>filtro posterior</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Combinar búsqueda léxica y vectorial, porque fallan de formas distintas. La híbrida no es «lo mejor de dos mundos» automáticamente: hay que fusionar bien y medir que mejora.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Enumerar los fallos característicos de cada método.</li>
+<li>Aplicar la fusión recíproca de rangos y explicar por qué no necesita normalizar.</li>
+<li>Comparar fusión por rango y por puntuación.</li>
+<li>Diseñar el filtrado por metadatos con la estrategia adecuada.</li>
+<li>Demostrar con medición que la híbrida mejora sobre cada método aislado.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="dónde-falla-cada-método">Dónde falla cada método</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th>BM25 (léxico)</th>
+<th>Vectorial (semántico)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«error 1451 foreign key»</td>
+<td><strong>Acierta</strong>: coincidencia exacta</td>
+<td>Falla: los códigos no tienen semántica</td>
+</tr>
+<tr>
+<td>«cómo evito que se pierdan datos»</td>
+<td>Falla: no comparte términos</td>
+<td><strong>Acierta</strong>: entiende la intención</td>
+</tr>
+<tr>
+<td>«pgvector» (término nuevo)</td>
+<td><strong>Acierta</strong> si está indexado</td>
+<td>Falla si el modelo no lo conoce</td>
+</tr>
+<tr>
+<td>«bd» frente a «base de datos»</td>
+<td>Falla sin sinónimos</td>
+<td><strong>Acierta</strong></td>
+</tr>
+<tr>
+<td>Nombre propio poco frecuente</td>
+<td><strong>Acierta</strong></td>
+<td>Puede fallar</td>
+</tr>
+<tr>
+<td>Paráfrasis completa</td>
+<td>Falla</td>
+<td><strong>Acierta</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Los fallos son <strong>complementarios</strong>, y por eso la combinación funciona. BM25 no entiende, pero no inventa; el vectorial entiende, y a veces se acerca a algo relacionado pero incorrecto.</p>
+<h3 id="fusión-recíproca-de-rangos-rrf">Fusión recíproca de rangos (RRF)</h3>
+<p>El problema de combinar: las puntuaciones de BM25 (no acotada, ~0 a 30) y las de coseno (−1 a 1) no son comparables ni entre sí ni entre consultas distintas.</p>
+<p>RRF ignora las puntuaciones y usa solo las <strong>posiciones</strong>:</p>
+<pre><code class="language-text">RRF(d) = Σ_sistemas  1 / (k + rango_sistema(d))       con k = 60 habitualmente
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Documento</th>
+<th style="text-align: right;">Rango BM25</th>
+<th style="text-align: right;">Rango vectorial</th>
+<th>RRF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">8</td>
+<td>1/61 + 1/68 = 0,0311</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td>1/64 + 1/62 = 0,0318</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">40</td>
+<td>1/62 + 1/100 = 0,0261</td>
+</tr>
+<tr>
+<td>D</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">1</td>
+<td>0 + 1/61 = 0,0164</td>
+</tr>
+</tbody>
+</table></div>
+<p>Orden final: <strong>B &gt; A &gt; C &gt; D</strong>. B gana por estar bien en ambos, aunque no fuera primero en ninguno. Esa es exactamente la propiedad buscada: <strong>premiar el consenso</strong>.</p>
+<p>La constante <code>k = 60</code> amortigua las primeras posiciones para que un primer puesto en un solo sistema no domine.</p>
+<p>Ventajas de RRF, y por qué se usa tanto: no requiere normalizar, no requiere entrenar, es robusto a escalas distintas y funciona con cualquier número de sistemas.</p>
+<h3 id="la-alternativa-fusión-por-puntuación">La alternativa: fusión por puntuación</h3>
+<pre><code class="language-text">score = α · norm(BM25) + (1-α) · norm(coseno)
+</code></pre>
+<p>Requiere normalizar por consulta (min-max sobre los resultados devueltos) y ajustar <code>α</code>. Puede superar a RRF <strong>si se ajusta con datos de evaluación</strong>; sin ellos, RRF es la elección segura.</p>
+<h3 id="filtrado">Filtrado</h3>
+<p>Es el mismo problema de la clase 059, y la regla de decisión es la misma:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Selectividad del filtro</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt; 20 %</td>
+<td>Post-filtrado con <code>k</code> ampliado</td>
+</tr>
+<tr>
+<td>1–20 %</td>
+<td>Filtrado integrado en el índice</td>
+</tr>
+<tr>
+<td>&lt; 1 %</td>
+<td>Pre-filtrado y búsqueda exhaustiva en el subconjunto</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta + filtros&quot;] --&gt; L[&quot;Rama léxica&lt;br/&gt;BM25 · top 50&quot;]
+    Q --&gt; V[&quot;Rama vectorial&lt;br/&gt;HNSW · top 50&quot;]
+    F[&quot;Filtros de metadatos&quot;] --&gt; L
+    F --&gt; V
+    L --&gt; R[&quot;Fusión RRF&quot;]
+    V --&gt; R
+    R --&gt; RR{&quot;¿Hay reordenador?&quot;}
+    RR -- &quot;Sí&quot; --&gt; CE[&quot;Reordenar top 50&lt;br/&gt;con modelo cruzado&quot;]
+    RR -- &quot;No&quot; --&gt; T[&quot;Top k&quot;]
+    CE --&gt; T
+    T --&gt; E[&quot;Evaluar: P@k · NDCG@k&quot;]
+</code></pre>
+<h3 id="el-reordenador">El reordenador</h3>
+<p>Un modelo de codificación cruzada procesa <strong>el par (consulta, documento) junto</strong> y produce una relevancia mucho más precisa que comparar dos vectores independientes. Es caro: no se puede aplicar a un millón de documentos, sí a los 50 que la fusión seleccionó.</p>
+<p>Patrón habitual: recuperar 50 con la híbrida (rápido), reordenar esos 50 (preciso), devolver 10.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Buscador del programa: 200 000 fragmentos, consultas mezcladas de códigos de error y de intención.</p>
+<p><strong>Implementación en PostgreSQL, un solo motor:</strong></p>
+<pre><code class="language-sql">WITH lexico AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(busqueda, q) DESC) AS rango
+  FROM fragmentos, plainto_tsquery('spanish', :consulta) q
+  WHERE busqueda @@ q AND (:curso IS NULL OR curso_id = :curso)
+  ORDER BY ts_rank(busqueda, q) DESC LIMIT 50
+),
+vectorial AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY embedding &lt;=&gt; :qvec) AS rango
+  FROM fragmentos
+  WHERE modelo = 'e5-base-v2' AND (:curso IS NULL OR curso_id = :curso)
+  ORDER BY embedding &lt;=&gt; :qvec LIMIT 50
+)
+SELECT f.id, f.texto,
+       COALESCE(1.0/(60 + l.rango), 0) + COALESCE(1.0/(60 + v.rango), 0) AS rrf
+FROM fragmentos f
+LEFT JOIN lexico    l ON l.id = f.id
+LEFT JOIN vectorial v ON v.id = f.id
+WHERE l.id IS NOT NULL OR v.id IS NOT NULL
+ORDER BY rrf DESC
+LIMIT 10;
+</code></pre>
+<p>Los <code>COALESCE</code> son importantes: un documento que solo aparece en una rama recibe la contribución de esa rama y cero de la otra, en vez de un nulo que anularía la suma.</p>
+<p><strong>Evaluación sobre 60 consultas juzgadas</strong>, mitad léxicas y mitad de intención:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Método</th>
+<th style="text-align: right;">P@5</th>
+<th style="text-align: right;">NDCG@10</th>
+<th style="text-align: right;">Recall@50</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Solo BM25</td>
+<td style="text-align: right;">0,52</td>
+<td style="text-align: right;">0,61</td>
+<td style="text-align: right;">0,74</td>
+</tr>
+<tr>
+<td>Solo vectorial</td>
+<td style="text-align: right;">0,58</td>
+<td style="text-align: right;">0,66</td>
+<td style="text-align: right;">0,81</td>
+</tr>
+<tr>
+<td>RRF (<code>k</code>=60)</td>
+<td style="text-align: right;"><strong>0,71</strong></td>
+<td style="text-align: right;"><strong>0,78</strong></td>
+<td style="text-align: right;"><strong>0,91</strong></td>
+</tr>
+<tr>
+<td>RRF + reordenador</td>
+<td style="text-align: right;"><strong>0,83</strong></td>
+<td style="text-align: right;"><strong>0,87</strong></td>
+<td style="text-align: right;">0,91</td>
+</tr>
+<tr>
+<td>Fusión por puntuación (<code>α</code>=0,5)</td>
+<td style="text-align: right;">0,64</td>
+<td style="text-align: right;">0,71</td>
+<td style="text-align: right;">0,89</td>
+</tr>
+<tr>
+<td>Fusión por puntuación (<code>α</code> ajustada = 0,35)</td>
+<td style="text-align: right;">0,73</td>
+<td style="text-align: right;">0,79</td>
+<td style="text-align: right;">0,91</td>
+</tr>
+</tbody>
+</table></div>
+<p>Lecturas:</p>
+<ul>
+<li>La híbrida gana claramente a cada método aislado: <strong>+13 puntos de P@5 sobre el mejor individual</strong>.</li>
+<li>El reordenador añade otros 12 puntos sin cambiar el recall@50: reordena lo ya recuperado, no recupera más.</li>
+<li>La fusión por puntuación <strong>sin ajustar</strong> es peor que RRF; <strong>ajustada</strong> con datos la supera ligeramente. Ese ajuste requiere el conjunto de evaluación, así que RRF sigue siendo el punto de partida correcto.</li>
+</ul>
+<p><strong>Desglose por tipo de consulta</strong>, que es donde se ve el mecanismo:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th style="text-align: right;">Solo BM25</th>
+<th style="text-align: right;">Solo vectorial</th>
+<th style="text-align: right;">RRF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Códigos y términos exactos</td>
+<td style="text-align: right;">0,81</td>
+<td style="text-align: right;">0,34</td>
+<td style="text-align: right;">0,79</td>
+</tr>
+<tr>
+<td>Preguntas de intención</td>
+<td style="text-align: right;">0,23</td>
+<td style="text-align: right;">0,74</td>
+<td style="text-align: right;">0,68</td>
+</tr>
+<tr>
+<td>Mixtas</td>
+<td style="text-align: right;">0,48</td>
+<td style="text-align: right;">0,61</td>
+<td style="text-align: right;">0,72</td>
+</tr>
+</tbody>
+</table></div>
+<p>En cada categoría, RRF pierde algo frente al especialista y <strong>gana en el conjunto</strong>. Ese es el compromiso real de la fusión, y conviene saberlo: si el 100 % de las consultas fueran códigos de error, BM25 solo sería mejor.</p>
+<p><strong>Filtrado, con la regla aplicada:</strong></p>
+<pre><code class="language-sql">-- Filtro por curso: cada curso es ~0,5 % del corpus → pre-filtrado exhaustivo
+SELECT id, texto, embedding &lt;=&gt; :qvec AS d
+FROM fragmentos WHERE curso_id = 42
+ORDER BY d LIMIT 10;
+-- 1 000 fragmentos: exhaustivo en 3 ms, recall 1,000
+</code></pre>
+<p>Con 1 000 fragmentos, la búsqueda exacta es más rápida <strong>y</strong> más exacta que cualquier índice aproximado. La decisión correcta es no usar el índice.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Método</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Términos técnicos, códigos, nombres</td>
+<td>BM25</td>
+</tr>
+<tr>
+<td>Preguntas en lenguaje natural</td>
+<td>Vectorial</td>
+</tr>
+<tr>
+<td>Consultas mezcladas (el caso real)</td>
+<td><strong>Híbrida con RRF</strong></td>
+</tr>
+<tr>
+<td>Máxima precisión en el top 10</td>
+<td>Híbrida + reordenador</td>
+</tr>
+<tr>
+<td>Sin conjunto de evaluación</td>
+<td>RRF (no requiere ajuste)</td>
+</tr>
+<tr>
+<td>Con conjunto de evaluación</td>
+<td>Fusión por puntuación ajustada</td>
+</tr>
+<tr>
+<td>Filtro muy selectivo</td>
+<td>Exhaustivo sobre el subconjunto</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Sumar puntuaciones de escalas distintas.</strong> BM25 y coseno no son comparables.</li>
+<li><strong>Adoptar la híbrida sin medir.</strong> Puede empeorar si una rama está mal configurada.</li>
+<li><strong>Post-filtrado con filtros selectivos.</strong> Devuelve poco o nada.</li>
+<li><strong>Reordenar demasiados candidatos.</strong> El codificador cruzado es caro.</li>
+<li><strong>Un solo tipo de consulta en la evaluación.</strong> El conjunto debe reflejar el tráfico real.</li>
+<li><strong>Analizadores distintos entre indexación y consulta en la rama léxica</strong> (clase 031).</li>
+<li><strong>Creer que el reordenador aumenta el recall.</strong> Solo reordena lo ya recuperado.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La mejora de un buscador se demuestra o no existe. El conjunto de consultas juzgadas —60 a 100 consultas reales con sus resultados esperados— es el activo que permite cambiar de modelo, de fusión o de parámetros sabiendo si se avanza o se retrocede.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Construye 60 consultas juzgadas que reflejen tu tráfico real, con las tres categorías.</li>
+<li>Mide P@5 y NDCG@10 con BM25, con vectorial y con RRF.</li>
+<li>Añade un reordenador sobre los 50 primeros y vuelve a medir.</li>
+<li>Desglosa por tipo de consulta y decide si la fusión compensa en tu caso.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué RRF no necesita normalizar las puntuaciones?</li>
+<li>Da una consulta de tu dominio donde el vectorial falle y BM25 acierte, y explica por qué.</li>
+<li>Calcula el RRF de un documento que quedó 3.º en léxico y 15.º en vectorial.</li>
+<li>¿En qué caso la búsqueda solo léxica sería la decisión correcta?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/06-vector-search/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
+  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
+<li><strong>OpenSearch Project</strong> (2026). <a href="https://docs.opensearch.org/latest/">OpenSearch Documentation</a>.<br />
+  Índice invertido, analizadores, relevancia y búsqueda k-NN.</li>
+<li><strong>Andrew Kane</strong> (2026). <a href="https://github.com/pgvector/pgvector">pgvector</a>.<br />
+  Búsqueda vectorial dentro de PostgreSQL: evita un sistema adicional cuando no hace falta.</li>
+<li><strong>Qdrant</strong> (2026). <a href="https://qdrant.tech/documentation/">Qdrant Documentation</a>.<br />
+  Colecciones, filtros con carga útil y parametros HNSW.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

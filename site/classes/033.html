@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="ACID: qué garantiza cada letra y quién la implementa. Parte 07: Transacciones, concurrencia y recuperación.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>033 — ACID: qué garantiza cada letra y quién la implementa · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 07 · Transacciones, concurrencia y recuperación</span>
+</nav>
+<main class="content">
+<h1 id="033--acid-qué-garantiza-cada-letra-y-quién-la-implementa">033 — ACID: qué garantiza cada letra y quién la implementa</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>07 — Transacciones, concurrencia y recuperación</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>atomicidad</code> · <code>consistencia</code> · <code>aislamiento</code> · <code>durabilidad</code> · <code>unidad de recuperación</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Precisar qué garantiza cada letra de ACID, quién la implementa y qué queda fuera. «Usamos una base ACID» no significa que el sistema sea correcto: significa que existen unas garantías concretas si se usan bien.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Definir con precisión atomicidad, consistencia, aislamiento y durabilidad.</li>
+<li>Explicar por qué la C es distinta de las otras tres.</li>
+<li>Identificar qué mecanismo del motor implementa cada letra.</li>
+<li>Reconocer las garantías que se pierden por configuración.</li>
+<li>Explicar por qué una transacción larga es un problema operativo.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-transacción">La transacción</h3>
+<p>Gray (1981) define la transacción como la unidad de trabajo que lleva la base de un estado consistente a otro, con la propiedad de que o se aplica entera o no se aplica nada. Es simultáneamente unidad de <strong>recuperación</strong>, de <strong>concurrencia</strong> y de <strong>consistencia</strong>.</p>
+<h3 id="las-cuatro-letras-una-por-una">Las cuatro letras, una por una</h3>
+<p><strong>A — Atomicidad.</strong> Todo o nada. Si la transacción falla o el proceso muere, no queda ningún efecto parcial. Lo implementa el registro de deshacer (<em>undo</em>): el motor guarda cómo revertir cada cambio antes de aplicarlo.</p>
+<p><strong>C — Consistencia.</strong> Aquí está la trampa pedagógica. Las otras tres letras son propiedades <strong>del motor</strong>; la C es una propiedad <strong>de la aplicación y del esquema</strong>. El motor solo garantiza las restricciones que alguien declaró (clase 013). Si nadie declaró que el saldo no puede ser negativo, ninguna transacción ACID lo impedirá.</p>
+<p>Formulación honesta: <em>la atomicidad y el aislamiento permiten que la aplicación mantenga sus invariantes; la C es la afirmación de que las mantiene</em>.</p>
+<p><strong>I — Aislamiento.</strong> Las transacciones concurrentes producen un resultado equivalente a <strong>alguna</strong> ejecución en serie. Esa es la definición de serializabilidad, y es el nivel más fuerte. En la práctica casi todos los sistemas funcionan en niveles más débiles que <strong>sí</strong> permiten anomalías, y por defecto (clase 034). Lo implementan el bloqueo en dos fases o el control multiversión (clase 035).</p>
+<p><strong>D — Durabilidad.</strong> Una vez confirmada, la transacción sobrevive a fallos. Lo implementa el registro anticipado (clase 036). El matiz importante: durabilidad <strong>frente a qué fallo</strong>. Sobrevivir a la caída del proceso, a la de la máquina, a la pérdida del disco y a la del centro de datos son cuatro garantías distintas con cuatro costos distintos.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Fallo</th>
+<th>Mecanismo necesario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caída del proceso</td>
+<td>WAL escrito al sistema operativo</td>
+</tr>
+<tr>
+<td>Caída de la máquina</td>
+<td><code>fsync</code> del WAL al disco</td>
+</tr>
+<tr>
+<td>Pérdida del disco</td>
+<td>Réplica o copia externa</td>
+</tr>
+<tr>
+<td>Pérdida del centro de datos</td>
+<td>Réplica geográficamente distante</td>
+</tr>
+<tr>
+<td>Error humano (<code>DROP TABLE</code>)</td>
+<td>Copia con recuperación a un punto en el tiempo</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ninguna configuración de un solo nodo protege de las tres últimas.</p>
+<h3 id="garantías-que-se-pierden-por-configuración">Garantías que se pierden por configuración</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Configuración</th>
+<th>Qué se pierde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL <code>synchronous_commit = off</code></td>
+<td>Durabilidad: hasta ~0,2 s de transacciones confirmadas</td>
+</tr>
+<tr>
+<td>PostgreSQL <code>fsync = off</code></td>
+<td>Durabilidad y posiblemente la integridad del archivo</td>
+</tr>
+<tr>
+<td>MySQL <code>innodb_flush_log_at_trx_commit = 2</code></td>
+<td>Durabilidad ante caída de la máquina</td>
+</tr>
+<tr>
+<td>MySQL con tablas MyISAM</td>
+<td><strong>Todo</strong>: no hay transacciones</td>
+</tr>
+<tr>
+<td>Réplica asíncrona con conmutación</td>
+<td>Las transacciones aún no replicadas</td>
+</tr>
+<tr>
+<td>SQLite <code>synchronous = OFF</code></td>
+<td>Durabilidad e integridad ante corte de energía</td>
+</tr>
+</tbody>
+</table></div>
+<p>La primera y la tercera son decisiones legítimas para datos reconstruibles, y hay que <strong>declararlas</strong>, no heredarlas de un archivo de configuración copiado.</p>
+<pre><code class="language-mermaid">flowchart TD
+    T[&quot;BEGIN&quot;] --&gt; W[&quot;Escrituras&quot;]
+    W --&gt; A{&quot;¿COMMIT o fallo?&quot;}
+    A -- &quot;Fallo&quot; --&gt; U[&quot;Registro de deshacer&lt;br/&gt;→ ATOMICIDAD&quot;]
+    A -- &quot;COMMIT&quot; --&gt; V{&quot;¿Se violó alguna&lt;br/&gt;restricción declarada?&quot;}
+    V -- &quot;Sí&quot; --&gt; U
+    V -- &quot;No&quot; --&gt; L[&quot;WAL + fsync&lt;br/&gt;→ DURABILIDAD&quot;]
+    L --&gt; OK[&quot;Confirmado&quot;]
+    W -.-&gt;|&quot;2PL o MVCC&quot;| I[&quot;AISLAMIENTO&quot;]
+    V -.-&gt; C[&quot;CONSISTENCIA&lt;br/&gt;(esquema + aplicación)&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Transferencia entre cuentas, el caso canónico:</p>
+<pre><code class="language-sql">BEGIN;
+UPDATE cuentas SET saldo = saldo - 300 WHERE id = 1;
+UPDATE cuentas SET saldo = saldo + 300 WHERE id = 2;
+COMMIT;
+</code></pre>
+<p><strong>Qué garantiza cada letra aquí:</strong></p>
+<ul>
+<li><strong>A:</strong> si el proceso muere entre los dos <code>UPDATE</code>, ninguno queda aplicado. Los 300 no desaparecen.</li>
+<li><strong>I:</strong> otra transferencia concurrente sobre la cuenta 1 no ve el estado intermedio ni provoca actualización perdida (con el nivel adecuado).</li>
+<li><strong>D:</strong> tras el <code>COMMIT</code>, un corte de energía no deshace la operación.</li>
+<li><strong>C:</strong> <strong>nada</strong>, salvo que se declare. Sin restricciones, esto se acepta:</li>
+</ul>
+<pre><code class="language-sql">BEGIN;
+UPDATE cuentas SET saldo = saldo - 100000 WHERE id = 1;  -- saldo queda en -99 700
+COMMIT;   -- ACID perfecto, negocio roto
+</code></pre>
+<p>La transacción es atómica, aislada y duradera, y deja un saldo imposible. La C exige escribirla:</p>
+<pre><code class="language-sql">ALTER TABLE cuentas ADD CONSTRAINT saldo_no_negativo CHECK (saldo &gt;= 0);
+</code></pre>
+<p>Ahora sí: el <code>UPDATE</code> falla, la transacción se revierte y la atomicidad garantiza que no queda rastro.</p>
+<p><strong>La invariante que un <code>CHECK</code> no cubre.</strong> «La suma de todos los saldos es constante»: relaciona filas distintas y no hay <code>CHECK</code> estándar que lo exprese. Solo el aislamiento serializable garantiza que dos transferencias concurrentes no la rompan; en niveles más débiles hay que auditarla:</p>
+<pre><code class="language-sql">SELECT SUM(saldo) FROM cuentas;   -- debe coincidir con el total esperado
+</code></pre>
+<p><strong>Transacciones largas: el problema operativo.</strong></p>
+<pre><code class="language-sql">BEGIN;
+SELECT * FROM enrollments;          -- el informe tarda 40 minutos
+-- ... la sesión queda abierta ...
+COMMIT;
+</code></pre>
+<p>Durante esos 40 minutos, en un motor MVCC:</p>
+<ul>
+<li>El motor <strong>no puede</strong> limpiar las versiones antiguas de fila, porque esta transacción podría necesitarlas. Las tablas se hinchan (clase 021).</li>
+<li>Con bloqueo (SQL Server en <code>READ COMMITTED</code> por defecto), además bloquea escritores.</li>
+<li>Si la transacción escribió algo, mantiene sus bloqueos todo ese tiempo.</li>
+</ul>
+<p>Medición típica: una transacción abierta 40 minutos en una base con 2 000 actualizaciones por segundo impide recuperar ~4,8 millones de versiones de fila. La consecuencia se ve como «la base creció 30 GB de la nada».</p>
+<p><strong>Regla operativa:</strong> una transacción abarca las escrituras que deben ser atómicas y nada más. Nunca debe contener llamadas de red a servicios externos, esperas de usuario ni informes largos.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Propiedad</th>
+<th>La garantiza</th>
+<th>Se pierde si</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Atomicidad</td>
+<td>Registro de deshacer</td>
+<td>Casi nunca; el motor la sostiene</td>
+</tr>
+<tr>
+<td>Consistencia</td>
+<td>Esquema + aplicación</td>
+<td>No se declaran las restricciones</td>
+</tr>
+<tr>
+<td>Aislamiento</td>
+<td>2PL o MVCC</td>
+<td>Nivel por defecto más débil que serializable</td>
+</tr>
+<tr>
+<td>Durabilidad</td>
+<td>WAL + <code>fsync</code></td>
+<td>Configuración de rendimiento; réplica asíncrona</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Creer que la C la pone el motor.</strong> La pone el esquema que se escribió.</li>
+<li><strong>Suponer serializable por defecto.</strong> Ningún motor de servidor lo hace por omisión.</li>
+<li><strong>Transacciones que envuelven llamadas HTTP.</strong> Un servicio lento hincha la base.</li>
+<li><strong>Confiar en la durabilidad con réplica asíncrona y conmutación automática.</strong> Se pierden transacciones confirmadas.</li>
+<li><strong>Usar MyISAM y hablar de transacciones.</strong> No las hay.</li>
+<li><strong>No probar la restauración.</strong> La durabilidad sin restauración probada es una suposición (clase 048).</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>«Somos ACID» es una respuesta incompleta a «¿pueden perder mi pedido?». La respuesta completa enumera: el nivel de aislamiento efectivo, la configuración de <code>fsync</code>, el modo de replicación y el resultado de la última prueba de restauración.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Determina el nivel de aislamiento y la configuración de durabilidad reales de tu base.</li>
+<li>Escribe la invariante de negocio más importante y verifica si el esquema la garantiza.</li>
+<li>Provoca un fallo a mitad de una transacción y demuestra la atomicidad.</li>
+<li>Localiza la transacción más larga de tu sistema y estima su efecto sobre las versiones de fila.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué la C es de naturaleza distinta a A, I y D?</li>
+<li>Da una invariante de tu dominio que ningún <code>CHECK</code> pueda expresar y di quién la vigila.</li>
+<li>Enumera los cuatro fallos frente a los que puede exigirse durabilidad y el mecanismo de cada uno.</li>
+<li>Explica el efecto de una transacción abierta durante una hora en un motor MVCC.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Jim Gray</strong> (1981). <a href="https://jimgray.azurewebsites.net/papers/thetransactionconcept.pdf">The Transaction Concept: Virtues and Limitations</a>. VLDB.<br />
+  Define la transacción como unidad de consistencia y recuperación.</li>
+<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
+  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

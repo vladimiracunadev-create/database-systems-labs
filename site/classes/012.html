@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Cálculo relacional y su equivalencia con el álgebra. Parte 02: Modelo relacional y álgebra.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>012 — Cálculo relacional y su equivalencia con el álgebra · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 02 · Modelo relacional y álgebra</span>
+</nav>
+<main class="content">
+<h1 id="012--cálculo-relacional-y-su-equivalencia-con-el-álgebra">012 — Cálculo relacional y su equivalencia con el álgebra</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>02 — Modelo relacional y álgebra</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>cálculo de tuplas</code> · <code>seguridad de expresión</code> · <code>equivalencia</code> · <code>declaratividad</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Entender por qué SQL es declarativo. El cálculo relacional describe <strong>qué</strong> se quiere sin decir cómo obtenerlo; su equivalencia con el álgebra es el teorema que autoriza a un optimizador a elegir el cómo.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Escribir consultas en cálculo relacional de tuplas.</li>
+<li>Explicar qué es una expresión segura y por qué importa.</li>
+<li>Enunciar la completitud relacional y qué implica para SQL.</li>
+<li>Reconocer los cuantificadores ∃ y ∀ detrás de <code>EXISTS</code> y <code>NOT EXISTS</code>.</li>
+<li>Argumentar qué preguntas quedan fuera del cálculo relacional puro.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-forma-de-una-expresión">La forma de una expresión</h3>
+<p>Una consulta en cálculo de tuplas se escribe:</p>
+<pre><code class="language-text">{ t | P(t) }
+</code></pre>
+<p>«el conjunto de tuplas <code>t</code> que cumplen el predicado <code>P</code>». No hay orden de operaciones, no hay reuniones explícitas, no hay decisión sobre índices: solo una condición lógica.</p>
+<p>Ejemplo: estudiantes con nota mayor que 6 en algún curso.</p>
+<pre><code class="language-text">{ s | s ∈ students ∧ ∃e ∈ enrollments ( e.student_id = s.id ∧ e.nota &gt; 6.0 ) }
+</code></pre>
+<p>El paralelo con SQL es directo, y no por casualidad:</p>
+<pre><code class="language-sql">SELECT * FROM students s
+WHERE EXISTS (SELECT 1 FROM enrollments e
+              WHERE e.student_id = s.id AND e.nota &gt; 6.0);
+</code></pre>
+<p><code>EXISTS</code> <strong>es</strong> el ∃. <code>NOT EXISTS</code> combinado con negación <strong>es</strong> el ∀, porque <code>∀x P(x) ≡ ¬∃x ¬P(x)</code>. De ahí la doble negación de la división relacional de la clase 011: no es un truco, es la traducción literal del cuantificador universal.</p>
+<h3 id="expresiones-seguras">Expresiones seguras</h3>
+<p>El cálculo permite escribir cosas sin sentido computable:</p>
+<pre><code class="language-text">{ t | ¬(t ∈ students) }
+</code></pre>
+<p>«todas las tuplas que no son estudiantes»: un conjunto infinito. Una expresión es <strong>segura</strong> si su resultado está contenido en el dominio de los valores que aparecen en la base de datos. SQL fuerza la seguridad por construcción: toda consulta parte de un <code>FROM</code>, así que el universo siempre está acotado.</p>
+<p>Es la razón por la que no existe en SQL un <code>SELECT</code> sin origen que devuelva «todo lo demás».</p>
+<h3 id="completitud-relacional">Completitud relacional</h3>
+<p><strong>Teorema (Codd).</strong> El cálculo relacional seguro y el álgebra relacional tienen exactamente el mismo poder expresivo: toda consulta escribible en uno lo es en el otro.</p>
+<p>Un lenguaje es <em>relacionalmente completo</em> si expresa todo lo del álgebra. SQL lo es, y además la excede con agregación, ordenación, recursión y funciones de ventana, que <strong>no</strong> forman parte del álgebra relacional original.</p>
+<p>La consecuencia práctica es toda la arquitectura de un motor moderno:</p>
+<pre><code class="language-mermaid">flowchart LR
+    U[&quot;Consulta declarativa&lt;br/&gt;(cálculo / SQL)&quot;] --&gt; T[&quot;Traducción a&lt;br/&gt;álgebra&quot;]
+    T --&gt; E[&quot;Expresiones equivalentes&lt;br/&gt;E1…E6 (clase 011)&quot;]
+    E --&gt; C[&quot;Estimación de costo&lt;br/&gt;con estadísticas&quot;]
+    C --&gt; P[&quot;Plan físico elegido&quot;]
+    P --&gt; R[&quot;Mismas filas,&lt;br/&gt;coste distinto&quot;]
+</code></pre>
+<p>Si el cálculo no fuese equivalente al álgebra, el motor no podría reescribir la consulta: tendría que ejecutar literalmente lo que se escribió, como hacían los sistemas anteriores a 1970.</p>
+<h3 id="lo-que-el-cálculo-relacional-no-expresa">Lo que el cálculo relacional no expresa</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Pregunta</th>
+<th>¿Cálculo relacional puro?</th>
+<th>Cómo se resuelve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«¿Cuántos estudiantes hay?»</td>
+<td>No: la agregación no es relacional</td>
+<td>Extensión de SQL (<code>COUNT</code>)</td>
+</tr>
+<tr>
+<td>«Los 10 mejores promedios»</td>
+<td>No: exige orden</td>
+<td><code>ORDER BY</code> + <code>LIMIT</code></td>
+</tr>
+<tr>
+<td>«Todos los prerrequisitos, a cualquier profundidad»</td>
+<td>No: cierre transitivo</td>
+<td>CTE recursiva (clase 018)</td>
+</tr>
+<tr>
+<td>«El promedio móvil de 3 períodos»</td>
+<td>No</td>
+<td>Función de ventana</td>
+</tr>
+<tr>
+<td>«¿Está inscrito en algún curso?»</td>
+<td>Sí (∃)</td>
+<td><code>EXISTS</code></td>
+</tr>
+<tr>
+<td>«¿Está en todos los obligatorios?»</td>
+<td>Sí (∀)</td>
+<td>Doble <code>NOT EXISTS</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El límite del cierre transitivo es históricamente importante: es el motivo por el que las bases de datos de grafos existen (clase 028) y por el que SQL:1999 añadió <code>WITH RECURSIVE</code>.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«estudiantes que no están inscritos en ningún curso del período 2026-1»</em>.</p>
+<p><strong>Cálculo:</strong></p>
+<pre><code class="language-text">{ s | s ∈ students ∧ ¬∃e ∈ enrollments (
+        e.student_id = s.id ∧
+        ∃c ∈ courses ( c.id = e.course_id ∧ c.periodo = '2026-1' ) ) }
+</code></pre>
+<p><strong>SQL, traducción literal:</strong></p>
+<pre><code class="language-sql">SELECT s.*
+FROM students s
+WHERE NOT EXISTS (
+  SELECT 1 FROM enrollments e
+  JOIN courses c ON c.id = e.course_id
+  WHERE e.student_id = s.id AND c.periodo = '2026-1'
+);
+</code></pre>
+<p><strong>Álgebra, misma consulta:</strong></p>
+<pre><code class="language-text">students − π_students.*( students ⋈ enrollments ⋈ σ_periodo='2026-1'(courses) )
+</code></pre>
+<p>Las tres formulaciones devuelven el mismo conjunto. La tercera hace explícita la diferencia (<code>−</code>), que es lo que un plan de ejecución llamará <em>anti-join</em>.</p>
+<p><strong>Contraste con la trampa de <code>NOT IN</code>:</strong></p>
+<pre><code class="language-sql">SELECT * FROM students
+WHERE id NOT IN (SELECT student_id FROM enrollments);   -- peligroso
+</code></pre>
+<p>Si <code>enrollments.student_id</code> admite nulos y hay uno solo, el resultado es <strong>vacío</strong>, no el esperado. La razón es la lógica de tres valores (clase 019): <code>id NOT IN (1, 2, NULL)</code> se evalúa como <code>id&lt;&gt;1 ∧ id&lt;&gt;2 ∧ id&lt;&gt;NULL</code>, y el último término es <code>UNKNOWN</code>, que nunca es verdadero.</p>
+<p><code>NOT EXISTS</code> no sufre este problema porque no compara valores: comprueba la existencia de filas. Esta es la razón técnica —no estilística— para preferirlo.</p>
+<p><strong>Traza numérica:</strong> con 2 000 estudiantes, 1 fila con <code>student_id</code> nulo basta para que <code>NOT IN</code> devuelva 0 filas en lugar de las 340 correctas. Un fallo silencioso de 340 registros perdidos.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Álgebra</th>
+<th>Cálculo</th>
+<th>SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Estilo</td>
+<td>Procedimental</td>
+<td>Declarativo</td>
+<td>Declarativo</td>
+</tr>
+<tr>
+<td>Especifica el orden</td>
+<td>Sí</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Riesgo de expresión insegura</td>
+<td>No</td>
+<td>Sí</td>
+<td>No (acotado por <code>FROM</code>)</td>
+</tr>
+<tr>
+<td>Poder expresivo</td>
+<td>Igual</td>
+<td>Igual</td>
+<td>Mayor</td>
+</tr>
+<tr>
+<td>Uso real</td>
+<td>Interno del motor</td>
+<td>Fundamento teórico</td>
+<td>Interfaz del usuario</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Usar <code>NOT IN</code> con subconsulta que puede devolver nulos.</strong> Devuelve vacío sin avisar.</li>
+<li><strong>Creer que el orden de los <code>JOIN</code> escritos es el ejecutado.</strong> La equivalencia autoriza al motor a reordenar.</li>
+<li><strong>Intentar expresar «todos» con <code>IN</code>.</strong> <code>IN</code> es ∃; para ∀ hace falta la doble negación.</li>
+<li><strong>Esperar cierre transitivo sin recursión.</strong> Un <code>JOIN</code> de profundidad fija no recorre jerarquías de profundidad variable.</li>
+<li><strong>Confundir declarativo con «el motor lo hará bien siempre».</strong> El motor elige el cómo, pero con estadísticas malas elige mal (clase 042).</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Cuando una consulta con <code>NOT IN</code> empieza a devolver menos filas tras una carga de datos, la causa casi siempre es un nulo nuevo en la subconsulta. Conocer el fundamento lógico convierte un misterio de tres días en una comprobación de tres minutos.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Escribe en cálculo de tuplas dos consultas reales de tu trabajo, una con ∃ y otra con ∀.</li>
+<li>Tradúcelas a SQL y al álgebra.</li>
+<li>Construye el caso con nulos que rompe la versión con <code>NOT IN</code> y captura la evidencia.</li>
+<li>Formula una pregunta de tu dominio que exija cierre transitivo y explica por qué queda fuera del cálculo.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué toda consulta SQL es automáticamente una expresión segura?</li>
+<li>Traduce <code>∀c ∈ obligatorios: inscrito(s, c)</code> a SQL y explica cada negación.</li>
+<li>Da un caso real donde <code>NOT IN</code> y <code>NOT EXISTS</code> devuelvan resultados distintos, con datos concretos.</li>
+<li>¿Qué le añade SQL al álgebra relacional, y por qué esas adiciones no rompen la capacidad de optimizar?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

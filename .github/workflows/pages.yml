@@ -1,0 +1,79 @@
+name: Pages
+
+# Publica `site/` en GitHub Pages. El sitio esta versionado, asi que aqui no se
+# construye nada nuevo: se regenera para comprobar que lo versionado es lo que
+# el generador produce, y se sube eso.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "classes/**"
+      - "catalog/**"
+      - "curriculum.yaml"
+      - "site/**"
+      - "scripts/generate_site.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  construir:
+    name: Generar y verificar
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --quiet -r requirements.txt
+
+      - name: Regenerar el sitio
+        run: python scripts/generate_site.py
+
+      - name: Verificar que está completo antes de publicar
+        run: |
+          set -euo pipefail
+          PAGINAS=$(find site -name '*.html' | wc -l)
+          CLASES=$(find site/classes -name '[0-9][0-9][0-9].html' | wc -l)
+          ESPERADAS=$(python -c "import yaml;c=yaml.safe_load(open('curriculum.yaml',encoding='utf-8'));print(sum(len(p['classes']) for p in c['parts']))")
+          [ "$CLASES" -eq "$ESPERADAS" ] || { echo "::error::$CLASES páginas de clase, esperaba $ESPERADAS"; exit 1; }
+          [ -s site/busqueda.json ] || { echo "::error::índice de búsqueda vacío"; exit 1; }
+          {
+            echo "### 🌐 Sitio publicado"
+            echo ""
+            echo "- Páginas HTML: **$PAGINAS**"
+            echo "- Clases: **$CLASES**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publicar:
+    name: Publicar
+    needs: construir
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Normalización de 1FN a BCFN con dependencias funcionales. Parte 01: Modelado conceptual y requisitos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>008 — Normalización de 1FN a BCFN con dependencias funcionales · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 01 · Modelado conceptual y requisitos</span>
+</nav>
+<main class="content">
+<h1 id="008--normalización-de-1fn-a-bcfn-con-dependencias-funcionales">008 — Normalización de 1FN a BCFN con dependencias funcionales</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>01 — Modelado conceptual y requisitos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>dependencia funcional</code> · <code>anomalía de actualización</code> · <code>BCFN</code> · <code>descomposición sin pérdida</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Normalizar con un criterio demostrable, no por costumbre. Las formas normales no son etiquetas de calidad: son teoremas sobre qué anomalías puede o no puede sufrir un esquema.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Escribir dependencias funcionales a partir de reglas de negocio.</li>
+<li>Calcular el cierre de un conjunto de atributos y encontrar las claves candidatas.</li>
+<li>Justificar 1FN, 2FN, 3FN y BCFN señalando la anomalía que cada una elimina.</li>
+<li>Descomponer sin pérdida y comprobarlo.</li>
+<li>Explicar por qué BCFN puede no preservar dependencias, y qué hacer entonces.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="dependencia-funcional">Dependencia funcional</h3>
+<p><code>X → Y</code> significa: si dos filas coinciden en <code>X</code>, coinciden necesariamente en <code>Y</code>. Es una afirmación sobre <strong>todas las instancias posibles</strong>, no sobre los datos de hoy. Que hoy no haya dos estudiantes con el mismo nombre no permite escribir <code>nombre → id</code>.</p>
+<p>Las dependencias vienen del dominio, no del dato. Por eso se descubren preguntando, no consultando.</p>
+<h3 id="cierre-y-claves-candidatas">Cierre y claves candidatas</h3>
+<p>El cierre <code>X⁺</code> es el conjunto de atributos determinables desde <code>X</code>. Algoritmo:</p>
+<pre><code class="language-text">X⁺ := X
+repetir hasta que no cambie:
+    para cada dependencia A → B:
+        si A ⊆ X⁺ entonces X⁺ := X⁺ ∪ B
+</code></pre>
+<p><code>X</code> es superclave si <code>X⁺</code> incluye todos los atributos; es clave candidata si además ningún subconjunto propio lo consigue.</p>
+<h3 id="las-formas-normales-y-su-anomalía">Las formas normales y su anomalía</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Forma</th>
+<th>Exige</th>
+<th>Anomalía que elimina</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1FN</strong></td>
+<td>Valores atómicos; sin grupos repetidos</td>
+<td>No se puede consultar ni restringir lo que está dentro de un campo compuesto</td>
+</tr>
+<tr>
+<td><strong>2FN</strong></td>
+<td>1FN + ningún atributo no primo depende de <strong>parte</strong> de una clave</td>
+<td>Redundancia en claves compuestas</td>
+</tr>
+<tr>
+<td><strong>3FN</strong></td>
+<td>2FN + ningún atributo no primo depende de otro no primo</td>
+<td>Dependencia transitiva: actualizar en un sitio y no en otro</td>
+</tr>
+<tr>
+<td><strong>BCFN</strong></td>
+<td>Todo determinante es superclave</td>
+<td>Redundancia residual con claves candidatas solapadas</td>
+</tr>
+</tbody>
+</table></div>
+<p>Las tres anomalías clásicas que aparecen si no se normaliza:</p>
+<ul>
+<li><strong>De inserción:</strong> no se puede registrar un hecho porque falta otro no relacionado.</li>
+<li><strong>De actualización:</strong> el mismo hecho está en N filas y se actualizan N−1.</li>
+<li><strong>De eliminación:</strong> borrar una fila destruye un hecho independiente.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;Tabla universal&quot;] --&gt; A{&quot;¿Valores atómicos?&quot;}
+    A -- &quot;No&quot; --&gt; A1[&quot;Separar → 1FN&quot;]
+    A -- &quot;Sí&quot; --&gt; B{&quot;¿Dependencia parcial&lt;br/&gt;de una clave compuesta?&quot;}
+    B -- &quot;Sí&quot; --&gt; B1[&quot;Extraer el determinante → 2FN&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Dependencia transitiva&lt;br/&gt;entre no primos?&quot;}
+    C -- &quot;Sí&quot; --&gt; C1[&quot;Extraer el intermedio → 3FN&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Todo determinante&lt;br/&gt;es superclave?&quot;}
+    D -- &quot;No&quot; --&gt; D1[&quot;Descomponer → BCFN&lt;br/&gt;(puede perder dependencias)&quot;]
+    D -- &quot;Sí&quot; --&gt; E[&quot;BCFN&quot;]
+</code></pre>
+<h3 id="descomposición-sin-pérdida">Descomposición sin pérdida</h3>
+<p>Descomponer <code>R</code> en <code>R1</code> y <code>R2</code> es <strong>sin pérdida</strong> si <code>R1 ∩ R2</code> es superclave de al menos una de las dos. Si no, la reunión de las partes produce filas que no existían: se han inventado datos. Garcia-Molina, Ullman y Widom lo demuestran; en la práctica basta con comprobar la condición de la intersección antes de partir una tabla.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Tabla sin normalizar:</p>
+<pre><code class="language-text">inscripcion(student_id, course_id, student_nombre, course_nombre,
+            teacher_id, teacher_nombre, nota)
+</code></pre>
+<p><strong>Dependencias del dominio:</strong></p>
+<pre><code class="language-text">D1  student_id                -&gt; student_nombre
+D2  course_id                 -&gt; course_nombre, teacher_id
+D3  teacher_id                -&gt; teacher_nombre
+D4  student_id, course_id     -&gt; nota
+</code></pre>
+<p><strong>Clave candidata.</strong> Calculamos <code>(student_id, course_id)⁺</code>:</p>
+<pre><code class="language-text">inicio        {student_id, course_id}
+por D1  +     student_nombre
+por D2  +     course_nombre, teacher_id
+por D3  +     teacher_nombre
+por D4  +     nota
+</code></pre>
+<p>El cierre cubre todos los atributos, y ninguna de las dos columnas por separado lo consigue. Clave candidata: <code>(student_id, course_id)</code>.</p>
+<p><strong>Diagnóstico:</strong></p>
+<ul>
+<li><strong>2FN falla</strong> por D1 y D2: <code>student_nombre</code> depende solo de <code>student_id</code>, que es <em>parte</em> de la clave. Consecuencia medible: con 2 000 estudiantes y 8 inscripciones de media, el nombre de cada estudiante se almacena 8 veces. 16 000 copias para 2 000 hechos.</li>
+<li><strong>3FN falla</strong> por D3: <code>teacher_nombre</code> depende de <code>teacher_id</code>, que no es primo. Es transitiva.</li>
+</ul>
+<p><strong>Descomposición:</strong></p>
+<pre><code class="language-sql">CREATE TABLE teachers (
+  id     INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE students (
+  id     INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE courses (
+  id         INTEGER PRIMARY KEY,
+  nombre     TEXT NOT NULL,
+  teacher_id INTEGER NOT NULL REFERENCES teachers(id)
+);
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p><strong>Comprobación de no pérdida.</strong> <code>enrollments ∩ students = {student_id}</code>, que es clave de <code>students</code>. Se cumple. Igual para <code>courses</code> y <code>teachers</code>.</p>
+<p><strong>Las tres anomalías, ya resueltas:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Anomalía</th>
+<th>Antes</th>
+<th>Después</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inserción</td>
+<td>No se puede registrar un curso nuevo sin un estudiante inscrito</td>
+<td><code>INSERT INTO courses</code> basta</td>
+</tr>
+<tr>
+<td>Actualización</td>
+<td>Corregir el nombre de un profesor toca N filas</td>
+<td>Toca 1</td>
+</tr>
+<tr>
+<td>Eliminación</td>
+<td>Borrar la última inscripción borra el curso</td>
+<td>El curso persiste</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>El caso BCFN.</strong> Añadamos la regla «cada curso lo dicta un solo profesor, y cada profesor dicta un solo curso por período». Aparecen dos claves candidatas solapadas y una dependencia <code>teacher_id, periodo → course_id</code> cuyo determinante no es superclave de la tabla resultante. Descomponer para llegar a BCFN elimina la redundancia, pero la dependencia queda repartida entre dos tablas y ya no puede comprobarse sin reunirlas.</p>
+<p>Ese es el compromiso real: <strong>BCFN no siempre preserva dependencias; 3FN siempre se puede alcanzar preservándolas</strong>. Cuando entran en conflicto, la decisión defendible suele ser quedarse en 3FN y auditar la dependencia con una invariante, en vez de perder la capacidad del motor de hacerla cumplir.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Redundancia</th>
+<th>Dependencias preservadas</th>
+<th>Costo de consulta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sin normalizar</td>
+<td>Alta</td>
+<td>—</td>
+<td>Bajo (sin reuniones)</td>
+</tr>
+<tr>
+<td>3FN</td>
+<td>Baja</td>
+<td>Siempre alcanzable</td>
+<td>Medio</td>
+</tr>
+<tr>
+<td>BCFN</td>
+<td>Mínima</td>
+<td>No siempre</td>
+<td>Medio-alto</td>
+</tr>
+<tr>
+<td>Desnormalizado a propósito (clase 009)</td>
+<td>Controlada y documentada</td>
+<td>Vigiladas por invariantes</td>
+<td>Bajo en lectura, alto en escritura</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Deducir dependencias de los datos actuales.</strong> Los datos muestran lo que ha ocurrido; la dependencia afirma lo que puede ocurrir.</li>
+<li><strong>Normalizar hasta BCFN por reflejo.</strong> Si perder la dependencia obliga a comprobarla en la aplicación, puede ser peor remedio que enfermedad.</li>
+<li><strong>Descomponer sin comprobar la no pérdida.</strong> Reunir dos partes mal elegidas fabrica filas que nunca existieron.</li>
+<li><strong>Creer que 1FN prohíbe los tipos compuestos.</strong> Prohíbe los grupos repetidos y los valores no atómicos <em>para el dominio</em>; un <code>jsonb</code> opaco que nunca se consulta por dentro es discutible, pero uno que se filtra por sus claves internas viola el espíritu de 1FN.</li>
+<li><strong>Confundir normalización con rendimiento.</strong> La normalización decide qué anomalías son posibles; el rendimiento se decide con índices y planes (parte 08).</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los datos sucios que aparecen en los informes casi siempre son anomalías de actualización que nadie previno. Un esquema en 3FN convierte esos errores en imposibles por construcción, y eso vale más que cualquier proceso de limpieza posterior.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Toma una tabla ancha real de tu trabajo y escribe sus dependencias funcionales.</li>
+<li>Calcula el cierre y determina las claves candidatas.</li>
+<li>Diagnostica en qué forma normal está, nombrando la dependencia que la rompe.</li>
+<li>Descompón, comprueba la no pérdida y cuantifica cuántas copias redundantes eliminaste.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da una dependencia funcional cierta en tu dominio que hoy los datos no reflejarían.</li>
+<li>Demuestra con un ejemplo pequeño que una descomposición con intersección no clave inventa filas.</li>
+<li>¿Qué anomalía concreta elimina 3FN que 2FN no elimina?</li>
+<li>Presenta un caso donde te quedarías en 3FN pudiendo llegar a BCFN, y di quién vigila entonces la dependencia perdida.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

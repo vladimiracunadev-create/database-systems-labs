@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Planes de ejecución: leer EXPLAIN y refutar una hipótesis. Parte 08: Almacenamiento, índices y planes.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 08 · Almacenamiento, índices y planes</span>
+</nav>
+<main class="content">
+<h1 id="042--planes-de-ejecución-leer-explain-y-refutar-una-hipótesis">042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>08 — Almacenamiento, índices y planes</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>optimizador por costos</code> · <code>estadística</code> · <code>estimación de cardinalidad</code> · <code>costo frente a tiempo</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Leer un plan de ejecución como evidencia y no como adorno. El plan permite convertir «va lento» en una hipótesis concreta, comprobable y refutable.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar cómo el optimizador por costos elige un plan.</li>
+<li>Distinguir costo estimado de tiempo real y filas estimadas de filas devueltas.</li>
+<li>Diagnosticar los cuatro fallos habituales de estimación.</li>
+<li>Refutar una hipótesis de rendimiento con evidencia.</li>
+<li>Saber cuándo el problema es la estadística y no el índice.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-optimizador-por-costos">El optimizador por costos</h3>
+<p>Selinger et al. (1979) definieron el método que siguen todos los motores relacionales:</p>
+<ol>
+<li>Enumerar planes equivalentes (equivalencias E1–E6 de la clase 011).</li>
+<li>Estimar, para cada uno, cuántas filas produce cada operador a partir de las <strong>estadísticas</strong> del catálogo.</li>
+<li>Asignar un costo mediante un modelo (páginas secuenciales, páginas aleatorias, CPU por fila).</li>
+<li>Elegir el más barato.</li>
+</ol>
+<p>El eslabón débil es el paso 2: <strong>si la estimación de cardinalidad es mala, la elección será mala</strong>, por bueno que sea el modelo de costos. Casi todos los planes malos son fallos de estimación.</p>
+<h3 id="las-dos-parejas-de-números">Las dos parejas de números</h3>
+<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) SELECT ...;
+</code></pre>
+<pre><code class="language-text">Seq Scan on enrollments  (cost=0.00..91234.00 rows=12 width=32)
+                         (actual time=0.03..842.11 rows=3841022 loops=1)
+  Filter: (nota &gt; 4.0)
+  Rows Removed by Filter: 1158978
+  Buffers: shared hit=1204 read=64586
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Pareja</th>
+<th>Qué comparar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cost</code> frente a <code>actual time</code></td>
+<td>El costo es una unidad interna, <strong>no</strong> milisegundos. Solo sirve para comparar planes entre sí</td>
+</tr>
+<tr>
+<td><code>rows</code> estimadas frente a <code>rows</code> reales</td>
+<td><strong>Aquí está el diagnóstico.</strong> Una desviación de más de 10× explica casi cualquier plan malo</td>
+</tr>
+</tbody>
+</table></div>
+<p>En el ejemplo: estimó 12 filas y devolvió 3 841 022. Un factor de 320 000. Con esa estimación el planificador eligió un bucle anidado que, con 3,8 millones de filas, es catastrófico.</p>
+<h3 id="los-cuatro-fallos-de-estimación">Los cuatro fallos de estimación</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Fallo</th>
+<th>Síntoma</th>
+<th>Corrección</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Estadísticas obsoletas</strong></td>
+<td>Estimaciones lejanas tras una carga masiva</td>
+<td><code>ANALYZE tabla</code></td>
+</tr>
+<tr>
+<td><strong>Columnas correlacionadas</strong></td>
+<td>Subestimación con varios <code>AND</code></td>
+<td><code>CREATE STATISTICS ... (dependencies)</code></td>
+</tr>
+<tr>
+<td><strong>Distribución sesgada</strong></td>
+<td>Bien para valores comunes, mal para los raros</td>
+<td>Subir <code>default_statistics_target</code></td>
+</tr>
+<tr>
+<td><strong>Expresión opaca</strong></td>
+<td>Estimación fija del 0,5 % o similar</td>
+<td>Índice de expresión, o reescribir el predicado</td>
+</tr>
+</tbody>
+</table></div>
+<p>El segundo merece detalle. El planificador supone <strong>independencia</strong> entre predicados:</p>
+<pre><code class="language-text">sel(ciudad='Santiago') = 0,30
+sel(region='Metropolitana') = 0,35
+estimación combinada = 0,30 · 0,35 = 0,105  → 10,5 %
+realidad: casi toda Santiago está en la Metropolitana → ~30 %
+</code></pre>
+<p>Subestima por un factor de 3. Con varias columnas correlacionadas, el error se multiplica. PostgreSQL 10+ permite corregirlo:</p>
+<pre><code class="language-sql">CREATE STATISTICS est_ciudad_region (dependencies, ndistinct)
+  ON ciudad, region FROM direcciones;
+ANALYZE direcciones;
+</code></pre>
+<h3 id="método-de-refutación">Método de refutación</h3>
+<p>Un plan no se «mejora»: se formula una hipótesis y se intenta <strong>refutarla</strong>.</p>
+<pre><code class="language-mermaid">flowchart TD
+    S[&quot;Síntoma: consulta lenta&quot;] --&gt; P[&quot;EXPLAIN ANALYZE&lt;br/&gt;capturar el plan completo&quot;]
+    P --&gt; D{&quot;¿rows estimadas ≈&lt;br/&gt;rows reales?&quot;}
+    D -- &quot;No, &gt;10×&quot; --&gt; E[&quot;Hipótesis: fallo de estimación&quot;]
+    E --&gt; E1[&quot;ANALYZE · estadísticas extendidas ·&lt;br/&gt;subir el objetivo&quot;]
+    E1 --&gt; M[&quot;Volver a medir&quot;]
+    D -- &quot;Sí&quot; --&gt; O{&quot;¿Qué operador&lt;br/&gt;consume el tiempo?&quot;}
+    O --&gt; O1[&quot;Barrido: ¿falta índice?&quot;]
+    O --&gt; O2[&quot;Orden: ¿work_mem o índice ordenado?&quot;]
+    O --&gt; O3[&quot;Reunión: ¿algoritmo adecuado?&quot;]
+    O1 --&gt; H[&quot;Hipótesis concreta&quot;]
+    O2 --&gt; H
+    O3 --&gt; H
+    H --&gt; T[&quot;Aplicar el cambio&lt;br/&gt;en un entorno comparable&quot;]
+    T --&gt; M
+    M --&gt; R{&quot;¿Mejoró en&lt;br/&gt;condiciones iguales?&quot;}
+    R -- &quot;No&quot; --&gt; RF[&quot;Hipótesis refutada:&lt;br/&gt;revertir y volver a P&quot;]
+    R -- &quot;Sí&quot; --&gt; OK[&quot;Documentar: antes, después,&lt;br/&gt;condiciones y límite&quot;]
+</code></pre>
+<p>El paso que casi nadie da es <strong>revertir cuando la hipótesis se refuta</strong>. Los índices que no sirvieron se quedan, y al cabo de dos años la tabla tiene once índices de los que se usan cuatro.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Síntoma: el panel del curso tarda 8 s.</p>
+<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
+SELECT c.nombre, count(*) AS inscritos, avg(e.nota) AS promedio
+FROM courses c JOIN enrollments e ON e.course_id = c.id
+WHERE c.periodo = '2026-1' AND e.estado = 'activa'
+GROUP BY c.id, c.nombre;
+</code></pre>
+<p><strong>Plan inicial:</strong></p>
+<pre><code class="language-text">HashAggregate  (cost=... rows=40) (actual time=8123.4..8124.1 rows=40 loops=1)
+  -&gt;  Nested Loop  (cost=... rows=53) (actual time=0.4..7890.2 rows=1521044 loops=1)
+        -&gt;  Seq Scan on courses c  (rows=40) (actual rows=40 loops=1)
+              Filter: (periodo = '2026-1')
+        -&gt;  Index Scan using enr_course_idx on enrollments e
+              (cost=... rows=1) (actual rows=38026 loops=40)
+              Index Cond: (course_id = c.id)
+              Filter: (estado = 'activa')
+              Rows Removed by Filter: 6710
+        Buffers: shared hit=201 read=182304
+</code></pre>
+<p><strong>Diagnóstico, leyendo los números:</strong></p>
+<ol>
+<li>El bucle anidado estimó <strong>53</strong> filas y produjo <strong>1 521 044</strong>: factor 28 700.</li>
+<li>El origen: el índice interno estimó <code>rows=1</code> por iteración y devolvió 38 026.</li>
+<li>Con <code>rows=1</code> estimado, el bucle anidado parecía barato. Con 38 026, es la peor elección posible.</li>
+</ol>
+<p><strong>Hipótesis 1:</strong> las estadísticas de <code>enrollments</code> están obsoletas.</p>
+<pre><code class="language-sql">ANALYZE enrollments;
+</code></pre>
+<p>Nueva ejecución: la estimación interna pasa de 1 a 16 800. El planificador cambia a reunión por hash:</p>
+<pre><code class="language-text">HashAggregate  (actual time=612.3..613.0 rows=40 loops=1)
+  -&gt;  Hash Join  (actual time=88.1..520.7 rows=1521044 loops=1)
+        -&gt;  Seq Scan on enrollments e   (actual rows=4250000)
+              Filter: (estado = 'activa')
+        -&gt;  Hash  -&gt;  Seq Scan on courses c  (actual rows=40)
+</code></pre>
+<p><strong>8 123 ms → 613 ms</strong> sin crear un solo índice. El problema nunca fue el índice: era la estadística.</p>
+<p><strong>Hipótesis 2:</strong> todavía se barren 4,25 millones de inscripciones. Un índice parcial evitaría el barrido.</p>
+<pre><code class="language-sql">CREATE INDEX enr_activas ON enrollments (course_id) INCLUDE (nota)
+WHERE estado = 'activa';
+</code></pre>
+<pre><code class="language-text">HashAggregate  (actual time=214.8..215.2 rows=40 loops=1)
+  -&gt;  Nested Loop  (actual rows=1521044 loops=1)
+        -&gt;  Seq Scan on courses c  (actual rows=40)
+        -&gt;  Index Only Scan using enr_activas  (actual rows=38026 loops=40)
+              Heap Fetches: 0
+</code></pre>
+<p><strong>613 ms → 215 ms.</strong> <code>Heap Fetches: 0</code> confirma que el índice cubre la consulta.</p>
+<p><strong>Registro de evidencia, que es el entregable:</strong></p>
+<pre><code class="language-text">Consulta      : panel del curso, período 2026-1
+Antes         : 8 123 ms · bucle anidado · estimación 53 / real 1 521 044
+Intervención 1: ANALYZE enrollments        → 613 ms (reunión por hash)
+Intervención 2: índice parcial cubriente   → 215 ms (Heap Fetches: 0)
+Costo añadido : índice de 92 MB, mantenido en cada escritura de fila activa
+Condiciones   : PostgreSQL 16, 5 M inscripciones, caché caliente en las tres medidas
+No demuestra  : nada sobre concurrencia; una sola sesión
+</code></pre>
+<p>La penúltima línea —caché caliente en las tres medidas— es lo que hace comparables los números. La última evita que alguien extrapole.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Señal en el plan</th>
+<th>Causa probable</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rows</code> estimadas ≪ reales</td>
+<td>Estadísticas obsoletas o correlación</td>
+<td><code>ANALYZE</code>, estadísticas extendidas</td>
+</tr>
+<tr>
+<td><code>Rows Removed by Filter</code> alto</td>
+<td>Índice sin la columna del filtro</td>
+<td>Añadirla al índice</td>
+</tr>
+<tr>
+<td><code>Sort Method: external merge</code></td>
+<td><code>work_mem</code> insuficiente</td>
+<td>Subirlo o indexar el orden</td>
+</tr>
+<tr>
+<td>Bucle anidado con <code>loops</code> alto</td>
+<td>Estimación baja del interno</td>
+<td>Corregir estadística</td>
+</tr>
+<tr>
+<td><code>Heap Fetches</code> alto en barrido de índice</td>
+<td>Mapa de visibilidad desactualizado</td>
+<td><code>VACUUM</code></td>
+</tr>
+<tr>
+<td><code>read</code> ≫ <code>hit</code> en <code>Buffers</code></td>
+<td>El conjunto de trabajo no cabe</td>
+<td>Más memoria o menos datos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Leer <code>cost</code> como milisegundos.</strong> Es una unidad interna sin significado absoluto.</li>
+<li><strong>Usar <code>EXPLAIN</code> sin <code>ANALYZE</code>.</strong> No hay filas reales que comparar.</li>
+<li><strong>Crear índices antes de mirar la estimación.</strong> La mitad de los planes malos se arreglan con <code>ANALYZE</code>.</li>
+<li><strong>Medir una vez en frío y otra en caliente.</strong> Los números dejan de ser comparables.</li>
+<li><strong>Forzar el plan con pistas.</strong> Tapa el síntoma y estorba cuando los datos cambian.</li>
+<li><strong>No revertir lo que no funcionó.</strong> Los índices inútiles se acumulan.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Un plan que degrada tras un despliegue suele deberse a una carga masiva sin <code>ANALYZE</code> o a un cambio en la distribución de datos. Guardar los planes de las consultas críticas como referencia permite detectar el cambio en minutos en vez de en días.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Captura el plan de tu consulta más lenta con <code>ANALYZE</code> y <code>BUFFERS</code>.</li>
+<li>Identifica el operador con mayor desviación entre estimación y realidad.</li>
+<li>Formula una hipótesis, aplícala y vuelve a medir en las mismas condiciones.</li>
+<li>Escribe el registro de evidencia completo, incluida la línea de «no demuestra».</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué una subestimación de cardinalidad lleva a elegir bucle anidado?</li>
+<li>Explica por qué el planificador subestima con columnas correlacionadas y cómo se corrige.</li>
+<li>¿Qué significa <code>Heap Fetches</code> distinto de cero en un barrido de índice?</li>
+<li>Da una hipótesis tuya que resultó refutada y qué hiciste con el cambio.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>P. Griffiths Selinger, M. M. Astrahan, D. D. Chamberlin, R. A. Lorie, T. G. Price</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/582095.582099">Access Path Selection in a Relational Database Management System</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/582095.582099">10.1145/582095.582099</a>.<br />
+  Base del optimizador por costos que siguen usando los motores actuales.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/using-explain.html">PostgreSQL: Using EXPLAIN</a>.<br />
+  Lectura de planes de ejecución y diferencia entre costo estimado y tiempo real.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/optoverview.html">SQLite: Query Optimizer Overview</a>.<br />
+  Como decide SQLite usar un índice; útil para leer EXPLAIN QUERY PLAN.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="SELECT: filtrado, proyección y orden con semántica precisa. Parte 03: SQL en profundidad.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>015 — SELECT: filtrado, proyección y orden con semántica precisa · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 03 · SQL en profundidad</span>
+</nav>
+<main class="content">
+<h1 id="015--select-filtrado-proyección-y-orden-con-semántica-precisa">015 — SELECT: filtrado, proyección y orden con semántica precisa</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>03 — SQL en profundidad</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>predicado</code> · <code>orden de evaluación</code> · <code>colación</code> · <code>determinismo de orden</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Escribir <code>SELECT</code> sabiendo exactamente qué devuelve. La mayoría de los errores de consulta no son de sintaxis: son de semántica, y aparecen cuando los datos cambian.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Enunciar el orden lógico de evaluación de una consulta y usarlo para explicar errores.</li>
+<li>Distinguir orden lógico de orden físico de ejecución.</li>
+<li>Escribir un <code>ORDER BY</code> determinista y explicar por qué hace falta.</li>
+<li>Prever el efecto de la colación en comparaciones y ordenaciones.</li>
+<li>Paginar sin saltarse ni repetir filas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-orden-lógico">El orden lógico</h3>
+<p>SQL se escribe en un orden y se evalúa en otro. El orden lógico definido por la norma es:</p>
+<pre><code class="language-text">1. FROM      (y los JOIN)
+2. WHERE
+3. GROUP BY
+4. HAVING
+5. SELECT    (incluidas las funciones de ventana)
+6. DISTINCT
+7. ORDER BY
+8. LIMIT / OFFSET
+</code></pre>
+<p>De aquí salen, sin más teoría, tres reglas que suelen memorizarse mal:</p>
+<ul>
+<li><strong>No se puede usar un alias de <code>SELECT</code> en <code>WHERE</code>.</strong> En el paso 2 ese alias todavía no existe. Sí se puede en <code>ORDER BY</code>, porque es posterior.</li>
+<li><strong><code>WHERE</code> filtra filas; <code>HAVING</code> filtra grupos.</strong> Poner una condición de fila en <code>HAVING</code> funciona pero agrupa de más y es más lento.</li>
+<li><strong>Las funciones de ventana no se pueden filtrar en <code>WHERE</code>.</strong> Se calculan en el paso 5. Para filtrarlas hace falta una subconsulta o una CTE (clase 018).</li>
+</ul>
+<p>El orden <strong>físico</strong> es otro: el motor aplica las equivalencias de la clase 011 y puede filtrar antes de reunir. Ambas cosas conviven porque el resultado es el mismo.</p>
+<h3 id="el-orden-de-las-filas-no-existe">El orden de las filas no existe</h3>
+<p>Sin <code>ORDER BY</code>, el orden de salida es un accidente del plan. Con <code>ORDER BY</code> sobre una columna con valores repetidos, el orden entre las filas empatadas <strong>tampoco</strong> está definido.</p>
+<p>Esto rompe la paginación por desplazamiento:</p>
+<pre><code class="language-sql">SELECT * FROM students ORDER BY nombre LIMIT 20 OFFSET 0;   -- página 1
+SELECT * FROM students ORDER BY nombre LIMIT 20 OFFSET 20;  -- página 2
+</code></pre>
+<p>Con dos estudiantes llamados «Ana Pérez», su orden relativo puede cambiar entre las dos consultas: uno aparece en ambas páginas y otro en ninguna. La solución es un <strong>orden total</strong>, añadiendo una columna única como desempate:</p>
+<pre><code class="language-sql">SELECT * FROM students ORDER BY nombre, id LIMIT 20 OFFSET 20;
+</code></pre>
+<h3 id="paginación-por-clave">Paginación por clave</h3>
+<p><code>OFFSET</code> tiene además un problema de costo: para saltar 100 000 filas, el motor las produce y las descarta. El costo crece con el número de página. La alternativa es la paginación por clave (<em>keyset</em>), que recuerda dónde se quedó:</p>
+<pre><code class="language-sql">-- primera página
+SELECT id, nombre FROM students ORDER BY nombre, id LIMIT 20;
+-- siguiente, con el último par visto
+SELECT id, nombre FROM students
+WHERE (nombre, id) &gt; ('Ana Pérez', 412)
+ORDER BY nombre, id LIMIT 20;
+</code></pre>
+<p>La comparación de tuplas <code>(a, b) &gt; (x, y)</code> es la forma correcta y está en la norma. Con un índice sobre <code>(nombre, id)</code>, el costo es constante por página, no creciente. Winand desarrolla este punto como uno de los usos canónicos del índice compuesto.</p>
+<h3 id="colación">Colación</h3>
+<p>La colación decide cómo se comparan y ordenan los textos: si <code>'a' = 'A'</code>, dónde va la «ñ», si los acentos importan.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Comportamiento por defecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>Sensible a mayúsculas; colación del <code>initdb</code> (a menudo del sistema)</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>Históricamente <strong>insensible</strong> a mayúsculas (<code>utf8mb4_0900_ai_ci</code>)</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><code>BINARY</code>: sensible a mayúsculas y solo ASCII en <code>NOCASE</code></td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Depende de la instalación; suele ser insensible</td>
+</tr>
+</tbody>
+</table></div>
+<p>Esa diferencia hace que <code>WHERE email = 'ANA@X.CL'</code> encuentre la fila en MySQL y no en PostgreSQL. Es la causa de portabilidad más subestimada (clase 022). La defensa es normalizar explícitamente al escribir —guardar el correo en minúsculas— en vez de depender de la colación.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<pre><code class="language-sql">SELECT s.nombre,
+       AVG(e.nota) AS promedio
+FROM students s
+JOIN enrollments e ON e.student_id = s.id
+WHERE promedio &gt; 5.0            -- ERROR
+GROUP BY s.nombre;
+</code></pre>
+<p>Falla porque en el paso 2 (<code>WHERE</code>) el alias <code>promedio</code> no existe y la agregación aún no se ha hecho. La forma correcta usa <code>HAVING</code>:</p>
+<pre><code class="language-sql">SELECT s.id, s.nombre, AVG(e.nota) AS promedio
+FROM students s
+JOIN enrollments e ON e.student_id = s.id
+GROUP BY s.id, s.nombre
+HAVING AVG(e.nota) &gt; 5.0
+ORDER BY promedio DESC, s.id;
+</code></pre>
+<p>Detalles que no son adorno:</p>
+<ul>
+<li>Se agrupa por <code>s.id</code> además de <code>s.nombre</code>: dos estudiantes homónimos se contarían como uno solo al agrupar solo por nombre. Un error de resultado, no de estilo.</li>
+<li><code>ORDER BY promedio DESC, s.id</code> usa el alias (permitido en el paso 7) y desempata con la clave.</li>
+</ul>
+<p><strong>Filtro de fila frente a filtro de grupo.</strong> Comparemos:</p>
+<pre><code class="language-sql">-- A: filtra filas antes de agrupar
+SELECT e.course_id, AVG(e.nota)
+FROM enrollments e
+WHERE e.estado = 'activa'
+GROUP BY e.course_id;
+
+-- B: filtra grupos después
+SELECT e.course_id, AVG(e.nota)
+FROM enrollments e
+GROUP BY e.course_id
+HAVING MIN(e.estado) = 'activa';
+</code></pre>
+<p>No son equivalentes ni en resultado ni en costo. A calcula el promedio <strong>solo</strong> de las activas; B calcula el promedio de todas y luego descarta grupos. Con 240 000 inscripciones de las que 200 000 están activas, A agrega 200 000 filas y B agrega 240 000 para descartar después. La regla: <strong>filtrar lo antes posible</strong>, que es la equivalencia E2 de la clase 011 aplicada a mano.</p>
+<p><strong>Paginación, medición.</strong> Sobre 5 millones de filas con índice en <code>(nombre, id)</code>:</p>
+<pre><code class="language-text">OFFSET 0        →  20 filas producidas
+OFFSET 100 000  →  100 020 filas producidas, 100 000 descartadas
+keyset          →  20 filas producidas, siempre
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Construcción correcta</th>
+<th>Trampa habitual</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Filtrar filas</td>
+<td><code>WHERE</code></td>
+<td>Hacerlo en <code>HAVING</code></td>
+</tr>
+<tr>
+<td>Filtrar agregados</td>
+<td><code>HAVING</code></td>
+<td>Intentarlo en <code>WHERE</code></td>
+</tr>
+<tr>
+<td>Filtrar ventanas</td>
+<td>Subconsulta o CTE</td>
+<td>Intentarlo en <code>WHERE</code></td>
+</tr>
+<tr>
+<td>Orden estable</td>
+<td><code>ORDER BY</code> con columna única final</td>
+<td>Confiar en el orden natural</td>
+</tr>
+<tr>
+<td>Paginar mucho</td>
+<td>Paginación por clave</td>
+<td><code>OFFSET</code> creciente</td>
+</tr>
+<tr>
+<td>Comparar texto</td>
+<td>Normalizar al escribir</td>
+<td>Depender de la colación</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Paginar con <code>OFFSET</code> sobre un orden no total.</strong> Filas repetidas y filas perdidas, sin ningún error visible.</li>
+<li><strong>Agrupar por el nombre y no por la clave.</strong> Fusiona homónimos en silencio.</li>
+<li><strong><code>SELECT *</code> con <code>JOIN</code>.</strong> Trae columnas duplicadas y ata el cliente al esquema.</li>
+<li><strong>Suponer que <code>WHERE</code> y <code>HAVING</code> son intercambiables.</strong> Cambian el resultado cuando hay agregados.</li>
+<li><strong>Confiar en la insensibilidad a mayúsculas.</strong> Funciona en MySQL y falla al migrar a PostgreSQL.</li>
+<li><strong><code>LIMIT</code> sin <code>ORDER BY</code>.</strong> Devuelve «20 filas cualesquiera», que pueden ser otras 20 en la siguiente ejecución.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las listas paginadas con elementos que se repiten o desaparecen son un clásico de los informes de error de usuario, y casi siempre se atribuyen al <em>frontend</em>. Casi siempre son un <code>ORDER BY</code> sin desempate.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Encuentra una consulta paginada real y demuestra con datos que su orden no es total.</li>
+<li>Conviértela a paginación por clave y mide el costo en la página 1 y en la 5 000.</li>
+<li>Reescribe una consulta que use <code>HAVING</code> para filtrar filas y compara los planes.</li>
+<li>Documenta la colación por defecto de tu motor y una consulta cuyo resultado cambiaría al migrar.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica con el orden lógico por qué un alias funciona en <code>ORDER BY</code> y no en <code>WHERE</code>.</li>
+<li>Da un caso donde <code>WHERE</code> y <code>HAVING</code> produzcan resultados distintos, con datos.</li>
+<li>¿Por qué la paginación por clave necesita un índice sobre exactamente las columnas del <code>ORDER BY</code>?</li>
+<li>Tu aplicación funciona en MySQL y falla en PostgreSQL al buscar correos. Diagnostica y propón la corrección definitiva.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

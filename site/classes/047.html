@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Consenso y transacciones distribuidas: Raft, 2PC y sagas. Parte 09: Distribución, réplica y consistencia.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>047 — Consenso y transacciones distribuidas: Raft, 2PC y sagas · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 09 · Distribución, réplica y consistencia</span>
+</nav>
+<main class="content">
+<h1 id="047--consenso-y-transacciones-distribuidas-raft-2pc-y-sagas">047 — Consenso y transacciones distribuidas: Raft, 2PC y sagas</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="046.html">← Anterior</a> · <a href="048.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>09 — Distribución, réplica y consistencia</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>spanner</code>, <code>cockroachdb</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>consenso</code> · <code>elección de líder</code> · <code>commit en dos fases</code> · <code>saga</code> · <code>compensación</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Coordinar varios nodos cuando hace falta acuerdo: consenso para elegir líder y ordenar operaciones, y las tres formas de que una operación abarque varios sistemas.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar qué problema resuelve el consenso y por qué necesita mayoría.</li>
+<li>Describir Raft: elección de líder, replicación del registro y confirmación.</li>
+<li>Identificar el fallo del commit en dos fases y por qué bloquea.</li>
+<li>Diseñar una saga con sus compensaciones.</li>
+<li>Elegir entre 2PC, saga y bandeja de salida transaccional.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-problema-del-consenso">El problema del consenso</h3>
+<p>Varios nodos deben ponerse de acuerdo en un valor, tolerando caídas y mensajes perdidos. Es el problema que subyace a: elegir líder, decidir si una transacción confirma, ordenar un registro replicado.</p>
+<p><strong>Por qué mayoría.</strong> Con <code>2f + 1</code> nodos se toleran <code>f</code> caídas, porque dos mayorías cualesquiera se solapan en al menos un nodo, y ese nodo impide que se tomen dos decisiones contradictorias. Con 5 nodos se toleran 2. Un número par no aporta: 4 nodos toleran 1, igual que 3, y tienen más coordinación.</p>
+<p>Lamport resolvió el problema con Paxos (1998); Ongaro y Ousterhout diseñaron Raft (2014) buscando explícitamente que fuese comprensible, y por eso es el que implementan etcd, Consul, CockroachDB y TiKV.</p>
+<h3 id="raft-en-tres-piezas">Raft en tres piezas</h3>
+<p><strong>1. Elección de líder.</strong> Cada nodo tiene un temporizador aleatorio. Al agotarse sin recibir señal del líder, se declara candidato del mandato <code>t+1</code> y pide votos. Con mayoría, es líder. La aleatoriedad de los temporizadores es lo que evita elecciones empatadas indefinidamente.</p>
+<p><strong>2. Replicación del registro.</strong> El líder recibe las operaciones, las añade a su registro y las envía a los seguidores. Una entrada se <strong>confirma</strong> cuando la mayoría la ha escrito. Solo entonces se aplica y se responde al cliente.</p>
+<p><strong>3. Seguridad.</strong> Un candidato solo obtiene votos si su registro está <strong>al menos tan actualizado</strong> como el del votante. Esa regla garantiza que un líder nuevo contiene todas las entradas confirmadas: nada confirmado se pierde jamás.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Cliente
+    participant L as Líder
+    participant S1 as Seguidor 1
+    participant S2 as Seguidor 2
+    C-&gt;&gt;L: operación
+    L-&gt;&gt;L: añadir al registro (sin confirmar)
+    L-&gt;&gt;S1: AppendEntries
+    L-&gt;&gt;S2: AppendEntries
+    S1--&gt;&gt;L: ok
+    Note over L: mayoría (2 de 3) → CONFIRMADA
+    L-&gt;&gt;L: aplicar
+    L--&gt;&gt;C: respuesta
+    S2--&gt;&gt;L: ok (tardío, no afecta)
+</code></pre>
+<p>Costo: <strong>una ida y vuelta a la mayoría por operación</strong>. En un centro de datos, ~1 ms; entre regiones, cientos.</p>
+<h3 id="commit-en-dos-fases">Commit en dos fases</h3>
+<pre><code class="language-text">Fase 1 (preparar):  el coordinador pregunta a cada participante &quot;¿puedes confirmar?&quot;
+                    cada uno responde SÍ o NO, y si dice SÍ queda OBLIGADO
+Fase 2 (confirmar): si todos dijeron SÍ, el coordinador ordena confirmar; si no, abortar
+</code></pre>
+<p><strong>El fallo.</strong> Si el coordinador cae después de que todos digan SÍ y antes de enviar la decisión, los participantes quedan <strong>en duda</strong>: no pueden confirmar (quizá alguien dijo NO) ni abortar (quizá todos dijeron SÍ). Mantienen sus bloqueos indefinidamente.</p>
+<p>Por eso 2PC se llama protocolo <strong>bloqueante</strong>. La corrección es un coordinador replicado por consenso —y entonces cada transacción cuesta consenso más dos rondas—. Es lo que hace Spanner, con la ventaja de una red controlada y relojes acotados por TrueTime.</p>
+<p>Helland argumenta que a escala esto no se sostiene, y propone el enfoque alternativo.</p>
+<h3 id="sagas">Sagas</h3>
+<p>Descomponer la operación en pasos locales atómicos, cada uno con su <strong>compensación</strong>:</p>
+<pre><code class="language-text">T1 → T2 → T3 → T4
+      ↓ falla T3
+C2 ← C1                    (compensaciones en orden inverso)
+</code></pre>
+<p>Propiedades que hay que asumir explícitamente:</p>
+<ul>
+<li><strong>No hay aislamiento.</strong> Los estados intermedios son visibles. Otro proceso puede ver el pedido creado y el pago aún no cobrado.</li>
+<li><strong>Las compensaciones son semánticas, no técnicas.</strong> No se «deshace» un correo enviado: se envía uno de disculpa. No se deshace un cobro: se emite un reembolso.</li>
+<li><strong>Todo paso y toda compensación debe ser idempotente</strong> (clase 037), porque se reintentan.</li>
+</ul>
+<h3 id="bandeja-de-salida-transaccional">Bandeja de salida transaccional</h3>
+<p>El problema más común no es una transacción entre dos bases: es «escribir en la base <strong>y</strong> publicar un evento» de forma atómica.</p>
+<pre><code class="language-sql">BEGIN;
+INSERT INTO enrollments (...) VALUES (...);
+INSERT INTO outbox (tipo, carga, creado_en)
+       VALUES ('inscripcion.creada', '{&quot;student_id&quot;:11,...}', now());
+COMMIT;
+-- Un proceso aparte lee outbox y publica. Si falla, reintenta.
+</code></pre>
+<p>Una sola transacción local garantiza que el evento existe si y solo si la inscripción existe. La publicación es al-menos-una-vez, y el consumidor debe ser idempotente. Resuelve el problema real sin ninguna transacción distribuida, y por eso es la primera opción a considerar.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Inscripción que debe: reservar cupo (servicio de cursos), cobrar (servicio de pagos) y emitir credencial (servicio de identidad).</p>
+<p><strong>Opción A — 2PC:</strong></p>
+<pre><code class="language-text">coordinador → prepare → cursos, pagos, identidad
+todos SÍ → commit
+</code></pre>
+<p>Problemas concretos:</p>
+<ul>
+<li>El servicio de pagos es una pasarela externa: <strong>no ofrece <code>prepare</code></strong>. 2PC es inaplicable desde el principio.</li>
+<li>Los tres servicios mantienen bloqueos durante toda la operación, incluida la latencia de la pasarela (segundos).</li>
+<li>Si el coordinador cae, tres servicios quedan bloqueados.</li>
+</ul>
+<p><strong>Opción B — saga:</strong></p>
+<pre><code class="language-python">PASOS = [
+    (&quot;reservar_cupo&quot;,     reservar_cupo,     liberar_cupo),
+    (&quot;cobrar&quot;,            cobrar,            reembolsar),
+    (&quot;emitir_credencial&quot;, emitir_credencial, revocar_credencial),
+]
+
+def ejecutar_saga(saga_id, ctx):
+    hechos = []
+    for nombre, accion, compensacion in PASOS:
+        try:
+            # La clave de idempotencia deriva de la saga y del paso:
+            # un reintento repite exactamente la misma clave.
+            accion(ctx, clave_idem=f&quot;{saga_id}:{nombre}&quot;)
+            hechos.append((nombre, compensacion))
+        except ErrorPermanente:
+            for nombre_h, comp in reversed(hechos):
+                comp(ctx, clave_idem=f&quot;{saga_id}:comp:{nombre_h}&quot;)
+            raise SagaAbortada(nombre)
+    return &quot;ok&quot;
+</code></pre>
+<p><strong>Traza de un fallo en el cobro:</strong></p>
+<pre><code class="language-text">t0  reservar_cupo    → ok (cupo 39/40)
+t1  cobrar           → tarjeta rechazada (ErrorPermanente)
+t2  liberar_cupo     → ok (cupo 40/40)
+resultado: saga abortada, estado coherente
+</code></pre>
+<p><strong>La falta de aislamiento, hecha visible:</strong></p>
+<pre><code class="language-text">t0    reservar_cupo → cupo 39/40
+t0+1s otro usuario consulta → ve 39 plazas libres, no 40
+t1    cobro falla
+t2    liberar_cupo → cupo 40/40
+</code></pre>
+<p>Durante ~1 segundo el sistema mostró un cupo que no estaba realmente comprometido. <strong>Es inherente a la saga y hay que decidir si es aceptable.</strong> Aquí sí lo es: como mucho, alguien vio una plaza menos de las disponibles, lo que es conservador. Si el error fuese al revés —mostrar plazas que no existen— no sería aceptable.</p>
+<p><strong>Opción C — bandeja de salida + coreografía</strong>, la que suele resultar mejor:</p>
+<pre><code class="language-text">inscripciones: BEGIN; INSERT enrollment; INSERT outbox('inscripcion.creada'); COMMIT
+pagos:         consume 'inscripcion.creada' → cobra → publica 'pago.ok' o 'pago.fallido'
+inscripciones: consume 'pago.fallido'      → marca la inscripción como anulada
+identidad:     consume 'pago.ok'           → emite credencial
+</code></pre>
+<p>Ningún coordinador, ninguna transacción distribuida, cada paso atómico en su propia base. A cambio: la coreografía es más difícil de seguir que la orquestación, y hace falta trazabilidad para saber dónde se detuvo una inscripción.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Mecanismo</th>
+<th>Atomicidad</th>
+<th>Aislamiento</th>
+<th>Bloqueante</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transacción local</td>
+<td>Total</td>
+<td>Total</td>
+<td>No</td>
+<td>Una sola base: <strong>siempre que se pueda</strong></td>
+</tr>
+<tr>
+<td>Bandeja de salida</td>
+<td>Total en el origen</td>
+<td>Del origen</td>
+<td>No</td>
+<td>Base + evento</td>
+</tr>
+<tr>
+<td>2PC</td>
+<td>Total</td>
+<td>Total</td>
+<td><strong>Sí</strong></td>
+<td>Pocos participantes, todos con <code>prepare</code>, red controlada</td>
+</tr>
+<tr>
+<td>2PC sobre consenso</td>
+<td>Total</td>
+<td>Total</td>
+<td>No</td>
+<td>Spanner, CockroachDB</td>
+</tr>
+<tr>
+<td>Saga (orquestada)</td>
+<td>Eventual</td>
+<td><strong>Ninguno</strong></td>
+<td>No</td>
+<td>Servicios heterogéneos, pasos largos</td>
+</tr>
+<tr>
+<td>Saga (coreografiada)</td>
+<td>Eventual</td>
+<td>Ninguno</td>
+<td>No</td>
+<td>Muchos servicios, bajo acoplamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>2PC entre microservicios por red pública.</strong> Bloqueo garantizado ante fallo del coordinador.</li>
+<li><strong>Sagas sin compensación para algún paso.</strong> Un fallo posterior deja el sistema inconsistente sin remedio.</li>
+<li><strong>Compensaciones no idempotentes.</strong> Un reintento reembolsa dos veces.</li>
+<li><strong>Ignorar la falta de aislamiento de las sagas.</strong> Los estados intermedios se ven y a veces se actúa sobre ellos.</li>
+<li><strong>Publicar el evento antes del <code>COMMIT</code>.</strong> Si la transacción se revierte, el evento ya salió.</li>
+<li><strong>Número par de nodos en consenso.</strong> Más coordinación, misma tolerancia.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La mayoría de las «transacciones distribuidas» que se plantean en un diseño desaparecen al reunir los datos que deben cambiar juntos en una misma base (clase 024). Antes de coordinar, conviene comprobar si la frontera del agregado está mal trazada.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Identifica una operación de tu sistema que abarque dos almacenes.</li>
+<li>Diséñala como saga con compensaciones idempotentes.</li>
+<li>Implementa la bandeja de salida y demuestra la atomicidad entre estado y evento.</li>
+<li>Documenta qué estado intermedio queda visible y por cuánto tiempo.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué el consenso necesita mayoría estricta y no basta la mitad?</li>
+<li>Traza el fallo del coordinador en 2PC y explica por qué los participantes no pueden decidir.</li>
+<li>Da un paso de tu sistema cuya compensación no sea una simple inversión.</li>
+<li>¿Qué garantiza la bandeja de salida y qué obligación traslada al consumidor?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Diego Ongaro, John Ousterhout</strong> (2014). <a href="https://raft.github.io/raft.pdf">In Search of an Understandable Consensus Algorithm</a>. USENIX ATC.<br />
+  Raft: consenso equivalente a Paxos con elección de líder explicita.</li>
+<li><strong>Leslie Lamport</strong> (1998). <a href="https://dl.acm.org/doi/10.1145/279227.279229">The Part-Time Parliament</a>. ACM TOCS 16(2). DOI <a href="https://doi.org/10.1145/279227.279229">10.1145/279227.279229</a>.<br />
+  Paxos, el primer algoritmo de consenso práctico demostrado correcto.</li>
+<li><strong>Pat Helland</strong> (2007). <a href="https://www.cidrdb.org/cidr2007/papers/cidr07p15.pdf">Life beyond Distributed Transactions: An Apostate's Opinion</a>. CIDR.<br />
+  Entidades, actividades y por qué las transacciones distribuidas no escalan.</li>
+<li><strong>James C. Corbett, Jeffrey Dean, Michael Epstein</strong> (2012). <a href="https://research.google/pubs/spanner-googles-globally-distributed-database-2/">Spanner: Google's Globally-Distributed Database</a>. USENIX OSDI.<br />
+  Serializabilidad global usando incertidumbre de reloj acotada (TrueTime).</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="046.html">← Anterior</a> · <a href="048.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

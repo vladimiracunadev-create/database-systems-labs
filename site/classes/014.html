@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="DDL: el esquema como contrato ejecutable. Parte 03: SQL en profundidad.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>014 — DDL: el esquema como contrato ejecutable · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 03 · SQL en profundidad</span>
+</nav>
+<main class="content">
+<h1 id="014--ddl-el-esquema-como-contrato-ejecutable">014 — DDL: el esquema como contrato ejecutable</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>03 — SQL en profundidad</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>tipo de dato</code> · <code>restricción</code> · <code>valor por defecto</code> · <code>DDL transaccional</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Escribir el esquema como un contrato ejecutable: cada línea de DDL es una promesa que el motor hace cumplir. Un esquema laxo traslada esa responsabilidad a cada programa cliente, presente y futuro.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Elegir tipos por el dominio del dato, no por costumbre.</li>
+<li>Justificar por qué el dinero no se guarda en coma flotante, con una demostración.</li>
+<li>Aplicar el criterio de tipos para fechas, horas y zonas horarias.</li>
+<li>Aprovechar el DDL transaccional donde existe y protegerte donde no.</li>
+<li>Escribir un esquema en el que un dato inválido sea imposible, no improbable.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-tipo-es-la-primera-restricción">El tipo es la primera restricción</h3>
+<p>Antes de cualquier <code>CHECK</code>, el tipo ya limita el dominio. Elegirlo mal deja pasar valores que ninguna restricción posterior recupera.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dato</th>
+<th>Tipo correcto</th>
+<th>Tipo frecuente y equivocado</th>
+<th>Qué se rompe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dinero</td>
+<td><code>NUMERIC(12,2)</code> / entero de centavos</td>
+<td><code>FLOAT</code>, <code>REAL</code></td>
+<td>Errores de redondeo acumulativos</td>
+</tr>
+<tr>
+<td>Fecha y hora con huso</td>
+<td><code>TIMESTAMPTZ</code></td>
+<td><code>TIMESTAMP</code> sin huso</td>
+<td>Ambigüedad en cambios de hora</td>
+</tr>
+<tr>
+<td>Fecha sin hora</td>
+<td><code>DATE</code></td>
+<td><code>TEXT</code></td>
+<td>Comparaciones y aritmética imposibles</td>
+</tr>
+<tr>
+<td>Identificador externo</td>
+<td><code>TEXT</code> con <code>CHECK</code> de formato</td>
+<td><code>INTEGER</code></td>
+<td>Se pierden ceros a la izquierda</td>
+</tr>
+<tr>
+<td>Booleano</td>
+<td><code>BOOLEAN</code></td>
+<td><code>INTEGER</code>, <code>CHAR(1)</code></td>
+<td>Tres estados donde debe haber dos</td>
+</tr>
+<tr>
+<td>Enumeración corta</td>
+<td><code>TEXT</code> + <code>CHECK IN (...)</code></td>
+<td><code>TEXT</code> libre</td>
+<td>Valores nuevos sin control</td>
+</tr>
+<tr>
+<td>Duración</td>
+<td>Entero de segundos o <code>INTERVAL</code></td>
+<td><code>TEXT</code> «2h 30m»</td>
+<td>Aritmética imposible</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="dinero-en-coma-flotante-la-demostración">Dinero en coma flotante: la demostración</h3>
+<p>Los tipos <code>FLOAT</code> y <code>DOUBLE</code> siguen IEEE 754, que representa en binario. El valor decimal <code>0,1</code> no tiene representación binaria finita, igual que 1/3 no la tiene en decimal.</p>
+<pre><code class="language-sql">SELECT 0.1 + 0.2 = 0.3;             -- en coma flotante: falso
+SELECT CAST(0.1 AS REAL) + CAST(0.2 AS REAL);   -- 0.30000000000000004
+</code></pre>
+<p>Con 10 000 transacciones de un producto de 19,99, el error acumulado deja de ser teórico y aparece en la conciliación contable como un descuadre de céntimos que nadie sabe explicar. <code>NUMERIC</code> almacena en base 10 y es exacto para estos valores; a cambio, la aritmética es más lenta. Para dinero, esa lentitud es irrelevante y la exactitud no lo es.</p>
+<h3 id="fechas-y-husos-horarios">Fechas y husos horarios</h3>
+<p><code>TIMESTAMP WITHOUT TIME ZONE</code> guarda una pared de reloj sin decir de qué reloj. Dos consecuencias:</p>
+<ul>
+<li>Un evento registrado a las 02:30 durante el retroceso del horario de verano es <strong>ambiguo</strong>: ocurrió dos veces.</li>
+<li>Comparar registros de dos regiones da resultados incorrectos sin conversión explícita.</li>
+</ul>
+<p><code>TIMESTAMPTZ</code> (en PostgreSQL) guarda un instante absoluto normalizado a UTC y lo presenta en el huso de la sesión. Regla operativa: <strong>almacenar instantes en UTC, convertir solo al presentar</strong>. La excepción legítima es la fecha civil sin instante —un cumpleaños, un feriado—, que es <code>DATE</code> y no tiene huso.</p>
+<h3 id="ddl-transaccional">DDL transaccional</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿<code>CREATE</code>/<code>ALTER</code> dentro de una transacción con reversión?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>Sí, casi todo el DDL</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Sí, en su mayor parte</td>
+</tr>
+<tr>
+<td>MySQL / MariaDB</td>
+<td><strong>No</strong>: cada sentencia DDL confirma implícitamente</td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td>No: confirmación implícita</td>
+</tr>
+</tbody>
+</table></div>
+<p>La consecuencia es enorme para las migraciones. En PostgreSQL, una migración de cinco pasos que falla en el cuarto revierte entera. En MySQL, deja el esquema a medias y hay que escribir el camino de vuelta a mano. Quien despliega sobre MySQL necesita migraciones idempotentes y verificadas paso a paso (clase 049).</p>
+<pre><code class="language-mermaid">flowchart TD
+    D[&quot;Regla del dominio&quot;] --&gt; T{&quot;¿La limita&lt;br/&gt;el tipo?&quot;}
+    T -- &quot;Sí&quot; --&gt; TY[&quot;Elegir el tipo exacto&quot;]
+    T -- &quot;No&quot; --&gt; N{&quot;¿Puede faltar&lt;br/&gt;el valor?&quot;}
+    N -- &quot;No&quot; --&gt; NN[&quot;NOT NULL&quot;]
+    N -- &quot;Sí&quot; --&gt; NU[&quot;Nulo con semántica documentada&quot;]
+    TY --&gt; C{&quot;¿Hay valores del tipo&lt;br/&gt;que el dominio prohíbe?&quot;}
+    NN --&gt; C
+    C -- &quot;Sí&quot; --&gt; CK[&quot;CHECK&quot;]
+    C -- &quot;No&quot; --&gt; OK[&quot;Listo&quot;]
+    CK --&gt; U{&quot;¿Debe ser único?&quot;}
+    U -- &quot;Sí&quot; --&gt; UQ[&quot;UNIQUE (parcial si aplica)&quot;]
+    U -- &quot;No&quot; --&gt; OK
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Esquema laxo, del tipo que se escribe en el primer prototipo y sobrevive tres años:</p>
+<pre><code class="language-sql">CREATE TABLE pagos (
+  id      INTEGER,
+  alumno  TEXT,
+  monto   REAL,
+  fecha   TEXT,
+  estado  TEXT
+);
+</code></pre>
+<p>Valores que este esquema acepta sin protestar, y que no significan nada:</p>
+<pre><code class="language-sql">INSERT INTO pagos VALUES (1, NULL, -0.1, 'ayer', 'PAGADO');
+INSERT INTO pagos VALUES (1, 'Ana', 1e308, '2026-13-45', 'pagadoo');
+</code></pre>
+<p>Dos filas con <code>id = 1</code>, un monto negativo, otro que desborda cualquier moneda real, dos fechas imposibles y un estado con una errata. Todo dentro del contrato, porque el contrato no dice nada.</p>
+<p>Esquema como contrato:</p>
+<pre><code class="language-sql">CREATE TABLE pagos (
+  id          INTEGER PRIMARY KEY,
+  student_id  INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+  monto_clp   INTEGER NOT NULL CHECK (monto_clp &gt; 0),
+  pagado_en   TEXT    NOT NULL CHECK (pagado_en LIKE '____-__-__T__:__:__Z'),
+  estado      TEXT    NOT NULL DEFAULT 'pendiente'
+              CHECK (estado IN ('pendiente','pagado','anulado')),
+  referencia  TEXT    UNIQUE
+);
+</code></pre>
+<p>Decisiones y su motivo:</p>
+<ul>
+<li><strong><code>monto_clp</code> como entero.</strong> El peso chileno no tiene decimales, así que el entero es exacto y natural. Para monedas con decimales, <code>NUMERIC(12,2)</code> o enteros de centavos con el nombre del campo diciéndolo (<code>monto_centavos</code>).</li>
+<li><strong><code>pagado_en</code> en texto ISO-8601 con <code>Z</code>.</strong> SQLite no tiene tipo de fecha; el patrón fuerza el formato y el sufijo declara UTC. En PostgreSQL sería <code>TIMESTAMPTZ NOT NULL</code>.</li>
+<li><strong><code>estado</code> enumerado con <code>CHECK</code>.</strong> «pagadoo» ahora falla en la inserción, no en el informe trimestral.</li>
+<li><strong><code>referencia UNIQUE</code>.</strong> Impide registrar dos veces el mismo pago del proveedor: es idempotencia declarada en el esquema (clase 037).</li>
+<li><strong><code>ON DELETE RESTRICT</code>.</strong> Un pago es evidencia contable; borrar al estudiante no puede borrarlo.</li>
+</ul>
+<p><strong>Comprobación de que el contrato funciona:</strong></p>
+<pre><code class="language-sql">INSERT INTO pagos (id, student_id, monto_clp, pagado_en, estado)
+VALUES (1, 999, -500, 'ayer', 'pagadoo');
+-- FOREIGN KEY constraint failed  /  CHECK constraint failed
+</code></pre>
+<p>Cuatro errores detectados en la inserción en lugar de cuatro incidencias en producción.</p>
+<p><strong>Unicidad condicional.</strong> Regla frecuente: «solo puede haber un pago pendiente por estudiante». Un <code>UNIQUE (student_id)</code> prohibiría también los pagados. La forma correcta es un índice único parcial:</p>
+<pre><code class="language-sql">CREATE UNIQUE INDEX pagos_un_pendiente
+  ON pagos (student_id) WHERE estado = 'pendiente';
+</code></pre>
+<p>Disponible en PostgreSQL y SQLite. En MySQL se emula con una columna generada que vale <code>student_id</code> cuando el estado es pendiente y <code>NULL</code> en otro caso, aprovechando que los nulos no colisionan en un índice único.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Decisión</th>
+<th>Esquema laxo</th>
+<th>Esquema como contrato</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dónde falla un dato malo</td>
+<td>En el informe, semanas después</td>
+<td>En el <code>INSERT</code>, al instante</td>
+</tr>
+<tr>
+<td>Quién valida</td>
+<td>Cada cliente, si se acuerda</td>
+<td>El motor, siempre</td>
+</tr>
+<tr>
+<td>Costo de un cliente nuevo</td>
+<td>Reimplementar las validaciones</td>
+<td>Ninguno</td>
+</tr>
+<tr>
+<td>Migración de datos sucios</td>
+<td>Inevitable</td>
+<td>Innecesaria</td>
+</tr>
+<tr>
+<td>Coste de escritura</td>
+<td>Mínimo</td>
+<td>Comprobaciones por fila (despreciable)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong><code>REAL</code> para dinero.</strong> Error garantizado, solo cuestión de volumen.</li>
+<li><strong><code>TEXT</code> para todo.</strong> Traslada el análisis sintáctico a cada consulta y hace imposible ordenar y comparar.</li>
+<li><strong><code>VARCHAR(255)</code> por inercia.</strong> El 255 viene de un límite histórico de MySQL, no del dominio. Si el límite real es 40, escribe 40.</li>
+<li><strong>Guardar horas locales sin huso.</strong> Se descubre en el cambio de horario, con datos ya escritos.</li>
+<li><strong>Enumeraciones sin <code>CHECK</code>.</strong> El estado con errata entra y contamina todos los agregados.</li>
+<li><strong>Suponer DDL transaccional en MySQL.</strong> Una migración a medias en producción.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los proyectos de «limpieza de datos» existen porque en su día el esquema aceptó lo que no debía. Cada <code>CHECK</code> escrito hoy es un proyecto de limpieza que no ocurrirá.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Toma una tabla real y lista los valores absurdos que hoy acepta.</li>
+<li>Reescribe su DDL como contrato, con tipos, <code>NOT NULL</code>, <code>CHECK</code> y <code>UNIQUE</code>.</li>
+<li>Demuestra con inserciones fallidas que cada regla se aplica.</li>
+<li>Escribe la consulta que encuentra los datos existentes que el nuevo contrato rechazaría, y decide qué hacer con ellos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Demuestra numéricamente por qué <code>REAL</code> no sirve para dinero.</li>
+<li>¿Qué diferencia práctica hay entre <code>TIMESTAMP</code> y <code>TIMESTAMPTZ</code> durante un cambio de horario?</li>
+<li>Escribe la unicidad condicional de tu dominio en dos motores distintos.</li>
+<li>Tu migración falla a mitad en MySQL. Describe el estado del esquema y cómo lo recuperas.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

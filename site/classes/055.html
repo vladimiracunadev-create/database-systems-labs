@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Modelado dimensional: hechos, dimensiones y cambios lentos. Parte 11: Analítica, integración y streaming.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>055 — Modelado dimensional: hechos, dimensiones y cambios lentos · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 11 · Analítica, integración y streaming</span>
+</nav>
+<main class="content">
+<h1 id="055--modelado-dimensional-hechos-dimensiones-y-cambios-lentos">055 — Modelado dimensional: hechos, dimensiones y cambios lentos</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>11 — Analítica, integración y streaming</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>duckdb</code>, <code>clickhouse</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>tabla de hechos</code> · <code>dimensión</code> · <code>grano</code> · <code>dimensión de cambio lento</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Modelar para el análisis. El modelo dimensional optimiza una cosa —responder preguntas de negocio sobre grandes volúmenes— y renuncia deliberadamente a otras.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Aplicar los cuatro pasos del método de Kimball.</li>
+<li>Declarar el grano de una tabla de hechos y comprobar que se respeta.</li>
+<li>Distinguir hechos aditivos, semiaditivos y no aditivos.</li>
+<li>Implementar dimensiones de cambio lento de tipos 1, 2 y 3.</li>
+<li>Explicar por qué se desnormaliza y qué se pierde.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-cuatro-pasos">Los cuatro pasos</h3>
+<p>Kimball y Ross proponen un método en este orden estricto:</p>
+<ol>
+<li><strong>Elegir el proceso de negocio.</strong> No un informe: un proceso («inscripción a cursos»).</li>
+<li><strong>Declarar el grano.</strong> Qué representa exactamente <strong>una fila</strong> de la tabla de hechos.</li>
+<li><strong>Identificar las dimensiones.</strong> Los «por qué, quién, cuándo, dónde» de ese hecho.</li>
+<li><strong>Identificar los hechos.</strong> Las medidas numéricas del proceso.</li>
+</ol>
+<p><strong>El paso 2 es el crítico.</strong> Un grano ambiguo produce dobles conteos, sumas incorrectas y meses de desconfianza en los datos. La formulación debe ser una frase completa: <em>«una fila por estudiante, curso y período»</em>, no «inscripciones».</p>
+<p>Y la regla que se deriva: <strong>nunca mezclar granos en la misma tabla de hechos</strong>. Si un informe necesita otro grano, es otra tabla.</p>
+<h3 id="hechos-y-su-aditividad">Hechos y su aditividad</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Se puede sumar</th>
+<th>Ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Aditivo</strong></td>
+<td>Por todas las dimensiones</td>
+<td>Monto pagado, unidades</td>
+</tr>
+<tr>
+<td><strong>Semiaditivo</strong></td>
+<td>Por todas menos el tiempo</td>
+<td>Saldo, inventario, matriculados</td>
+</tr>
+<tr>
+<td><strong>No aditivo</strong></td>
+<td>Por ninguna</td>
+<td>Porcentajes, ratios, promedios</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla de oro: <strong>guardar los componentes, no el ratio</strong>. En vez de <code>porcentaje_aprobacion</code>, guardar <code>aprobados</code> y <code>evaluados</code>, y calcular el porcentaje al consultar. Sumar porcentajes de distintas filas da un número sin significado; sumar componentes y dividir después, no.</p>
+<p>Los semiaditivos son la trampa silenciosa: sumar los saldos de los doce meses del año da un número que no es el saldo anual de nada.</p>
+<h3 id="dimensiones-de-cambio-lento">Dimensiones de cambio lento</h3>
+<p>¿Qué pasa cuando un atributo de dimensión cambia? Una estudiante cambia de programa en 2026. ¿Sus inscripciones de 2025 pertenecen al programa antiguo o al nuevo?</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Qué hace</th>
+<th>Historia</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td>Sobrescribe</td>
+<td>Se pierde</td>
+<td>Corrección de errores</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Nueva fila con vigencia</td>
+<td><strong>Se conserva</strong></td>
+<td>El cambio importa históricamente</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>Columna «valor anterior»</td>
+<td>Solo el cambio previo</td>
+<td>Comparar dos versiones</td>
+</tr>
+</tbody>
+</table></div>
+<p>El tipo 2 es el habitual para atributos con significado histórico:</p>
+<pre><code class="language-sql">CREATE TABLE dim_estudiante (
+  sk_estudiante SERIAL PRIMARY KEY,       -- clave sustituta del almacén
+  nk_student_id INTEGER NOT NULL,         -- clave natural del origen
+  nombre        TEXT NOT NULL,
+  programa      TEXT NOT NULL,
+  comuna        TEXT,
+  valido_desde  DATE NOT NULL,
+  valido_hasta  DATE NOT NULL DEFAULT '9999-12-31',
+  es_actual     BOOLEAN NOT NULL DEFAULT true
+);
+CREATE UNIQUE INDEX ON dim_estudiante (nk_student_id) WHERE es_actual;
+</code></pre>
+<p>La clave que la tabla de hechos guarda es <code>sk_estudiante</code>, <strong>no</strong> <code>nk_student_id</code>. Así cada hecho queda ligado a la versión de la dimensión vigente en su momento, y un informe de 2025 sigue mostrando el programa de 2025 aunque hoy sea otro.</p>
+<p>Es la diferencia entre «cómo era» y «cómo es», y las dos preguntas son legítimas: la primera se responde uniendo por <code>sk</code>, la segunda uniendo por <code>nk</code> con <code>es_actual</code>.</p>
+<pre><code class="language-mermaid">erDiagram
+    DIM_TIEMPO      ||--o{ HECHO_INSCRIPCION : &quot;cuándo&quot;
+    DIM_ESTUDIANTE  ||--o{ HECHO_INSCRIPCION : &quot;quién&quot;
+    DIM_CURSO       ||--o{ HECHO_INSCRIPCION : &quot;qué&quot;
+    DIM_DOCENTE     ||--o{ HECHO_INSCRIPCION : &quot;con quién&quot;
+    HECHO_INSCRIPCION {
+        int sk_tiempo FK
+        int sk_estudiante FK
+        int sk_curso FK
+        int sk_docente FK
+        numeric nota
+        int aprobado
+        int evaluado
+        int creditos
+    }
+    DIM_ESTUDIANTE {
+        int sk_estudiante PK
+        int nk_student_id
+        text programa
+        date valido_desde
+        date valido_hasta
+        bool es_actual
+    }
+</code></pre>
+<h3 id="por-qué-desnormalizar">Por qué desnormalizar</h3>
+<p>Las dimensiones se desnormalizan deliberadamente (esquema en estrella) en vez de normalizarse (copo de nieve):</p>
+<ul>
+<li>Menos reuniones en cada consulta analítica.</li>
+<li>Las dimensiones son pequeñas: la redundancia cuesta poco.</li>
+<li>Las herramientas de análisis y los usuarios entienden mejor un esquema plano.</li>
+</ul>
+<p>Lo que se pierde —anomalías de actualización— importa poco en un almacén, porque las escrituras son controladas y por lotes, no concurrentes desde una aplicación. <strong>Es la aplicación consciente de lo contrario a la clase 008</strong>, y por eso es legítima.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p><strong>Paso 1 — proceso:</strong> inscripción y evaluación académica.</p>
+<p><strong>Paso 2 — grano:</strong> <em>«una fila por estudiante, curso y período académico»</em>.</p>
+<p><strong>Paso 3 — dimensiones:</strong> tiempo (período), estudiante, curso, docente.</p>
+<p><strong>Paso 4 — hechos:</strong> nota, aprobado (0/1), evaluado (0/1), créditos.</p>
+<pre><code class="language-sql">CREATE TABLE hecho_inscripcion (
+  sk_tiempo     INTEGER NOT NULL REFERENCES dim_tiempo(sk_tiempo),
+  sk_estudiante INTEGER NOT NULL REFERENCES dim_estudiante(sk_estudiante),
+  sk_curso      INTEGER NOT NULL REFERENCES dim_curso(sk_curso),
+  sk_docente    INTEGER          REFERENCES dim_docente(sk_docente),
+  nota          NUMERIC(2,1),
+  aprobado      SMALLINT NOT NULL DEFAULT 0,
+  evaluado      SMALLINT NOT NULL DEFAULT 0,
+  creditos      SMALLINT NOT NULL,
+  PRIMARY KEY (sk_tiempo, sk_estudiante, sk_curso)
+);
+</code></pre>
+<p>La clave primaria <strong>es</strong> la declaración del grano, hecha cumplir por el motor. Insertar dos filas para el mismo estudiante, curso y período es ahora imposible: el doble conteo queda excluido por construcción.</p>
+<p><strong>Los hechos elegidos, y por qué:</strong></p>
+<ul>
+<li><code>aprobado</code> y <code>evaluado</code> como enteros 0/1 en vez de un porcentaje. Son aditivos: <code>SUM(aprobado) / SUM(evaluado)</code> da el porcentaje correcto en <strong>cualquier</strong> agregación. Un <code>porcentaje_aprobacion</code> por fila no se puede promediar sin ponderar.</li>
+<li><code>nota</code> es <strong>no aditiva</strong>: <code>AVG(nota)</code> es válido, <code>SUM(nota)</code> no significa nada. Se documenta.</li>
+</ul>
+<p><strong>Consulta típica, sin ninguna reunión compleja:</strong></p>
+<pre><code class="language-sql">SELECT t.anio, t.semestre, c.facultad,
+       count(*)                                          AS inscripciones,
+       sum(f.evaluado)                                   AS evaluados,
+       sum(f.aprobado)                                   AS aprobados,
+       round(100.0 * sum(f.aprobado) / NULLIF(sum(f.evaluado),0), 1) AS pct_aprobacion,
+       round(avg(f.nota) FILTER (WHERE f.nota IS NOT NULL), 2)       AS nota_media
+FROM hecho_inscripcion f
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+JOIN dim_curso  c ON c.sk_curso  = f.sk_curso
+GROUP BY t.anio, t.semestre, c.facultad
+ORDER BY t.anio, t.semestre, c.facultad;
+</code></pre>
+<p>Cuatro reuniones como máximo, todas por clave sustituta entera, todas hacia tablas pequeñas. Comparado con el esquema normalizado del OLTP, que exigiría recorrer <code>students</code>, <code>enrollments</code>, <code>courses</code>, <code>teaching</code> y <code>teachers</code>.</p>
+<p><strong>El cambio lento en acción.</strong> Ana pasa de «Ingeniería» a «Ciencias» el 2026-03-01:</p>
+<pre><code class="language-sql">UPDATE dim_estudiante
+   SET valido_hasta = DATE '2026-02-28', es_actual = false
+ WHERE nk_student_id = 11 AND es_actual;
+
+INSERT INTO dim_estudiante (nk_student_id, nombre, programa, valido_desde)
+VALUES (11, 'Ana Pérez', 'Ciencias', DATE '2026-03-01');
+</code></pre>
+<p>Ahora:</p>
+<pre><code class="language-sql">-- &quot;Como era entonces&quot;: las inscripciones de 2025 cuentan en Ingeniería
+SELECT d.programa, count(*) FROM hecho_inscripcion f
+JOIN dim_estudiante d ON d.sk_estudiante = f.sk_estudiante
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+WHERE t.anio = 2025 GROUP BY d.programa;
+
+-- &quot;Como es ahora&quot;: las mismas inscripciones cuentan en Ciencias
+SELECT d.programa, count(*) FROM hecho_inscripcion f
+JOIN dim_estudiante h ON h.sk_estudiante = f.sk_estudiante
+JOIN dim_estudiante d ON d.nk_student_id = h.nk_student_id AND d.es_actual
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+WHERE t.anio = 2025 GROUP BY d.programa;
+</code></pre>
+<p><strong>Dos cifras distintas, ambas correctas.</strong> Sin cambio lento de tipo 2 solo se puede responder una de las dos preguntas, y normalmente se descubre cuando alguien pregunta la otra.</p>
+<p><strong>La dimensión de tiempo, siempre poblada de antemano:</strong></p>
+<pre><code class="language-sql">CREATE TABLE dim_tiempo (
+  sk_tiempo  INTEGER PRIMARY KEY,     -- p. ej. 20260301
+  fecha      DATE NOT NULL UNIQUE,
+  anio       SMALLINT NOT NULL,
+  semestre   SMALLINT NOT NULL,
+  mes        SMALLINT NOT NULL,
+  periodo_academico TEXT NOT NULL,
+  es_habil   BOOLEAN NOT NULL
+);
+</code></pre>
+<p>Tener el calendario como tabla evita repetir lógica de fechas en cada consulta y permite atributos que ninguna función de fecha conoce: períodos académicos, feriados locales, semanas de exámenes.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Modelo normalizado (OLTP)</th>
+<th>Modelo dimensional (OLAP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Objetivo</td>
+<td>Evitar anomalías</td>
+<td>Responder preguntas rápido</td>
+</tr>
+<tr>
+<td>Redundancia</td>
+<td>Mínima</td>
+<td>Aceptada en dimensiones</td>
+</tr>
+<tr>
+<td>Reuniones por consulta</td>
+<td>Muchas</td>
+<td>Pocas, en estrella</td>
+</tr>
+<tr>
+<td>Escrituras</td>
+<td>Concurrentes</td>
+<td>Por lotes, controladas</td>
+</tr>
+<tr>
+<td>Historia</td>
+<td>Presente</td>
+<td>Conservada (tipo 2)</td>
+</tr>
+<tr>
+<td>Comprensible para el negocio</td>
+<td>Poco</td>
+<td><strong>Mucho</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>No declarar el grano.</strong> Origen de todos los dobles conteos.</li>
+<li><strong>Mezclar granos en una tabla de hechos.</strong> Las sumas dejan de tener sentido.</li>
+<li><strong>Guardar ratios en vez de componentes.</strong> No se pueden reagregar.</li>
+<li><strong>Sumar hechos semiaditivos por el tiempo.</strong> Un saldo anual que no es de nadie.</li>
+<li><strong>Tipo 1 donde hacía falta tipo 2.</strong> La historia se pierde y no se recupera.</li>
+<li><strong>Usar la clave natural en los hechos.</strong> Rompe el cambio lento de tipo 2.</li>
+<li><strong>Calcular fechas en cada consulta.</strong> Falta la dimensión de tiempo.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La causa más frecuente de «los informes no cuadran» no está en los datos: está en dos tablas de hechos con granos distintos que alguien sumó. Declarar el grano en la clave primaria lo convierte en un error de inserción en vez de en un número equivocado.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Elige un proceso de negocio tuyo y aplica los cuatro pasos.</li>
+<li>Declara el grano como frase completa y hazlo cumplir con la clave primaria.</li>
+<li>Clasifica cada hecho como aditivo, semiaditivo o no aditivo, y documéntalo.</li>
+<li>Implementa un cambio lento de tipo 2 y responde la misma pregunta «como era» y «como es».</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Escribe el grano de una tabla de hechos tuya como frase completa.</li>
+<li>¿Por qué se guardan <code>aprobados</code> y <code>evaluados</code> en vez del porcentaje?</li>
+<li>Da un hecho semiaditivo de tu dominio y la agregación que sería incorrecta.</li>
+<li>Explica qué se rompe si la tabla de hechos guarda la clave natural.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Ralph Kimball, Margy Ross</strong> (2013). <a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/">The Data Warehouse Toolkit</a>. 3.a ed. Wiley. ISBN 978-1-118-53080-1.<br />
+  Modelado dimensional, tablas de hechos y dimensiones de cambio lento.</li>
+<li><strong>Joe Reis, Matt Housley</strong> (2022). <a href="https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/">Fundamentals of Data Engineering</a>. O'Reilly. ISBN 978-1-0981-0830-4.<br />
+  Ciclo de vida de la ingenieria de datos e integración entre sistemas.</li>
+<li><strong>dbt Labs</strong> (2026). <a href="https://docs.getdbt.com/">dbt Documentation</a>.<br />
+  Transformaciones versionadas y pruebas de datos en el almacen.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

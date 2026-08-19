@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Qué resuelve un sistema de bases de datos y qué no. Parte 00: Fundamentos, sistemas y método.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>001 — Qué resuelve un sistema de bases de datos y qué no · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 00 · Fundamentos, sistemas y método</span>
+</nav>
+<main class="content">
+<h1 id="001--qué-resuelve-un-sistema-de-bases-de-datos-y-qué-no">001 — Qué resuelve un sistema de bases de datos y qué no</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>00 — Fundamentos, sistemas y método</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>persistencia</code> · <code>concurrencia</code> · <code>integridad</code> · <code>recuperación</code> · <code>independencia de datos</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Establecer qué problemas concretos resuelve un sistema gestor de bases de datos (SGBD) y, sobre todo, cuáles <strong>no</strong> resuelve. Sin esa demarcación, cualquier archivo con datos se llama «base de datos» y cualquier fallo de diseño se atribuye al motor.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Enumerar los seis problemas del almacenamiento en archivos planos que motivaron la aparición de los SGBD.</li>
+<li>Reproducir una anomalía de actualización perdida y explicar por qué el sistema de archivos no la impide.</li>
+<li>Distinguir lo que el motor <strong>garantiza</strong> de lo que solo <strong>permite declarar</strong>.</li>
+<li>Justificar cuándo <em>no</em> usar un SGBD, con un criterio distinto de «es lo que se usa siempre».</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-problema-que-existía-antes">El problema que existía antes</h3>
+<p>Silberschatz, Korth y Sudarshan abren <em>Database System Concepts</em> con la lista de defectos del enfoque «un archivo por aplicación». No es historia: cada uno reaparece cuando alguien decide guardar el estado en JSON y arreglarlo después.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Defecto</th>
+<th>Qué ocurre en la práctica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redundancia e inconsistencia</td>
+<td>El mismo dato vive en dos archivos y divergen</td>
+</tr>
+<tr>
+<td>Dificultad de acceso</td>
+<td>Cada consulta nueva exige escribir un programa nuevo</td>
+</tr>
+<tr>
+<td>Aislamiento de datos</td>
+<td>Formatos distintos impiden combinar información</td>
+</tr>
+<tr>
+<td>Problemas de integridad</td>
+<td>La regla «el saldo no puede ser negativo» vive en el código, no en el dato</td>
+</tr>
+<tr>
+<td>Problemas de atomicidad</td>
+<td>Una caída a mitad de una transferencia deja el dinero en ninguna parte</td>
+</tr>
+<tr>
+<td>Anomalías de concurrencia</td>
+<td>Dos procesos escriben a la vez y uno de los cambios desaparece</td>
+</tr>
+<tr>
+<td>Problemas de seguridad</td>
+<td>No hay forma de dar acceso parcial: o se ve el archivo entero o nada</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="lo-que-un-sgbd-aporta">Lo que un SGBD aporta</h3>
+<p>Un gestor no es «un lugar donde guardar tablas». Es un programa que ofrece cuatro servicios que un sistema de archivos no ofrece:</p>
+<ul>
+<li><strong>Persistencia con recuperación.</strong> Tras un corte de energía, el sistema vuelve a un estado consistente conocido, no a «lo que hubiera alcanzado a escribirse».</li>
+<li><strong>Concurrencia controlada.</strong> Muchos clientes leen y escriben simultáneamente y el resultado es equivalente a alguna ejecución ordenada (según el nivel de aislamiento elegido; parte 07).</li>
+<li><strong>Integridad declarada.</strong> Las restricciones se expresan una vez, en el esquema, y el motor las hace cumplir para todo cliente, incluido el que se conecta por consola a las tres de la mañana.</li>
+<li><strong>Independencia de datos.</strong> La forma física de almacenamiento puede cambiar sin reescribir las consultas. Es la aportación central del artículo de Codd (1970) y el tema de la clase 003.</li>
+</ul>
+<p>Hellerstein, Stonebraker y Hamilton describen cómo se implementan esos servicios: gestor de procesos, procesador de consultas, gestor de transacciones y gestor de almacenamiento compartido. Ningún componente es opcional si se quieren las cuatro garantías.</p>
+<h3 id="lo-que-un-sgbd-no-hace">Lo que un SGBD <strong>no</strong> hace</h3>
+<p>Aquí se pierde más tiempo del que se cree:</p>
+<ul>
+<li><strong>No hace que los datos sean verdaderos.</strong> Hace cumplir las restricciones que alguien declaró. Si nadie declaró que <code>edad &gt; 0</code>, el motor guardará <code>-4</code> sin protestar.</li>
+<li><strong>No modela el dominio por ti.</strong> William Kent dedica <em>Data and Reality</em> a mostrar que ningún esquema captura el mundo: siempre se elige un recorte. El motor ejecuta ese recorte, no lo mejora.</li>
+<li><strong>No compensa un modelo equivocado con más hardware.</strong> Una consulta que multiplica filas por una reunión mal planteada devuelve resultados erróneos igual de rápido.</li>
+<li><strong>No es gratis.</strong> Añade un proceso que operar, respaldar, actualizar y asegurar.</li>
+</ul>
+<h3 id="cuándo-no-usar-un-sgbd">Cuándo no usar un SGBD</h3>
+<p>Criterios defendibles para quedarse con archivos: los datos son de un solo escritor, caben en memoria, no hay reglas de integridad entre elementos, y perderlos es aceptable (caché, artefactos de compilación, registros efímeros). En cuanto aparezcan dos escritores o una invariante entre dos registros, el argumento se cae.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Necesito guardar datos&quot;] --&gt; B{&quot;¿Más de un escritor&lt;br/&gt;concurrente?&quot;}
+    B -- &quot;No&quot; --&gt; C{&quot;¿Hay invariantes&lt;br/&gt;entre registros?&quot;}
+    B -- &quot;Sí&quot; --&gt; G[&quot;SGBD: hace falta control&lt;br/&gt;de concurrencia&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Perderlos es&lt;br/&gt;aceptable?&quot;}
+    C -- &quot;Sí&quot; --&gt; G
+    D -- &quot;Sí&quot; --&gt; E[&quot;Archivos: suficiente&quot;]
+    D -- &quot;No&quot; --&gt; F{&quot;¿Consultas variadas&lt;br/&gt;o no previstas?&quot;}
+    F -- &quot;No&quot; --&gt; H[&quot;Archivo + copia verificada&quot;]
+    F -- &quot;Sí&quot; --&gt; G
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Dos cajeros aplican un cargo sobre la misma cuenta, que tiene <strong>1 000</strong> de saldo. Con archivos, cada proceso lee, calcula y escribe:</p>
+<pre><code class="language-text">t0  Cajero A lee saldo         -&gt; 1000
+t1  Cajero B lee saldo         -&gt; 1000
+t2  Cajero A calcula 1000 - 300 -&gt; 700
+t3  Cajero B calcula 1000 - 500 -&gt; 500
+t4  Cajero A escribe            -&gt; 700
+t5  Cajero B escribe            -&gt; 500
+</code></pre>
+<p>Saldo final: <strong>500</strong>. Saldo correcto: 1000 − 300 − 500 = <strong>200</strong>. Se perdieron 300 sin que ningún programa fallara ni ningún archivo se corrompiera: los dos cajeros hicieron exactamente lo que su código decía. Es la <em>actualización perdida</em>, la anomalía que Gray formalizaría como violación de aislamiento.</p>
+<p>El mismo escenario dentro de un SGBD, con una transacción por cajero y un nivel de aislamiento que detecte el conflicto, tiene tres desenlaces posibles: uno espera al otro y ambos terminan (200), o uno se aborta y se reintenta (200), o el motor informa de un fallo serializable y el cliente decide. Lo que <strong>no</strong> puede ocurrir es que un cambio confirmado se pierda en silencio.</p>
+<p>Comprobación numérica del argumento: con archivos, la ventana de riesgo es el intervalo <code>t0</code>–<code>t5</code>. Si cada operación dura 5 ms y llegan 40 cargos por segundo sobre la misma cuenta, la probabilidad de solapamiento no es marginal: es el caso habitual.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Archivos planos</th>
+<th>SGBD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unidad de escritura</td>
+<td>El archivo o un bloque</td>
+<td>La transacción</td>
+</tr>
+<tr>
+<td>Recuperación tras caída</td>
+<td>Lo que alcanzó a escribirse</td>
+<td>Último estado confirmado</td>
+</tr>
+<tr>
+<td>Reglas de integridad</td>
+<td>En cada programa cliente</td>
+<td>Una vez, en el esquema</td>
+</tr>
+<tr>
+<td>Consultas no previstas</td>
+<td>Programa nuevo</td>
+<td>Consulta nueva</td>
+</tr>
+<tr>
+<td>Concurrencia</td>
+<td>Responsabilidad del programador</td>
+<td>Del gestor, según nivel declarado</td>
+</tr>
+<tr>
+<td>Control de acceso</td>
+<td>Permisos del sistema de archivos</td>
+<td>Por objeto, rol y fila</td>
+</tr>
+<tr>
+<td>Costo de operación</td>
+<td>Casi nulo</td>
+<td>Proceso que mantener</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>«La base de datos garantiza que los datos sean correctos.»</strong> Garantiza las restricciones declaradas. Un esquema sin <code>CHECK</code>, sin <code>NOT NULL</code> y sin claves foráneas no garantiza nada; solo almacena.</li>
+<li><strong>«SQL es la base de datos.»</strong> SQL es un lenguaje. El gestor es el programa que lo ejecuta, y hay gestores sin SQL con las mismas garantías transaccionales.</li>
+<li><strong>«Si va lento, el motor es malo.»</strong> Antes de esa conclusión hay que mirar el modelo, los índices y el plan de ejecución (parte 08). El motor casi nunca es el primer sospechoso.</li>
+<li><strong>«Con NoSQL me ahorro el modelado.»</strong> Se cambia dónde ocurre el modelado, no si ocurre: pasa del esquema a los patrones de acceso (parte 05).</li>
+<li><strong>«Un archivo JSON es una base de datos.»</strong> Lo es en sentido coloquial y no lo es en sentido técnico: no ofrece atomicidad, aislamiento ni control de acceso.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>En un sistema real, la decisión «SGBD sí o no» arrastra consecuencias que no aparecen en el prototipo: quién aplica los parches de seguridad, dónde se guardan las copias, cómo se prueba la restauración, qué pasa cuando el disco se llena y quién recibe la alerta. Elegir un gestor es adoptar un servicio que operar, no solo una biblioteca que importar.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Toma un sistema que hayas escrito y que guarde estado en archivos. Documenta, con evidencia:</p>
+<ol>
+<li>Una invariante entre dos registros que hoy nadie hace cumplir.</li>
+<li>Una secuencia concreta de dos procesos que la rompa (con marcas de tiempo, como en el ejemplo).</li>
+<li>Qué restricción del esquema la impediría en un SGBD.</li>
+<li>El costo de operación que asumirías al migrar.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica, con una traza temporal propia, una anomalía de concurrencia distinta de la actualización perdida y por qué el sistema de archivos no la evita.</li>
+<li>Un compañero afirma: «migramos a PostgreSQL, así que los datos ya son consistentes». ¿Qué le falta declarar para que esa frase sea cierta?</li>
+<li>Da un caso real de tu trabajo donde usar un SGBD sería una mala decisión, y justifica con los criterios del diagrama.</li>
+<li>¿Qué componente descrito por Hellerstein et al. desaparece si renuncias a la durabilidad, y qué garantía pierdes con él?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>William Kent</strong> (2012). <a href="https://technicspub.com/data-and-reality/">Data and Reality</a>. 3.a ed. Technics Publications. ISBN 978-1-935504-21-4.<br />
+  Por qué ningún modelo captura el mundo: fuente del criterio de alcance del programa.</li>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

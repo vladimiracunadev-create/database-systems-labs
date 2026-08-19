@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="RAG evaluable: medir la recuperación antes que la generación. Parte 12: Vectores, recuperación y RAG.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>061 — RAG evaluable: medir la recuperación antes que la generación · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 12 · Vectores, recuperación y RAG</span>
+</nav>
+<main class="content">
+<h1 id="061--rag-evaluable-medir-la-recuperación-antes-que-la-generación">061 — RAG evaluable: medir la recuperación antes que la generación</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>12 — Vectores, recuperación y RAG</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>qdrant</code>, <code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>recall@k</code> · <code>precisión@k</code> · <code>MRR</code> · <code>fragmentación</code> · <code>trazabilidad de la cita</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Construir un sistema de generación aumentada por recuperación cuya calidad se pueda medir. La parte de bases de datos —la recuperación— se evalúa por separado y <strong>antes</strong> que la generación.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Descomponer un sistema RAG y localizar dónde falla.</li>
+<li>Construir un conjunto de evaluación de recuperación.</li>
+<li>Calcular recall@k, precision@k, MRR y NDCG@k.</li>
+<li>Explicar por qué el techo de la generación es el recall de la recuperación.</li>
+<li>Diseñar la trazabilidad de las citas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-arquitectura-y-sus-puntos-de-fallo">La arquitectura y sus puntos de fallo</h3>
+<p>Lewis et al. definieron RAG: recuperar pasajes relevantes y dárselos al modelo generador como contexto.</p>
+<pre><code class="language-mermaid">flowchart LR
+    D[&quot;Documentos&quot;] --&gt; C[&quot;Fragmentar&lt;br/&gt;FALLO 1: mal corte&quot;]
+    C --&gt; E[&quot;Embeddings&lt;br/&gt;FALLO 2: modelo inadecuado&quot;]
+    E --&gt; I[(&quot;Índice + metadatos&quot;)]
+    Q[&quot;Pregunta&quot;] --&gt; R[&quot;Recuperar top k&lt;br/&gt;FALLO 3: recall bajo&quot;]
+    I --&gt; R
+    R --&gt; RR[&quot;Reordenar&lt;br/&gt;FALLO 4: mal orden&quot;]
+    RR --&gt; P[&quot;Construir contexto&lt;br/&gt;FALLO 5: no cabe&quot;]
+    P --&gt; G[&quot;Generar&lt;br/&gt;FALLO 6: ignora o inventa&quot;]
+    G --&gt; A[&quot;Respuesta + citas&lt;br/&gt;FALLO 7: cita no verificable&quot;]
+</code></pre>
+<p>Los fallos 1 a 5 son <strong>de bases de datos</strong>. Solo el 6 es del modelo generador. La consecuencia práctica es que la mayor parte del trabajo de mejora de un RAG es trabajo de recuperación.</p>
+<h3 id="el-techo">El techo</h3>
+<p><strong>Si el pasaje que contiene la respuesta no está entre los <code>k</code> recuperados, ningún modelo puede responder correctamente.</strong> Como mucho, dirá que no lo sabe; en el peor caso, inventará.</p>
+<pre><code class="language-text">recall@5 = 0,60  →  el 40 % de las preguntas son irrespondibles
+                    por muy bueno que sea el generador
+</code></pre>
+<p>De ahí la regla operativa del programa: <strong>medir la recuperación antes de tocar el generador</strong>. Es también la más barata: no consume tokens.</p>
+<h3 id="las-métricas">Las métricas</h3>
+<p>Con un conjunto de preguntas y, para cada una, los fragmentos relevantes conocidos:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Fórmula</th>
+<th>Qué mide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall@k</strong></td>
+<td>relevantes en el top k / relevantes totales</td>
+<td>¿Está la respuesta ahí?</td>
+</tr>
+<tr>
+<td><strong>Precision@k</strong></td>
+<td>relevantes en el top k / k</td>
+<td>¿Cuánto ruido acompaña?</td>
+</tr>
+<tr>
+<td><strong>MRR</strong></td>
+<td>media de 1/posición del primer relevante</td>
+<td>¿Cómo de arriba aparece?</td>
+</tr>
+<tr>
+<td><strong>NDCG@k</strong></td>
+<td>ganancia descontada / ideal</td>
+<td>Relevancia graduada y posición</td>
+</tr>
+</tbody>
+</table></div>
+<p>Para RAG, <strong>recall@k es la métrica principal</strong>: define el techo. Precision importa porque el contexto es finito y el ruido distrae al generador.</p>
+<h3 id="el-conjunto-de-evaluación">El conjunto de evaluación</h3>
+<p>Es el activo central y hay que construirlo:</p>
+<ol>
+<li>Reunir 50–100 preguntas <strong>reales</strong> (de usuarios, de soporte, de registros).</li>
+<li>Para cada una, identificar a mano los fragmentos que contienen la respuesta.</li>
+<li>Guardarlo versionado, junto al código.</li>
+<li>Ejecutarlo en cada cambio de fragmentación, modelo, índice o fusión.</li>
+</ol>
+<p>Sin él, cualquier afirmación sobre la calidad del sistema es una impresión.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>RAG sobre este programa: 64 clases fragmentadas, preguntas de estudiantes.</p>
+<p><strong>Conjunto de evaluación:</strong></p>
+<pre><code class="language-json">[
+  {&quot;pregunta&quot;: &quot;¿Por qué NOT IN falla con nulos?&quot;,
+   &quot;relevantes&quot;: [&quot;019#3&quot;, &quot;012#5&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Cuándo conviene un índice parcial?&quot;,
+   &quot;relevantes&quot;: [&quot;041#2&quot;, &quot;039#4&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Qué se pierde con appendfsync everysec?&quot;,
+   &quot;relevantes&quot;: [&quot;027#2&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Cómo evito el doble conteo al reunir dos tablas hijas?&quot;,
+   &quot;relevantes&quot;: [&quot;016#4&quot;, &quot;017#1&quot;]}
+]
+</code></pre>
+<p><strong>Evaluación de la recuperación, sin generar nada:</strong></p>
+<pre><code class="language-python">def evaluar(recuperar, conjunto, k=5):
+    recalls, precisions, rr = [], [], []
+    for caso in conjunto:
+        obtenidos = [d.id for d in recuperar(caso[&quot;pregunta&quot;], k=k)]
+        relevantes = set(caso[&quot;relevantes&quot;])
+        aciertos = [d for d in obtenidos if d in relevantes]
+
+        recalls.append(len(aciertos) / len(relevantes))
+        precisions.append(len(aciertos) / k)
+        # MRR: solo cuenta la posición del PRIMER relevante
+        pos = next((i + 1 for i, d in enumerate(obtenidos) if d in relevantes), None)
+        rr.append(1 / pos if pos else 0.0)
+
+    n = len(conjunto)
+    return {&quot;recall@k&quot;: sum(recalls)/n, &quot;precision@k&quot;: sum(precisions)/n,
+            &quot;mrr&quot;: sum(rr)/n}
+</code></pre>
+<p><strong>Iteraciones medidas, en orden cronológico:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Configuración</th>
+<th style="text-align: right;">recall@5</th>
+<th style="text-align: right;">precision@5</th>
+<th style="text-align: right;">MRR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fragmentos de 2 000 car., solo vectorial</td>
+<td style="text-align: right;">0,58</td>
+<td style="text-align: right;">0,23</td>
+<td style="text-align: right;">0,51</td>
+</tr>
+<tr>
+<td>Fragmentos de 600 car. con 15 % de solape</td>
+<td style="text-align: right;">0,71</td>
+<td style="text-align: right;">0,31</td>
+<td style="text-align: right;">0,62</td>
+</tr>
+<tr>
+<td>+ cabecera de sección en cada fragmento</td>
+<td style="text-align: right;">0,78</td>
+<td style="text-align: right;">0,34</td>
+<td style="text-align: right;">0,69</td>
+</tr>
+<tr>
+<td>+ híbrida RRF (clase 060)</td>
+<td style="text-align: right;">0,89</td>
+<td style="text-align: right;">0,39</td>
+<td style="text-align: right;">0,81</td>
+</tr>
+<tr>
+<td>+ reordenador sobre 50</td>
+<td style="text-align: right;">0,89</td>
+<td style="text-align: right;"><strong>0,52</strong></td>
+<td style="text-align: right;"><strong>0,88</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Observaciones que enseñan más que las cifras:</p>
+<ul>
+<li><strong>Fragmentar mejor fue la mejora más grande</strong> (+13 puntos) y no costó ni un modelo nuevo ni un servicio nuevo.</li>
+<li><strong>Añadir la cabecera de sección</strong> al texto del fragmento (+7 puntos) fue casi gratis: da contexto al embedding sobre de qué trata el fragmento.</li>
+<li><strong>El reordenador no cambia el recall</strong> (0,89 → 0,89) y sube mucho la precisión y el MRR: no recupera más, ordena mejor. Exactamente lo previsto en la clase 060.</li>
+<li>El techo de la generación pasó del 58 % al 89 % <strong>sin tocar el generador</strong>.</li>
+</ul>
+<p><strong>Construcción del contexto</strong>, donde está el fallo 5:</p>
+<pre><code class="language-python">def construir_contexto(fragmentos, presupuesto_tokens=3000):
+    partes, usados = [], 0
+    for f in fragmentos:                       # ya reordenados: lo mejor primero
+        bloque = (f&quot;[{f.id}] {f.clase} · {f.seccion}\n{f.texto}\n&quot;)
+        t = contar_tokens(bloque)
+        if usados + t &gt; presupuesto_tokens:
+            break                              # truncar por el final, nunca por el principio
+        partes.append(bloque)
+        usados += t
+    return &quot;\n---\n&quot;.join(partes)
+</code></pre>
+<p>Dos decisiones deliberadas:</p>
+<ul>
+<li><strong>Truncar por el final.</strong> Los fragmentos mejor puntuados van primero y nunca se descartan.</li>
+<li><strong>El identificador <code>[019#3]</code> viaja en el contexto.</strong> Es lo que hace verificable la cita.</li>
+</ul>
+<p><strong>Trazabilidad de la cita:</strong></p>
+<pre><code class="language-python">def verificar_citas(respuesta, contexto_ids):
+    citadas = set(re.findall(r&quot;\[(\d{3}#\d+)\]&quot;, respuesta))
+    inventadas = citadas - set(contexto_ids)
+    if inventadas:
+        raise CitaInvalida(f&quot;cita no presente en el contexto: {inventadas}&quot;)
+    return citadas
+</code></pre>
+<p>Una cita a un identificador que no estaba en el contexto es una alucinación <strong>detectable mecánicamente</strong>. Es la comprobación más barata y más efectiva de todo el sistema, y no requiere ningún modelo evaluador.</p>
+<p><strong>Registro por consulta</strong>, para poder diagnosticar en producción:</p>
+<pre><code class="language-sql">CREATE TABLE rag_traza (
+  id            BIGSERIAL PRIMARY KEY,
+  pregunta      TEXT NOT NULL,
+  modelo_emb    TEXT NOT NULL,
+  ids_recuperados TEXT[] NOT NULL,
+  ids_citados     TEXT[] NOT NULL,
+  latencia_ms   INTEGER NOT NULL,
+  ocurrido_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+</code></pre>
+<p>Con esta traza, una queja concreta —«me respondió mal»— se diagnostica: si el fragmento correcto no está en <code>ids_recuperados</code>, el problema es de recuperación; si estaba y no se citó, es del generador. <strong>Dos equipos distintos, dos arreglos distintos</strong>, y la traza dice cuál.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Síntoma</th>
+<th>Causa probable</th>
+<th>Diagnóstico</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«No encuentra información que existe»</td>
+<td>Recall bajo</td>
+<td>Medir recall@k</td>
+</tr>
+<tr>
+<td>«Responde con datos de otro tema»</td>
+<td>Precision baja o fragmentos grandes</td>
+<td>Medir precision, revisar fragmentación</td>
+</tr>
+<tr>
+<td>«Inventa citas»</td>
+<td>Contexto insuficiente o mal construido</td>
+<td>Verificar citas mecánicamente</td>
+</tr>
+<tr>
+<td>«Responde bien a unas y mal a otras»</td>
+<td>Conjunto de evaluación poco representativo</td>
+<td>Ampliar y desglosar</td>
+</tr>
+<tr>
+<td>«Va lento»</td>
+<td><code>ef_search</code> alto o reordenador sobre demasiados</td>
+<td>Curva de la clase 059</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Evaluar solo la respuesta final.</strong> No dice dónde está el fallo.</li>
+<li><strong>No medir la recuperación.</strong> Se optimiza el generador contra un techo que no se mueve.</li>
+<li><strong>Conjunto de evaluación con preguntas inventadas.</strong> No refleja el uso real.</li>
+<li><strong>Fragmentos demasiado grandes.</strong> La señal se diluye y el contexto se llena de ruido.</li>
+<li><strong>Fragmentos sin contexto de origen.</strong> Un párrafo suelto no se entiende ni se cita.</li>
+<li><strong>Citas no verificables.</strong> Impide detectar alucinaciones mecánicamente.</li>
+<li><strong>Cambiar el modelo de embeddings sin recalcular la colección</strong> (clase 058).</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Un RAG en producción se degrada por causas de base de datos: documentos nuevos sin indexar, un cambio de modelo a medias, el recall del índice cayendo al crecer la colección. La traza por consulta y la ejecución periódica del conjunto de evaluación son el equivalente aquí de la prueba de restauración de la clase 048.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Construye un conjunto de 50 preguntas reales con sus fragmentos relevantes.</li>
+<li>Mide recall@5, precision@5 y MRR con tu configuración actual.</li>
+<li>Prueba tres tamaños de fragmento y quédate con el mejor medido.</li>
+<li>Implementa la verificación mecánica de citas y la traza por consulta.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué recall@k es el techo de la calidad de la respuesta?</li>
+<li>Explica por qué el reordenador sube la precisión y no el recall.</li>
+<li>¿Cómo distingues un fallo de recuperación de uno de generación con la traza?</li>
+<li>Da una comprobación mecánica de alucinación que no requiera otro modelo.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/06-vector-search/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Patrick Lewis, Ethan Perez, Aleksandra Piktus</strong> (2020). <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. NeurIPS.<br />
+  Artículo que define RAG: la base de datos es parte del sistema, no un accesorio.</li>
+<li><strong>Vladimir Karpukhin, Barlas Oguz, Sewon Min</strong> (2020). <a href="https://arxiv.org/abs/2004.04906">Dense Passage Retrieval for Open-Domain Question Answering</a>. EMNLP.<br />
+  Recuperación densa entrenada, y su comparación honesta contra BM25.</li>
+<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
+  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

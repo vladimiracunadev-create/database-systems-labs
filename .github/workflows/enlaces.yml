@@ -1,0 +1,50 @@
+name: Enlaces
+
+# Comprueba semanalmente que las fuentes del registro siguen siendo
+# alcanzables. Va aparte de CI a proposito: un enlace que cae en un servidor
+# ajeno no es un error del cambio que se acaba de subir, y no debe teñir de
+# rojo un `push` que no tiene nada que ver.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # lunes por la mañana (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuentes:
+    name: Alcance de las fuentes
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Comprobar el registro
+        id: check
+        run: |
+          set -o pipefail
+          python scripts/check_external_links.py --timeout 30 | tee enlaces.log
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### 🔗 Estado de las fuentes"
+            echo ""
+            echo '```text'
+            tail -n 5 enlaces.log || echo "sin salida"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Informe completo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-enlaces
+          path: enlaces.log
+          retention-days: 30

@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Inyección SQL y el contrato de parametrización. Parte 10: Operación, seguridad y gobierno.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>051 — Inyección SQL y el contrato de parametrización · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 10 · Operación, seguridad y gobierno</span>
+</nav>
+<main class="content">
+<h1 id="051--inyección-sql-y-el-contrato-de-parametrización">051 — Inyección SQL y el contrato de parametrización</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>10 — Operación, seguridad y gobierno</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code>, <code>mysql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>consulta parametrizada</code> · <code>identificador dinamico</code> · <code>lista blanca</code> · <code>defensa en profundidad</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Eliminar la inyección SQL por construcción, entendiendo por qué la parametrización funciona y qué casos no cubre — que son justamente donde siguen apareciendo las vulnerabilidades.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Explicar por qué una consulta parametrizada es inmune, a nivel de protocolo.</li>
+<li>Identificar las cuatro partes de una consulta que <strong>no</strong> admiten parámetros.</li>
+<li>Aplicar listas blancas y funciones de citado para esos casos.</li>
+<li>Reconocer inyección de segundo orden y en consultas dinámicas del servidor.</li>
+<li>Aplicar defensa en profundidad más allá de la parametrización.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="por-qué-funciona-la-parametrización">Por qué funciona la parametrización</h3>
+<p>La inyección ocurre porque el motor recibe <strong>una sola cadena</strong> y decide qué es código y qué es dato al analizarla. Si el dato contiene sintaxis, se convierte en código.</p>
+<p>Con una consulta parametrizada, el cliente envía <strong>dos cosas separadas</strong> por el protocolo:</p>
+<pre><code class="language-text">1. La plantilla:  SELECT * FROM students WHERE email = $1
+   → el motor la analiza y planifica AHORA, sin ver ningún valor
+2. Los valores:   ['ana@ejemplo.cl'&quot;; DROP TABLE students;--']
+   → llegan después, cuando el árbol sintáctico YA está fijado
+</code></pre>
+<p>El valor <strong>nunca pasa por el analizador sintáctico</strong>. No es que se escape bien: es que no hay nada que escapar, porque no participa en el análisis. Es una garantía estructural, no una comprobación.</p>
+<p>OWASP lo sitúa como la defensa principal y la especificación PEP 249 la define para todo cliente Python conforme.</p>
+<pre><code class="language-python"># CORRECTO
+cur.execute(&quot;SELECT * FROM students WHERE email = %s&quot;, (email,))
+cur.execute(&quot;SELECT * FROM students WHERE email = ?&quot;, (email,))   # sqlite3
+
+# VULNERABLE — todas las formas, incluida la que parece moderna
+cur.execute(&quot;SELECT * FROM students WHERE email = '&quot; + email + &quot;'&quot;)
+cur.execute(&quot;SELECT * FROM students WHERE email = '%s'&quot; % email)
+cur.execute(f&quot;SELECT * FROM students WHERE email = '{email}'&quot;)
+</code></pre>
+<p>La tercera es hoy la más frecuente: la f-string parece limpia y es exactamente la misma concatenación.</p>
+<h3 id="lo-que-no-se-puede-parametrizar">Lo que no se puede parametrizar</h3>
+<p>Un parámetro ocupa el lugar de un <strong>valor</strong>. No puede ocupar el lugar de un identificador ni de sintaxis, porque el motor necesita ambos para analizar la consulta:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Elemento</th>
+<th>¿Parametrizable?</th>
+<th>Solución</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Valor en <code>WHERE</code>, <code>VALUES</code>, <code>SET</code></td>
+<td><strong>Sí</strong></td>
+<td>Parámetro</td>
+</tr>
+<tr>
+<td>Nombre de tabla o columna</td>
+<td>No</td>
+<td><strong>Lista blanca</strong></td>
+</tr>
+<tr>
+<td>Dirección de <code>ORDER BY</code></td>
+<td>No</td>
+<td>Lista blanca (<code>ASC</code>/<code>DESC</code>)</td>
+</tr>
+<tr>
+<td>Nombre de esquema</td>
+<td>No</td>
+<td>Lista blanca</td>
+</tr>
+<tr>
+<td>Número de elementos de <code>IN</code></td>
+<td>Parcial</td>
+<td>Generar tantos marcadores como elementos, o pasar un arreglo</td>
+</tr>
+<tr>
+<td><code>LIMIT</code> / <code>OFFSET</code></td>
+<td>Sí en la mayoría</td>
+<td>Parámetro, y validar que sea entero</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>La lista blanca es la única defensa correcta para identificadores.</strong> No una expresión regular, no un escape: una comparación contra un conjunto cerrado de valores permitidos, definido en el código.</p>
+<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;s.nombre&quot;, &quot;nota&quot;: &quot;e.nota&quot;, &quot;fecha&quot;: &quot;e.registrada_en&quot;}
+SENTIDOS  = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
+
+def listar(cur, orden: str, sentido: str, limite: int):
+    col = ORDENABLES.get(orden)
+    dir_ = SENTIDOS.get(sentido.lower())
+    if col is None or dir_ is None:
+        raise ValueError(&quot;orden no permitido&quot;)
+    # `col` y `dir_` salen del diccionario, NUNCA de la entrada del usuario:
+    # la entrada solo se usa como clave de búsqueda.
+    cur.execute(f&quot;SELECT s.nombre, e.nota FROM ... ORDER BY {col} {dir_} LIMIT %s&quot;,
+                (min(int(limite), 100),))
+</code></pre>
+<p>La clave está en el comentario: lo que se interpola es el <strong>valor del diccionario</strong>, no la entrada. La entrada solo decide qué valor conocido se usa.</p>
+<h3 id="inyección-de-segundo-orden">Inyección de segundo orden</h3>
+<p>El dato entra parametrizado —y por tanto se guarda íntegro, con sus comillas— y se inyecta <strong>después</strong>, cuando otro proceso lo concatena:</p>
+<pre><code class="language-python"># Paso 1: guardado correctamente
+cur.execute(&quot;INSERT INTO students (nombre) VALUES (%s)&quot;, (&quot;Ana'; DROP TABLE x;--&quot;,))
+
+# Paso 2: un informe lo lee de la base y lo concatena. Aquí ocurre la inyección.
+nombre = cur.execute(&quot;SELECT nombre FROM students WHERE id=1&quot;).fetchone()[0]
+cur.execute(f&quot;SELECT * FROM logs WHERE usuario = '{nombre}'&quot;)   # VULNERABLE
+</code></pre>
+<p>La lección: <strong>todo dato es entrada, venga de donde venga</strong>. Que esté en la base no lo hace confiable.</p>
+<h3 id="sql-dinámico-en-el-servidor">SQL dinámico en el servidor</h3>
+<p>Dentro de una función PL/pgSQL, el problema reaparece:</p>
+<pre><code class="language-sql">-- VULNERABLE
+EXECUTE 'SELECT * FROM ' || tabla || ' WHERE id = ' || id;
+
+-- CORRECTO: format con %I (identificador citado) y %L (literal citado)
+EXECUTE format('SELECT * FROM %I WHERE id = %L', tabla, id);
+
+-- MEJOR: identificador por lista blanca, valor por parámetro real
+EXECUTE format('SELECT * FROM %I WHERE id = $1', tabla) USING id;
+</code></pre>
+<p><code>%I</code> cita como identificador y <code>%L</code> como literal. <code>USING</code> pasa un parámetro de verdad.</p>
+<pre><code class="language-mermaid">flowchart TD
+    E[&quot;Entrada&quot;] --&gt; T{&quot;¿Dónde va&lt;br/&gt;en la consulta?&quot;}
+    T -- &quot;Valor&quot; --&gt; P[&quot;Parámetro&lt;br/&gt;inmune por protocolo&quot;]
+    T -- &quot;Identificador&quot; --&gt; W{&quot;¿Conjunto cerrado&lt;br/&gt;de valores válidos?&quot;}
+    W -- &quot;Sí&quot; --&gt; L[&quot;Lista blanca&lt;br/&gt;(diccionario en código)&quot;]
+    W -- &quot;No&quot; --&gt; Q[&quot;Función de citado&lt;br/&gt;del motor (%I) · último recurso&quot;]
+    T -- &quot;Sintaxis (ASC/DESC)&quot; --&gt; L
+    P --&gt; D[&quot;Defensa en profundidad&quot;]
+    L --&gt; D
+    D --&gt; D1[&quot;Privilegio mínimo (clase 050)&quot;]
+    D --&gt; D2[&quot;Seguridad por fila&quot;]
+    D --&gt; D3[&quot;Tiempo límite de consulta&quot;]
+    D --&gt; D4[&quot;Registro y alerta de errores SQL&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Buscador de cursos con filtros opcionales y orden configurable: el caso donde más veces se abandona la parametrización «porque es dinámico».</p>
+<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;c.nombre&quot;, &quot;periodo&quot;: &quot;c.periodo&quot;,
+              &quot;inscritos&quot;: &quot;inscritos&quot;}
+SENTIDOS   = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
+
+def buscar_cursos(cur, *, texto=None, periodo=None, min_inscritos=None,
+                  orden=&quot;nombre&quot;, sentido=&quot;asc&quot;, limite=50):
+    condiciones, params = [], []
+
+    # Cada filtro añade su condición Y su parámetro: la consulta crece
+    # dinámicamente, los valores nunca se concatenan.
+    if texto:
+        condiciones.append(&quot;c.nombre ILIKE %s&quot;)
+        params.append(f&quot;%{texto}%&quot;)
+    if periodo:
+        condiciones.append(&quot;c.periodo = %s&quot;)
+        params.append(periodo)
+    if min_inscritos is not None:
+        condiciones.append(&quot;(SELECT count(*) FROM enrollments e &quot;
+                           &quot; WHERE e.course_id = c.id) &gt;= %s&quot;)
+        params.append(int(min_inscritos))
+
+    where = f&quot;WHERE {' AND '.join(condiciones)}&quot; if condiciones else &quot;&quot;
+
+    col = ORDENABLES.get(orden)
+    dir_ = SENTIDOS.get(str(sentido).lower())
+    if col is None or dir_ is None:
+        raise ValueError(&quot;parámetro de orden no permitido&quot;)
+
+    params.append(min(max(int(limite), 1), 200))
+
+    sql = f&quot;&quot;&quot;
+        SELECT c.id, c.nombre, c.periodo,
+               (SELECT count(*) FROM enrollments e WHERE e.course_id = c.id) AS inscritos
+        FROM courses c
+        {where}
+        ORDER BY {col} {dir_}, c.id
+        LIMIT %s
+    &quot;&quot;&quot;
+    cur.execute(sql, params)
+    return cur.fetchall()
+</code></pre>
+<p><strong>Por qué es seguro:</strong></p>
+<ul>
+<li>Toda la sintaxis interpolada (<code>where</code>, <code>col</code>, <code>dir_</code>) procede de <strong>literales del código</strong> o de diccionarios cerrados.</li>
+<li>Todos los valores del usuario van como parámetros.</li>
+<li>El límite está acotado: evita que alguien pida un millón de filas.</li>
+<li><code>ORDER BY ... , c.id</code> da orden total (clase 015).</li>
+</ul>
+<p><strong>Comprobación con entradas hostiles:</strong></p>
+<pre><code class="language-python">buscar_cursos(cur, texto=&quot;'; DROP TABLE courses;--&quot;)
+# → busca literalmente ese texto. 0 resultados. Ninguna tabla borrada.
+
+buscar_cursos(cur, orden=&quot;nombre; DROP TABLE courses;--&quot;)
+# → ValueError: parámetro de orden no permitido
+
+buscar_cursos(cur, periodo=&quot;2026-1' OR '1'='1&quot;)
+# → busca ese período literal. 0 resultados.
+</code></pre>
+<p><strong>Defensa en profundidad</strong>, porque ningún control único es suficiente:</p>
+<pre><code class="language-sql">-- 1. El usuario de la aplicación no puede borrar tablas
+REVOKE ALL ON SCHEMA public FROM svc_api;
+GRANT  SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO svc_api;
+
+-- 2. Tiempo límite: una inyección basada en tiempo se corta
+ALTER ROLE svc_api SET statement_timeout = '10s';
+
+-- 3. Sin acceso a metadatos innecesarios
+REVOKE SELECT ON pg_authid FROM PUBLIC;
+</code></pre>
+<p>Con estas tres medidas, una inyección que llegara a ejecutarse encontraría un usuario que no puede escribir en el catálogo, con consultas cortadas a los 10 segundos y sin poder enumerar credenciales.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Técnica</th>
+<th>Eficacia</th>
+<th>Nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consulta parametrizada</td>
+<td><strong>Total</strong> para valores</td>
+<td>La defensa principal</td>
+</tr>
+<tr>
+<td>Lista blanca de identificadores</td>
+<td><strong>Total</strong></td>
+<td>Única correcta para nombres</td>
+</tr>
+<tr>
+<td>Función de citado del motor (<code>%I</code>)</td>
+<td>Alta</td>
+<td>Solo si la lista blanca es imposible</td>
+</tr>
+<tr>
+<td>Escape manual</td>
+<td><strong>Baja</strong></td>
+<td>Depende de codificación y motor; no usar</td>
+</tr>
+<tr>
+<td>Cortafuegos de aplicación</td>
+<td>Parcial</td>
+<td>Complemento, nunca sustituto</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Alta por defecto</td>
+<td>Se pierde con SQL en crudo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>f-strings con entrada de usuario.</strong> La forma moderna del mismo error de siempre.</li>
+<li><strong>Escape manual.</strong> Existen bypass por codificación y por multibyte.</li>
+<li><strong>Confiar en datos de la base.</strong> Inyección de segundo orden.</li>
+<li><strong><code>ORDER BY</code> desde la petición sin lista blanca.</strong> El vector más frecuente hoy.</li>
+<li><strong>SQL en crudo dentro de un ORM sin parametrizar.</strong> Se pierde toda la protección.</li>
+<li><strong>Devolver el error SQL al cliente.</strong> Regala el esquema al atacante.</li>
+<li><strong>La aplicación con privilegios de administrador.</strong> Convierte una inyección en un desastre.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las inyecciones que llegan a producción hoy casi nunca están en el <code>WHERE</code>: están en el <code>ORDER BY</code>, en un nombre de tabla dinámico o en un informe que concatena datos leídos de la propia base. Buscar concatenación de cadenas cerca de la palabra <code>execute</code> en toda la base de código es una auditoría de una tarde con mucho retorno.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Busca en tu proyecto toda construcción de SQL por concatenación o f-string.</li>
+<li>Convierte los valores a parámetros y los identificadores a lista blanca.</li>
+<li>Escribe pruebas con entradas hostiles que demuestren el comportamiento seguro.</li>
+<li>Aplica las tres medidas de defensa en profundidad y verifica cada una.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica a nivel de protocolo por qué un parámetro no puede inyectar.</li>
+<li>¿Por qué el nombre de una columna no se puede parametrizar?</li>
+<li>Describe un caso de inyección de segundo orden en tu propio sistema.</li>
+<li>Si una inyección llegara a ejecutarse, ¿qué podría hacer con tus privilegios actuales?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>OWASP</strong> (2026). <a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html">SQL Injection Prevention Cheat Sheet</a>.<br />
+  Consultas parametrizadas como defensa principal, con sus excepciones.</li>
+<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
+  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
+<li><strong>Marc-Andre Lemburg</strong> (1999). <a href="https://peps.python.org/pep-0249/">PEP 249 - Python Database API Specification v2.0</a>.<br />
+  Contrato de parametrización que evita la concatenación de entradas.</li>
+<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
+  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

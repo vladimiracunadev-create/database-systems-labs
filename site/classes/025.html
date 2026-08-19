@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Modelado documental: incrustar o referenciar. Parte 05: Documentos y clave-valor.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>025 — Modelado documental: incrustar o referenciar · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 05 · Documentos y clave-valor</span>
+</nav>
+<main class="content">
+<h1 id="025--modelado-documental-incrustar-o-referenciar">025 — Modelado documental: incrustar o referenciar</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="024.html">← Anterior</a> · <a href="026.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>05 — Documentos y clave-valor</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>mongodb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>incrustación</code> · <code>referencia</code> · <code>crecimiento no acotado</code> · <code>patrón de extensión</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Tomar la decisión central del modelado documental —incrustar o referenciar— con criterios medibles, y conocer los patrones que resuelven los casos donde ninguna de las dos basta.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Aplicar los cuatro criterios de decisión de la documentación de MongoDB.</li>
+<li>Reconocer y aplicar los patrones de extensión, de subconjunto y de atributo.</li>
+<li>Detectar el crecimiento no acotado antes de que llegue al límite de tamaño.</li>
+<li>Modelar relaciones N:M en documentos sin duplicación descontrolada.</li>
+<li>Justificar cuándo un modelo documental es peor que uno relacional.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-cuatro-criterios">Los cuatro criterios</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>Favorece incrustar</th>
+<th>Favorece referenciar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cómo se lee</strong></td>
+<td>Siempre junto al padre</td>
+<td>A veces solo, o desde otros padres</td>
+</tr>
+<tr>
+<td><strong>Cardinalidad</strong></td>
+<td>Pocos y acotados</td>
+<td>Muchos o sin cota</td>
+</tr>
+<tr>
+<td><strong>Frecuencia de cambio</strong></td>
+<td>Cambian con el padre</td>
+<td>El hijo cambia mucho más</td>
+</tr>
+<tr>
+<td><strong>Duplicación</strong></td>
+<td>El hijo pertenece a un solo padre</td>
+<td>El hijo es compartido</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla resumida de la documentación oficial: <em>«los datos a los que se accede juntos deben almacenarse juntos»</em>. El matiz que se olvida: <strong>junto ≠ siempre dentro</strong>. Si se leen juntos pero uno se escribe cien veces más, incrustar obliga a reescribir el padre entero en cada cambio.</p>
+<h3 id="el-límite-duro">El límite duro</h3>
+<p>MongoDB limita cada documento a <strong>16 MB</strong>. Con subdocumentos de ~200 bytes, eso son unos 80 000 elementos. Pero el problema práctico llega mucho antes:</p>
+<ul>
+<li>Un arreglo de 5 000 elementos hace que cada lectura del padre transfiera 1 MB aunque se quiera un solo campo.</li>
+<li>Cada actualización de un elemento reescribe el documento; si crece más allá del espacio reservado, se reubica.</li>
+<li>Los índices multiclave generan <strong>una entrada por elemento del arreglo</strong>: un arreglo de 5 000 elementos en 10 000 documentos produce 50 millones de entradas de índice.</li>
+</ul>
+<p>Criterio operativo del repositorio: <strong>si el arreglo puede superar unos cientos de elementos, no se incrusta</strong>.</p>
+<h3 id="los-tres-patrones-que-resuelven-el-80--de-los-casos">Los tres patrones que resuelven el 80 % de los casos</h3>
+<p><strong>Patrón de extensión (<em>outlier</em>)</strong> — la mayoría de los casos son pequeños y unos pocos son enormes:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;, &quot;inscritos&quot;: [ ...40 elementos... ], &quot;tiene_extension&quot;: false}
+{&quot;_id&quot;: &quot;curso-intro&quot;, &quot;inscritos&quot;: [ ...primeros 100... ], &quot;tiene_extension&quot;: true}
+</code></pre>
+<p>Los casos normales se resuelven con una lectura; los excepcionales llevan una marca y sus datos adicionales viven en otra colección. Se optimiza el caso común sin romperse en el raro.</p>
+<p><strong>Patrón de subconjunto</strong> — incrustar solo lo que se muestra:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;,
+ &quot;ultimas_inscripciones&quot;: [ {&quot;student_id&quot;: 11, &quot;nombre&quot;: &quot;Ana&quot;}, ... 5 elementos ... ],
+ &quot;total_inscritos&quot;: 3812}
+</code></pre>
+<p>La portada se sirve con una lectura; el detalle completo consulta la colección de inscripciones. Es la respuesta correcta cuando la interfaz muestra «los últimos N».</p>
+<p><strong>Patrón de atributo</strong> — muchos campos opcionales sobre los que se filtra:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;,
+ &quot;atributos&quot;: [{&quot;k&quot;: &quot;sala&quot;, &quot;v&quot;: &quot;B-201&quot;}, {&quot;k&quot;: &quot;modalidad&quot;, &quot;v&quot;: &quot;presencial&quot;}]}
+</code></pre>
+<p>Con un único índice sobre <code>atributos.k</code> y <code>atributos.v</code> se filtra por cualquier atributo. Sin este patrón haría falta un índice por campo posible.</p>
+<pre><code class="language-mermaid">flowchart TD
+    R[&quot;Relación padre-hijo&quot;] --&gt; C{&quot;¿El hijo se consulta&lt;br/&gt;por sí solo?&quot;}
+    C -- &quot;Sí&quot; --&gt; REF[&quot;Referenciar&quot;]
+    C -- &quot;No&quot; --&gt; N{&quot;¿La cardinalidad&lt;br/&gt;está acotada?&quot;}
+    N -- &quot;No&quot; --&gt; SUB{&quot;¿Basta con mostrar&lt;br/&gt;los últimos N?&quot;}
+    SUB -- &quot;Sí&quot; --&gt; S[&quot;Patrón de subconjunto&quot;]
+    SUB -- &quot;No&quot; --&gt; REF
+    N -- &quot;Sí&quot; --&gt; F{&quot;¿El hijo cambia mucho&lt;br/&gt;más que el padre?&quot;}
+    F -- &quot;Sí&quot; --&gt; REF
+    F -- &quot;No&quot; --&gt; O{&quot;¿Hay casos atípicos&lt;br/&gt;enormes?&quot;}
+    O -- &quot;Sí&quot; --&gt; EXT[&quot;Patrón de extensión&quot;]
+    O -- &quot;No&quot; --&gt; EMB[&quot;Incrustar&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Dominio: cursos, estudiantes e inscripciones, en MongoDB.</p>
+<p><strong>Modelo 1 — todo incrustado en el curso.</strong> Ya analizado en la clase 024: correcto para cursos pequeños, insostenible para uno con 20 000 inscritos.</p>
+<p><strong>Modelo 2 — copiar el relacional.</strong> Tres colecciones y <code>$lookup</code> para reunir. Funciona, pero el motor documental no está optimizado para reuniones: no hay optimizador de orden de reunión ni índices de hash de reunión. Si el modelo necesita <code>$lookup</code> en todas las consultas, la pregunta correcta es por qué no se usa un motor relacional.</p>
+<p><strong>Modelo 3 — dirigido por las consultas reales.</strong> Enumeramos primero qué se pregunta:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th style="text-align: right;">Frecuencia diaria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Portada del curso: nombre, cupo, total inscritos, últimos 5</td>
+<td style="text-align: right;">200 000</td>
+</tr>
+<tr>
+<td>Ficha del estudiante: sus cursos con nota</td>
+<td style="text-align: right;">40 000</td>
+</tr>
+<tr>
+<td>Listado completo de inscritos de un curso (paginado)</td>
+<td style="text-align: right;">3 000</td>
+</tr>
+<tr>
+<td>Inscribir</td>
+<td style="text-align: right;">400</td>
+</tr>
+</tbody>
+</table></div>
+<p>Diseño resultante:</p>
+<pre><code class="language-json">// courses
+{&quot;_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;, &quot;periodo&quot;: &quot;2026-1&quot;, &quot;cupo&quot;: 40,
+ &quot;total_inscritos&quot;: 38,
+ &quot;ultimas_inscripciones&quot;: [{&quot;student_id&quot;: 11, &quot;nombre&quot;: &quot;Ana Pérez&quot;,
+                            &quot;en&quot;: &quot;2026-03-11T12:00:00Z&quot;}]}
+
+// enrollments
+{&quot;_id&quot;: {&quot;s&quot;: 11, &quot;c&quot;: &quot;curso-2026-1-bd&quot;},
+ &quot;student_id&quot;: 11, &quot;student_nombre&quot;: &quot;Ana Pérez&quot;,
+ &quot;course_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;course_nombre&quot;: &quot;Bases de datos&quot;,
+ &quot;nota&quot;: 6.0, &quot;estado&quot;: &quot;activa&quot;, &quot;registrada_en&quot;: &quot;2026-03-11T12:00:00Z&quot;}
+</code></pre>
+<p>Justificación de cada decisión:</p>
+<ul>
+<li><strong><code>_id</code> compuesto en <code>enrollments</code></strong>: la clave natural garantiza que no haya inscripciones duplicadas. Es la misma clave natural compuesta de la clase 007, aquí como identificador del documento.</li>
+<li><strong><code>student_nombre</code> y <code>course_nombre</code> duplicados</strong>: evitan <code>$lookup</code> en la ficha del estudiante y en el listado. Son datos que cambian rarísimamente.</li>
+<li><strong><code>ultimas_inscripciones</code> acotado a 5</strong>: patrón de subconjunto, mantenido con <code>$push</code> + <code>$slice: -5</code>.</li>
+<li><strong><code>total_inscritos</code></strong>: contador declarado, con su invariante (clase 024).</li>
+</ul>
+<p><strong>El costo de duplicar el nombre.</strong> Si una estudiante cambia de nombre, hay que actualizar sus N inscripciones:</p>
+<pre><code class="language-javascript">db.enrollments.updateMany({student_id: 11}, {$set: {student_nombre: &quot;Ana Rojas&quot;}})
+</code></pre>
+<p>Con 8 inscripciones de media, son 8 escrituras por cambio de nombre. Si los cambios de nombre son ~5 al mes y las lecturas que se ahorran el <code>$lookup</code> son 40 000 diarias, la aritmética es clara: <strong>40 escrituras mensuales frente a 1,2 millones de reuniones evitadas</strong>. Esa comparación —y no una preferencia estética— es lo que justifica la duplicación.</p>
+<p>La misma aritmética con datos que cambian a diario daría el resultado opuesto.</p>
+<p><strong>Índices necesarios:</strong></p>
+<pre><code class="language-javascript">db.enrollments.createIndex({student_id: 1, registrada_en: -1})
+db.enrollments.createIndex({course_id: 1, estado: 1})
+db.courses.createIndex({periodo: 1})
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Lecturas de portada</th>
+<th>Reuniones</th>
+<th>Riesgo de divergencia</th>
+<th>Escala en escritura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Todo incrustado</td>
+<td>1</td>
+<td>0</td>
+<td>Ninguno</td>
+<td>Mala</td>
+</tr>
+<tr>
+<td>Copia del relacional</td>
+<td>1 + <code>$lookup</code></td>
+<td>Muchas</td>
+<td>Ninguno</td>
+<td>Buena</td>
+</tr>
+<tr>
+<td>Dirigido por consultas</td>
+<td>1</td>
+<td>0</td>
+<td>Real, acotado y medido</td>
+<td>Buena</td>
+</tr>
+<tr>
+<td>Relacional</td>
+<td>1 con reunión</td>
+<td>Optimizadas por el motor</td>
+<td>Ninguno</td>
+<td>Buena hasta un nodo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Incrustar arreglos sin cota.</strong> Se descubre al llegar a 16 MB, con datos ya en producción.</li>
+<li><strong>Duplicar datos que cambian a menudo.</strong> La aritmética se invierte y cada cambio propaga N escrituras.</li>
+<li><strong><code>$lookup</code> en el camino crítico.</strong> Si es imprescindible, el motor relacional lo hace mejor.</li>
+<li><strong>Un índice por campo posible.</strong> Usa el patrón de atributo.</li>
+<li><strong>Modelar antes de enumerar las consultas.</strong> En documental, las consultas <em>son</em> el modelo.</li>
+<li><strong>Olvidar el índice multiclave.</strong> Un arreglo indexado multiplica las entradas por su longitud.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Cambiar la forma de los documentos con datos en producción exige una migración con lectura tolerante a las dos formas: los documentos antiguos y los nuevos conviven durante semanas. Diseñar previendo esa convivencia —con un campo de versión de esquema— es lo que evita una parada.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Enumera las cinco consultas más frecuentes de tu dominio con su frecuencia real.</li>
+<li>Diseña el modelo documental que las sirve con una lectura cada una.</li>
+<li>Calcula la aritmética de duplicación: escrituras añadidas frente a reuniones evitadas.</li>
+<li>Identifica el arreglo con mayor riesgo de crecimiento y aplícale el patrón que corresponda.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué «se leen juntos» no implica «se guardan dentro»?</li>
+<li>Calcula el punto de equilibrio de duplicar un campo en tu dominio, con cifras reales.</li>
+<li>Explica el efecto de un arreglo de 5 000 elementos sobre un índice multiclave.</li>
+<li>Da un caso de tu dominio donde el modelo documental sea peor que el relacional, y justifícalo.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>MongoDB, Inc.</strong> (2026). <a href="https://www.mongodb.com/docs/manual/data-modeling/">MongoDB: Data Modeling</a>.<br />
+  Criterio para incrustar o referenciar según patrones de acceso.</li>
+<li><strong>Shannon Bradshaw, Eoin Brazil, Kristina Chodorow</strong> (2019). <a href="https://www.oreilly.com/library/view/mongodb-the-definitive/9781491954454/">MongoDB: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-5446-1.<br />
+  Modelado documental, índices y canalización de agregación.</li>
+<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
+  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="024.html">← Anterior</a> · <a href="026.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

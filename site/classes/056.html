@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Integración: ETL, ELT, captura de cambios y el registro como nexo. Parte 11: Analítica, integración y streaming.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>056 — Integración: ETL, ELT, captura de cambios y el registro como nexo · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 11 · Analítica, integración y streaming</span>
+</nav>
+<main class="content">
+<h1 id="056--integración-etl-elt-captura-de-cambios-y-el-registro-como-nexo">056 — Integración: ETL, ELT, captura de cambios y el registro como nexo</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="055.html">← Anterior</a> · <a href="057.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>11 — Analítica, integración y streaming</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>kafka</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>ETL</code> · <code>ELT</code> · <code>CDC</code> · <code>escritura dual</code> · <code>idempotencia de carga</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Mover datos entre sistemas sin perderlos, sin duplicarlos y sin perder su significado. El registro de transacciones resulta ser la pieza que unifica replicación, integración y streaming.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Comparar ETL y ELT y decidir con criterio.</li>
+<li>Explicar por qué la extracción incremental por marca de tiempo pierde filas.</li>
+<li>Describir la captura de cambios leyendo el registro del motor.</li>
+<li>Diseñar una carga idempotente y reprocesable.</li>
+<li>Reconocer el problema de la doble escritura y sus soluciones.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="etl-frente-a-elt">ETL frente a ELT</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>ETL</th>
+<th>ELT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orden</td>
+<td>Extraer, transformar, cargar</td>
+<td>Extraer, cargar, <strong>transformar dentro</strong></td>
+</tr>
+<tr>
+<td>Dónde se transforma</td>
+<td>Proceso intermedio</td>
+<td>En el almacén</td>
+</tr>
+<tr>
+<td>Reproceso</td>
+<td>Reejecutar todo el canal</td>
+<td>Volver a ejecutar SQL sobre lo crudo</td>
+</tr>
+<tr>
+<td>Requiere</td>
+<td>Motor de transformación</td>
+<td>Almacén potente y barato</td>
+</tr>
+<tr>
+<td>Trazabilidad</td>
+<td>Se pierde el dato original</td>
+<td><strong>Se conserva lo crudo</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>ELT es hoy la opción predominante porque el almacenamiento es barato y los motores columnares son rápidos. Su ventaja decisiva es la trazabilidad: conservar los datos crudos permite <strong>rehacer</strong> la transformación cuando se descubre que estaba mal, sin volver a pedirle nada al sistema origen.</p>
+<p>En ETL, un error de transformación descubierto tres meses después es irrecuperable si el origen ya rotó sus datos.</p>
+<h3 id="por-qué-la-extracción-incremental-por-marca-de-tiempo-pierde-filas">Por qué la extracción incremental por marca de tiempo pierde filas</h3>
+<p>El patrón más común y el más roto:</p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE actualizado_en &gt; :ultima_marca;
+</code></pre>
+<p>Falla por cuatro motivos, todos silenciosos:</p>
+<ol>
+<li><strong>Transacciones largas.</strong> Una fila con <code>actualizado_en = 10:00:05</code> confirmada a las 10:00:12, cuando la extracción ya leyó hasta las 10:00:10, no se ve nunca.</li>
+<li><strong>Relojes.</strong> Si <code>actualizado_en</code> lo pone la aplicación, dos servidores con desfase producen huecos.</li>
+<li><strong>Borrados.</strong> Una fila borrada no aparece en ninguna consulta. El destino conserva datos que ya no existen.</li>
+<li><strong>Actualizaciones sin tocar la marca.</strong> Una migración con <code>UPDATE ... SET x = y</code> que olvide <code>actualizado_en</code> es invisible.</li>
+</ol>
+<p>El punto 1 es el que engaña: el canal no falla nunca y las filas simplemente faltan. Solo se detecta comparando conteos con el origen.</p>
+<p><strong>Mitigación parcial:</strong> solapar la ventana (<code>&gt; ultima_marca - 5 minutos</code>) y hacer la carga idempotente. No resuelve el punto 3.</p>
+<h3 id="captura-de-cambios-desde-el-registro">Captura de cambios desde el registro</h3>
+<p>En lugar de consultar la tabla, se lee el <strong>registro de transacciones</strong> del motor —el mismo WAL de la clase 036 que sirve para recuperarse y para replicar—.</p>
+<pre><code class="language-mermaid">flowchart LR
+    A[&quot;Aplicación&quot;] --&gt; DB[(&quot;PostgreSQL&quot;)]
+    DB --&gt; W[&quot;WAL&quot;]
+    W --&gt; D[&quot;Debezium&lt;br/&gt;ranura de replicación lógica&quot;]
+    D --&gt; K[&quot;Kafka&lt;br/&gt;tema por tabla&quot;]
+    K --&gt; S1[&quot;Almacén&quot;]
+    K --&gt; S2[&quot;Motor de búsqueda&quot;]
+    K --&gt; S3[&quot;Caché&quot;]
+    K --&gt; S4[&quot;Servicio de auditoría&quot;]
+</code></pre>
+<p>Ventajas frente a la consulta periódica:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>Consulta por marca</th>
+<th>Captura desde el registro</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Borrados</td>
+<td><strong>Invisibles</strong></td>
+<td>Capturados</td>
+</tr>
+<tr>
+<td>Transacciones largas</td>
+<td>Pierde filas</td>
+<td>Correcto: lee el orden de confirmación</td>
+</tr>
+<tr>
+<td>Carga sobre el origen</td>
+<td>Consultas periódicas</td>
+<td>Mínima: lee el WAL</td>
+</tr>
+<tr>
+<td>Latencia</td>
+<td>Intervalo de sondeo</td>
+<td>Segundos</td>
+</tr>
+<tr>
+<td>Estado anterior</td>
+<td>No disponible</td>
+<td>Disponible (con <code>REPLICA IDENTITY FULL</code>)</td>
+</tr>
+<tr>
+<td>Complejidad</td>
+<td>Baja</td>
+<td>Media-alta</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kreps lo formuló como principio general: <strong>el registro es la abstracción que unifica</strong> replicación, integración y streaming. Un solo flujo ordenado de cambios alimenta todos los consumidores, cada uno a su ritmo.</p>
+<p>Requisitos en PostgreSQL:</p>
+<pre><code class="language-sql">ALTER SYSTEM SET wal_level = logical;   -- requiere reinicio
+CREATE PUBLICATION cdc_enrollments FOR TABLE enrollments, courses, students;
+ALTER TABLE enrollments REPLICA IDENTITY FULL;   -- para tener el estado anterior
+</code></pre>
+<p><strong>Advertencia operativa:</strong> una ranura de replicación con un consumidor detenido <strong>impide reciclar el WAL</strong> y llena el disco del primario. Es la causa número uno de incidentes con captura de cambios, y hay que vigilarla:</p>
+<pre><code class="language-sql">SELECT slot_name, active,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retenido
+FROM pg_replication_slots;
+</code></pre>
+<h3 id="el-problema-de-la-doble-escritura">El problema de la doble escritura</h3>
+<pre><code class="language-python">db.insert(inscripcion)        # ✓
+kafka.publish(evento)         # ✗ falla → el evento nunca sale
+</code></pre>
+<p>Dos sistemas, ninguna atomicidad. Las tres soluciones, ya vistas en la clase 047:</p>
+<ol>
+<li><strong>Bandeja de salida transaccional:</strong> escribir estado y evento en la misma transacción local; un proceso publica desde la tabla de salida.</li>
+<li><strong>Captura de cambios:</strong> no publicar nada; el evento se deriva del cambio en la base.</li>
+<li><strong>Origen de eventos:</strong> el evento <strong>es</strong> el estado; la base se deriva de él.</li>
+</ol>
+<p>La 2 es la más barata cuando ya existe la infraestructura de captura, porque elimina la doble escritura sin tocar el código de la aplicación.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Objetivo: mantener el almacén sincronizado con las inscripciones, con latencia inferior a un minuto y sin perder borrados.</p>
+<p><strong>Enfoque A — consulta periódica. Detección del fallo:</strong></p>
+<pre><code class="language-sql">-- en el origen
+SELECT count(*) FROM enrollments;                  -- 5 002 341
+-- en el destino
+SELECT count(*) FROM stg_enrollments;              -- 4 998 102
+--                                                    faltan 4 239
+</code></pre>
+<p>Investigación: 3 100 corresponden a filas borradas en el origen que el destino conserva, y 1 139 a filas confirmadas por transacciones largas durante la ventana de extracción. El canal llevaba meses «funcionando».</p>
+<p><strong>Enfoque B — captura desde el registro:</strong></p>
+<pre><code class="language-json">// Evento producido por Debezium
+{
+  &quot;op&quot;: &quot;u&quot;,
+  &quot;before&quot;: {&quot;student_id&quot;: 11, &quot;course_id&quot;: 42, &quot;nota&quot;: 5.5, &quot;estado&quot;: &quot;activa&quot;},
+  &quot;after&quot;:  {&quot;student_id&quot;: 11, &quot;course_id&quot;: 42, &quot;nota&quot;: 6.0, &quot;estado&quot;: &quot;activa&quot;},
+  &quot;source&quot;: {&quot;lsn&quot;: 24857392, &quot;ts_ms&quot;: 1755600000123, &quot;table&quot;: &quot;enrollments&quot;}
+}
+</code></pre>
+<p><code>op</code> vale <code>c</code> (crear), <code>u</code> (actualizar), <code>d</code> (borrar) o <code>r</code> (instantánea inicial). El borrado deja de ser invisible.</p>
+<p><strong>Carga idempotente en el almacén:</strong></p>
+<pre><code class="language-sql">-- Zona cruda: se guarda TODO el evento, sin transformar (principio ELT)
+CREATE TABLE raw_enrollments (
+  lsn        BIGINT PRIMARY KEY,     -- orden total del origen; hace la carga idempotente
+  op         CHAR(1) NOT NULL,
+  ts_ms      BIGINT  NOT NULL,
+  before     JSONB,
+  after      JSONB,
+  ingerido_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Reprocesar el mismo evento no duplica: la clave primaria lo impide.
+INSERT INTO raw_enrollments (lsn, op, ts_ms, before, after)
+VALUES (:lsn, :op, :ts, :before::jsonb, :after::jsonb)
+ON CONFLICT (lsn) DO NOTHING;
+</code></pre>
+<p>El LSN es la pieza clave: es un <strong>orden total</strong> asignado por el origen. Sirve de clave de idempotencia (clase 037) y de criterio de desempate.</p>
+<p><strong>Vista del estado actual, derivada de lo crudo:</strong></p>
+<pre><code class="language-sql">CREATE OR REPLACE VIEW cur_enrollments AS
+SELECT DISTINCT ON (
+         COALESCE(after-&gt;&gt;'student_id', before-&gt;&gt;'student_id'),
+         COALESCE(after-&gt;&gt;'course_id',  before-&gt;&gt;'course_id'))
+       COALESCE(after-&gt;&gt;'student_id', before-&gt;&gt;'student_id')::int AS student_id,
+       COALESCE(after-&gt;&gt;'course_id',  before-&gt;&gt;'course_id')::int  AS course_id,
+       (after-&gt;&gt;'nota')::numeric(2,1) AS nota,
+       after-&gt;&gt;'estado'               AS estado,
+       op = 'd'                       AS borrado,
+       lsn
+FROM raw_enrollments
+ORDER BY 1, 2, lsn DESC;    -- el LSN mayor gana: es el último cambio
+</code></pre>
+<p>Propiedades que resultan de este diseño:</p>
+<ul>
+<li><strong>Idempotente:</strong> reprocesar el mismo flujo no cambia el resultado.</li>
+<li><strong>Reprocesable:</strong> si la transformación estaba mal, se corrige la vista y se recalcula sobre lo crudo. No hay que pedirle nada al origen.</li>
+<li><strong>Completo:</strong> los borrados aparecen como <code>op = 'd'</code>.</li>
+<li><strong>Auditable:</strong> el histórico completo de cambios queda disponible.</li>
+</ul>
+<p><strong>Verificación diaria, que es lo que convierte el canal en fiable:</strong></p>
+<pre><code class="language-sql">-- Conteos comparados: origen frente a destino
+SELECT (SELECT count(*) FROM enrollments)                                AS origen,
+       (SELECT count(*) FROM cur_enrollments WHERE NOT borrado)          AS destino;
+
+-- Frescura: ¿cuánto hace del último evento recibido?
+SELECT now() - to_timestamp(max(ts_ms)/1000) AS retraso FROM raw_enrollments;
+</code></pre>
+<p>Ambas comprobaciones con alerta. Un canal de datos sin verificación de conteo es un canal del que nadie puede afirmar que funciona.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Mecanismo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Carga histórica inicial</td>
+<td>Instantánea completa</td>
+</tr>
+<tr>
+<td>Sincronización continua sin borrados</td>
+<td>Consulta por marca (con reservas)</td>
+</tr>
+<tr>
+<td>Sincronización completa</td>
+<td>Captura desde el registro</td>
+</tr>
+<tr>
+<td>Estado + evento atómicos</td>
+<td>Bandeja de salida</td>
+</tr>
+<tr>
+<td>Varios destinos del mismo cambio</td>
+<td>Registro compartido (Kafka)</td>
+</tr>
+<tr>
+<td>Corregir una transformación pasada</td>
+<td>ELT sobre datos crudos conservados</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Extracción incremental sin solape ni verificación de conteos.</strong> Pierde filas en silencio.</li>
+<li><strong>Ignorar los borrados.</strong> El destino acumula datos que ya no existen.</li>
+<li><strong>Ranura de replicación sin vigilancia.</strong> Llena el disco del primario.</li>
+<li><strong>Cargas no idempotentes.</strong> Un reintento duplica.</li>
+<li><strong>Transformar antes de conservar lo crudo.</strong> Un error de transformación es irreversible.</li>
+<li><strong>Doble escritura a base y a cola.</strong> Divergencia garantizada.</li>
+<li><strong>Canal sin comprobación de frescura.</strong> Se detiene y nadie lo nota.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Un canal de datos roto no da errores: da cifras ligeramente distintas que nadie relaciona con él. La verificación de conteo y de frescura, con alerta, es lo único que convierte el canal en una fuente en la que se puede confiar.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Compara conteos entre origen y destino de un canal real tuyo y explica la diferencia.</li>
+<li>Configura replicación lógica y captura los tres tipos de operación.</li>
+<li>Implementa la carga idempotente por LSN y demuestra que reprocesar no duplica.</li>
+<li>Añade las comprobaciones de conteo y frescura con sus alertas.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Explica con una traza cómo una transacción larga hace perder filas a la extracción por marca.</li>
+<li>¿Por qué los borrados son invisibles en ese enfoque y no en la captura desde el registro?</li>
+<li>¿Qué ocurre si el consumidor de una ranura de replicación se detiene una semana?</li>
+<li>Da una transformación tuya que hoy sería imposible corregir retroactivamente, y cómo lo arreglarías.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Jay Kreps</strong> (2013). <a href="https://web.archive.org/web/2023/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying">The Log: What Every Software Engineer Should Know About Real-Time Data's Unifying Abstraction</a>. LinkedIn Engineering.<br />
+  El registro append-only como nexo entre replicación, integración y streaming. Se cita la copia archivada: LinkedIn retiro el original.</li>
+<li><strong>Debezium Community</strong> (2026). <a href="https://debezium.io/documentation/">Debezium Documentation</a>.<br />
+  Captura de cambios leyendo el registro de transacciones del motor.</li>
+<li><strong>dbt Labs</strong> (2026). <a href="https://docs.getdbt.com/">dbt Documentation</a>.<br />
+  Transformaciones versionadas y pruebas de datos en el almacen.</li>
+<li><strong>Apache Software Foundation</strong> (2026). <a href="https://iceberg.apache.org/docs/latest/">Apache Iceberg Documentation</a>.<br />
+  Formato de tabla con instantaneas y evolución de esquema sobre almacenamiento de objetos.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="055.html">← Anterior</a> · <a href="057.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

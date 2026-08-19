@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Proyecto final: diseñar, medir y defender. Parte 13: Arquitectura y proyecto final.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>064 — Proyecto final: diseñar, medir y defender · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 13 · Arquitectura y proyecto final</span>
+</nav>
+<main class="content">
+<h1 id="064--proyecto-final-diseñar-medir-y-defender">064 — Proyecto final: diseñar, medir y defender</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="063.html">← Anterior</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>13 — Arquitectura y proyecto final</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>6</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mongodb</code>, <code>redis</code>, <code>qdrant</code>, <code>duckdb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>defensa técnica</code> · <code>evidencia reproducible</code> · <code>límite declarado</code> · <code>plan de evolución</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Integrar todo el programa en un sistema completo, medido y defendible. El entregable no es código que funciona: es un conjunto de afirmaciones respaldadas por evidencia reproducible.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Diseñar un sistema de datos completo a partir de requisitos.</li>
+<li>Producir evidencia reproducible de cada afirmación de rendimiento y corrección.</li>
+<li>Defender las decisiones con alternativas descartadas y sus cifras.</li>
+<li>Declarar los límites del trabajo con precisión.</li>
+<li>Presentar un plan de evolución con umbrales medibles.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="qué-se-evalúa">Qué se evalúa</h3>
+<p>No es «que funcione». Es que <strong>cada afirmación esté respaldada</strong> y que los límites estén declarados.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th style="text-align: right;">Peso</th>
+<th>Evidencia exigida</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modelo y justificación</td>
+<td style="text-align: right;">20 %</td>
+<td>ERD, diccionario, dependencias funcionales, exclusiones</td>
+</tr>
+<tr>
+<td>Corrección demostrada</td>
+<td style="text-align: right;">20 %</td>
+<td>Invariantes que fallan al romper el dato</td>
+</tr>
+<tr>
+<td>Rendimiento medido</td>
+<td style="text-align: right;">20 %</td>
+<td>Planes antes/después, condiciones declaradas</td>
+</tr>
+<tr>
+<td>Operación</td>
+<td style="text-align: right;">20 %</td>
+<td>Restauración cronometrada, control de acceso, observabilidad</td>
+</tr>
+<tr>
+<td>Decisiones y límites</td>
+<td style="text-align: right;">20 %</td>
+<td>ADR con alternativas y consecuencias negativas</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="elegir-el-dominio">Elegir el dominio</h3>
+<p>Uno de los canónicos del repositorio, o uno propio que cumpla cinco condiciones:</p>
+<ol>
+<li>Al menos <strong>cuatro entidades</strong> con relaciones no triviales.</li>
+<li>Al menos <strong>una invariante</strong> que un <code>CHECK</code> no pueda expresar.</li>
+<li>Al menos <strong>una carga</strong> que justifique medir (volumen o concurrencia).</li>
+<li><strong>Datos personales</strong>, para ejercitar retención y control de acceso.</li>
+<li>Una consulta que se beneficie de un modelo no relacional.</li>
+</ol>
+<h3 id="el-error-que-hay-que-evitar">El error que hay que evitar</h3>
+<p>El trabajo que dice «el sistema soporta 10 000 consultas por segundo» sin decir con qué datos, qué máquina, qué estado de caché y qué consulta. Esa frase no es un resultado: es una impresión con un número.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Estructura completa de un entregable aceptable, con el contenido que debe llevar cada parte.</p>
+<h3 id="1-requisitos-y-alcance">1. Requisitos y alcance</h3>
+<pre><code class="language-markdown">## Dominio
+Plataforma de cursos con inscripciones, evaluación y búsqueda de contenido.
+
+## Requisitos funcionales
+RF1 Inscribir estudiantes respetando el cupo del curso.
+RF2 Registrar y rectificar notas, conservando el histórico de rectificaciones.
+RF3 Buscar contenido por lenguaje natural.
+RF4 Panel de dirección con métricas por período y facultad.
+
+## Requisitos no funcionales
+RNF1 p99 de inscripción &lt; 100 ms con 200 inscripciones/s.
+RNF2 RPO ≤ 5 min, RTO ≤ 2 h.
+RNF3 Un docente solo ve las notas de sus cursos.
+RNF4 Registros de acceso: retención 90 días.
+
+## Fuera de alcance (declarado)
+- Pagos y aranceles.
+- Asistencia.
+- Emisión de certificados con firma electrónica.
+</code></pre>
+<p>Las exclusiones son parte del entregable (clase 005).</p>
+<h3 id="2-modelo-con-su-justificación">2. Modelo, con su justificación</h3>
+<p>ERD, diccionario de datos con origen de cada regla, dependencias funcionales y forma normal alcanzada, con la justificación de cualquier desnormalización.</p>
+<pre><code class="language-markdown">## Decisiones de modelado
+- `enrollments` con clave natural compuesta `(student_id, course_id)`: única,
+  no nula e inmutable (clase 007).
+- `students` separada de `student_identity` para permitir supresión conservando
+  el histórico académico (clase 053).
+- `courses.inscritos` NO se almacena: se cuenta. Relación lecturas/escrituras
+  medida = 12,5 : 1, por debajo del umbral de 100 : 1 (clase 009).
+</code></pre>
+<h3 id="3-invariantes-y-su-verificación">3. Invariantes y su verificación</h3>
+<pre><code class="language-sql">-- INV-1: ninguna inscripción apunta a un curso inexistente
+SELECT e.student_id, e.course_id FROM enrollments e
+LEFT JOIN courses c ON c.id = e.course_id WHERE c.id IS NULL;
+
+-- INV-2: ningún curso excede su cupo   (no expresable con CHECK)
+SELECT c.id, c.cupo, count(*) AS inscritos
+FROM courses c JOIN enrollments e ON e.course_id = c.id AND e.estado = 'activa'
+GROUP BY c.id, c.cupo HAVING count(*) &gt; c.cupo;
+
+-- INV-3: toda nota está en el rango de la escala o es nula
+SELECT student_id, course_id, nota FROM enrollments
+WHERE nota IS NOT NULL AND nota NOT BETWEEN 1.0 AND 7.0;
+
+-- INV-4: todo curso tiene al menos un docente asignado
+SELECT c.id FROM courses c
+LEFT JOIN teaching t ON t.course_id = c.id WHERE t.course_id IS NULL;
+</code></pre>
+<p><strong>Y la demostración de que las invariantes sirven:</strong> romper el dato a propósito y capturar la salida que lo delata. Una invariante que nunca ha fallado puede estar comprobando la nada (clase 004).</p>
+<h3 id="4-evidencia-de-rendimiento">4. Evidencia de rendimiento</h3>
+<pre><code class="language-markdown">## RNF1 — p99 de inscripción &lt; 100 ms con 200 inscripciones/s
+
+Condiciones:
+  PostgreSQL 16.3, 4 vCPU, 16 GB RAM, SSD NVMe
+  5 000 000 inscripciones precargadas, 300 cursos, 200 000 estudiantes
+  Caché caliente (3 min de precalentamiento antes de medir)
+  Cliente: 50 conexiones a través de pgbouncer, 60 s de medición
+
+Resultado:
+  caudal sostenido : 214 inscripciones/s
+  p50 : 11 ms   p95 : 38 ms   p99 : 74 ms   máx : 210 ms
+  errores de serialización: 0,3 % (reintentados con éxito)
+
+Comando:
+  python labs/bench/inscripciones.py --dur 60 --conc 50 --seed 42
+
+NO demuestra:
+  - Comportamiento con caché fría (medido aparte: p99 = 260 ms)
+  - Comportamiento con un curso caliente único (medido aparte: 41/s, cola)
+  - Nada sobre más de 5 M de filas
+</code></pre>
+<p>El bloque «NO demuestra» es obligatorio y es lo que distingue un informe honesto.</p>
+<h3 id="5-operación">5. Operación</h3>
+<pre><code class="language-markdown">## RNF2 — Restauración
+Prueba ejecutada el 2026-08-18 sobre copia de 512 GB.
+  descarga 38 min · restauración 12 min · WAL 24 min · verificación 8 min
+  RTO medido: 82 min  (objetivo: 120 min) ✔
+  Verificación: 5 002 341 filas, INV-1 a INV-4 en cero.
+  RPO medido: 4 min 12 s (archive_timeout = 300 s) ✔
+
+## RNF3 — Control de acceso
+Políticas por fila (clase 050) con pruebas automatizadas que intentan
+leer y escribir fuera del ámbito. 12 pruebas, todas en verde.
+
+## RNF4 — Retención
+Trabajo diario + verificación de que no quedan filas fuera de plazo.
+</code></pre>
+<h3 id="6-decisiones">6. Decisiones</h3>
+<p>Los ADR de las decisiones no triviales, con alternativas y consecuencias negativas (clase 063).</p>
+<h3 id="7-límites-y-plan-de-evolución">7. Límites y plan de evolución</h3>
+<pre><code class="language-markdown">## Límites conocidos
+- Probado hasta 5 M de inscripciones. Sin evidencia por encima.
+- Un solo nodo: no hay tolerancia a fallo del primario más allá de la réplica.
+- La búsqueda semántica tiene recall@5 = 0,89: el 11 % de las preguntas puede
+  no recuperar el fragmento correcto.
+- El panel tiene hasta 24 h de desfase.
+
+## Umbrales de revisión
+| Umbral                              | Acción            | Alerta |
+|-------------------------------------|-------------------|--------|
+| &gt; 20 M inscripciones                | Particionar       | Sí     |
+| p99 de inscripción &gt; 80 ms (7 días) | Revisar índices   | Sí     |
+| &gt; 5 M fragmentos de búsqueda        | Evaluar Qdrant    | Sí     |
+| Utilización sostenida &gt; 70 %        | Escalar           | Sí     |
+</code></pre>
+<h3 id="8-la-defensa">8. La defensa</h3>
+<p>Quince minutos. Las preguntas que se harán:</p>
+<ol>
+<li>¿Por qué esta clave primaria y no otra?</li>
+<li>¿Qué invariante no puede garantizar el motor y quién la vigila?</li>
+<li>Enséñame un plan antes y después, y di qué cambió.</li>
+<li>¿Cuánto tardaste en restaurar y qué verificaste?</li>
+<li>¿Qué alternativa descartaste que era mejor en alguna métrica?</li>
+<li>¿Qué <strong>no</strong> demuestra tu evidencia?</li>
+<li>¿Qué se rompe primero al crecer, y cómo lo sabrás?</li>
+</ol>
+<p><strong>La pregunta 6 es la que separa el trabajo maduro del correcto.</strong> Quien sabe qué no ha demostrado, sabe lo que ha demostrado.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Señal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Insuficiente</td>
+<td>Funciona; sin mediciones ni límites</td>
+</tr>
+<tr>
+<td>Suficiente</td>
+<td>Modelo justificado, invariantes, alguna medición</td>
+</tr>
+<tr>
+<td>Bueno</td>
+<td>Todo lo anterior + restauración cronometrada + ADR</td>
+</tr>
+<tr>
+<td>Excelente</td>
+<td>+ alternativas descartadas con cifras, límites precisos y umbrales con alerta</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Medir sin declarar condiciones.</strong> El número no significa nada.</li>
+<li><strong>Omitir la sección de límites.</strong> Sugiere que no se han buscado.</li>
+<li><strong>ADR con la opción elegida ganando en todo.</strong> Nadie se lo cree.</li>
+<li><strong>Invariantes que nunca se han visto fallar.</strong> Pueden no comprobar nada.</li>
+<li><strong>Copia de seguridad sin restauración probada</strong> (clase 048).</li>
+<li><strong>Caché caliente presentado como caso general.</strong></li>
+<li><strong>Alcance sin exclusiones.</strong> Se juzga contra expectativas que nadie fijó.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Este entregable es, con muy pocos cambios, el documento que se lleva a una revisión de arquitectura real, a una auditoría o a una entrevista técnica. La diferencia entre una demostración y un sistema es exactamente lo que aquí se exige: evidencia, límites y un plan de evolución con umbrales.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>El proyecto final es el reto. Entrega:</p>
+<ol>
+<li>Requisitos con exclusiones declaradas.</li>
+<li>Modelo con justificación y diccionario de datos.</li>
+<li>Invariantes, con la demostración de que fallan al romper el dato.</li>
+<li>Evidencia de rendimiento con condiciones y sección de «no demuestra».</li>
+<li>Restauración cronometrada y verificada.</li>
+<li>Control de acceso con pruebas automatizadas.</li>
+<li>ADR de las decisiones no triviales.</li>
+<li>Límites y umbrales de revisión con sus alertas.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Enuncia una afirmación de tu proyecto y la evidencia exacta que la respalda.</li>
+<li>¿Qué invariante de tu sistema no puede garantizar el motor y cómo la vigilas?</li>
+<li>Da una alternativa que descartaste siendo mejor en alguna métrica, y por qué.</li>
+<li>¿Qué se rompe primero cuando tu sistema crezca diez veces, y cómo te enterarás?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/02-polyglot-modeling/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
+  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
+<li><strong>Peter Bailis, Joseph M. Hellerstein, Michael Stonebraker</strong> (2015). <a href="http://www.redbook.io/">Readings in Database Systems</a>. 5.a ed. MIT Press. ISBN 978-0-262-52964-3.<br />
+  Antologia comentada de acceso libre. Cada capitulo situa los papers en su discusión.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="063.html">← Anterior</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

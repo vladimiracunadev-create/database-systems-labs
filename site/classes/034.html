@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Anomalías de aislamiento y la crítica a los niveles ANSI. Parte 07: Transacciones, concurrencia y recuperación.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>034 — Anomalías de aislamiento y la crítica a los niveles ANSI · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 07 · Transacciones, concurrencia y recuperación</span>
+</nav>
+<main class="content">
+<h1 id="034--anomalías-de-aislamiento-y-la-crítica-a-los-niveles-ansi">034 — Anomalías de aislamiento y la crítica a los niveles ANSI</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>07 — Transacciones, concurrencia y recuperación</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>mysql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>5</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>lectura sucia</code> · <code>lectura no repetible</code> · <code>fantasma</code> · <code>sesgo de escritura</code> · <code>snapshot isolation</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Reproducir las anomalías de concurrencia una por una y saber cuáles permite tu motor en su nivel por defecto. El nombre del nivel no basta: hay que comprobar el comportamiento.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Reproducir cada anomalía con dos sesiones y una traza temporal.</li>
+<li>Explicar por qué la norma ANSI define los niveles de forma ambigua.</li>
+<li>Distinguir instantánea de serializable y describir el sesgo de escritura.</li>
+<li>Comprobar empíricamente qué permite tu motor, con el método de Hermitage.</li>
+<li>Elegir nivel de aislamiento con un criterio explícito.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="las-anomalías">Las anomalías</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Anomalía</th>
+<th>Qué ocurre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0 Escritura sucia</strong></td>
+<td>Una transacción sobrescribe un dato no confirmado de otra</td>
+</tr>
+<tr>
+<td><strong>P1 Lectura sucia</strong></td>
+<td>Se lee un dato que después se revierte</td>
+</tr>
+<tr>
+<td><strong>P2 Lectura no repetible</strong></td>
+<td>Se lee dos veces el mismo dato y cambia</td>
+</tr>
+<tr>
+<td><strong>P3 Fantasma</strong></td>
+<td>Se repite una consulta de rango y aparecen filas nuevas</td>
+</tr>
+<tr>
+<td><strong>P4 Actualización perdida</strong></td>
+<td>Dos lecturas-modificaciones concurrentes; una se pierde</td>
+</tr>
+<tr>
+<td><strong>A5A Lectura sesgada</strong></td>
+<td>Se leen dos datos relacionados y se ve una combinación imposible</td>
+</tr>
+<tr>
+<td><strong>A5B Sesgo de escritura</strong></td>
+<td>Dos transacciones leen lo mismo, escriben cosas distintas y juntas rompen una invariante</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="la-crítica-de-berenson-y-otros">La crítica de Berenson y otros</h3>
+<p>El artículo de 1995 demuestra que la norma ANSI SQL-92 define los niveles enumerando fenómenos prohibidos, y que esas definiciones son <strong>ambiguas</strong>: admiten una lectura estricta y otra laxa. Peor: no cubren el sesgo de escritura, así que un sistema puede ser conforme a <code>SERIALIZABLE</code> según la letra de la norma y permitir anomalías.</p>
+<p>De ahí sale además la caracterización de <strong>snapshot isolation</strong> (aislamiento de instantánea), que la norma ni menciona y que hoy implementan PostgreSQL, Oracle y SQL Server.</p>
+<p>Adya (1999) reformula las definiciones sin referirse a la implementación, mediante grafos de dependencias entre transacciones. Es la formulación que usan los verificadores modernos.</p>
+<p><strong>Consecuencia práctica:</strong> el nombre del nivel no dice qué garantiza. <code>REPEATABLE READ</code> significa cosas distintas en MySQL y en PostgreSQL.</p>
+<h3 id="lo-que-permite-cada-motor-de-verdad">Lo que permite cada motor, de verdad</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Anomalía</th>
+<th>PG <code>RC</code></th>
+<th>PG <code>RR</code></th>
+<th>PG <code>SER</code></th>
+<th>MySQL <code>RR</code></th>
+<th>SQLite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lectura sucia</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Lectura no repetible</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Fantasma</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Actualización perdida</td>
+<td><strong>Sí</strong></td>
+<td>No (aborta)</td>
+<td>No</td>
+<td><strong>Sí</strong>*</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Sesgo de escritura</td>
+<td><strong>Sí</strong></td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p>* MySQL <code>REPEATABLE READ</code> con lecturas normales; con <code>SELECT ... FOR UPDATE</code> se evita.</p>
+<p>Dos hechos que importan:</p>
+<ul>
+<li><strong>PostgreSQL <code>REPEATABLE READ</code> es aislamiento de instantánea</strong>, no la definición ANSI. No permite fantasmas —lo que la norma sí permitiría— y sí permite sesgo de escritura.</li>
+<li><strong>Solo <code>SERIALIZABLE</code> evita el sesgo de escritura.</strong> PostgreSQL lo implementa con aislamiento de instantánea serializable (SSI), que detecta ciclos de dependencia y aborta una transacción.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Dos transacciones concurrentes&quot;] --&gt; B{&quot;¿Leen lo que la&lt;br/&gt;otra escribe?&quot;}
+    B -- &quot;No&quot; --&gt; OK[&quot;Sin conflicto&quot;]
+    B -- &quot;Sí&quot; --&gt; C{&quot;¿Escriben el&lt;br/&gt;mismo dato?&quot;}
+    C -- &quot;Sí&quot; --&gt; D[&quot;Actualización perdida&lt;br/&gt;→ evitable con RR o bloqueo&quot;]
+    C -- &quot;No&quot; --&gt; E[&quot;Sesgo de escritura&lt;br/&gt;→ SOLO evitable con SERIALIZABLE&lt;br/&gt;o bloqueo explícito&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<h3 id="actualización-perdida">Actualización perdida</h3>
+<pre><code class="language-text">Sesión A                              Sesión B
+BEGIN;
+SELECT saldo FROM c WHERE id=1;  1000
+                                      BEGIN;
+                                      SELECT saldo FROM c WHERE id=1;  1000
+UPDATE c SET saldo=700 WHERE id=1;
+COMMIT;
+                                      UPDATE c SET saldo=500 WHERE id=1;
+                                      COMMIT;
+</code></pre>
+<p>Resultado: 500. Correcto: 200.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Comportamiento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>READ COMMITTED</code></td>
+<td>Ocurre: B pisa a A</td>
+</tr>
+<tr>
+<td><code>REPEATABLE READ</code> (PG)</td>
+<td>B aborta con <code>could not serialize access</code></td>
+</tr>
+<tr>
+<td><code>READ COMMITTED</code> + <code>SELECT ... FOR UPDATE</code></td>
+<td>B espera a A y lee 700</td>
+</tr>
+<tr>
+<td><code>UPDATE c SET saldo = saldo - 500</code></td>
+<td>El motor lee y escribe en una operación: no ocurre</td>
+</tr>
+</tbody>
+</table></div>
+<p>La última fila es la más importante: <strong>una única sentencia atómica de lectura-modificación elimina la anomalía sin cambiar el nivel de aislamiento</strong>. Es la solución más barata y la más ignorada.</p>
+<h3 id="sesgo-de-escritura">Sesgo de escritura</h3>
+<p>La anomalía que sobrevive al aislamiento de instantánea. Regla: <em>«siempre debe haber al menos un profesor asignado a cada curso»</em>. Hay dos, Ana y Luis, y ambos piden baja a la vez.</p>
+<pre><code class="language-text">Sesión A (Ana)                              Sesión B (Luis)
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM teaching
+  WHERE course_id='bd';           -- 2
+                                            BEGIN ISOLATION LEVEL REPEATABLE READ;
+                                            SELECT COUNT(*) FROM teaching
+                                              WHERE course_id='bd';       -- 2
+-- 2 &gt;= 2, puedo darme de baja
+DELETE FROM teaching
+  WHERE course_id='bd' AND teacher_id=1;
+                                            -- 2 &gt;= 2, puedo darme de baja
+                                            DELETE FROM teaching
+                                              WHERE course_id='bd' AND teacher_id=2;
+COMMIT;
+                                            COMMIT;
+</code></pre>
+<p><strong>Resultado: cero profesores.</strong> Ninguna transacción escribió sobre lo que la otra escribió —A borró la fila 1 y B la 2—, así que no hay conflicto de escritura que detectar. Cada una leyó un estado en el que su acción era válida y juntas rompieron la invariante.</p>
+<p>Es el ejemplo canónico y el mejor argumento contra «con instantánea basta».</p>
+<p>Tres soluciones:</p>
+<pre><code class="language-sql">-- 1. SERIALIZABLE: PostgreSQL detecta el ciclo y aborta una
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+-- ... la segunda en confirmar recibe:
+-- ERROR: could not serialize access due to read/write dependencies among transactions
+</code></pre>
+<pre><code class="language-sql">-- 2. Materializar el conflicto: bloquear la fila padre
+BEGIN;
+SELECT id FROM courses WHERE id='bd' FOR UPDATE;   -- las dos compiten por ESTA fila
+SELECT COUNT(*) FROM teaching WHERE course_id='bd';
+DELETE FROM teaching WHERE course_id='bd' AND teacher_id=1;
+COMMIT;
+</code></pre>
+<pre><code class="language-sql">-- 3. Convertirlo en una restricción declarativa que el motor comprueba
+--    (contador con CHECK, o restricción diferida: clase 013)
+</code></pre>
+<p><code>SERIALIZABLE</code> es la solución correcta y tiene un costo: transacciones abortadas que la aplicación <strong>debe</strong> reintentar. Cualquier código que use <code>SERIALIZABLE</code> sin bucle de reintento está incompleto.</p>
+<h3 id="comprobarlo-empíricamente">Comprobarlo empíricamente</h3>
+<p>El método de Hermitage (Kleppmann) es un conjunto de guiones de dos sesiones, uno por anomalía, que se ejecutan contra cada motor y cada nivel. El resultado es una tabla de hechos, no de promesas de la documentación.</p>
+<p>Reproducirlo con dos terminales sobre el <code>docker-compose</code> del repositorio es el laboratorio de esta clase.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Evita</th>
+<th>Permite</th>
+<th>Costo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>READ UNCOMMITTED</code></td>
+<td>—</td>
+<td>Todo</td>
+<td>Ninguno</td>
+</tr>
+<tr>
+<td><code>READ COMMITTED</code></td>
+<td>Lectura sucia</td>
+<td>No repetible, fantasma, perdida, sesgo</td>
+<td>Bajo</td>
+</tr>
+<tr>
+<td><code>REPEATABLE READ</code> / instantánea</td>
+<td>+ no repetible, fantasma, perdida</td>
+<td><strong>Sesgo de escritura</strong></td>
+<td>Abortos ocasionales</td>
+</tr>
+<tr>
+<td><code>SERIALIZABLE</code></td>
+<td>Todo</td>
+<td>—</td>
+<td>Abortos frecuentes con contención</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Suponer que el nombre del nivel define el comportamiento.</strong> Varía entre motores.</li>
+<li><strong>Creer que instantánea es serializable.</strong> El sesgo de escritura los separa.</li>
+<li><strong>Usar <code>SERIALIZABLE</code> sin reintentos.</strong> Los abortos son parte del contrato.</li>
+<li><strong>Leer-modificar-escribir en la aplicación</strong> cuando bastaría una sentencia atómica.</li>
+<li><strong>Subir el nivel de aislamiento sin identificar la anomalía concreta.</strong> Se paga contención sin saber qué se compró.</li>
+<li><strong>Probar la concurrencia con una sola sesión.</strong> No aparece nada.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>El sesgo de escritura produce los datos imposibles que aparecen «una vez cada tantos meses» y nadie logra reproducir: dos reservas para la misma sala, un cupo excedido en uno, un turno sin nadie de guardia. Reconocer el patrón es la mitad del diagnóstico.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Reproduce la actualización perdida y el sesgo de escritura con dos sesiones, y captura ambas trazas.</li>
+<li>Repite en dos motores y niveles distintos, y construye tu tabla de hechos.</li>
+<li>Identifica en tu sistema una invariante vulnerable al sesgo de escritura.</li>
+<li>Resuélvela de dos formas distintas y compara el costo en contención.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué el sesgo de escritura no lo detecta el aislamiento de instantánea?</li>
+<li>Escribe una operación de tu sistema que hoy sea lectura-modificación-escritura y conviértela en atómica.</li>
+<li>¿Qué debe hacer la aplicación al recibir un error de serialización, y por qué no basta con reintentar sin límite?</li>
+<li>Diseña el guion de dos sesiones que demuestre si tu motor permite fantasmas en su nivel por defecto.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Hal Berenson, Phil Bernstein, Jim Gray, Jim Melton, Elizabeth O'Neil, Patrick O'Neil</strong> (1995). <a href="https://arxiv.org/abs/cs/0701157">A Critique of ANSI SQL Isolation Levels</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/223784.223785">10.1145/223784.223785</a>.<br />
+  Demuestra que los niveles de la norma no definen sin ambigüedad las anomalías e introduce snapshot isolation.</li>
+<li><strong>Atul Adya</strong> (1999). <a href="http://pmg.csail.mit.edu/papers/adya-phd.pdf">Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions</a>. Tesis doctoral, MIT.<br />
+  Definición de los fenomenos de aislamiento independiente de la implementación.</li>
+<li><strong>Martin Kleppmann</strong> (2014). <a href="https://github.com/ept/hermitage">Hermitage: Testing Transaction Isolation Levels</a>.<br />
+  Guion reproducible que muestra que anomalías permite cada motor en cada nivel.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/mvcc.html">PostgreSQL: Concurrency Control</a>.<br />
+  Niveles de aislamiento tal como los implementa PostgreSQL, no como los define la norma.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/isolation.html">SQLite: Isolation</a>.<br />
+  Que garantiza y que no garantiza SQLite entre conexiones.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

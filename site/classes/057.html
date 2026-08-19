@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Streaming: tiempo de evento, ventanas y semántica de entrega. Parte 11: Analítica, integración y streaming.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>057 — Streaming: tiempo de evento, ventanas y semántica de entrega · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 11 · Analítica, integración y streaming</span>
+</nav>
+<main class="content">
+<h1 id="057--streaming-tiempo-de-evento-ventanas-y-semántica-de-entrega">057 — Streaming: tiempo de evento, ventanas y semántica de entrega</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>11 — Analítica, integración y streaming</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>kafka</code>, <code>clickhouse</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>tiempo de evento</code> · <code>marca de agua</code> · <code>ventana</code> · <code>entrega al menos una vez</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Procesar datos que no dejan de llegar. La dificultad no es el caudal: es que los eventos llegan tarde, desordenados y a veces dos veces, y hay que decidir cuándo se cierra un resultado.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Distinguir tiempo de evento, de ingesta y de procesamiento.</li>
+<li>Elegir el tipo de ventana adecuado a la pregunta.</li>
+<li>Explicar qué es una marca de agua y qué compromiso codifica.</li>
+<li>Comparar las tres semánticas de entrega y cómo se consigue cada una.</li>
+<li>Aplicar la dualidad flujo-tabla.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-tres-tiempos">Los tres tiempos</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tiempo</th>
+<th>Definición</th>
+<th>Problema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>De evento</strong></td>
+<td>Cuando ocurrió en el mundo</td>
+<td>Llega tarde y desordenado</td>
+</tr>
+<tr>
+<td><strong>De ingesta</strong></td>
+<td>Cuando entró al sistema</td>
+<td>No refleja la realidad</td>
+</tr>
+<tr>
+<td><strong>De procesamiento</strong></td>
+<td>Cuando se calculó</td>
+<td>Reprocesar da otro resultado</td>
+</tr>
+</tbody>
+</table></div>
+<p>Akidau, Chernyak y Lax establecen la regla: <strong>si la pregunta es sobre el mundo, se usa tiempo de evento</strong>. «¿Cuántas inscripciones hubo el martes?» se refiere al martes real, no a cuándo llegaron los mensajes.</p>
+<p>El desfase entre evento y procesamiento no está acotado: un móvil sin cobertura puede enviar eventos de hace tres días.</p>
+<h3 id="tipos-de-ventana">Tipos de ventana</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Ventana</th>
+<th>Forma</th>
+<th>Pregunta que responde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Fija</strong> (tumbling)</td>
+<td>Intervalos contiguos sin solape</td>
+<td>«Inscripciones por hora»</td>
+</tr>
+<tr>
+<td><strong>Deslizante</strong> (sliding)</td>
+<td>Tamaño y desplazamiento independientes</td>
+<td>«Media de los últimos 10 min, cada minuto»</td>
+</tr>
+<tr>
+<td><strong>De sesión</strong></td>
+<td>Agrupa por inactividad</td>
+<td>«Actividad de un usuario hasta 30 min de pausa»</td>
+</tr>
+<tr>
+<td><strong>Global</strong></td>
+<td>Todo el flujo</td>
+<td>«Total desde siempre»</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="marcas-de-agua">Marcas de agua</h3>
+<p>Una <strong>marca de agua</strong> es la afirmación del sistema: <em>«creo que ya no llegarán eventos anteriores a T»</em>. Es la que permite cerrar una ventana y emitir un resultado.</p>
+<p>Es una <strong>heurística</strong>, no una certeza. De ahí el compromiso central del streaming:</p>
+<pre><code class="language-text">marca de agua agresiva  → resultados rápidos, más eventos rezagados descartados
+marca de agua permisiva → resultados tardíos, menos pérdida
+</code></pre>
+<p>Y las tres políticas para lo que llega después de la marca:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Política</th>
+<th>Qué hace</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Descartar</strong></td>
+<td>Ignora el rezagado</td>
+<td>El error es tolerable</td>
+</tr>
+<tr>
+<td><strong>Emitir corrección</strong></td>
+<td>Reemite la ventana actualizada</td>
+<td>El consumidor sabe reconciliar</td>
+</tr>
+<tr>
+<td><strong>Desviar</strong></td>
+<td>A un canal aparte para revisión</td>
+<td>Auditoría, cumplimiento</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-mermaid">flowchart LR
+    E[&quot;Eventos&lt;br/&gt;desordenados&quot;] --&gt; B[&quot;Asignar a ventana&lt;br/&gt;por tiempo de EVENTO&quot;]
+    B --&gt; W{&quot;¿Marca de agua&lt;br/&gt;pasó el fin&lt;br/&gt;de la ventana?&quot;}
+    W -- &quot;No&quot; --&gt; ACC[&quot;Acumular&quot;]
+    W -- &quot;Sí&quot; --&gt; EM[&quot;Emitir resultado&quot;]
+    EM --&gt; L{&quot;Llega un rezagado&quot;}
+    L --&gt; P{&quot;Política&quot;}
+    P --&gt; P1[&quot;Descartar&quot;]
+    P --&gt; P2[&quot;Emitir corrección&quot;]
+    P --&gt; P3[&quot;Desviar a revisión&quot;]
+</code></pre>
+<h3 id="semánticas-de-entrega">Semánticas de entrega</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Semántica</th>
+<th>Garantía</th>
+<th>Cómo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Como mucho una vez</strong></td>
+<td>Puede perder</td>
+<td>Sin reintentos</td>
+</tr>
+<tr>
+<td><strong>Al menos una vez</strong></td>
+<td>Puede duplicar</td>
+<td>Reintentos + confirmación tras procesar</td>
+</tr>
+<tr>
+<td><strong>Exactamente una vez</strong></td>
+<td>Ni pierde ni duplica</td>
+<td>Al menos una vez <strong>+ receptor idempotente</strong>, o transacciones del propio sistema</td>
+</tr>
+</tbody>
+</table></div>
+<p>La entrega exactamente-una-vez <strong>de extremo a extremo no existe</strong> como propiedad de la red: se construye combinando entrega al-menos-una-vez con un receptor que deduplica por identificador (clase 037). Kafka ofrece transacciones que dan «procesamiento exactamente una vez» dentro de Kafka; en cuanto un efecto sale del sistema —una fila en otra base, un correo—, la idempotencia vuelve a ser responsabilidad del receptor.</p>
+<h3 id="dualidad-flujo-tabla">Dualidad flujo-tabla</h3>
+<ul>
+<li>Un <strong>flujo</strong> es la secuencia de cambios.</li>
+<li>Una <strong>tabla</strong> es el estado acumulado de esos cambios.</li>
+</ul>
+<p>Cada uno se deriva del otro: agregar un flujo produce una tabla; observar los cambios de una tabla produce un flujo. Es exactamente lo que hace la captura de cambios de la clase 056, y es la misma idea del WAL de la clase 036 vista desde otro ángulo.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Métrica: inscripciones por curso y por hora, con paneles casi en tiempo real. Los eventos llegan de móviles con conectividad variable.</p>
+<p><strong>Observación previa, imprescindible:</strong> medir el retraso real antes de elegir la marca de agua.</p>
+<pre><code class="language-sql">SELECT percentile_disc(0.50) WITHIN GROUP (ORDER BY retraso_s) AS p50,
+       percentile_disc(0.95) WITHIN GROUP (ORDER BY retraso_s) AS p95,
+       percentile_disc(0.99) WITHIN GROUP (ORDER BY retraso_s) AS p99,
+       max(retraso_s)                                          AS maximo
+FROM (SELECT extract(epoch FROM (ingerido_en - ocurrido_en)) AS retraso_s
+      FROM eventos WHERE ingerido_en &gt; now() - interval '7 days') t;
+</code></pre>
+<pre><code class="language-text">p50 = 0,8 s      p95 = 45 s      p99 = 340 s      máximo = 3 días
+</code></pre>
+<p>Ese <code>máximo</code> de 3 días es un móvil que estuvo sin cobertura. Esperar tres días para cerrar una ventana horaria es absurdo; descartarlo sin más, tampoco es aceptable si son inscripciones.</p>
+<p><strong>Decisión, justificada con los percentiles:</strong></p>
+<pre><code class="language-text">Marca de agua: tiempo de evento máximo visto − 10 minutos
+   → cubre el p99 (340 s) con margen
+Política para rezagados: emitir corrección hasta 24 h; después, desviar a revisión
+   → el panel se corrige solo; lo muy tardío no se pierde, se revisa
+</code></pre>
+<p><strong>Implementación en SQL de ventanas, sobre la tabla cruda:</strong></p>
+<pre><code class="language-sql">-- Ventana fija de una hora, por tiempo de EVENTO
+CREATE MATERIALIZED VIEW inscripciones_hora AS
+SELECT date_trunc('hour', ocurrido_en) AS hora,
+       course_id,
+       count(*)                        AS n,
+       max(ingerido_en)                AS ultima_actualizacion
+FROM eventos
+WHERE tipo = 'inscripcion.creada'
+GROUP BY 1, 2;
+</code></pre>
+<p>Una ventana que se recalcula incorpora automáticamente los rezagados: es la política de «emitir corrección», implementada sin ningún motor de streaming.</p>
+<p><strong>Marca de agua y estado de cada ventana:</strong></p>
+<pre><code class="language-sql">WITH marca AS (
+  SELECT max(ocurrido_en) - interval '10 minutes' AS w FROM eventos
+)
+SELECT h.hora, h.course_id, h.n,
+       CASE WHEN h.hora + interval '1 hour' &lt; (SELECT w FROM marca)
+            THEN 'cerrada' ELSE 'provisional' END AS estado
+FROM inscripciones_hora h
+ORDER BY h.hora DESC LIMIT 24;
+</code></pre>
+<p><strong>Esta columna <code>estado</code> es el entregable pedagógico de la clase.</strong> Un panel que muestra cifras sin decir si son definitivas o provisionales genera desconfianza: alguien anota el número de las 14:00, vuelve a mirar y ve otro. Con la marca explícita, el cambio es esperado y comprensible.</p>
+<p><strong>Rezagados muy tardíos:</strong></p>
+<pre><code class="language-sql">INSERT INTO eventos_tardios
+SELECT * FROM eventos
+WHERE ingerido_en - ocurrido_en &gt; interval '24 hours';
+</code></pre>
+<p>No se descartan: se desvían. Para inscripciones, perder un evento es perder una matrícula.</p>
+<p><strong>Ventana de sesión</strong>, para «cuánto dura una sesión de estudio»:</p>
+<pre><code class="language-sql">WITH marcado AS (
+  SELECT student_id, ocurrido_en,
+         CASE WHEN ocurrido_en - lag(ocurrido_en)
+                   OVER (PARTITION BY student_id ORDER BY ocurrido_en)
+                   &gt; interval '30 minutes'
+              THEN 1 ELSE 0 END AS nueva
+  FROM eventos WHERE tipo = 'actividad'
+),
+sesiones AS (
+  SELECT student_id, ocurrido_en,
+         sum(nueva) OVER (PARTITION BY student_id ORDER BY ocurrido_en) AS sesion
+  FROM marcado
+)
+SELECT student_id, sesion, min(ocurrido_en) AS inicio, max(ocurrido_en) AS fin,
+       max(ocurrido_en) - min(ocurrido_en) AS duracion, count(*) AS eventos
+FROM sesiones GROUP BY student_id, sesion;
+</code></pre>
+<p>Las funciones de ventana de la clase 018 resuelven ventanas de sesión sin ningún motor de streaming, y sobre datos históricos. Es el recordatorio útil: <strong>muchos problemas de «streaming» son problemas de SQL sobre datos con marca de tiempo</strong>.</p>
+<p><strong>Idempotencia del consumidor</strong>, que cierra el círculo:</p>
+<pre><code class="language-sql">CREATE TABLE eventos (
+  evento_id   UUID PRIMARY KEY,     -- generado por el productor
+  tipo        TEXT NOT NULL,
+  ocurrido_en TIMESTAMPTZ NOT NULL,
+  ingerido_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  carga       JSONB NOT NULL
+);
+
+INSERT INTO eventos (...) VALUES (...) ON CONFLICT (evento_id) DO NOTHING;
+</code></pre>
+<p>Con esto, la entrega al-menos-una-vez de Kafka se convierte en efecto exactamente-una-vez en el destino.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Herramienta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Métricas por intervalo</td>
+<td>Ventana fija</td>
+</tr>
+<tr>
+<td>Media móvil</td>
+<td>Ventana deslizante</td>
+</tr>
+<tr>
+<td>Agrupar actividad</td>
+<td>Ventana de sesión</td>
+</tr>
+<tr>
+<td>Analítica histórica con marca de tiempo</td>
+<td><strong>SQL con funciones de ventana</strong></td>
+</tr>
+<tr>
+<td>Latencia de segundos</td>
+<td>Motor de streaming</td>
+</tr>
+<tr>
+<td>Un flujo, muchos consumidores</td>
+<td>Kafka</td>
+</tr>
+<tr>
+<td>No duplicar en el destino</td>
+<td>Clave de evento + <code>ON CONFLICT</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Usar tiempo de procesamiento para preguntas del mundo.</strong> Reprocesar da otro resultado.</li>
+<li><strong>Marca de agua sin medir el retraso real.</strong> Se elige a ojo y se descartan eventos válidos.</li>
+<li><strong>Descartar rezagados sin registrarlos.</strong> Se pierden datos y nadie lo sabe.</li>
+<li><strong>Mostrar cifras sin marcar si son provisionales.</strong> Destruye la confianza en el panel.</li>
+<li><strong>Suponer entrega exactamente una vez de la infraestructura.</strong> El receptor debe ser idempotente.</li>
+<li><strong>Motor de streaming donde bastaba SQL.</strong> Muchas ventanas se resuelven con <code>OVER</code>.</li>
+<li><strong>Ventanas de sesión con tiempo de procesamiento.</strong> Agrupan por latencia de red, no por conducta.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La pregunta que ordena cualquier discusión sobre streaming es: <strong>¿cuánto se espera a un evento tardío y qué se hace con el que llega después?</strong> Sin esa respuesta escrita, cada componente del canal toma la suya y las cifras dejan de cuadrar.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Mide la distribución real del retraso de tus eventos, con percentiles.</li>
+<li>Elige la marca de agua justificándola con el p99 y define la política de rezagados.</li>
+<li>Implementa una ventana fija con la columna <code>estado</code> de provisional o cerrada.</li>
+<li>Calcula ventanas de sesión con funciones de ventana sobre datos históricos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da una pregunta de tu negocio que exija tiempo de evento y explica qué se rompería con tiempo de procesamiento.</li>
+<li>¿Qué compromiso codifica exactamente una marca de agua?</li>
+<li>Explica por qué la entrega exactamente una vez de extremo a extremo no es una propiedad de la red.</li>
+<li>Da un caso tuyo de «streaming» que en realidad se resuelva con SQL sobre una tabla con marca de tiempo.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Tyler Akidau, Slava Chernyak, Reuven Lax</strong> (2018). <a href="https://www.oreilly.com/library/view/streaming-systems/9781491983867/">Streaming Systems</a>. O'Reilly. ISBN 978-1-4919-8387-4.<br />
+  Tiempo de evento, ventanas, marcas de agua y la dualidad tabla-flujo.</li>
+<li><strong>Apache Software Foundation</strong> (2026). <a href="https://kafka.apache.org/documentation/">Apache Kafka Documentation</a>.<br />
+  Particiones, orden, retención y semántica de entrega.</li>
+<li><strong>Jay Kreps</strong> (2013). <a href="https://web.archive.org/web/2023/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying">The Log: What Every Software Engineer Should Know About Real-Time Data's Unifying Abstraction</a>. LinkedIn Engineering.<br />
+  El registro append-only como nexo entre replicación, integración y streaming. Se cita la copia archivada: LinkedIn retiro el original.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

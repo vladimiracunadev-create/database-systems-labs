@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Entorno reproducible y evidencia comprobable. Parte 00: Fundamentos, sistemas y método.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>004 — Entorno reproducible y evidencia comprobable · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 00 · Fundamentos, sistemas y método</span>
+</nav>
+<main class="content">
+<h1 id="004--entorno-reproducible-y-evidencia-comprobable">004 — Entorno reproducible y evidencia comprobable</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="003.html">← Anterior</a> · <a href="005.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>00 — Fundamentos, sistemas y método</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>sqlite</code>, <code>postgresql</code>, <code>mongodb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>reproducibilidad</code> · <code>semilla</code> · <code>contenedor</code> · <code>invariante</code> · <code>evidencia</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Montar un entorno donde toda afirmación sobre datos pueda comprobarse por otra persona. En bases de datos, «a mí me funciona» es una afirmación especialmente débil: el resultado depende de la versión, la configuración, los datos previos y el estado del caché.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Ejecutar el laboratorio base sin instalar ningún servidor.</li>
+<li>Levantar motores por perfiles con Docker Compose, sin arrancarlos todos.</li>
+<li>Distinguir evidencia de captura de pantalla, y saber qué debe acompañar a un resultado.</li>
+<li>Escribir una comprobación de invariante que falle cuando el dato está mal.</li>
+<li>Explicar por qué una medición sin condiciones declaradas no sirve para decidir.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-núcleo-sin-dependencias">El núcleo sin dependencias</h3>
+<p>SQLite permite estudiar un gestor completo sin instalar nada: es una biblioteca que se enlaza al proceso, con soporte para transacciones, índices, planes de ejecución y registro anticipado. La biblioteca estándar de Python la expone en <code>sqlite3</code>, conforme a la especificación PEP 249.</p>
+<p>Eso da una propiedad valiosa para un programa formativo: <strong>el primer laboratorio no puede fallar por instalación</strong>. Si <code>python labs/01-sql-foundations/run_lab.py</code> no corre, el problema está en el código, no en el entorno.</p>
+<h3 id="los-motores-con-contenedores">Los motores con contenedores</h3>
+<p>El resto de los motores llega por Docker Compose, organizado en <strong>perfiles</strong> para no levantar diez servicios a la vez:</p>
+<pre><code class="language-bash">docker compose --profile relational up -d
+docker compose --profile document   up -d
+docker compose --profile cache      up -d
+</code></pre>
+<p>Dos reglas del repositorio, ambas de seguridad:</p>
+<ul>
+<li>Las credenciales del <code>compose</code> son locales y están escritas a la vista. Nunca se copian a otro entorno.</li>
+<li>Los servicios no publican puertos hacia fuera de la máquina más allá de lo necesario para el laboratorio.</li>
+</ul>
+<h3 id="qué-es-evidencia">Qué es evidencia</h3>
+<p>El libro de SRE de Google formula el criterio que aquí adoptamos: una afirmación operativa vale lo que vale su medición, y una medición vale lo que valen sus condiciones declaradas. Aplicado a este programa, una evidencia válida incluye:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Elemento</th>
+<th>Por qué sin él la evidencia se cae</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comando exacto</td>
+<td>Sin él, nadie puede repetir</td>
+</tr>
+<tr>
+<td>Versión del motor</td>
+<td>El plan y la semántica cambian entre versiones</td>
+</tr>
+<tr>
+<td>Datos de entrada (o su semilla)</td>
+<td>Un resultado sobre otros datos no es el mismo resultado</td>
+</tr>
+<tr>
+<td>Salida literal, no resumida</td>
+<td>El resumen ya es una interpretación</td>
+</tr>
+<tr>
+<td>Estado previo (caché frío o caliente)</td>
+<td>Cambia el tiempo en órdenes de magnitud</td>
+</tr>
+<tr>
+<td>Qué <strong>no</strong> demuestra</td>
+<td>Evita extrapolar una demo a producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>Una captura de pantalla sin comando no es evidencia: no se puede repetir.</p>
+<pre><code class="language-mermaid">flowchart LR
+    H[&quot;Hipótesis&lt;br/&gt;«el índice mejora esta consulta»&quot;] --&gt; C[&quot;Condiciones declaradas&lt;br/&gt;versión, datos, caché&quot;]
+    C --&gt; E[&quot;Ejecución&lt;br/&gt;comando reproducible&quot;]
+    E --&gt; S[&quot;Salida literal&quot;]
+    S --&gt; I{&quot;¿La salida&lt;br/&gt;respalda la hipótesis?&quot;}
+    I -- &quot;Sí&quot; --&gt; A[&quot;Conclusión + límites&quot;]
+    I -- &quot;No&quot; --&gt; R[&quot;Refutación:&lt;br/&gt;también es resultado&quot;]
+    R --&gt; H
+</code></pre>
+<h3 id="invariantes-la-prueba-que-sí-falla">Invariantes: la prueba que sí falla</h3>
+<p>Una prueba que siempre pasa no informa. En datos, la forma útil es la <strong>invariante</strong>: una propiedad que debe cumplirse siempre y que se comprueba con una consulta que devuelve cero filas cuando todo está bien.</p>
+<pre><code class="language-sql">-- Invariante: ninguna inscripción apunta a un curso inexistente.
+SELECT e.id
+FROM enrollments e
+LEFT JOIN courses c ON c.id = e.course_id
+WHERE c.id IS NULL;
+</code></pre>
+<p>Si esa consulta devuelve filas, el dato está mal y el nombre de la invariante dice exactamente qué se rompió.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Comprobemos que el dominio canónico del repositorio cumple lo que promete.</p>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>El laboratorio carga el esquema y los datos en SQLite <strong>en memoria</strong>, ejecuta consultas y comprueba invariantes. Tres decisiones de diseño, con su razón:</p>
+<ol>
+<li><strong>En memoria.</strong> No deja archivos entre ejecuciones, así que la ejecución número 20 es idéntica a la número 1. Un laboratorio que acumula estado produce resultados que dependen del historial de quien lo ejecuta.</li>
+<li><strong>Datos fijos, no aleatorios.</strong> Con 4 estudiantes conocidos, el resultado esperado se puede escribir a mano y contrastar. Los datos aleatorios sin semilla producen fallos irreproducibles.</li>
+<li><strong>Comprobación de claves foráneas.</strong> <code>PRAGMA foreign_key_check</code> detecta referencias colgantes que un <code>SELECT</code> normal no muestra.</li>
+</ol>
+<p>Ejemplo de traza de evidencia bien formada:</p>
+<pre><code class="language-text">Comando   : python labs/01-sql-foundations/run_lab.py
+Python    : 3.12.9
+SQLite    : 3.45.1   (SELECT sqlite_version();)
+Datos     : reference-data/school/seed.sqlite.sql (4 estudiantes, 3 cursos)
+Estado    : base en memoria, recién creada
+Salida    : LAB_OK  filas=4  invariantes=3/3
+No demuestra: nada sobre concurrencia ni sobre volumen; el conjunto cabe en una página
+</code></pre>
+<p>La última línea es la que distingue un informe honesto de uno vendedor. El laboratorio demuestra que las consultas son correctas sobre datos pequeños; <strong>no</strong> demuestra nada sobre rendimiento, concurrencia ni durabilidad.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Enfoque</th>
+<th>Reproducible</th>
+<th>Coste de arranque</th>
+<th>Qué permite estudiar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite en memoria</td>
+<td>Total</td>
+<td>Ninguno</td>
+<td>SQL, planes, transacciones de una sesión</td>
+</tr>
+<tr>
+<td>SQLite en archivo</td>
+<td>Alto</td>
+<td>Ninguno</td>
+<td>Además: WAL, durabilidad, recuperación</td>
+</tr>
+<tr>
+<td>Contenedor con perfil</td>
+<td>Alto si se fija la etiqueta</td>
+<td>Minutos</td>
+<td>Concurrencia real, réplica, dialectos</td>
+</tr>
+<tr>
+<td>Servidor instalado a mano</td>
+<td>Bajo</td>
+<td>Alto</td>
+<td>Nada que no permitan los anteriores</td>
+</tr>
+<tr>
+<td>Servicio gestionado en la nube</td>
+<td>Bajo, y con costo</td>
+<td>Variable</td>
+<td>Operación real; mal sitio para aprender</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Usar la etiqueta <code>latest</code> en el <code>compose</code>.</strong> El mismo archivo produce entornos distintos según el día. Fija la versión.</li>
+<li><strong>Medir sobre una base con caché caliente y llamarlo mejora.</strong> Declara siempre si la ejecución fue en frío.</li>
+<li><strong>Datos aleatorios sin semilla.</strong> El fallo aparece una vez y no vuelve; es el peor tipo de fallo.</li>
+<li><strong>Confundir «la prueba pasa» con «el sistema es correcto».</strong> Una prueba que nunca ha fallado puede estar comprobando la nada. Rómpela a propósito una vez.</li>
+<li><strong>Copiar las credenciales del laboratorio a otro entorno.</strong> Son públicas: están en un archivo versionado.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>El mismo criterio de evidencia sirve en un incidente real: quien afirma «la consulta empeoró tras el despliegue» necesita el plan antes, el plan después, la versión y el volumen. Sin eso, la conversación se decide por antigüedad en la empresa y no por datos.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Añade al laboratorio una invariante nueva que hoy no se comprueba y que sea cierta en el dominio.</li>
+<li>Rómpela a propósito modificando los datos y captura la salida que la delata.</li>
+<li>Restaura y vuelve a ejecutar, mostrando que la salida vuelve al estado correcto.</li>
+<li>Escribe el informe de evidencia con las seis filas de la tabla de la sección de fundamentos.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué una base en memoria produce ejecuciones más comparables que una en archivo?</li>
+<li>Un compañero muestra un tiempo de 3 ms como prueba de que su índice funciona. ¿Qué tres datos le pedirías antes de aceptarlo?</li>
+<li>Escribe una invariante del dominio que no pueda expresarse como clave foránea, y la consulta que la comprueba.</li>
+<li>¿Qué afirmación <em>no</em> puede sostenerse con el laboratorio base, por bien que se ejecute?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
+  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
+<li><strong>Docker, Inc.</strong> (2026). <a href="https://docs.docker.com/compose/">Docker Compose Documentation</a>.<br />
+  Perfiles y comprobaciones de salud usados por los laboratorios con contenedores.</li>
+<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
+  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="003.html">← Anterior</a> · <a href="005.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

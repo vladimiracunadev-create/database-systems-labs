@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Columnas anchas: modelar desde la consulta. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>029 — Columnas anchas: modelar desde la consulta · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 06 · Grafos, columnas, tiempo y búsqueda</span>
+</nav>
+<main class="content">
+<h1 id="029--columnas-anchas-modelar-desde-la-consulta">029 — Columnas anchas: modelar desde la consulta</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>06 — Grafos, columnas, tiempo y búsqueda</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>cassandra</code>, <code>scylladb</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>clave de partición</code> · <code>clave de agrupamiento</code> · <code>desnormalización por consulta</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Modelar en un motor de columnas anchas, donde la regla se invierte: no se normaliza y luego se consulta, sino que se enumeran las consultas y se diseña una tabla por cada una.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Distinguir clave de partición de clave de agrupamiento y su efecto físico.</li>
+<li>Diseñar tablas a partir de las consultas, aceptando la duplicación.</li>
+<li>Reconocer las particiones calientes y las particiones sin límite.</li>
+<li>Explicar por qué CQL prohíbe deliberadamente operaciones que SQL permite.</li>
+<li>Elegir el nivel de consistencia y calcular cuándo hay lectura consistente.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-clave-primaria-tiene-dos-partes">La clave primaria tiene dos partes</h3>
+<pre><code class="language-sql">PRIMARY KEY ( (course_id, periodo), registrada_en, student_id )
+--             ^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+--             clave de partición    claves de agrupamiento
+</code></pre>
+<ul>
+<li><strong>Clave de partición:</strong> decide <strong>en qué nodo</strong> viven los datos, por hash. Todas las filas con la misma clave de partición están juntas en el mismo nodo.</li>
+<li><strong>Claves de agrupamiento:</strong> deciden <strong>el orden dentro</strong> de la partición. Los datos se guardan físicamente ordenados por ellas.</li>
+</ul>
+<p>Consecuencias que rigen todo lo demás:</p>
+<ol>
+<li>Toda consulta eficiente <strong>debe</strong> especificar la clave de partición completa. Sin ella, hay que preguntar a todos los nodos.</li>
+<li>Solo se puede filtrar por rango en las claves de agrupamiento y <strong>en orden</strong>, sin saltarse ninguna.</li>
+<li><code>ORDER BY</code> solo funciona sobre las claves de agrupamiento y en el sentido declarado.</li>
+</ol>
+<h3 id="lo-que-cql-prohíbe-y-por-qué">Lo que CQL prohíbe, y por qué</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operación SQL</th>
+<th>En CQL</th>
+<th>Motivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JOIN</code></td>
+<td>No existe</td>
+<td>Exigiría coordinación entre nodos</td>
+</tr>
+<tr>
+<td><code>GROUP BY</code> arbitrario</td>
+<td>Muy limitado</td>
+<td>Ídem</td>
+</tr>
+<tr>
+<td>Filtrar por columna no clave</td>
+<td>Requiere <code>ALLOW FILTERING</code></td>
+<td>Sería un barrido del clúster</td>
+</tr>
+<tr>
+<td>Subconsultas</td>
+<td>No existen</td>
+<td>Ídem</td>
+</tr>
+<tr>
+<td><code>OR</code> en el <code>WHERE</code></td>
+<td>No</td>
+<td>Rompería la localización por partición</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ALLOW FILTERING</code> no es una opción avanzada: es una advertencia. Su presencia en código de producción indica casi siempre que el modelo no corresponde a la consulta.</p>
+<p>Las prohibiciones son <strong>de diseño</strong>. Un motor que permitiera reuniones distribuidas ofrecería consultas cuyo costo crece con el tamaño del clúster, y eso es exactamente lo que Cassandra evita para garantizar latencia predecible.</p>
+<h3 id="modelado-dirigido-por-la-consulta">Modelado dirigido por la consulta</h3>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Enumerar TODAS las consultas&quot;] --&gt; P[&quot;Por cada una: ¿qué se conoce&lt;br/&gt;en el momento de preguntar?&quot;]
+    P --&gt; K[&quot;Eso es la clave de partición&quot;]
+    K --&gt; O[&quot;¿En qué orden se quiere el resultado?&quot;]
+    O --&gt; C[&quot;Eso son las claves de agrupamiento&quot;]
+    C --&gt; T[&quot;Una tabla por consulta&quot;]
+    T --&gt; W[&quot;Escribir en todas ellas&lt;br/&gt;en cada operación&quot;]
+    W --&gt; V{&quot;¿Alguna partición&lt;br/&gt;crece sin límite?&quot;}
+    V -- &quot;Sí&quot; --&gt; B[&quot;Añadir un cubo temporal&lt;br/&gt;a la clave de partición&quot;]
+    V -- &quot;No&quot; --&gt; OK[&quot;Modelo válido&quot;]
+</code></pre>
+<h3 id="particiones-los-dos-fallos">Particiones: los dos fallos</h3>
+<p><strong>Partición caliente:</strong> una clave concreta recibe una fracción desproporcionada del tráfico. Si <code>course_id</code> es la clave y un curso tiene el 40 % de las inscripciones, un nodo hace el 40 % del trabajo mientras los demás están ociosos.</p>
+<p><strong>Partición sin límite:</strong> una partición que crece indefinidamente. Cassandra recomienda mantenerlas por debajo de ~100 MB y ~100 000 filas. Una partición por <code>sensor_id</code> que recibe una medición por segundo supera esa cota en poco más de un día.</p>
+<p>La solución para ambos es la misma: <strong>añadir un cubo a la clave de partición</strong>.</p>
+<pre><code class="language-sql">PRIMARY KEY ( (sensor_id, dia), medido_en )
+</code></pre>
+<p>Ahora cada partición cubre un día. El costo: una consulta de siete días debe preguntar por siete particiones, lo que el cliente resuelve con siete consultas en paralelo. Elegir el tamaño del cubo es un cálculo, no una intuición:</p>
+<pre><code class="language-text">mediciones por día = 86 400
+tamaño de fila     ≈ 100 bytes
+partición diaria   ≈ 8,6 MB          ← correcto
+partición mensual  ≈ 260 MB          ← demasiado grande
+</code></pre>
+<h3 id="consistencia-ajustable">Consistencia ajustable</h3>
+<p>Cada operación elige cuántas réplicas deben responder:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ONE</code></td>
+<td>Una réplica</td>
+</tr>
+<tr>
+<td><code>QUORUM</code></td>
+<td>⌊RF/2⌋ + 1</td>
+</tr>
+<tr>
+<td><code>LOCAL_QUORUM</code></td>
+<td>Quórum dentro del centro de datos local</td>
+</tr>
+<tr>
+<td><code>ALL</code></td>
+<td>Todas</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Regla de lectura consistente:</strong> <code>R + W &gt; RF</code>. Con factor de replicación 3:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>W</th>
+<th>R</th>
+<th>¿Lectura consistente?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ONE</code> (1)</td>
+<td><code>ONE</code> (1)</td>
+<td>No: 1+1 = 2 ≤ 3</td>
+</tr>
+<tr>
+<td><code>QUORUM</code> (2)</td>
+<td><code>QUORUM</code> (2)</td>
+<td><strong>Sí</strong>: 2+2 = 4 &gt; 3</td>
+</tr>
+<tr>
+<td><code>ALL</code> (3)</td>
+<td><code>ONE</code> (1)</td>
+<td>Sí, pero sin tolerancia a fallos en escritura</td>
+</tr>
+<tr>
+<td><code>ONE</code> (1)</td>
+<td><code>ALL</code> (3)</td>
+<td>Sí, pero sin tolerancia a fallos en lectura</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>QUORUM</code>/<code>QUORUM</code> es el punto de equilibrio habitual: tolera la caída de una réplica en ambos sentidos. Es el mismo cálculo de quórums de Dynamo, que se retoma en la clase 043.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Consultas del dominio:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Consulta</th>
+<th>Se conoce</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td>Inscripciones de un curso, las más recientes primero</td>
+<td><code>course_id</code>, <code>periodo</code></td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>Cursos de un estudiante</td>
+<td><code>student_id</code></td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>Una inscripción concreta</td>
+<td>ambos</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tres tablas, una por consulta:</strong></p>
+<pre><code class="language-sql">CREATE TABLE inscripciones_por_curso (
+  course_id     text, periodo text,
+  registrada_en timestamp, student_id int,
+  student_nombre text, nota decimal, estado text,
+  PRIMARY KEY ((course_id, periodo), registrada_en, student_id)
+) WITH CLUSTERING ORDER BY (registrada_en DESC, student_id ASC);
+
+CREATE TABLE cursos_por_estudiante (
+  student_id int, periodo text,
+  course_id text, course_nombre text, nota decimal, estado text,
+  PRIMARY KEY ((student_id), periodo, course_id)
+) WITH CLUSTERING ORDER BY (periodo DESC, course_id ASC);
+
+CREATE TABLE inscripcion (
+  student_id int, course_id text,
+  periodo text, nota decimal, estado text, registrada_en timestamp,
+  PRIMARY KEY ((student_id, course_id))
+);
+</code></pre>
+<p>Los mismos datos, tres veces. <strong>Eso es correcto en este modelo</strong>: el almacenamiento es barato y la coordinación distribuida es cara.</p>
+<p><strong>Escritura: un lote lógico.</strong></p>
+<pre><code class="language-sql">BEGIN BATCH
+  INSERT INTO inscripciones_por_curso (course_id, periodo, registrada_en, student_id,
+                                       student_nombre, estado)
+         VALUES ('bd','2026-1', toTimestamp(now()), 11, 'Ana Pérez', 'activa');
+  INSERT INTO cursos_por_estudiante (student_id, periodo, course_id, course_nombre, estado)
+         VALUES (11, '2026-1', 'bd', 'Bases de datos', 'activa');
+  INSERT INTO inscripcion (student_id, course_id, periodo, estado, registrada_en)
+         VALUES (11, 'bd', '2026-1', 'activa', toTimestamp(now()));
+APPLY BATCH;
+</code></pre>
+<p>Advertencia importante: un <code>BATCH</code> que abarca varias particiones <strong>no</strong> es una transacción. Garantiza que todas las sentencias se aplicarán <em>eventualmente</em>, mediante un registro de lote, y tiene un costo de coordinación notable. Los lotes son adecuados para mantener sincronizadas vistas duplicadas de una misma escritura lógica, no para lógica transaccional.</p>
+<p><strong>Comprobación de la partición sin límite.</strong> <code>inscripciones_por_curso</code> tiene una partición por <code>(course_id, periodo)</code>. Un curso masivo con 50 000 inscritos y filas de ~150 bytes da 7,5 MB: dentro de lo aceptable. Si el dominio admitiera cursos de un millón, habría que cubetear por mes de inscripción.</p>
+<p><strong>Q2 con <code>ALLOW FILTERING</code></strong>, el antipatrón:</p>
+<pre><code class="language-sql">SELECT * FROM inscripciones_por_curso WHERE student_id = 11 ALLOW FILTERING;
+</code></pre>
+<p>Funciona y pregunta a <strong>todos</strong> los nodos, leyendo todas las particiones. Con 300 cursos, la consulta lee 300 particiones para devolver 8 filas. Por eso existe <code>cursos_por_estudiante</code>.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Relacional</th>
+<th>Columnas anchas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Punto de partida</td>
+<td>El esquema normalizado</td>
+<td>Las consultas</td>
+</tr>
+<tr>
+<td>Duplicación</td>
+<td>Se evita</td>
+<td>Se busca</td>
+</tr>
+<tr>
+<td>Reuniones</td>
+<td>En el motor</td>
+<td>En la escritura</td>
+</tr>
+<tr>
+<td>Consultas no previstas</td>
+<td>Se escriben y funcionan</td>
+<td>Exigen tabla nueva y relleno</td>
+</tr>
+<tr>
+<td>Coste de escritura</td>
+<td>Uno</td>
+<td>Uno por vista</td>
+</tr>
+<tr>
+<td>Escalado horizontal de escritura</td>
+<td>Limitado</td>
+<td>Lineal</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong><code>ALLOW FILTERING</code> en producción.</strong> Señal de modelo ausente.</li>
+<li><strong>Particiones sin cota.</strong> Degradan la latencia progresivamente hasta el fallo.</li>
+<li><strong>Confundir <code>BATCH</code> con transacción.</strong> No hay atomicidad entre particiones.</li>
+<li><strong>Clave de partición de baja cardinalidad.</strong> Concentra los datos en pocos nodos.</li>
+<li><strong>Leer con <code>ONE</code> tras escribir con <code>ONE</code> y esperar consistencia.</strong> <code>R + W ≤ RF</code>.</li>
+<li><strong>Índices secundarios de Cassandra por costumbre.</strong> Consultan todos los nodos; en general se prefiere una tabla nueva.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Una consulta no prevista en un modelo de columnas anchas no es un <code>SELECT</code> nuevo: es una tabla nueva más el relleno histórico de todos los datos existentes. Enumerar bien las consultas al principio no es burocracia, es la única forma barata de hacerlo.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Enumera las consultas de tu dominio con lo que se conoce en el momento de preguntar.</li>
+<li>Diseña una tabla por consulta con sus claves de partición y agrupamiento.</li>
+<li>Calcula el tamaño máximo de la partición más grande y decide el cubo si hace falta.</li>
+<li>Elige <code>R</code> y <code>W</code> para dos operaciones distintas y justifica con <code>R + W &gt; RF</code>.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué CQL prohíbe las reuniones en lugar de permitirlas y avisar de su costo?</li>
+<li>Calcula el tamaño de partición de una serie tuya y elige el cubo temporal.</li>
+<li>Con RF = 5, ¿qué combinaciones de <code>R</code> y <code>W</code> dan lectura consistente?</li>
+<li>Da una consulta nueva sobre tu modelo y describe el trabajo completo de añadirla.</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/05-nosql-workloads/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Fay Chang, Jeffrey Dean, Sanjay Ghemawat</strong> (2006). <a href="https://research.google/pubs/bigtable-a-distributed-storage-system-for-structured-data/">Bigtable: A Distributed Storage System for Structured Data</a>. USENIX OSDI.<br />
+  Origen del modelo de familias de columnas que adoptaron HBase y Cassandra.</li>
+<li><strong>Jeff Carpenter, Eben Hewitt</strong> (2020). <a href="https://www.oreilly.com/library/view/cassandra-the-definitive/9781098115159/">Cassandra: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-0981-1516-3.<br />
+  Modelado dirigido por consultas en un motor de columnas anchas.</li>
+<li><strong>Apache Software Foundation</strong> (2026). <a href="https://cassandra.apache.org/doc/latest/">Apache Cassandra Documentation</a>.<br />
+  CQL, claves de partición y niveles de consistencia ajustables.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

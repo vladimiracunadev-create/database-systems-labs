@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="LSM-Tree, compactación y amplificación de escritura. Parte 08: Almacenamiento, índices y planes.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>040 — LSM-Tree, compactación y amplificación de escritura · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 08 · Almacenamiento, índices y planes</span>
+</nav>
+<main class="content">
+<h1 id="040--lsm-tree-compactación-y-amplificación-de-escritura">040 — LSM-Tree, compactación y amplificación de escritura</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>08 — Almacenamiento, índices y planes</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Avanzado</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>cassandra</code>, <code>scylladb</code>, <code>redis</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>memtable</code> · <code>SSTable</code> · <code>compactación</code> · <code>amplificación de escritura</code> · <code>filtro de Bloom</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Entender la otra gran familia de estructuras de almacenamiento. El LSM-Tree sostiene Cassandra, RocksDB, ScyllaDB y LevelDB, y su compromiso es el inverso al del B-Tree.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Describir el camino de una escritura y de una lectura en un LSM.</li>
+<li>Definir y calcular las tres amplificaciones: escritura, lectura y espacio.</li>
+<li>Explicar el papel del filtro de Bloom y calcular su tasa de falsos positivos.</li>
+<li>Comparar compactación por niveles y por tamaños.</li>
+<li>Elegir entre B-Tree y LSM según la carga.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-camino-de-la-escritura">El camino de la escritura</h3>
+<pre><code class="language-text">1. Registro de confirmación (append secuencial, para durabilidad)
+2. Memtable: estructura ordenada en memoria
+3. Cuando la memtable se llena → se vuelca como SSTable inmutable, ordenada
+4. Las SSTables se fusionan periódicamente (compactación)
+</code></pre>
+<p>Todo lo que toca el disco es <strong>secuencial</strong>. No hay escritura aleatoria en el camino crítico, y ahí está la ventaja: una escritura secuencial es órdenes de magnitud más barata que una aleatoria.</p>
+<p>Comparación con el B-Tree, que debe localizar la página correcta, modificarla en su sitio y posiblemente dividirla: escritura <strong>aleatoria</strong>, más el registro.</p>
+<h3 id="el-camino-de-la-lectura">El camino de la lectura</h3>
+<pre><code class="language-text">1. Buscar en la memtable
+2. Si no está, buscar en cada SSTable, de la más nueva a la más antigua
+3. Filtro de Bloom por SSTable para descartar sin leer
+4. Índice disperso dentro de la SSTable elegida
+</code></pre>
+<p>Aquí está el precio: una clave inexistente puede exigir consultar <strong>todas</strong> las SSTables. El filtro de Bloom es lo que hace viable el modelo.</p>
+<h3 id="filtro-de-bloom">Filtro de Bloom</h3>
+<p>Estructura probabilística que responde «seguro que no está» o «puede que esté», nunca «seguro que sí».</p>
+<pre><code class="language-text">tasa de falsos positivos ≈ (1 - e^(-kn/m))^k
+
+con 10 bits por clave y k = 7 funciones hash:  ≈ 0,82 %
+</code></pre>
+<p>Con 10 SSTables y 0,82 % de falsos positivos, una lectura de clave inexistente lee de media 0,082 SSTables en vez de 10. Un 1,25 % de memoria adicional elimina el 99 % del trabajo inútil.</p>
+<h3 id="las-tres-amplificaciones">Las tres amplificaciones</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Amplificación</th>
+<th>Definición</th>
+<th>B-Tree</th>
+<th>LSM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Escritura</strong></td>
+<td>Bytes escritos al disco / bytes lógicos</td>
+<td>~2–3×</td>
+<td>10–30× (por niveles)</td>
+</tr>
+<tr>
+<td><strong>Lectura</strong></td>
+<td>Páginas leídas / mínimo necesario</td>
+<td>~1×</td>
+<td>1–N según SSTables</td>
+</tr>
+<tr>
+<td><strong>Espacio</strong></td>
+<td>Espacio ocupado / datos vivos</td>
+<td>1,3–2× (fragmentación)</td>
+<td>1,1× (niveles) a 2× (tamaños)</td>
+</tr>
+</tbody>
+</table></div>
+<p>El dato contraintuitivo: <strong>el LSM amplifica más la escritura</strong>, porque cada dato se reescribe en cada compactación que lo mueve de nivel. Su ventaja no es escribir menos bytes: es escribirlos <strong>secuencialmente</strong>, lo que en la práctica rinde mucho más.</p>
+<h3 id="estrategias-de-compactación">Estrategias de compactación</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Estrategia</th>
+<th>Amplificación de escritura</th>
+<th>De lectura</th>
+<th>De espacio</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Por niveles</strong></td>
+<td>Alta (~10–30×)</td>
+<td>Baja (~1 SSTable por nivel)</td>
+<td>Baja (~1,1×)</td>
+<td>Predomina la lectura</td>
+</tr>
+<tr>
+<td><strong>Por tamaños</strong></td>
+<td>Baja (~4–10×)</td>
+<td>Alta (varias SSTables)</td>
+<td>Alta (~2×)</td>
+<td>Predomina la escritura</td>
+</tr>
+<tr>
+<td><strong>Temporal</strong></td>
+<td>Muy baja</td>
+<td>Baja con filtro temporal</td>
+<td>Baja</td>
+<td>Series temporales con TTL</td>
+</tr>
+</tbody>
+</table></div>
+<p>La estrategia temporal es la correcta para datos con expiración: las SSTables agrupan por ventana temporal y expirar es eliminar archivos enteros, sin compactar nada.</p>
+<h3 id="lápidas">Lápidas</h3>
+<p>Borrar en un LSM no borra: escribe una <strong>lápida</strong> (marca de borrado). El dato desaparece de verdad cuando una compactación fusiona la lápida con el valor original.</p>
+<p>Consecuencia práctica y frecuente: una tabla de la que se borra mucho puede <strong>crecer</strong> tras los borrados, y las lecturas se vuelven más lentas porque hay que leer y descartar lápidas. En Cassandra, una consulta de rango que atraviesa miles de lápidas es una causa habitual de tiempos agotados.</p>
+<pre><code class="language-mermaid">flowchart TD
+    W[&quot;Escritura&quot;] --&gt; CL[&quot;Registro de confirmación&lt;br/&gt;(secuencial)&quot;]
+    W --&gt; MT[&quot;Memtable&lt;br/&gt;(memoria, ordenada)&quot;]
+    MT --&gt;|&quot;se llena&quot;| L0[&quot;SSTable nivel 0&quot;]
+    L0 --&gt;|&quot;compactación&quot;| L1[&quot;Nivel 1&quot;]
+    L1 --&gt;|&quot;compactación&quot;| L2[&quot;Nivel 2&quot;]
+    R[&quot;Lectura&quot;] --&gt; MT
+    R --&gt; BF{&quot;Filtro de Bloom&lt;br/&gt;por SSTable&quot;}
+    BF -- &quot;seguro que no&quot; --&gt; SK[&quot;Saltar&quot;]
+    BF -- &quot;puede que sí&quot; --&gt; IX[&quot;Índice disperso&lt;br/&gt;→ leer bloque&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Carga: 50 000 escrituras/s de eventos, lecturas por clave puntual y consultas de rango por tiempo.</p>
+<p><strong>Con B-Tree</strong> (PostgreSQL, tabla con índice sobre <code>(sensor_id, medido_en)</code>):</p>
+<pre><code class="language-text">Por cada inserción:
+  - registro WAL:                     secuencial
+  - página de datos:                  aleatoria (o al final si hay correlación)
+  - página de hoja del índice:        ALEATORIA
+  - división de página ocasional:     escrituras extra
+Amplificación ≈ 2-3×, pero con componente ALEATORIO dominante
+</code></pre>
+<p>Con 50 000 inserciones/s y claves dispersas, las hojas del índice se tocan en posiciones aleatorias: el cuello de botella son las IOPS aleatorias.</p>
+<p><strong>Con LSM</strong> (RocksDB o Cassandra):</p>
+<pre><code class="language-text">Por cada inserción:
+  - registro de confirmación:         secuencial
+  - memtable:                         memoria
+Compactación en segundo plano:        SECUENCIAL, fuera del camino crítico
+Amplificación ≈ 15×, todo secuencial
+</code></pre>
+<p>Escribe <strong>cinco veces más bytes</strong> y aun así sostiene mucho más caudal, porque la escritura secuencial en un SSD rinde varios GB/s frente a las decenas de miles de IOPS aleatorias.</p>
+<p><strong>El precio, en la lectura de una clave inexistente:</strong></p>
+<pre><code class="language-text">niveles: L0 (4 SSTables) + L1 (10) + L2 (100) = 114 SSTables
+sin filtro de Bloom: 114 comprobaciones, muchas con lectura de disco
+con filtro (0,82 %):  114 · 0,0082 ≈ 0,93 lecturas de media
+</code></pre>
+<p><strong>Cálculo de espacio con lápidas.</strong> 10 millones de filas de 100 B, se borra el 30 %:</p>
+<pre><code class="language-text">datos vivos                        700 MB
+lápidas (30 %, ~50 B cada una)     150 MB
+valores aún no compactados         300 MB
+total antes de compactar         1 150 MB   ← 64 % más que los datos vivos
+tras compactación completa         700 MB
+</code></pre>
+<p>Por eso <code>gc_grace_seconds</code> en Cassandra —el plazo antes de eliminar lápidas— es un parámetro operativo delicado: bajarlo libera espacio antes, y arriesga que un nodo que estuvo caído resucite datos borrados.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>B-Tree</th>
+<th>LSM-Tree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Escritura aleatoria</td>
+<td>Cara</td>
+<td>Convertida en secuencial</td>
+</tr>
+<tr>
+<td>Lectura puntual</td>
+<td>Óptima (log N)</td>
+<td>Buena con filtro de Bloom</td>
+</tr>
+<tr>
+<td>Consulta de rango</td>
+<td>Excelente (hojas enlazadas)</td>
+<td>Buena, requiere fusionar SSTables</td>
+</tr>
+<tr>
+<td>Amplificación de escritura</td>
+<td>2–3×</td>
+<td>10–30×</td>
+</tr>
+<tr>
+<td>Espacio</td>
+<td>Fragmentación interna</td>
+<td>Lápidas y duplicados</td>
+</tr>
+<tr>
+<td>Latencia</td>
+<td>Predecible</td>
+<td>Picos durante la compactación</td>
+</tr>
+<tr>
+<td>Motores</td>
+<td>PostgreSQL, InnoDB, SQLite</td>
+<td>Cassandra, RocksDB, ScyllaDB, LevelDB</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Borrar masivamente en un LSM y esperar que libere espacio.</strong> Hasta la compactación, ocupa más.</li>
+<li><strong>Consultas de rango sobre zonas con muchas lápidas.</strong> Tiempos agotados difíciles de diagnosticar.</li>
+<li><strong>Estrategia de compactación por defecto para cualquier carga.</strong> Series temporales y cargas de lectura piden estrategias distintas.</li>
+<li><strong>Filtros de Bloom mal dimensionados.</strong> Pocos bits por clave disparan los falsos positivos.</li>
+<li><strong>Ignorar los picos de latencia por compactación.</strong> El percentil 99 es peor que la media.</li>
+<li><strong>Elegir LSM «porque escala».</strong> Si la carga es de lectura por rango, el B-Tree suele ganar.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Las incidencias de un LSM se ven como picos de latencia y de espacio, no como lentitud constante. Vigilar la deuda de compactación pendiente es la métrica que anticipa el problema, igual que la hinchazón lo es en un motor MVCC.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Calcula la amplificación de escritura de tu carga con compactación por niveles y por tamaños.</li>
+<li>Estima la tasa de falsos positivos de tu filtro de Bloom con la configuración actual.</li>
+<li>Reproduce el crecimiento de espacio tras un borrado masivo y mide antes y después de compactar.</li>
+<li>Argumenta con cifras si tu carga encaja mejor en B-Tree o en LSM.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué un LSM escribe más bytes y aun así sostiene más caudal de escritura?</li>
+<li>Calcula la tasa de falsos positivos con 8 bits por clave y 5 funciones hash.</li>
+<li>Explica por qué borrar puede aumentar el espacio ocupado y ralentizar las lecturas.</li>
+<li>¿Qué estrategia de compactación elegirías para datos con TTL de 30 días, y por qué?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Patrick O'Neil, Edward Cheng, Dieter Gawlick, Elizabeth O'Neil</strong> (1996). <a href="https://link.springer.com/article/10.1007/s002360050048">The Log-Structured Merge-Tree (LSM-Tree)</a>. Acta Informatica 33(4). DOI <a href="https://doi.org/10.1007/s002360050048">10.1007/s002360050048</a>.<br />
+  Estructura que sostiene RocksDB, Cassandra, ScyllaDB y LevelDB.</li>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>Burton H. Bloom</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362686.362692">Space/Time Trade-offs in Hash Coding with Allowable Errors</a>. Communications of the ACM 13(7). DOI <a href="https://doi.org/10.1145/362686.362692">10.1145/362686.362692</a>.<br />
+  Filtro de Bloom: clave para evitar lecturas de disco en motores LSM.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

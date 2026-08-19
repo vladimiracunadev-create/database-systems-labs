@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="PostgreSQL: tipos, extensiones y modelo de procesos. Parte 04: Motores relacionales y dialectos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>021 — PostgreSQL: tipos, extensiones y modelo de procesos · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 04 · Motores relacionales y dialectos</span>
+</nav>
+<main class="content">
+<h1 id="021--postgresql-tipos-extensiones-y-modelo-de-procesos">021 — PostgreSQL: tipos, extensiones y modelo de procesos</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>04 — Motores relacionales y dialectos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Intermedio</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>extensión</code> · <code>tipo compuesto</code> · <code>proceso por conexión</code> · <code>autovacuum</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Conocer PostgreSQL lo suficiente para usarlo bien y para saber qué de él <strong>no</strong> es transferible a otros motores. Es el motor de referencia del programa por su cobertura de la norma y su documentación.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Describir el modelo de proceso de PostgreSQL y su consecuencia sobre las conexiones.</li>
+<li>Explicar por qué existe <code>VACUUM</code> y qué ocurre si no se ejecuta.</li>
+<li>Elegir entre <code>json</code> y <code>jsonb</code> con criterio.</li>
+<li>Usar extensiones sin convertir el esquema en algo irreproducible.</li>
+<li>Dimensionar la memoria compartida frente a la de sesión.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="un-proceso-por-conexión">Un proceso por conexión</h3>
+<p>PostgreSQL arranca un proceso del sistema operativo por cada conexión. Ventaja: aislamiento fuerte, un fallo no derriba el servidor. Costo: cada conexión reserva memoria propia y su creación no es barata.</p>
+<p>De ahí la regla operativa más importante del motor: <strong>usar siempre un agrupador de conexiones</strong>. Sin él, 1 000 clientes web abren 1 000 procesos, y el servidor pasa más tiempo cambiando de contexto que trabajando.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Parámetro</th>
+<th>Ámbito</th>
+<th>Nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shared_buffers</code></td>
+<td>Compartido</td>
+<td>Caché de páginas. Típicamente 25 % de la RAM</td>
+</tr>
+<tr>
+<td><code>work_mem</code></td>
+<td><strong>Por operación</strong>, no por conexión</td>
+<td>Un plan con 3 ordenamientos puede usar 3 × <code>work_mem</code></td>
+</tr>
+<tr>
+<td><code>maintenance_work_mem</code></td>
+<td>Por operación de mantenimiento</td>
+<td>Afecta a <code>VACUUM</code> y a la creación de índices</td>
+</tr>
+<tr>
+<td><code>effective_cache_size</code></td>
+<td>Estimación para el planificador</td>
+<td>No reserva memoria: informa al optimizador</td>
+</tr>
+</tbody>
+</table></div>
+<p>El error de configuración más caro es tratar <code>work_mem</code> como si fuese por conexión. Con 200 conexiones y planes que usan tres ordenamientos, el consumo real es 600 × <code>work_mem</code>.</p>
+<h3 id="mvcc-y-vacuum">MVCC y <code>VACUUM</code></h3>
+<p>PostgreSQL implementa control de concurrencia multiversión (clase 035): un <code>UPDATE</code> <strong>no</strong> modifica la fila, escribe una versión nueva y marca la anterior como muerta. Un <code>DELETE</code> solo marca.</p>
+<p>Consecuencias que hay que aceptar:</p>
+<ul>
+<li>Las filas muertas ocupan espacio hasta que <code>VACUUM</code> las recupera.</li>
+<li>Una tabla con muchas actualizaciones <strong>se hincha</strong> si el autovacuum no va al ritmo.</li>
+<li>Los identificadores de transacción son finitos; sin vacuum, el motor llega a un punto en que se detiene para protegerse.</li>
+</ul>
+<pre><code class="language-sql">SELECT relname, n_live_tup, n_dead_tup,
+       round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 1) AS pct_muertas
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC LIMIT 10;
+</code></pre>
+<p>Rogov documenta el mecanismo completo. Lo relevante aquí: <code>VACUUM</code> no es «limpieza opcional», es parte del funcionamiento normal, y su ausencia se manifiesta como degradación progresiva.</p>
+<h3 id="tipos-que-evitan-tablas">Tipos que evitan tablas</h3>
+<p>PostgreSQL ofrece tipos que resuelven modelados que en otros motores exigen tablas adicionales:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Reemplaza a</th>
+<th>Cuidado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jsonb</code></td>
+<td>Tabla de atributos dinámicos</td>
+<td>Sin restricciones dentro; se indexa con GIN</td>
+</tr>
+<tr>
+<td><code>tstzrange</code></td>
+<td>Par de columnas desde/hasta</td>
+<td>Habilita <code>EXCLUDE</code> contra solapamientos</td>
+</tr>
+<tr>
+<td><code>text[]</code></td>
+<td>Tabla puente para etiquetas</td>
+<td>Rompe la 1FN; sin integridad referencial</td>
+</tr>
+<tr>
+<td><code>inet</code>, <code>cidr</code></td>
+<td>Texto con validación manual</td>
+<td>Valida y permite operadores de red</td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td><code>CHAR(36)</code></td>
+<td>16 bytes en vez de 36</td>
+</tr>
+<tr>
+<td><code>numeric</code></td>
+<td>Decimal exacto</td>
+<td>Más lento que <code>bigint</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>json</code> frente a <code>jsonb</code>:</strong> <code>json</code> guarda el texto tal cual (conserva orden de claves y espacios, no se indexa bien); <code>jsonb</code> guarda una representación binaria descompuesta (más rápida de consultar, indexable con GIN, no conserva el orden de claves ni los duplicados). Para casi todo uso, <code>jsonb</code>.</p>
+<p>La advertencia importante: <code>jsonb</code> <strong>no</strong> es una excusa para no modelar. Dentro de un <code>jsonb</code> no hay tipos, ni <code>NOT NULL</code>, ni claves foráneas. Es adecuado para datos genuinamente heterogéneos —una carga útil de un proveedor externo, atributos que varían por categoría—, no para las columnas del dominio.</p>
+<h3 id="extensiones">Extensiones</h3>
+<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS vector;      -- pgvector, parte 12
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Extensión</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pg_stat_statements</code></td>
+<td>Consultas más costosas acumuladas: la primera que instalar</td>
+</tr>
+<tr>
+<td><code>pg_trgm</code></td>
+<td>Búsqueda por similitud y <code>LIKE '%x%'</code> indexado</td>
+</tr>
+<tr>
+<td><code>postgis</code></td>
+<td>Datos geográficos</td>
+</tr>
+<tr>
+<td><code>pgvector</code></td>
+<td>Búsqueda vectorial dentro del mismo motor (clase 059)</td>
+</tr>
+<tr>
+<td><code>citext</code></td>
+<td>Texto insensible a mayúsculas sin depender de la colación</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla de reproducibilidad: cada <code>CREATE EXTENSION</code> debe estar en una migración versionada. Una extensión instalada a mano en producción convierte el esquema en algo que nadie puede recrear.</p>
+<pre><code class="language-mermaid">flowchart TD
+    C[&quot;Clientes&quot;] --&gt; POOL[&quot;Agrupador de conexiones&lt;br/&gt;(pgbouncer)&quot;]
+    POOL --&gt; PM[&quot;postmaster&quot;]
+    PM --&gt; B1[&quot;backend 1&quot;]
+    PM --&gt; B2[&quot;backend 2&quot;]
+    B1 --&gt; SB[&quot;shared_buffers&lt;br/&gt;(memoria compartida)&quot;]
+    B2 --&gt; SB
+    B1 --&gt; WM1[&quot;work_mem&lt;br/&gt;por operación&quot;]
+    SB --&gt; WAL[&quot;WAL&quot;]
+    SB --&gt; D[(&quot;Archivos de datos&quot;)]
+    AV[&quot;autovacuum&quot;] --&gt; D
+    WR[&quot;writer / checkpointer&quot;] --&gt; D
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Modelamos atributos que varían por tipo de curso: los presenciales tienen sala y aforo; los remotos, plataforma y enlace.</p>
+<p><strong>Opción A — columnas para todo:</strong> seis columnas nulas la mitad del tiempo, sin forma de exigir que las de presencial estén presentes justo cuando el curso es presencial.</p>
+<p><strong>Opción B — <code>jsonb</code> con validación explícita:</strong></p>
+<pre><code class="language-sql">CREATE TABLE courses (
+  id        INTEGER PRIMARY KEY,
+  nombre    TEXT NOT NULL,
+  modalidad TEXT NOT NULL CHECK (modalidad IN ('presencial','remoto')),
+  detalles  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT detalles_coherentes CHECK (
+    (modalidad = 'presencial' AND detalles ? 'sala'       AND detalles ? 'aforo') OR
+    (modalidad = 'remoto'     AND detalles ? 'plataforma' AND detalles ? 'enlace')
+  )
+);
+
+CREATE INDEX courses_detalles_gin ON courses USING gin (detalles);
+CREATE INDEX courses_sala ON courses ((detalles-&gt;&gt;'sala')) WHERE modalidad = 'presencial';
+</code></pre>
+<p>Lo que aporta cada pieza:</p>
+<ul>
+<li>El <code>CHECK</code> con el operador <code>?</code> («la clave existe») recupera parte de la integridad que <code>jsonb</code> no da por sí solo.</li>
+<li>El índice GIN permite <code>WHERE detalles @&gt; '{"sala":"B-201"}'</code> sin barrido.</li>
+<li>El índice de expresión <strong>parcial</strong> sirve la consulta más frecuente con una fracción del tamaño: solo indexa las filas presenciales.</li>
+</ul>
+<p><strong>Medición del índice parcial</strong> con 100 000 cursos, 30 % presenciales:</p>
+<pre><code class="language-text">Índice completo sobre (detalles-&gt;&gt;'sala')  ~ 100 000 entradas
+Índice parcial WHERE modalidad='presencial' ~ 30 000 entradas
+</code></pre>
+<p>Menos entradas significa menos páginas, más aciertos de caché y mantenimiento más barato en cada escritura de un curso remoto (que ya no toca ese índice).</p>
+<p><strong>Opción C — tablas por subtipo:</strong> dos tablas hijas con clave foránea al curso. Integridad total, sin <code>jsonb</code>, a cambio de una reunión y de DDL para cada modalidad nueva.</p>
+<p>La elección honesta: si las modalidades son dos y estables, C. Si el proveedor añade campos cada mes, B.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>PostgreSQL</th>
+<th>Equivalente portable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Atributos dinámicos</td>
+<td><code>jsonb</code> + GIN</td>
+<td>Tabla clave-valor</td>
+</tr>
+<tr>
+<td>Unicidad condicional</td>
+<td>Índice único parcial</td>
+<td>Columna generada con nulos</td>
+</tr>
+<tr>
+<td>Sin solapamiento de rangos</td>
+<td><code>EXCLUDE USING gist</code></td>
+<td>Comprobación en la aplicación</td>
+</tr>
+<tr>
+<td>Texto insensible a mayúsculas</td>
+<td><code>citext</code> o <code>lower()</code> indexado</td>
+<td>Normalizar al escribir</td>
+</tr>
+<tr>
+<td>Consultas más caras</td>
+<td><code>pg_stat_statements</code></td>
+<td>Registro de consultas lentas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Conexiones directas sin agrupador.</strong> Es la causa más común de caída bajo carga.</li>
+<li><strong><code>work_mem</code> alto con muchas conexiones.</strong> Multiplica por operación, no por sesión.</li>
+<li><strong>Desactivar el autovacuum «porque consume».</strong> Consume más lo que ocurre después.</li>
+<li><strong><code>jsonb</code> para el dominio.</strong> Se pierden tipos, restricciones y claves foráneas.</li>
+<li><strong>Extensiones instaladas a mano.</strong> El entorno deja de ser reproducible.</li>
+<li><strong>Índices sin usar.</strong> Cada uno se mantiene en cada escritura; revísalos con <code>pg_stat_user_indexes</code>.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los incidentes típicos de PostgreSQL son tres: agotamiento de conexiones, hinchazón por vacuum insuficiente y un plan que cambia tras una carga masiva sin <code>ANALYZE</code>. Los tres se previenen con configuración, no con hardware.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Levanta el perfil relacional del <code>docker-compose</code> y consulta <code>pg_stat_user_tables</code>.</li>
+<li>Provoca hinchazón con actualizaciones repetidas y mide <code>n_dead_tup</code> antes y después de <code>VACUUM</code>.</li>
+<li>Modela un atributo dinámico de tu dominio con <code>jsonb</code> y añade el <code>CHECK</code> que recupera la integridad.</li>
+<li>Crea el índice parcial equivalente y compara tamaño y plan con el índice completo.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué <code>work_mem</code> puede consumirse varias veces en una sola consulta?</li>
+<li>Explica qué ocurre en una tabla con muchas actualizaciones si el autovacuum no llega a tiempo.</li>
+<li>Da un caso de tu dominio donde <code>jsonb</code> sea correcto y otro donde sea una excusa para no modelar.</li>
+<li>¿Qué pierdes al migrar de PostgreSQL a un motor sin índices parciales, y cómo lo compensas?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/03-transactions/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

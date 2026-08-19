@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Arquitectura interna de un gestor, del cliente al disco. Parte 00: Fundamentos, sistemas y método.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>002 — Arquitectura interna de un gestor, del cliente al disco · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 00 · Fundamentos, sistemas y método</span>
+</nav>
+<main class="content">
+<h1 id="002--arquitectura-interna-de-un-gestor-del-cliente-al-disco">002 — Arquitectura interna de un gestor, del cliente al disco</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="001.html">← Anterior</a> · <a href="003.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>00 — Fundamentos, sistemas y método</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>postgresql</code>, <code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>analizador</code> · <code>planificador</code> · <code>ejecutor</code> · <code>gestor de almacenamiento</code> · <code>buffer pool</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Abrir la caja negra. Saber qué le ocurre a una consulta desde que sale del cliente hasta que vuelve con filas permite razonar sobre rendimiento, bloqueos y fallos en lugar de adivinar.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Nombrar los cinco componentes de un SGBD relacional y qué hace cada uno.</li>
+<li>Seguir el recorrido de una consulta y señalar en qué etapa se decide el rendimiento.</li>
+<li>Explicar por qué el mismo SQL puede tardar 2 ms o 2 s sin que cambie el dato.</li>
+<li>Distinguir el modelo de proceso por conexión del de hilos, y su consecuencia operativa.</li>
+<li>Localizar cada afirmación en la fuente que la respalda.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-cinco-componentes">Los cinco componentes</h3>
+<p>Hellerstein, Stonebraker y Hamilton organizan cualquier SGBD relacional en cinco piezas. La lista es estable desde System R y sigue describiendo PostgreSQL, MySQL u Oracle:</p>
+<ol>
+<li><strong>Gestor de procesos y conexiones.</strong> Acepta clientes, autentica y asigna a cada sesión un contexto de ejecución.</li>
+<li><strong>Procesador de consultas.</strong> Analiza, reescribe, planifica y ejecuta. Aquí vive el optimizador.</li>
+<li><strong>Gestor de transacciones.</strong> Bloqueos, registro de escritura anticipada, control de versiones y recuperación.</li>
+<li><strong>Gestor de almacenamiento.</strong> Páginas, buffer, organización de archivos e índices.</li>
+<li><strong>Utilidades compartidas.</strong> Catálogo, memoria, replicación, respaldo, estadísticas.</li>
+</ol>
+<h3 id="el-recorrido-de-una-consulta">El recorrido de una consulta</h3>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;Cliente&quot;] --&gt; P[&quot;1. Analizador&lt;br/&gt;sintaxis y nombres&quot;]
+    P --&gt; R[&quot;2. Reescritor&lt;br/&gt;vistas, reglas&quot;]
+    R --&gt; O[&quot;3. Planificador&lt;br/&gt;optimizador por costos&quot;]
+    O --&gt; E[&quot;4. Ejecutor&lt;br/&gt;árbol de operadores&quot;]
+    E --&gt; B[&quot;5. Buffer&lt;br/&gt;páginas en memoria&quot;]
+    B --&gt; D[(&quot;Disco&quot;)]
+    E --&gt; T[&quot;Gestor de&lt;br/&gt;transacciones&quot;]
+    T --&gt; W[&quot;WAL&quot;]
+    E --&gt; C
+</code></pre>
+<p>Las etapas 1 y 2 son deterministas y baratas. La etapa 3 es donde se juega el rendimiento: el optimizador estima cuántas filas producirá cada operador y elige un plan. La etapa 5 es donde se paga: cada página que no esté en memoria es una lectura de disco.</p>
+<p>El punto pedagógico: <strong>la misma consulta puede recibir planes distintos</strong> según las estadísticas del catálogo, la memoria disponible y los índices existentes. Por eso el rendimiento se diagnostica leyendo el plan (clase 042), no leyendo el SQL.</p>
+<h3 id="buffer-pool-por-qué-la-memoria-manda">Buffer pool: por qué la memoria manda</h3>
+<p>El gestor de almacenamiento no lee filas, lee <strong>páginas</strong> (8 KB en PostgreSQL, configurable en otros motores). Esas páginas se mantienen en un caché compartido. Una lectura servida desde el buffer cuesta cientos de nanosegundos; una que llega al disco, cientos de microsegundos en SSD. Tres órdenes de magnitud de diferencia por el mismo SQL.</p>
+<p>Petrov desarrolla la consecuencia: casi todas las decisiones de diseño de un motor —tamaño de página, estructura del índice, política de compactación— son intentos de reducir el número de páginas tocadas.</p>
+<h3 id="modelo-de-proceso-qué-cambia-en-operación">Modelo de proceso: qué cambia en operación</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Motor típico</th>
+<th>Consecuencia práctica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Proceso por conexión</td>
+<td>PostgreSQL</td>
+<td>Cada conexión cuesta memoria; hace falta un agrupador de conexiones</td>
+</tr>
+<tr>
+<td>Hilo por conexión</td>
+<td>MySQL, SQL Server</td>
+<td>Conexiones más baratas; más riesgo de contención en estructuras compartidas</td>
+</tr>
+<tr>
+<td>Biblioteca embebida</td>
+<td>SQLite, DuckDB</td>
+<td>No hay servidor: el proceso de la aplicación <em>es</em> el motor</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rogov documenta el caso de PostgreSQL con detalle: el proceso de fondo <code>autovacuum</code>, la memoria compartida y por qué abrir 500 conexiones directas hunde un servidor que soporta sin esfuerzo 500 clientes a través de un agrupador.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Sigamos <code>SELECT nombre FROM students WHERE id = 3</code> sobre el dominio canónico del repositorio.</p>
+<p><strong>Etapa 1 — Análisis.</strong> Se comprueba la sintaxis y se resuelve <code>students</code> en el catálogo. Si la tabla no existe, el error llega aquí, antes de tocar un solo dato.</p>
+<p><strong>Etapa 3 — Planificación.</strong> El planificador tiene dos caminos:</p>
+<pre><code class="language-text">Plan A  Barrido secuencial: leer las N páginas de la tabla y filtrar
+Plan B  Búsqueda por índice: descender el B-Tree de la clave primaria
+</code></pre>
+<p>Con la tabla de ejemplo (4 filas, 1 página), el coste estimado del barrido es menor que el del índice: leer una página y descartar tres filas es más barato que descender un árbol. <strong>El motor elige el barrido y hace bien.</strong> Con 4 millones de filas repartidas en 30 000 páginas, el mismo optimizador elige el índice, porque descender tres niveles del árbol toca 4 páginas frente a 30 000.</p>
+<p>Este es el resultado que sorprende a quien empieza: <em>no usar el índice puede ser la decisión correcta</em>. Depende de la selectividad, y la selectividad la estima el optimizador a partir de estadísticas.</p>
+<p><strong>Etapa 5 — Acceso.</strong> Si esas páginas ya estaban en el buffer por una consulta anterior, no hay lectura física. La segunda ejecución de la misma consulta suele ser mucho más rápida que la primera, y eso <strong>no</strong> significa que la consulta haya mejorado: significa que el caché está caliente. Cualquier medición que ignore este efecto es una medición inválida.</p>
+<p>Comprobación directa en el laboratorio, sin instalar nada:</p>
+<pre><code class="language-sql">EXPLAIN QUERY PLAN SELECT nombre FROM students WHERE id = 3;
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Etapa</th>
+<th>Qué decide</th>
+<th>Coste típico</th>
+<th>Se diagnostica con</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Análisis</td>
+<td>Validez sintáctica y de nombres</td>
+<td>microsegundos</td>
+<td>mensaje de error</td>
+</tr>
+<tr>
+<td>Reescritura</td>
+<td>Expansión de vistas y reglas</td>
+<td>microsegundos</td>
+<td>plan expandido</td>
+</tr>
+<tr>
+<td>Planificación</td>
+<td>Orden de reunión, uso de índices</td>
+<td>microsegundos a ms</td>
+<td><code>EXPLAIN</code></td>
+</tr>
+<tr>
+<td>Ejecución</td>
+<td>Trabajo real sobre filas</td>
+<td>ms a minutos</td>
+<td><code>EXPLAIN ANALYZE</code></td>
+</tr>
+<tr>
+<td>Almacenamiento</td>
+<td>Páginas leídas y escritas</td>
+<td>dominante</td>
+<td>contadores de E/S y aciertos de buffer</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>«El motor no usa mi índice, está roto.»</strong> Casi siempre el optimizador estimó que el barrido era más barato, y con pocas filas suele acertar. Antes de forzar nada, mira la estimación frente al conteo real.</li>
+<li><strong>«Mido el tiempo de la primera ejecución.»</strong> Esa medición incluye el llenado del buffer. Compara siempre ejecuciones en frío contra ejecuciones en frío.</li>
+<li><strong>«Más conexiones, más rendimiento.»</strong> Por encima del paralelismo útil, cada conexión adicional añade contención y memoria. La curva baja, no sube.</li>
+<li><strong>«El plan es estable.»</strong> Cambia con las estadísticas, el volumen y la versión del motor. Un plan bueno hoy puede degradarse tras una carga masiva sin recolección de estadísticas.</li>
+<li><strong>«SQLite no tiene arquitectura.»</strong> Tiene los mismos componentes; lo que no tiene es un proceso servidor. Precisamente por eso es el mejor motor para leer un gestor entero.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los incidentes de bases de datos casi nunca son «la consulta es lenta»: son «el plan cambió tras una migración», «el buffer se quedó pequeño al crecer los datos», «el agrupador de conexiones se agotó». Reconocer en qué componente ocurre un síntoma reduce el diagnóstico de horas a minutos.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Ejecuta la misma consulta dos veces sobre el dominio del repositorio y documenta:</p>
+<ol>
+<li>El plan elegido en cada caso, con la salida literal.</li>
+<li>La diferencia de tiempo, y a qué componente la atribuyes.</li>
+<li>Una modificación (índice, volumen de datos o filtro) que haga cambiar el plan, con la evidencia del cambio.</li>
+<li>Qué medirías para demostrar que la mejora es real y no un efecto de caché.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿En qué etapa se detecta un nombre de columna mal escrito, y por qué no puede detectarse antes ni después?</li>
+<li>Explica con números por qué un barrido secuencial puede ganarle a una búsqueda por índice.</li>
+<li>Tu servidor pasa de 50 a 500 conexiones y el rendimiento cae. Da dos causas plausibles ligadas al modelo de proceso.</li>
+<li>¿Qué componente falla si, tras un corte de energía, aparecen filas de una transacción que nunca se confirmó?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="001.html">← Anterior</a> · <a href="003.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>

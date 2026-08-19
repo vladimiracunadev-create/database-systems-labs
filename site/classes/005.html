@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="De requisitos ambiguos a entidades defendibles. Parte 01: Modelado conceptual y requisitos.">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<title>005 — De requisitos ambiguos a entidades defendibles · Database Systems Labs</title>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html">&#9678; Database Systems Labs</a>
+  <span class="crumb">Parte 01 · Modelado conceptual y requisitos</span>
+</nav>
+<main class="content">
+<h1 id="005--de-requisitos-ambiguos-a-entidades-defendibles">005 — De requisitos ambiguos a entidades defendibles</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="004.html">← Anterior</a> · <a href="006.html">Siguiente →</a></p>
+</blockquote>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parte</strong></td>
+<td>01 — Modelado conceptual y requisitos</td>
+</tr>
+<tr>
+<td><strong>Nivel</strong></td>
+<td>Fundamentos</td>
+</tr>
+<tr>
+<td><strong>Horas estimadas</strong></td>
+<td>3</td>
+</tr>
+<tr>
+<td><strong>Motores</strong></td>
+<td><code>sqlite</code></td>
+</tr>
+<tr>
+<td><strong>Laboratorio</strong></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a></td>
+</tr>
+<tr>
+<td><strong>Fuentes</strong></td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Conceptos centrales:</strong> <code>regla de negocio</code> · <code>diccionario de datos</code> · <code>alcance</code> · <code>patrón de acceso</code></p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Convertir un enunciado en prosa —ambiguo, incompleto y contradictorio, como todos— en una lista de entidades, atributos y reglas que se pueda defender frente a quien encargó el sistema.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Extraer entidades candidatas de un texto con un procedimiento repetible.</li>
+<li>Separar hechos del dominio de decisiones de implementación.</li>
+<li>Escribir un diccionario de datos con tipo, obligatoriedad, dominio y origen.</li>
+<li>Detectar las tres ambigüedades que más caro salen: identidad, temporalidad y alcance.</li>
+<li>Justificar qué queda <strong>fuera</strong> del modelo y por qué.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="el-método-no-la-inspiración">El método, no la inspiración</h3>
+<p>Hernández propone un procedimiento que funciona porque es aburrido y se puede auditar. Adaptado a este programa:</p>
+<ol>
+<li><strong>Recoger el enunciado literal</strong>, sin reescribirlo todavía.</li>
+<li><strong>Subrayar sustantivos</strong> → entidades candidatas. <strong>Subrayar verbos</strong> → relaciones candidatas. <strong>Subrayar adjetivos y medidas</strong> → atributos candidatos.</li>
+<li><strong>Descartar sinónimos</strong> («alumno», «estudiante», «matriculado» suelen ser lo mismo; a veces no, y eso hay que preguntarlo).</li>
+<li><strong>Preguntar por la identidad</strong> de cada entidad: ¿qué hace que dos ejemplares sean el mismo?</li>
+<li><strong>Preguntar por la temporalidad</strong>: ¿el valor cambia? ¿hace falta el histórico?</li>
+<li><strong>Escribir el diccionario de datos</strong> con el origen de cada regla.</li>
+<li><strong>Escribir la lista de exclusiones</strong>: lo que el sistema no modelará.</li>
+</ol>
+<p>El paso 7 es el que casi nadie hace y el que evita la mitad de los conflictos. Kent lo argumenta en <em>Data and Reality</em>: no existe un modelo «correcto» del mundo, solo un recorte útil para un propósito. Si el recorte no está escrito, cada persona supondrá uno distinto.</p>
+<h3 id="las-tres-ambigüedades-caras">Las tres ambigüedades caras</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Ambigüedad</th>
+<th>Pregunta que la resuelve</th>
+<th>Qué pasa si no se pregunta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Identidad</strong></td>
+<td>¿Dos filas con los mismos datos son la misma cosa?</td>
+<td>Duplicados imposibles de limpiar después</td>
+</tr>
+<tr>
+<td><strong>Temporalidad</strong></td>
+<td>¿Necesitamos saber cómo era antes?</td>
+<td>Se sobrescribe el pasado y no hay vuelta atrás</td>
+</tr>
+<tr>
+<td><strong>Alcance</strong></td>
+<td>¿Esto lo gestiona nuestro sistema o solo lo referencia?</td>
+<td>Se modela medio mundo y no se termina nunca</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="hechos-frente-a-decisiones">Hechos frente a decisiones</h3>
+<p>Elmasri y Navathe separan el <strong>modelo conceptual</strong> (qué existe en el dominio) del <strong>modelo lógico</strong> (cómo se representa en un modelo de datos concreto). Mezclarlos es el error de principiante más costoso, porque congela decisiones antes de entender el problema.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Es un hecho del dominio</th>
+<th>Es una decisión de implementación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Un estudiante puede inscribir varios cursos»</td>
+<td>«Usaremos una tabla puente»</td>
+</tr>
+<tr>
+<td>«El correo identifica a la persona en el sistema»</td>
+<td>«El correo será la clave primaria»</td>
+</tr>
+<tr>
+<td>«La nota va de 1,0 a 7,0»</td>
+<td>«Será <code>NUMERIC(2,1)</code> con un <code>CHECK</code>»</td>
+</tr>
+<tr>
+<td>«Necesitamos saber quién cambió una nota»</td>
+<td>«Habrá una tabla de auditoría con disparadores»</td>
+</tr>
+</tbody>
+</table></div>
+<p>La columna izquierda se negocia con el cliente. La derecha se negocia con el equipo, y puede cambiar sin volver a reunirse con nadie.</p>
+<pre><code class="language-mermaid">flowchart TD
+    E[&quot;Enunciado en prosa&quot;] --&gt; S[&quot;Sustantivos → entidades&lt;br/&gt;Verbos → relaciones&lt;br/&gt;Medidas → atributos&quot;]
+    S --&gt; P[&quot;Preguntas obligatorias:&lt;br/&gt;identidad · temporalidad · alcance&quot;]
+    P --&gt; D[&quot;Diccionario de datos&lt;br/&gt;tipo · obligatoriedad · dominio · origen&quot;]
+    P --&gt; X[&quot;Lista de exclusiones&lt;br/&gt;lo que NO se modela&quot;]
+    D --&gt; M[&quot;Modelo conceptual&quot;]
+    X --&gt; M
+    M --&gt; L[&quot;Modelo lógico&lt;br/&gt;(clases 006-008)&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Enunciado recibido:</p>
+<blockquote>
+<p>«Necesitamos registrar los cursos que dicta cada profesor y las notas de los estudiantes. Un curso lo puede dictar más de un profesor. Queremos saber el promedio del curso.»</p>
+</blockquote>
+<p><strong>Paso 2.</strong> Sustantivos: <em>curso, profesor, estudiante, nota, promedio</em>. Verbos: <em>dictar, registrar</em>.</p>
+<p><strong>Paso 3.</strong> <code>promedio</code> no es una entidad ni un atributo almacenado: es un <strong>cálculo</strong> sobre notas. Guardarlo introduce redundancia que hay que mantener (clase 009 discute cuándo sí conviene).</p>
+<p><strong>Paso 4 — identidad.</strong> ¿Dos profesores con el mismo nombre son la misma persona? No. Hace falta un identificador. ¿Y dos cursos llamados «Bases de datos»? Tampoco: se distinguen por período. El enunciado no lo dice, así que <strong>es una pregunta al cliente</strong>, no una suposición.</p>
+<p><strong>Paso 5 — temporalidad.</strong> «Las notas de los estudiantes»: ¿se corrigen? Si una nota se puede rectificar y alguien puede reclamar, hace falta histórico. El enunciado calla. Segunda pregunta al cliente.</p>
+<p><strong>Paso 6 — diccionario de datos:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Entidad</th>
+<th>Atributo</th>
+<th>Tipo</th>
+<th>Obligatorio</th>
+<th>Dominio</th>
+<th>Origen de la regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>student</td>
+<td>id</td>
+<td>entero</td>
+<td>sí</td>
+<td>&gt; 0</td>
+<td>decisión de diseño</td>
+</tr>
+<tr>
+<td>student</td>
+<td>nombre</td>
+<td>texto</td>
+<td>sí</td>
+<td>≤ 120 caracteres</td>
+<td>enunciado</td>
+</tr>
+<tr>
+<td>course</td>
+<td>id</td>
+<td>entero</td>
+<td>sí</td>
+<td>&gt; 0</td>
+<td>decisión de diseño</td>
+</tr>
+<tr>
+<td>course</td>
+<td>nombre</td>
+<td>texto</td>
+<td>sí</td>
+<td>≤ 120 caracteres</td>
+<td>enunciado</td>
+</tr>
+<tr>
+<td>course</td>
+<td>periodo</td>
+<td>texto</td>
+<td>sí</td>
+<td><code>AAAA-S</code></td>
+<td><strong>pregunta pendiente</strong></td>
+</tr>
+<tr>
+<td>enrollment</td>
+<td>nota</td>
+<td>decimal(2,1)</td>
+<td>no</td>
+<td>1,0 – 7,0</td>
+<td>escala chilena, confirmar</td>
+</tr>
+<tr>
+<td>enrollment</td>
+<td>registrada_en</td>
+<td>marca de tiempo</td>
+<td>sí</td>
+<td>pasado</td>
+<td>necesaria para auditoría</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Paso 7 — exclusiones declaradas:</strong></p>
+<ul>
+<li>No se modela la asistencia.</li>
+<li>No se modela el pago de aranceles.</li>
+<li>Los profesores se referencian, pero la nómina la gestiona otro sistema.</li>
+<li>No se guarda el promedio: se calcula.</li>
+</ul>
+<p>Resultado: cuatro entidades (<code>student</code>, <code>course</code>, <code>teacher</code>, <code>enrollment</code>), dos preguntas abiertas explícitas y una lista de exclusiones. Nada de esto exige haber elegido todavía un motor.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Enfoque de partida</th>
+<th>Ventaja</th>
+<th>Riesgo dominante</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Desde el enunciado (este método)</td>
+<td>Trazabilidad a la regla de negocio</td>
+<td>Lento si el enunciado es pobre</td>
+</tr>
+<tr>
+<td>Desde las pantallas de la aplicación</td>
+<td>Rápido, muy concreto</td>
+<td>Modela la interfaz, no el dominio; cambia con el diseño</td>
+</tr>
+<tr>
+<td>Desde un esquema heredado</td>
+<td>Conserva compatibilidad</td>
+<td>Hereda los errores y los normaliza como verdad</td>
+</tr>
+<tr>
+<td>Desde un modelo de referencia del sector</td>
+<td>Vocabulario común</td>
+<td>Trae entidades que nadie necesita</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Modelar la pantalla.</strong> Si la entidad se llama <code>FormularioInscripcion</code>, el modelo caducará con el próximo rediseño de la interfaz.</li>
+<li><strong>Guardar valores calculados sin decidirlo.</strong> El promedio almacenado se desincroniza en cuanto alguien corrige una nota por fuera.</li>
+<li><strong>Resolver las ambigüedades por cuenta propia.</strong> Suponer que los cursos no se repiten entre períodos es una decisión de negocio disfrazada de detalle técnico.</li>
+<li><strong>Confundir el nombre con la identidad.</strong> «Nombre único» casi nunca es cierto y siempre se descubre en producción.</li>
+<li><strong>No escribir las exclusiones.</strong> Sin ellas, el alcance crece en cada reunión y nadie puede señalar cuándo cambió.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Los cambios de esquema más caros no vienen de requisitos nuevos: vienen de ambigüedades no resueltas al principio. Añadir histórico a una tabla que lleva tres años sobrescribiendo significa que ese pasado ya no existe: ninguna migración lo recupera.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Toma un requisito real de un proyecto tuyo y produce:</p>
+<ol>
+<li>La lista de entidades, relaciones y atributos candidatos, con el subrayado que la originó.</li>
+<li>Las tres preguntas de identidad, temporalidad y alcance, formuladas para hacérselas a una persona no técnica.</li>
+<li>El diccionario de datos con la columna «origen de la regla» completa.</li>
+<li>La lista de exclusiones, con una frase de justificación por cada una.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Da un atributo de tu dominio que parezca un hecho y sea en realidad una decisión de implementación.</li>
+<li>¿Qué pierdes exactamente si no preguntas por la temporalidad de un atributo que sí cambia?</li>
+<li>Un cliente afirma que el correo identifica a la persona. Da dos casos reales que rompan esa afirmación.</li>
+<li>¿Por qué la lista de exclusiones es parte del modelo y no del acta de la reunión?</li>
+</ol>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Michael J. Hernandez</strong> (2020). <a href="https://www.informit.com/store/database-design-for-mere-mortals-a-hands-on-guide-to-9780136788041">Database Design for Mere Mortals</a>. 4.a ed. Addison-Wesley. ISBN 978-0-13-678804-1.<br />
+  Método de diseño paso a paso, independiente de producto.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
+<li><strong>William Kent</strong> (2012). <a href="https://technicspub.com/data-and-reality/">Data and Reality</a>. 3.a ed. Technics Publications. ISBN 978-1-935504-21-4.<br />
+  Por qué ningún modelo captura el mundo: fuente del criterio de alcance del programa.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="004.html">← Anterior</a> · <a href="006.html">Siguiente →</a></p>
+</blockquote>
+</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    mermaid.initialize({ startOnLoad: true, theme: "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+</body>
+</html>
