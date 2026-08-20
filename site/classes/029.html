@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>clave de partición</code> · <code>clave de agrupamiento</code> · <code>desnormalización por consulta</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Modelar en un motor de columnas anchas, donde la regla se invierte: no se normaliza y luego se consulta, sino que se enumeran las consultas y se diseña una tabla por cada una.</p>
@@ -346,6 +347,369 @@ APPLY BATCH;
 <li>Con RF = 5, ¿qué combinaciones de <code>R</code> y <code>W</code> dan lectura consistente?</li>
 <li>Da una consulta nueva sobre tu modelo y describe el trabajo completo de añadirla.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Las dos últimas lecturas de un sensor, de la más reciente a la más antigua</p>
+<p>En el modelo de columnas anchas no se modela el dominio: se modela <strong>la
+consulta</strong>. La clave primaria de Cassandra tiene dos partes con papeles muy
+distintos: la de partición decide en qué nodo vive la fila, y la de
+agrupamiento decide en qué orden están las filas <strong>dentro</strong> de esa partición,
+en el disco.</p>
+<p>El caso lo pone a prueba con la consulta más común de la telemetría: las dos
+últimas lecturas de <code>sensor-1</code>. Con la tabla modelada así, la respuesta son
+dos celdas contiguas de una sola partición, en un solo nodo, sin ordenar
+nada. Cambiar la pregunta —«las lecturas de todos los sensores a las 10:01»—
+obliga a otra tabla, y esa es exactamente la lección.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>momento</th>
+<th>valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2026-08-19T10:02:00Z</code></td>
+<td><code>23</code></td>
+</tr>
+<tr>
+<td><code>2026-08-19T10:01:00Z</code></td>
+<td><code>22</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 029</code>: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ScyllaDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/scylladb/consulta.cql">código</a></td>
+<td><a href="https://opensource.docs.scylladb.com/stable/cql/ddl.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/timeseries/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html
+-- nota: implementacion declarada. Las dos partes de la clave primaria hacen
+--       cosas distintas y conviene no confundirlas:
+--         (dispositivo)  clave de PARTICION -&gt; en que nodo vive la fila
+--         momento        clave de AGRUPAMIENTO -&gt; en que orden estan las filas
+--                        DENTRO de esa particion, en el disco
+--       Por eso LIMIT 2 lee dos celdas contiguas de un solo nodo.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS telemetria
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS telemetria.lecturas_por_dispositivo;
+
+CREATE TABLE telemetria.lecturas_por_dispositivo (
+    dispositivo text,
+    momento     timestamp,
+    valor       int,
+    PRIMARY KEY (dispositivo, momento)
+) WITH CLUSTERING ORDER BY (momento DESC);
+
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:00:00Z', 21);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:01:00Z', 22);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:02:00Z', 23);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-2', '2026-08-19T10:00:00Z', 30);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Sin ORDER BY: el orden ya esta en el disco. Y sin ALLOW FILTERING: la
+-- consulta toca UNA particion.
+--
+-- La pregunta inversa —«todas las lecturas de las 10:01, de cualquier sensor»—
+-- NO se puede responder con esta tabla, y esa es la leccion. Haria falta
+-- lecturas_por_minuto, escrita por la aplicacion en la misma operacion.
+--
+-- Y ojo con la particion infinita: un sensor que emite para siempre hace crecer
+-- su particion sin limite. En produccion la clave seria ((dispositivo, dia)).
+SELECT momento, valor
+FROM telemetria.lecturas_por_dispositivo
+WHERE dispositivo = 'sensor-1'
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La consulta se resuelve por el orden físico: <code>LIMIT 2</code> lee dos celdas contiguas de una partición, en un nodo, sin ordenación ni reunión. Y añadir nodos aumenta la capacidad de escritura de forma lineal, porque el dispositivo reparte las particiones por todo el anillo.</li>
+<li><strong>Por qué no:</strong> Solo responde la pregunta con la que se modeló. Cualquier otra exige otra tabla, escrita por la aplicación en la misma operación y sin transacción que garantice que ambas quedaron de acuerdo. Y una partición que crezca sin límite —un sensor que emite para siempre— acaba siendo un problema por sí sola: hay que meter el mes o el día en la clave de partición.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html">https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html</a></li>
+</ul>
+<h4 id="scylladb--implementacionesscylladbconsultacql">ScyllaDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/scylladb/consulta.cql"><code>implementaciones/scylladb/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: scylladb
+-- doc: https://opensource.docs.scylladb.com/stable/cql/ddl.html
+-- nota: implementacion declarada, y deliberadamente IDENTICA a la de Cassandra:
+--       ese es el argumento. ScyllaDB habla el mismo CQL y usa el mismo modelo
+--       de datos, asi que el diseno migra sin tocar una linea. Lo que cambia
+--       esta debajo: implementacion en C++ con un hilo fijado por nucleo y sin
+--       recolector de basura, lo que elimina las pausas que en Cassandra hay
+--       que ajustar a mano.
+--       Lo que NO es identico: indices secundarios, vistas materializadas y
+--       herramientas de operacion. La compatibilidad es alta, no total.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS telemetria
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS telemetria.lecturas_por_dispositivo;
+
+CREATE TABLE telemetria.lecturas_por_dispositivo (
+    dispositivo text,
+    momento     timestamp,
+    valor       int,
+    PRIMARY KEY (dispositivo, momento)
+) WITH CLUSTERING ORDER BY (momento DESC);
+
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:01:00Z', 22);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:02:00Z', 23);
+
+-- === consulta ===
+SELECT momento, valor
+FROM telemetria.lecturas_por_dispositivo
+WHERE dispositivo = 'sensor-1'
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Habla el mismo CQL y usa el mismo modelo de datos, así que el diseño migra sin cambios; su implementación en C++ con un hilo por núcleo y sin recolector de basura elimina las pausas que en Cassandra hay que ajustar.</li>
+<li><strong>Por qué no:</strong> La compatibilidad no es total —hay diferencias en índices secundarios, vistas materializadas y herramientas— y el ecosistema alrededor es más pequeño: se gana rendimiento y se pierde comunidad.</li>
+<li>📄 Documentación oficial: <a href="https://opensource.docs.scylladb.com/stable/cql/ddl.html">https://opensource.docs.scylladb.com/stable/cql/ddl.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: la clave primaria (dispositivo, momento) ordena las filas en el arbol B
+--       exactamente como la clave de agrupamiento de Cassandra ordena las celdas
+--       dentro de la particion. La idea es la misma; lo que falta aqui es el
+--       reparto entre nodos.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    dispositivo TEXT NOT NULL,
+    momento     TEXT NOT NULL,
+    valor       INTEGER NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con la clave primaria <code>(dispositivo, momento)</code>, SQLite guarda las filas ordenadas por esa clave en el árbol B: la misma idea de «el orden está en el disco» se puede comprobar aquí sin clúster.</li>
+<li><strong>Por qué no:</strong> Un solo archivo y un solo escritor: la parte del modelo que justifica Cassandra —repartir la escritura entre muchos nodos— no se puede estudiar aquí en absoluto.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+-- nota: la pregunta que hay que hacerle a DuckDB no es esta, sino esta otra:
+--         SELECT dispositivo, COUNT(*) FROM lecturas
+--         GROUP BY dispositivo ORDER BY 2 DESC LIMIT 10;
+--       es decir, que particion va a crecer sin limite. Mejor saberlo antes.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    dispositivo VARCHAR NOT NULL,
+    momento     VARCHAR NOT NULL,
+    valor       INTEGER NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es la herramienta para la otra mitad del trabajo: comprobar si el diseño de particiones aguanta. Contar filas por partición sobre un volcado dice cuál va a crecer sin límite antes de que lo haga en producción.</li>
+<li><strong>Por qué no:</strong> No hay particionado ni distribución: es donde se analiza la decisión, no donde se ejecuta.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">https://duckdb.org/docs/stable/sql/query_syntax/orderby.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+-- nota: el indice (dispositivo, momento DESC) da el mismo atajo que la clave de
+--       agrupamiento de Cassandra: EXPLAIN muestra «Index Scan» sin nodo Sort.
+--       La diferencia no esta en la lectura, esta en que la escritura sigue
+--       pasando por un unico nodo primario.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lecturas;
+
+CREATE TABLE lecturas (
+    dispositivo text NOT NULL,
+    momento     text NOT NULL,
+    valor       integer NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+CREATE INDEX lecturas_recientes ON lecturas (dispositivo, momento DESC);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un índice sobre <code>(dispositivo, momento DESC)</code> da el mismo atajo —leer dos entradas contiguas y parar— y además permite responder cualquier otra pregunta, aunque más despacio. Con particionado declarativo por rango de fecha se cubre buena parte de la carga de telemetría sin salir del motor.</li>
+<li><strong>Por qué no:</strong> La escritura sigue pasando por un único nodo primario: cuando el volumen de ingesta supera lo que una máquina puede escribir, no hay índice que salve, y ahí es donde el modelo distribuido deja de ser una alternativa y pasa a ser la única.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">https://www.postgresql.org/docs/current/ddl-partitioning.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/timeseries-collections/
+// nota: una coleccion de series temporales agrupa internamente las medidas por
+//       metaField y ventana de tiempo. El metaField hace el papel de la clave
+//       de particion de Cassandra, y elegirlo mal produce el mismo problema:
+//       un fragmento que recibe toda la escritura.
+
+// === preparacion ===
+db.lecturas.drop();
+db.createCollection(&quot;lecturas&quot;, {
+  timeseries: { timeField: &quot;momento&quot;, metaField: &quot;dispositivo&quot;, granularity: &quot;minutes&quot; },
+});
+db.lecturas.insertMany([
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:00:00Z&quot;), valor: 21 },
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:01:00Z&quot;), valor: 22 },
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:02:00Z&quot;), valor: 23 },
+  { dispositivo: &quot;sensor-2&quot;, momento: new Date(&quot;2026-08-19T10:00:00Z&quot;), valor: 30 },
+  { dispositivo: &quot;sensor-2&quot;, momento: new Date(&quot;2026-08-19T10:01:00Z&quot;), valor: 31 },
+]);
+
+// === consulta ===
+db.lecturas
+  .find({ dispositivo: &quot;sensor-1&quot; })
+  .sort({ momento: -1 })
+  .limit(2)
+  .forEach((d) =&gt; print(d.momento.toISOString().replace(&quot;.000Z&quot;, &quot;Z&quot;) + &quot;|&quot; + d.valor));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las colecciones de series temporales agrupan las medidas por dispositivo y ventana de tiempo, lo que reduce mucho el espacio, y la clave de fragmentación cumple el papel de la clave de partición.</li>
+<li><strong>Por qué no:</strong> Elegir mal la clave de fragmentación produce el mismo problema que en Cassandra —un fragmento caliente que recibe toda la escritura— y cambiarla en caliente, aunque hoy se pueda, es una operación cara.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">https://www.mongodb.com/docs/manual/core/timeseries-collections/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>Un conjunto ordenado por marca de tiempo responde esta consulta muy bien, pero todo vive en memoria: la telemetría es precisamente el caso donde el volumen histórico no cabe y no se puede permitir perder.</td>
+<td>Redis como ventana caliente de las últimas horas, con la serie completa en el almacén que sí puede guardarla; dos sistemas con dos papeles, declarado cuál es cuál.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/timeseries/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

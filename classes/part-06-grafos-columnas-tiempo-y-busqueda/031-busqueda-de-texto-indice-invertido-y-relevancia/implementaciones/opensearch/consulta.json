@@ -1,0 +1,44 @@
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/query-dsl/full-text/match/",
+    "nota: implementacion declarada. Lo que distingue a un motor de busqueda de",
+    "una funcion de busqueda esta en el bloque `settings`: el analizador es",
+    "configurable —minusculas, sin acentos, raices en espanol, palabras vacias—",
+    "y de esa configuracion depende que «Bases» encuentre «bases» y que «datos»",
+    "encuentre «dato». Cambiar el analizador obliga a REINDEXAR: el indice",
+    "guarda terminos ya analizados, no el texto original.",
+    "Se aplica con:  PUT /documentos   (settings + mappings)",
+    "y se consulta:  POST /documentos/_search   (bloque `busqueda`)"
+  ],
+
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "es_personalizado": {
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding", "spanish_stop", "spanish_stemmer"]
+        }
+      },
+      "filter": {
+        "spanish_stop": { "type": "stop", "stopwords": "_spanish_" },
+        "spanish_stemmer": { "type": "stemmer", "language": "light_spanish" }
+      }
+    }
+  },
+
+  "mappings": {
+    "properties": {
+      "titulo": { "type": "text", "analyzer": "es_personalizado" }
+    }
+  },
+
+  "busqueda": {
+    "_nota": "operator AND exige los dos terminos; sin el, basta con uno.",
+    "query": {
+      "match": { "titulo": { "query": "bases datos", "operator": "and" } }
+    },
+    "sort": ["_id"],
+    "_id_de_los_resultados_esperados": ["d1", "d2"]
+  }
+}

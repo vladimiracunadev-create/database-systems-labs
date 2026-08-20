@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>opensearch</code>, <code>postgresql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>índice invertido</code> · <code>analizador</code> · <code>TF-IDF</code> · <code>BM25</code> · <code>precisión y exhaustividad</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender cómo se busca texto: qué es un índice invertido, qué hace el analizador y cómo se ordena por relevancia. Es también la base de comparación honesta para la búsqueda vectorial de la parte 12.</p>
@@ -330,6 +331,313 @@ WHERE busqueda @@ query ORDER BY score DESC LIMIT 10;
 <li>Calcula el IDF de un término presente en 999 de 1 000 documentos e interpreta el valor.</li>
 <li>Justifica con cifras si tu caso necesita un motor de búsqueda dedicado.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Qué documentos hablan de bases de datos, buscando por palabras y no por subcadenas</p>
+<p>Buscar texto no es <code>LIKE '%bases%'</code>. Un índice invertido no guarda cadenas:
+guarda <strong>términos</strong> —después de partir el texto, pasarlo a minúsculas,
+quitar acentos y reducir las palabras a su raíz— y para cada término, la
+lista de documentos donde aparece. Por eso «Bases» encuentra «bases», por
+eso «datos» encuentra «dato», y por eso <code>LIKE</code> no hace ninguna de las dos
+cosas.</p>
+<p>El caso busca los documentos que hablan de bases <strong>y</strong> de datos entre tres
+títulos, y los devuelve ordenados por identificador. La relevancia —qué
+documento va primero— se discute en cada motor, pero no se compara: cada uno
+la calcula con su propia fórmula, y presentar esas puntuaciones como si
+fueran equivalentes sería falso.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>documento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>d1</code></td>
+</tr>
+<tr>
+<td><code>d2</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 031</code>: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/opensearch/consulta.json">código</a></td>
+<td><a href="https://docs.opensearch.org/latest/query-dsl/full-text/match/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/textsearch-intro.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/fts5.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/fulltext-search.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/extensions/full_text_search.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/sinter/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="opensearch--implementacionesopensearchconsultajson">OpenSearch · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/opensearch/consulta.json"><code>implementaciones/opensearch/consulta.json</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-json">{
+  &quot;_comentario&quot;: [
+    &quot;motor: opensearch&quot;,
+    &quot;doc: https://docs.opensearch.org/latest/query-dsl/full-text/match/&quot;,
+    &quot;nota: implementacion declarada. Lo que distingue a un motor de busqueda de&quot;,
+    &quot;una funcion de busqueda esta en el bloque `settings`: el analizador es&quot;,
+    &quot;configurable —minusculas, sin acentos, raices en espanol, palabras vacias—&quot;,
+    &quot;y de esa configuracion depende que «Bases» encuentre «bases» y que «datos»&quot;,
+    &quot;encuentre «dato». Cambiar el analizador obliga a REINDEXAR: el indice&quot;,
+    &quot;guarda terminos ya analizados, no el texto original.&quot;,
+    &quot;Se aplica con:  PUT /documentos   (settings + mappings)&quot;,
+    &quot;y se consulta:  POST /documentos/_search   (bloque `busqueda`)&quot;
+  ],
+
+  &quot;settings&quot;: {
+    &quot;analysis&quot;: {
+      &quot;analyzer&quot;: {
+        &quot;es_personalizado&quot;: {
+          &quot;tokenizer&quot;: &quot;standard&quot;,
+          &quot;filter&quot;: [&quot;lowercase&quot;, &quot;asciifolding&quot;, &quot;spanish_stop&quot;, &quot;spanish_stemmer&quot;]
+        }
+      },
+      &quot;filter&quot;: {
+        &quot;spanish_stop&quot;: { &quot;type&quot;: &quot;stop&quot;, &quot;stopwords&quot;: &quot;_spanish_&quot; },
+        &quot;spanish_stemmer&quot;: { &quot;type&quot;: &quot;stemmer&quot;, &quot;language&quot;: &quot;light_spanish&quot; }
+      }
+    }
+  },
+
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;titulo&quot;: { &quot;type&quot;: &quot;text&quot;, &quot;analyzer&quot;: &quot;es_personalizado&quot; }
+    }
+  },
+
+  &quot;busqueda&quot;: {
+    &quot;_nota&quot;: &quot;operator AND exige los dos terminos; sin el, basta con uno.&quot;,
+    &quot;query&quot;: {
+      &quot;match&quot;: { &quot;titulo&quot;: { &quot;query&quot;: &quot;bases datos&quot;, &quot;operator&quot;: &quot;and&quot; } }
+    },
+    &quot;sort&quot;: [&quot;_id&quot;],
+    &quot;_id_de_los_resultados_esperados&quot;: [&quot;d1&quot;, &quot;d2&quot;]
+  }
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es un motor de búsqueda entero, no una función: analizadores por idioma, sinónimos, corrección de errores tipográficos, resaltado, facetas y puntuación BM25 ajustable. Cuando la búsqueda <strong>es</strong> el producto, esto es lo que hace falta.</li>
+<li><strong>Por qué no:</strong> Es un sistema más que operar, y el índice va por detrás del origen: es un almacén secundario, no la verdad. Reindexar cuando cambia el analizador es una operación de horas sobre volúmenes reales.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/query-dsl/full-text/match/">https://docs.opensearch.org/latest/query-dsl/full-text/match/</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/textsearch-intro.html
+-- nota: la columna tsvector es GENERADA, asi que se mantiene sola y el indice
+--       GIN nunca va por detras. Es la diferencia con un motor de busqueda
+--       aparte: aqui el indice se actualiza DENTRO de la misma transaccion que
+--       el dato.
+--       Para ver que guarda de verdad el indice:
+--         SELECT to_tsvector('spanish', 'Bases de datos distribuidas');
+--         -&gt; 'bas':1 'dat':3 'distribu':4    (raices, sin palabras vacias)
+
+-- === preparacion ===
+DROP TABLE IF EXISTS documentos;
+
+CREATE TABLE documentos (
+    id      text PRIMARY KEY,
+    titulo  text NOT NULL,
+    buscado tsvector GENERATED ALWAYS AS (to_tsvector('spanish', titulo)) STORED
+);
+CREATE INDEX documentos_buscado ON documentos USING GIN (buscado);
+
+INSERT INTO documentos (id, titulo) VALUES
+    ('d1', 'Introduccion a las bases de datos relacionales'),
+    ('d2', 'Bases de datos distribuidas y replicacion'),
+    ('d3', 'Redes de computadores y protocolos');
+
+-- === consulta ===
+SELECT id AS documento
+FROM documentos
+WHERE buscado @@ to_tsquery('spanish', 'bases &amp; datos')
+ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>tsvector</code> y <code>tsquery</code> con índice GIN dan búsqueda por términos, con raíces y palabras vacías por idioma, <strong>dentro de la misma transacción</strong> que los datos: el índice nunca va por detrás, y se puede combinar con cualquier filtro del esquema.</li>
+<li><strong>Por qué no:</strong> La relevancia (<code>ts_rank</code>) es mucho más pobre que BM25 y no tiene corrección de errores ni sinónimos sin trabajo adicional. Y el <code>tsvector</code> hay que mantenerlo: como columna generada, o el índice se calcula en cada consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/textsearch-intro.html">https://www.postgresql.org/docs/current/textsearch-intro.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/fts5.html
+-- nota: FTS5 es un indice invertido completo dentro del archivo. La consulta
+--       'bases datos' significa «los dos terminos», no la subcadena: por eso
+--       encuentra «Bases» con mayuscula y no encuentra d3, que no habla de
+--       datos. Un LIKE '%bases%' fallaria en ambas cosas.
+
+-- === preparacion ===
+CREATE VIRTUAL TABLE documentos USING fts5(id UNINDEXED, titulo);
+
+INSERT INTO documentos (id, titulo) VALUES
+    ('d1', 'Introduccion a las bases de datos relacionales'),
+    ('d2', 'Bases de datos distribuidas y replicacion'),
+    ('d3', 'Redes de computadores y protocolos');
+
+-- === consulta ===
+SELECT id AS documento
+FROM documentos
+WHERE documentos MATCH 'bases datos'
+ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> FTS5 es un índice invertido completo dentro de un archivo: tokenización, operadores booleanos, frases y puntuación BM25. Para buscar en la documentación de una aplicación de escritorio o en un teléfono, sobra.</li>
+<li><strong>Por qué no:</strong> La tabla FTS es una tabla aparte que hay que mantener sincronizada con la real —con disparadores o con las tablas <code>external content</code>—, y el analizador por omisión no quita acentos salvo que se active <code>remove_diacritics</code>.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/fts5.html">https://sqlite.org/fts5.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/fulltext-search.html
+-- nota: se usa el MODO BOOLEANO a proposito. En modo de lenguaje natural,
+--       InnoDB descarta las palabras que aparecen en mas del 50 % de las filas,
+--       asi que con tres documentos «datos» se ignoraria y la busqueda
+--       devolveria cualquier cosa. Es la sorpresa clasica de las pruebas
+--       pequenas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS documentos;
+
+CREATE TABLE documentos (
+    id     VARCHAR(10) PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    FULLTEXT KEY ft_titulo (titulo)
+) ENGINE=InnoDB;
+
+INSERT INTO documentos (id, titulo) VALUES
+    ('d1', 'Introduccion a las bases de datos relacionales'),
+    ('d2', 'Bases de datos distribuidas y replicacion'),
+    ('d3', 'Redes de computadores y protocolos');
+
+-- === consulta ===
+SELECT id AS documento
+FROM documentos
+WHERE MATCH(titulo) AGAINST('+bases +datos' IN BOOLEAN MODE)
+ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> InnoDB tiene índices <code>FULLTEXT</code> con modo booleano y de lenguaje natural, así que la búsqueda vive junto a los datos transaccionales sin añadir un sistema.</li>
+<li><strong>Por qué no:</strong> El mínimo de longitud de palabra por omisión es de 3 caracteres, y en modo de lenguaje natural las palabras presentes en más de la mitad de las filas se ignoran: con pocos documentos, una búsqueda razonable puede devolver cero resultados sin explicación aparente.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/fulltext-search.html">https://dev.mysql.com/doc/refman/8.4/en/fulltext-search.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/
+// nota: solo se permite UN indice de texto por coleccion, y el idioma decide
+//       las raices y las palabras vacias. La puntuacion se expone con
+//       $meta: &quot;textScore&quot;, y es rudimentaria comparada con BM25.
+
+// === preparacion ===
+db.documentos.drop();
+db.documentos.insertMany([
+  { _id: &quot;d1&quot;, titulo: &quot;Introduccion a las bases de datos relacionales&quot; },
+  { _id: &quot;d2&quot;, titulo: &quot;Bases de datos distribuidas y replicacion&quot; },
+  { _id: &quot;d3&quot;, titulo: &quot;Redes de computadores y protocolos&quot; },
+]);
+db.documentos.createIndex({ titulo: &quot;text&quot; }, { default_language: &quot;spanish&quot; });
+
+// === consulta ===
+// Las comillas fuerzan que AMBOS terminos esten presentes; sin ellas, $text
+// devuelve los documentos que tengan CUALQUIERA de los dos.
+db.documentos
+  .find({ $text: { $search: '&quot;bases&quot; &quot;datos&quot;' } }, { _id: 1 })
+  .sort({ _id: 1 })
+  .forEach((d) =&gt; print(d._id));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un índice de texto cubre la búsqueda por términos con raíces por idioma sin salir de la base, y <code>$meta: "textScore"</code> expone la puntuación para ordenar.</li>
+<li><strong>Por qué no:</strong> Solo se permite <strong>un</strong> índice de texto por colección, no hay control sobre el analizador y la puntuación es rudimentaria. Para búsqueda seria, su propia oferta es Atlas Search, que por debajo es Lucene: es decir, otro motor.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/">https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>Tiene una extensión de búsqueda de texto, pero hay que instalarla desde la red en tiempo de ejecución: incluirla como motor de núcleo haría que la verificación del repositorio dependiera de una descarga, y eso rompería la regla de que el núcleo se ejecuta en cualquier máquina.</td>
+<td>Para el trabajo analítico sobre texto que sí encaja aquí —contar términos, medir cobertura de un corpus— bastan las funciones de cadena y <code>UNNEST</code> sobre las palabras.</td>
+<td><a href="https://duckdb.org/docs/stable/extensions/full_text_search.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>El servidor base no busca dentro de los valores: son opacos. Sin el módulo de búsqueda, la única opción sería traerse los documentos y filtrarlos en el cliente.</td>
+<td>Mantener a mano el índice invertido —un conjunto por término con los identificadores— y cruzarlo con <code>SINTER</code>. Se consigue el «y» booleano; no hay raíces, ni relevancia, ni frases.</td>
+<td><a href="https://redis.io/docs/latest/commands/sinter/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

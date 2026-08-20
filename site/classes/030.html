@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>timescaledb</code>, <code>influxdb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>cardinalidad de etiquetas</code> · <code>submuestreo</code> · <code>retención</code> · <code>agregado continuo</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Diseñar almacenamiento para datos que llegan continuamente y se consultan por ventanas de tiempo, sin que la cardinalidad de las etiquetas destruya el sistema.</p>
@@ -299,6 +300,359 @@ después: 800 · 200 000 = 160 000 000 series
 <li>Explica la diferencia entre tiempo de evento y de ingesta con un caso de tu sistema.</li>
 <li>¿Qué ventaja tiene eliminar un fragmento frente a un <code>DELETE</code> con filtro temporal?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Sumar las lecturas por hora, que es lo único que se mira de una serie</p>
+<p>Nadie consulta una serie temporal lectura a lectura: se consulta por
+ventanas. Sumar, promediar o contar por intervalos —el <em>bucketing</em>— es la
+operación central, y todos los motores la resuelven; lo que cambia es si hay
+que escribirla cada vez, si el resultado se mantiene solo y qué pasa con los
+datos viejos.</p>
+<p>El caso tiene cinco lecturas repartidas en dos horas y pide el total por
+hora, ordenado. Las tres preguntas que la clase pone encima de la mesa —la
+cardinalidad de las series, la retención de lo viejo y el agregado que se
+mantiene al día— aparecen en el «por qué no» de cada motor, que es donde se
+decide.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>hora</th>
+<th>total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2026-08-19 10:00</code></td>
+<td><code>66</code></td>
+</tr>
+<tr>
+<td><code>2026-08-19 11:00</code></td>
+<td><code>45</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 030</code>: 3 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TimescaleDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/timescaledb/consulta.sql">código</a></td>
+<td><a href="https://docs.timescale.com/use-timescale/latest/time-buckets/">doc oficial</a></td>
+</tr>
+<tr>
+<td>InfluxDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/influxdb/consulta.txt">código</a></td>
+<td><a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-datetime.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_datefunc.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="timescaledb--implementacionestimescaledbconsultasql">TimescaleDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/timescaledb/consulta.sql"><code>implementaciones/timescaledb/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: timescaledb
+-- doc: https://docs.timescale.com/use-timescale/latest/time-buckets/
+-- nota: implementacion declarada. Es PostgreSQL con la parte temporal resuelta:
+--       hipertabla que particiona sola, time_bucket con ventanas arbitrarias,
+--       agregado continuo que se mantiene al dia y politicas declarativas de
+--       retencion y compresion. Todo lo de abajo sigue siendo SQL, y se puede
+--       reunir con el resto del esquema.
+
+-- === preparacion ===
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+DROP TABLE IF EXISTS lecturas CASCADE;
+
+CREATE TABLE lecturas (
+    momento timestamptz NOT NULL,
+    valor   integer NOT NULL
+);
+SELECT create_hypertable('lecturas', by_range('momento'));
+
+INSERT INTO lecturas (momento, valor) VALUES
+    ('2026-08-19 10:00:00+00', 20),
+    ('2026-08-19 10:15:00+00', 21),
+    ('2026-08-19 10:45:00+00', 25),
+    ('2026-08-19 11:05:00+00', 22),
+    ('2026-08-19 11:30:00+00', 23);
+
+-- El agregado que NO hay que recalcular: se mantiene solo al llegar datos.
+CREATE MATERIALIZED VIEW lecturas_por_hora
+WITH (timescaledb.continuous) AS
+SELECT time_bucket(INTERVAL '1 hour', momento) AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora;
+
+-- Y la retencion, declarada en vez de programada a mano:
+SELECT add_retention_policy('lecturas', INTERVAL '90 days');
+
+-- === consulta ===
+SELECT to_char(hora, 'YYYY-MM-DD HH24:MI') AS hora, total
+FROM lecturas_por_hora
+ORDER BY hora;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es PostgreSQL con la parte temporal resuelta: <code>time_bucket</code> para ventanas arbitrarias, hipertablas que particionan por tiempo sin que nadie lo administre, agregados continuos que se actualizan solos y políticas de retención y compresión declarativas. Y sigue siendo SQL, con reuniones contra el resto del esquema.</li>
+<li><strong>Por qué no:</strong> Es una extensión: en un servicio administrado hay que comprobar que está disponible, y añade su propio ciclo de versiones sobre el de PostgreSQL. La compresión, además, hace las filas comprimidas más caras de modificar.</li>
+<li>📄 Documentación oficial: <a href="https://docs.timescale.com/use-timescale/latest/time-buckets/">https://docs.timescale.com/use-timescale/latest/time-buckets/</a></li>
+</ul>
+<h4 id="influxdb--implementacionesinfluxdbconsultatxt">InfluxDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/influxdb/consulta.txt"><code>implementaciones/influxdb/consulta.txt</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-text"># motor: influxdb
+# doc: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/
+# nota: implementacion declarada. Lo importante de este archivo no es la
+#       consulta: es la linea de escritura de arriba.
+#
+#       En el protocolo de linea, lo que va antes del primer espacio son
+#       ETIQUETAS (indexadas) y lo que va despues son CAMPOS (no indexados).
+#       Cada combinacion distinta de valores de etiqueta crea una SERIE, y el
+#       indice de series vive en memoria. Poner como etiqueta algo con muchos
+#       valores distintos —un id de usuario, un id de peticion, una traza— es
+#       el error que tumba servidores de InfluxDB, y no avisa: simplemente deja
+#       de arrancar cuando el indice no cabe.
+#
+#       Regla: etiqueta lo que tenga POCOS valores distintos y sirva para
+#       filtrar; deja como campo todo lo demas.
+
+# === preparacion ===
+# Escritura con el protocolo de linea (measurement,tags fields timestamp):
+#   lecturas,sensor=sensor-1 valor=20 1787133600000000000
+#   lecturas,sensor=sensor-1 valor=21 1787134500000000000
+#   lecturas,sensor=sensor-1 valor=25 1787136300000000000
+#   lecturas,sensor=sensor-1 valor=22 1787137500000000000
+#   lecturas,sensor=sensor-1 valor=23 1787139000000000000
+
+# === consulta ===
+# Flux. La ventana es una primitiva del lenguaje, no una funcion sobre la fecha.
+from(bucket: &quot;telemetria&quot;)
+  |&gt; range(start: 2026-08-19T10:00:00Z, stop: 2026-08-19T12:00:00Z)
+  |&gt; filter(fn: (r) =&gt; r._measurement == &quot;lecturas&quot; and r._field == &quot;valor&quot;)
+  |&gt; aggregateWindow(every: 1h, fn: sum, createEmpty: false)
+  |&gt; keep(columns: [&quot;_time&quot;, &quot;_value&quot;])
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Está construido solo para esto: escritura por lotes muy alta, compresión específica de series, retención por <em>bucket</em> y ventanas como primitiva del lenguaje. Para telemetría pura, el ajuste es directo.</li>
+<li><strong>Por qué no:</strong> Aquí la cardinalidad manda: cada combinación distinta de etiquetas crea una serie, y un identificador único como etiqueta —un id de usuario, una traza— hace explotar la memoria del índice. Es el error clásico, y no avisa hasta que el servidor deja de arrancar. Además ha cambiado de lenguaje de consulta entre versiones mayores.</li>
+<li>📄 Documentación oficial: <a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/">https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-datetime.html
+-- nota: la retencion barata no es DELETE, es DROP de una particion. Con
+--       particionado declarativo por rango, tirar un mes entero cuesta lo mismo
+--       que borrar un archivo:
+--         CREATE TABLE lecturas (...) PARTITION BY RANGE (momento);
+--         DROP TABLE lecturas_2026_07;
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lecturas;
+
+CREATE TABLE lecturas (
+    momento timestamptz NOT NULL,
+    valor   integer NOT NULL
+);
+INSERT INTO lecturas (momento, valor) VALUES
+    (TIMESTAMPTZ '2026-08-19 10:00:00+00', 20),
+    (TIMESTAMPTZ '2026-08-19 10:15:00+00', 21),
+    (TIMESTAMPTZ '2026-08-19 10:45:00+00', 25),
+    (TIMESTAMPTZ '2026-08-19 11:05:00+00', 22),
+    (TIMESTAMPTZ '2026-08-19 11:30:00+00', 23);
+
+-- === consulta ===
+-- `AT TIME ZONE 'UTC'` fija la zona en la EXPRESION en vez de en la sesion. Si
+-- dependiera de la sesion, la misma consulta agruparia en horas distintas segun
+-- quien la lanzara, y ese es un error de informe muy dificil de ver.
+SELECT to_char(date_trunc('hour', momento AT TIME ZONE 'UTC'),
+               'YYYY-MM-DD HH24:MI') AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY 1
+ORDER BY 1;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>date_trunc</code> con <code>GROUP BY</code> resuelve el caso sin extensiones, y el particionado declarativo por rango permite tirar un mes entero con un <code>DROP TABLE</code> de la partición, que es la forma barata de la retención: borrar filas una a una es lo caro.</li>
+<li><strong>Por qué no:</strong> Sin extensión no hay agregados que se mantengan solos ni compresión por columnas: una tabla de telemetría normal ocupa varias veces lo que ocuparía en un motor especializado, y el agregado se recalcula en cada consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-datetime.html">https://www.postgresql.org/docs/current/functions-datetime.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/timestamp.html
+-- nota: aqui la marca SI es un TIMESTAMP de verdad, y time_bucket admite
+--       ventanas arbitrarias:
+--         time_bucket(INTERVAL '15 minutes', momento)
+--       La misma consulta funciona sobre un Parquet sin cargarlo.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento TIMESTAMP NOT NULL,
+    valor   INTEGER NOT NULL
+);
+INSERT INTO lecturas VALUES
+    ('2026-08-19 10:00:00', 20),
+    ('2026-08-19 10:15:00', 21),
+    ('2026-08-19 10:45:00', 25),
+    ('2026-08-19 11:05:00', 22),
+    ('2026-08-19 11:30:00', 23);
+
+-- === consulta ===
+SELECT strftime(time_bucket(INTERVAL '1 hour', momento), '%Y-%m-%d %H:%M') AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene <code>time_bucket</code> propio y agrega sobre millones de puntos en memoria: es la forma más rápida de explorar un histórico exportado a Parquet sin montar nada.</li>
+<li><strong>Por qué no:</strong> No ingiere: no hay escritura continua, ni retención, ni agregados mantenidos. Analiza la serie; no la guarda.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">https://duckdb.org/docs/stable/sql/functions/timestamp.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_datefunc.html
+-- nota: SQLite NO tiene tipo de fecha. Estas marcas son texto ISO-8601, que se
+--       ordena y se compara bien por casualidad del formato. Mezclar texto ISO
+--       con segundos desde la epoca en la misma columna no da error: da un
+--       resultado equivocado.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento TEXT NOT NULL,
+    valor   INTEGER NOT NULL
+);
+INSERT INTO lecturas (momento, valor) VALUES
+    ('2026-08-19T10:00:00Z', 20),
+    ('2026-08-19T10:15:00Z', 21),
+    ('2026-08-19T10:45:00Z', 25),
+    ('2026-08-19T11:05:00Z', 22),
+    ('2026-08-19T11:30:00Z', 23);
+
+-- === consulta ===
+SELECT strftime('%Y-%m-%d %H:00', momento) AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>strftime</code> se agrupa por hora sin nada más, lo que lo hace perfecto para telemetría <strong>en el dispositivo</strong>: guardar localmente lo que se mide y enviar solo el agregado.</li>
+<li><strong>Por qué no:</strong> No tiene tipo de fecha: las marcas de tiempo son texto, números o segundos desde la época, y comparar dos formatos distintos no da error, da un resultado equivocado. La zona horaria hay que gestionarla entera a mano.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_datefunc.html">https://sqlite.org/lang_datefunc.html</a></li>
+</ul>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions
+-- nota: implementacion declarada. La vista materializada de ClickHouse no es
+--       una copia que se refresca: es un disparador de insercion que agrega al
+--       llegar los datos. El agregado nunca se recalcula.
+--       El precio: corregir una lectura mal enviada no es un UPDATE, es una
+--       mutacion asincrona que reescribe partes enteras.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento DateTime,
+    valor   Int32
+) ENGINE = MergeTree ORDER BY momento;
+
+CREATE MATERIALIZED VIEW lecturas_por_hora
+ENGINE = SummingMergeTree ORDER BY hora
+AS SELECT toStartOfHour(momento) AS hora, SUM(valor) AS total
+FROM lecturas GROUP BY hora;
+
+INSERT INTO lecturas VALUES
+    ('2026-08-19 10:00:00', 20),
+    ('2026-08-19 10:15:00', 21),
+    ('2026-08-19 10:45:00', 25),
+    ('2026-08-19 11:05:00', 22),
+    ('2026-08-19 11:30:00', 23);
+
+-- === consulta ===
+SELECT formatDateTime(hora, '%Y-%m-%d %H:%M') AS hora, SUM(total) AS total
+FROM lecturas_por_hora
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>toStartOfHour</code> y las vistas materializadas que agregan al <strong>insertar</strong> dan el mismo resultado sin recalcular, y su compresión por columnas sobre datos temporales ordenados es de las mejores que existen. Es la opción cuando la serie tiene miles de millones de puntos.</li>
+<li><strong>Por qué no:</strong> Actualizar o borrar puntos concretos es una operación pesada y asíncrona: corregir una lectura mal enviada no es un <code>UPDATE</code>, es una mutación que reescribe partes enteras.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MongoDB</td>
+<td>Sus colecciones de series temporales resuelven bien el almacenamiento, pero para este caso concreto la comparación no aporta: la agregación por ventana se escribe con <code>$dateTrunc</code> y <code>$group</code>, que ya se estudió en la clase de agregación sobre documentos.</td>
+<td>Se compara donde sí aporta —en el modelado por dispositivo y ventana, en la clase de columnas anchas— en vez de repetir aquí la misma tubería.</td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

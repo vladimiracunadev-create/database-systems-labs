@@ -8,6 +8,8 @@ Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
 
 **Conceptos centrales:** `nodo` · `arista` · `recorrido de profundidad variable` · `reunión sin índice`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -178,6 +180,252 @@ Añadir un motor de grafos añade un sistema que replicar, respaldar, asegurar y
 2. Calcula las búsquedas de índice de un recorrido de profundidad 6 con ramificación 10.
 3. Da una consulta de tu dominio donde el grafo sería claramente peor.
 4. ¿Qué garantías de integridad pierdes al mover datos de un relacional a un grafo?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Todos los prerrequisitos de un curso, por lejos que estén en la cadena
+
+AR-301 exige SE-201, que exige DB-101, que exige MA-100. La pregunta —«¿qué
+tengo que haber aprobado antes de AR-301?»— tiene una propiedad que la hace
+distinta de todas las anteriores: **no se sabe de antemano cuántas reuniones
+hacen falta**. Hoy la cadena tiene tres eslabones; mañana, siete.
+
+Todo motor relacional serio la resuelve con `WITH RECURSIVE`, y funciona. Lo
+que esta clase compara es el precio: en SQL hay que escribir el caso base, el
+paso recursivo y la protección contra ciclos cada vez; en un grafo, el
+recorrido de profundidad variable es un símbolo del lenguaje.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso |
+|---|
+| `DB-101` |
+| `MA-100` |
+| `SE-201` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 028`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| Neo4j | sí | servicio | [código](implementaciones/neo4j/consulta.cypher) | [doc oficial](https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/queries-with.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_with.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/with.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/sets/) |
+
+### Los que resuelven el caso
+
+#### Neo4j · [`implementaciones/neo4j/consulta.cypher`](implementaciones/neo4j/consulta.cypher)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```cypher
+// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/
+// nota: aqui esta la clase entera en dos caracteres. `*` significa «uno o mas
+//       saltos», y el motor no resuelve cada salto por indice: cada nodo guarda
+//       punteros a sus vecinos, asi que el costo depende del vecindario
+//       recorrido y no del tamano del grafo.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (ar:Curso {codigo: 'AR-301'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (ma:Curso {codigo: 'MA-100'}),
+       (ar)-[:REQUIERE]->(se),
+       (se)-[:REQUIERE]->(db),
+       (db)-[:REQUIERE]->(ma);
+
+// === consulta ===
+MATCH (:Curso {codigo: 'AR-301'})-[:REQUIERE*]->(previo:Curso)
+RETURN DISTINCT previo.codigo AS curso
+ORDER BY curso;
+```
+
+- **Por qué sí:** El recorrido de profundidad variable se escribe con dos caracteres: `-[:REQUIERE*]->`. Y el costo no depende del tamaño del grafo sino del vecindario recorrido, porque cada nodo guarda punteros a sus vecinos en vez de resolverse por índice en cada salto.
+- **Por qué no:** Ese mismo modelo penaliza lo tabular: contar todos los nodos de una etiqueta o agregar sobre todos ellos es más caro que en una tabla, y mantener un grafo entero para una jerarquía de tres niveles es añadir un sistema para no escribir seis líneas de SQL.
+- 📄 Documentación oficial: <https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/queries-with.html
+-- nota: para grafos con ciclos, PostgreSQL tiene la clausula CYCLE, que lleva
+--       la deteccion al propio lenguaje en vez de dejarla al UNION:
+--         WITH RECURSIVE cadena(curso) AS (...) CYCLE curso SET hay_ciclo USING ruta
+
+-- === preparacion ===
+DROP TABLE IF EXISTS prerrequisitos;
+
+CREATE TABLE prerrequisitos (
+    curso    text NOT NULL,
+    requiere text NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+```
+
+- **Por qué sí:** `WITH RECURSIVE` es del estándar y resuelve el caso sin salir del motor donde ya están los datos: para jerarquías de pocos niveles —organigramas, categorías, listas de materiales— es casi siempre la respuesta correcta.
+- **Por qué no:** Cada nivel de profundidad es una reunión más, y el planificador estima muy mal el número de filas de una recursión: a partir de cierta profundidad, el plan deja de tener sentido y el tiempo se dispara sin aviso.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/queries-with.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_with.html
+-- nota: UNION —no UNION ALL— es lo que protege de los ciclos: descarta las
+--       filas ya vistas. Con UNION ALL y un grafo ciclico, esta consulta no
+--       termina nunca.
+
+-- === preparacion ===
+CREATE TABLE prerrequisitos (
+    curso    TEXT NOT NULL,
+    requiere TEXT NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+```
+
+- **Por qué sí:** Implementa `WITH RECURSIVE` completo, así que el recorrido en anchura se puede estudiar sin instalar nada. `UNION` en vez de `UNION ALL` es lo que corta los ciclos: descarta las filas ya vistas.
+- **Por qué no:** Solo tiene bucle anidado como algoritmo de reunión, así que cada nivel vuelve a buscar por índice fila a fila: la recursión funciona y no escala.
+- 📄 Documentación oficial: <https://sqlite.org/lang_with.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/with.html
+-- nota: la misma consulta funciona sobre un grafo exportado a Parquet sin
+--       cargarlo, que es la via analitica cuando la pregunta es «cuantos
+--       caminos hay» y no «dame este camino».
+
+-- === preparacion ===
+CREATE TABLE prerrequisitos (
+    curso    VARCHAR NOT NULL,
+    requiere VARCHAR NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+```
+
+- **Por qué sí:** Admite la misma sintaxis recursiva y la resuelve de forma vectorizada, lo que la hace viable sobre grafos grandes exportados a Parquet: es la vía analítica para responder «cuántos caminos hay» sin montar un grafo.
+- **Por qué no:** No hay recorrido guiado ni algoritmos de grafo: para camino más corto, centralidad o comunidades hay que escribirlo todo a mano, si es que se puede.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/with.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/
+// nota: $graphLookup hace el recorrido transitivo dentro del motor. Tiene un
+//       limite de 100 MB por operacion y no aprovecha indices en colecciones
+//       fragmentadas: sirve para jerarquias modestas, no para un grafo grande.
+
+// === preparacion ===
+db.prerrequisitos.drop();
+db.prerrequisitos.insertMany([
+  { curso: "AR-301", requiere: "SE-201" },
+  { curso: "SE-201", requiere: "DB-101" },
+  { curso: "DB-101", requiere: "MA-100" },
+]);
+
+// === consulta ===
+db.prerrequisitos
+  .aggregate([
+    { $match: { curso: "AR-301" } },
+    { $graphLookup: {
+        from: "prerrequisitos",
+        startWith: "$requiere",
+        connectFromField: "requiere",
+        connectToField: "curso",
+        as: "cadena" } },
+    { $project: { cursos: { $concatArrays: [["$requiere"], "$cadena.requiere"] } } },
+    { $unwind: "$cursos" },
+    { $group: { _id: "$cursos" } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) => print(d._id));
+```
+
+- **Por qué sí:** `$graphLookup` hace el recorrido transitivo dentro del motor, con profundidad máxima configurable: no hace falta traerse el grafo al cliente ni escribir la recursión.
+- **Por qué no:** Está limitado a 100 MB de memoria por operación y no puede usar índice para la búsqueda recursiva en colecciones fragmentadas: es una herramienta para jerarquías modestas, no para un grafo de verdad.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | No hay reuniones, no hay recursión y no hay forma de recorrer una relación sin conocer de antemano cuántos saltos harán falta. Cada salto sería una consulta desde el cliente, con su latencia de red. | Guardar el cierre transitivo ya calculado —una fila por cada par (curso, prerrequisito lejano)— y recalcularlo cuando cambie el plan de estudios: se paga en escritura y en espacio lo que no se puede pagar en lectura. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html) |
+| Redis | Recorrer exigiría un viaje por salto o un script Lua que implemente la búsqueda en anchura a mano: el almacén no entiende la relación, solo entiende claves. | Guardar en un conjunto los prerrequisitos transitivos de cada curso (`curso:AR-301:requiere-todo`) y reconstruirlo al cambiar el grafo. | [doc](https://redis.io/docs/latest/develop/data-types/sets/) |
 
 ---
 

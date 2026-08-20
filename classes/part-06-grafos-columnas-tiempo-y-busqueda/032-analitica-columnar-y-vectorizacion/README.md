@@ -8,6 +8,8 @@ Parte 06 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
 
 **Conceptos centrales:** `almacenamiento columnar` · `compresión` · `ejecución vectorizada` · `poda de particiones`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -199,6 +201,275 @@ Migrar informes de un motor por filas a uno columnar suele dar mejoras de uno o 
 2. ¿Por qué ordenar por una columna de baja cardinalidad reduce el tamaño total?
 3. Explica por qué la ejecución vectorizada ayuda incluso con todos los datos en memoria.
 4. Da una métrica de tu negocio donde el error del 1 % de HyperLogLog sea inaceptable.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Sumar una columna de mil filas y entender por qué el formato decide el tiempo
+
+La consulta analítica típica toca **pocas columnas de muchísimas filas**. La
+transaccional toca **todas las columnas de pocas filas**. Esa diferencia, y
+no el lenguaje, es la que separa a los dos mundos: un almacén orientado a
+filas guarda la fila entera junta, así que para sumar una columna tiene que
+leer también todas las demás.
+
+El caso genera mil filas repartidas en dos categorías y suma el importe de
+cada una. Con mil filas, todos los motores tardan lo mismo: eso es
+deliberado, porque lo que se compara aquí es **cómo** llegan al mismo
+número. El «por qué no» de cada motor dice a partir de qué volumen ese cómo
+empieza a decidir si la consulta tarda un segundo o un minuto.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| categoria | importe |
+|---|---|
+| `c0` | `250500` |
+| `c1` | `250000` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 032`: 3 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
+| ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/fileformat.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/parallel-query.html) |
+| Google BigQuery | sí | declarado | [código](implementaciones/bigquery/consulta.sql) | [doc oficial](https://cloud.google.com/bigquery/docs/best-practices-costs) |
+| Snowflake | sí | declarado | [código](implementaciones/snowflake/consulta.sql) | [doc oficial](https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/) |
+
+### Los que resuelven el caso
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/internals/storage.html
+-- nota: aqui la suma lee DOS columnas y ninguna mas, ya comprimidas, en lotes
+--       de miles de valores por operacion en vez de una llamada por fila. Es la
+--       misma consulta y una arquitectura distinta.
+--       Para verlo: EXPLAIN ANALYZE delante de la consulta.
+
+-- === preparacion ===
+CREATE TABLE hechos (
+    id        INTEGER PRIMARY KEY,
+    categoria VARCHAR NOT NULL,
+    importe   INTEGER NOT NULL
+);
+
+INSERT INTO hechos
+SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Almacenamiento columnar, ejecución vectorizada por lotes de miles de valores y paralelismo por trozos: la suma lee solo las dos columnas que necesita, ya comprimidas, y sin una llamada de función por fila. Es la arquitectura analítica completa dentro de un proceso.
+- **Por qué no:** Esa arquitectura es pésima para lo contrario: leer una fila entera por su clave obliga a tocar todos los bloques de columna, y modificar filas sueltas reescribe bloques enteros.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/internals/storage.html>
+
+#### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+-- nota: implementacion declarada. La clausula ORDER BY del motor MergeTree no
+--       es un orden de presentacion: es el ORDEN FISICO de los datos, y de el
+--       dependen la compresion y los indices de salto, que descartan bloques
+--       enteros sin leerlos.
+--       Lo que este motor NO tiene: transacciones. No hay BEGIN, y corregir
+--       filas es una mutacion asincrona que reescribe partes.
+
+-- === preparacion ===
+CREATE TABLE hechos (
+    id        UInt32,
+    categoria LowCardinality(String),
+    importe   UInt32
+) ENGINE = MergeTree ORDER BY (categoria, id);
+
+INSERT INTO hechos
+SELECT number + 1, concat('c', toString((number + 1) % 2)), number + 1
+FROM numbers(1000);
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Lleva la misma idea a escala distribuida: `MergeTree` ordena y comprime por partes, los índices de salto descartan bloques enteros sin leerlos, y la ejecución es masivamente paralela. Es lo que se usa cuando la tabla tiene miles de millones de filas.
+- **Por qué no:** No es transaccional: no hay `BEGIN`, las actualizaciones y borrados son mutaciones asíncronas que reescriben partes, y las reuniones entre tablas grandes son su punto débil. Es un almacén de hechos, no un sistema operacional.
+- 📄 Documentación oficial: <https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/fileformat.html
+-- nota: SQLite guarda la FILA entera junta en la pagina. Para sumar `importe`
+--       tiene que leer tambien `id` y `categoria` de cada una de las mil filas.
+--       Con mil no se nota. Con cien millones, es el problema entero, y ningun
+--       indice lo arregla: no se trata de encontrar las filas, se trata de
+--       leerlas todas.
+
+-- === preparacion ===
+CREATE TABLE hechos (
+    id        INTEGER PRIMARY KEY,
+    categoria TEXT NOT NULL,
+    importe   INTEGER NOT NULL
+);
+
+WITH RECURSIVE serie(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM serie WHERE n < 1000
+)
+INSERT INTO hechos (id, categoria, importe)
+SELECT n, 'c' || (n % 2), n FROM serie;
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Está aquí para mostrar el contraste desde el otro lado: el mismo SQL, el mismo resultado, y un almacenamiento por filas que obliga a leer cada registro entero para sumar una columna.
+- **Por qué no:** Con mil filas no se nota; con cien millones, la diferencia es de órdenes de magnitud, y no hay índice que la arregle porque el problema no es encontrar las filas, es leerlas todas.
+- 📄 Documentación oficial: <https://sqlite.org/fileformat.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/parallel-query.html
+-- nota: el punto intermedio. Filas en disco, pero con agregacion en paralelo
+--       (Parallel Seq Scan + Partial Aggregate + Gather) cuando la tabla es lo
+--       bastante grande. Para verlo hacen falta mas de mil filas y
+--         SET max_parallel_workers_per_gather = 4;
+--         EXPLAIN (ANALYZE) SELECT ...
+
+-- === preparacion ===
+DROP TABLE IF EXISTS hechos;
+
+CREATE TABLE hechos (
+    id        integer PRIMARY KEY,
+    categoria text NOT NULL,
+    importe   integer NOT NULL
+);
+
+INSERT INTO hechos (id, categoria, importe)
+SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Es el punto intermedio honesto: filas en disco, pero con ejecución paralela, agregación en paralelo y `BRIN` para tablas ordenadas. Para analítica de tamaño medio sobre los datos operativos, evita montar un almacén aparte.
+- **Por qué no:** Sigue leyendo filas completas y usando una versión por fila para el control de concurrencia: por mucho paralelismo, no compite con un formato columnar cuando la consulta toca dos columnas de una tabla de cien.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/parallel-query.html>
+
+#### Google BigQuery · [`implementaciones/bigquery/consulta.sql`](implementaciones/bigquery/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: bigquery
+-- doc: https://cloud.google.com/bigquery/docs/best-practices-costs
+-- nota: implementacion declarada. Aqui la optimizacion no es de tiempo: es de
+--       FACTURA. Se paga por bytes LEIDOS, y al ser columnar, leer dos columnas
+--       cuesta dos columnas. La misma consulta con SELECT * sobre una tabla de
+--       cien columnas cuesta cincuenta veces mas y devuelve lo mismo.
+--       Antes de lanzarla en serio:
+--         bq query --dry_run   -> dice cuantos bytes se van a leer, sin cobrar.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE analitica.hechos
+PARTITION BY RANGE_BUCKET(id, GENERATE_ARRAY(0, 1000000, 100000))
+CLUSTER BY categoria
+AS
+SELECT n AS id,
+       CONCAT('c', CAST(MOD(n, 2) AS STRING)) AS categoria,
+       n AS importe
+FROM UNNEST(GENERATE_ARRAY(1, 1000)) AS n;
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM analitica.hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Separa por completo almacenamiento y cómputo: el mismo formato columnar, con miles de nodos efímeros que se asignan por consulta y sin nada que administrar. Para un agregado sobre petabytes ocasional, es la opción con menos operación.
+- **Por qué no:** Se paga por bytes leídos: la misma consulta escrita con `SELECT *` en vez de dos columnas cuesta dinero de verdad, y una consulta mal filtrada puede costar más que el análisis que la motivó. Aquí la optimización no es de tiempo, es de factura.
+- 📄 Documentación oficial: <https://cloud.google.com/bigquery/docs/best-practices-costs>
+
+#### Snowflake · [`implementaciones/snowflake/consulta.sql`](implementaciones/snowflake/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: snowflake
+-- doc: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
+-- nota: implementacion declarada. Snowflake divide la tabla en micro-particiones
+--       columnares de 50-500 MB y guarda metadatos de cada una —minimo, maximo,
+--       numero de valores distintos—, de modo que una consulta filtrada puede
+--       descartar particiones enteras sin leerlas. Ese es todo el secreto, y
+--       depende de que los datos esten agrupados por la columna que se filtra.
+--       El computo se factura por TIEMPO ENCENDIDO: dimensionar y suspender el
+--       almacen es parte del diseno, no una tarea de operacion posterior.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE hechos (
+    id        NUMBER,
+    categoria STRING,
+    importe   NUMBER
+) CLUSTER BY (categoria);
+
+INSERT INTO hechos (id, categoria, importe)
+SELECT SEQ4() + 1,
+       'c' || TO_VARCHAR(MOD(SEQ4() + 1, 2)),
+       SEQ4() + 1
+FROM TABLE(GENERATOR(ROWCOUNT => 1000));
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** Micro-particiones columnares con metadatos por partición que permiten descartar bloques sin leerlos, y almacenes de cómputo independientes que se dimensionan por carga: el equipo de análisis no compite con el de ingesta.
+- **Por qué no:** El cómputo se factura por tiempo encendido, así que la disciplina de apagar y dimensionar es parte del diseño; y su rendimiento depende del orden de agrupamiento, que hay que mantener con `CLUSTER BY` en tablas grandes.
+- 📄 Documentación oficial: <https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | Su almacenamiento es orientado a documentos: sumar un campo de un millón de documentos obliga a leer un millón de documentos completos. La tubería de agregación es expresiva, pero el formato no ayuda. | Exportar a Parquet y analizar con DuckDB o ClickHouse, que es lo que hace en la práctica casi todo el que tiene datos operativos en MongoDB y preguntas analíticas sobre ellos. | [doc](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/) |
 
 ---
 

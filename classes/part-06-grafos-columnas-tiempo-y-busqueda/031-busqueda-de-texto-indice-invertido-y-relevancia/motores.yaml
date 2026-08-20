@@ -1,0 +1,121 @@
+---
+caso:
+  titulo: Qué documentos hablan de bases de datos, buscando por palabras y no por subcadenas
+  contrato: |
+    Buscar texto no es `LIKE '%bases%'`. Un índice invertido no guarda cadenas:
+    guarda **términos** —después de partir el texto, pasarlo a minúsculas,
+    quitar acentos y reducir las palabras a su raíz— y para cada término, la
+    lista de documentos donde aparece. Por eso «Bases» encuentra «bases», por
+    eso «datos» encuentra «dato», y por eso `LIKE` no hace ninguna de las dos
+    cosas.
+
+    El caso busca los documentos que hablan de bases **y** de datos entre tres
+    títulos, y los devuelve ordenados por identificador. La relevancia —qué
+    documento va primero— se discute en cada motor, pero no se compara: cada uno
+    la calcula con su propia fórmula, y presentar esas puntuaciones como si
+    fueran equivalentes sería falso.
+  columnas: [documento]
+  esperado:
+    - [d1]
+    - [d2]
+
+motores:
+  - id: opensearch
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/opensearch/consulta.json
+    porque_si: >-
+      Es un motor de búsqueda entero, no una función: analizadores por idioma,
+      sinónimos, corrección de errores tipográficos, resaltado, facetas y
+      puntuación BM25 ajustable. Cuando la búsqueda **es** el producto, esto es
+      lo que hace falta.
+    porque_no: >-
+      Es un sistema más que operar, y el índice va por detrás del origen: es un
+      almacén secundario, no la verdad. Reindexar cuando cambia el analizador es
+      una operación de horas sobre volúmenes reales.
+    doc: https://docs.opensearch.org/latest/query-dsl/full-text/match/
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `tsvector` y `tsquery` con índice GIN dan búsqueda por términos, con
+      raíces y palabras vacías por idioma, **dentro de la misma transacción** que
+      los datos: el índice nunca va por detrás, y se puede combinar con
+      cualquier filtro del esquema.
+    porque_no: >-
+      La relevancia (`ts_rank`) es mucho más pobre que BM25 y no tiene
+      corrección de errores ni sinónimos sin trabajo adicional. Y el `tsvector`
+      hay que mantenerlo: como columna generada, o el índice se calcula en cada
+      consulta.
+    doc: https://www.postgresql.org/docs/current/textsearch-intro.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      FTS5 es un índice invertido completo dentro de un archivo: tokenización,
+      operadores booleanos, frases y puntuación BM25. Para buscar en la
+      documentación de una aplicación de escritorio o en un teléfono, sobra.
+    porque_no: >-
+      La tabla FTS es una tabla aparte que hay que mantener sincronizada con la
+      real —con disparadores o con las tablas `external content`—, y el
+      analizador por omisión no quita acentos salvo que se active `remove_diacritics`.
+    doc: https://sqlite.org/fts5.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      InnoDB tiene índices `FULLTEXT` con modo booleano y de lenguaje natural,
+      así que la búsqueda vive junto a los datos transaccionales sin añadir un
+      sistema.
+    porque_no: >-
+      El mínimo de longitud de palabra por omisión es de 3 caracteres, y en modo
+      de lenguaje natural las palabras presentes en más de la mitad de las filas
+      se ignoran: con pocos documentos, una búsqueda razonable puede devolver
+      cero resultados sin explicación aparente.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/fulltext-search.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Un índice de texto cubre la búsqueda por términos con raíces por idioma
+      sin salir de la base, y `$meta: "textScore"` expone la puntuación para
+      ordenar.
+    porque_no: >-
+      Solo se permite **un** índice de texto por colección, no hay control sobre
+      el analizador y la puntuación es rudimentaria. Para búsqueda seria, su
+      propia oferta es Atlas Search, que por debajo es Lucene: es decir, otro
+      motor.
+    doc: https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/
+
+  - id: duckdb
+    aplica: no
+    porque_no: >-
+      Tiene una extensión de búsqueda de texto, pero hay que instalarla desde la
+      red en tiempo de ejecución: incluirla como motor de núcleo haría que la
+      verificación del repositorio dependiera de una descarga, y eso rompería la
+      regla de que el núcleo se ejecuta en cualquier máquina.
+    alternativa: >-
+      Para el trabajo analítico sobre texto que sí encaja aquí —contar términos,
+      medir cobertura de un corpus— bastan las funciones de cadena y `UNNEST`
+      sobre las palabras.
+    doc: https://duckdb.org/docs/stable/extensions/full_text_search.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      El servidor base no busca dentro de los valores: son opacos. Sin el módulo
+      de búsqueda, la única opción sería traerse los documentos y filtrarlos en
+      el cliente.
+    alternativa: >-
+      Mantener a mano el índice invertido —un conjunto por término con los
+      identificadores— y cruzarlo con `SINTER`. Se consigue el «y» booleano; no
+      hay raíces, ni relevancia, ni frases.
+    doc: https://redis.io/docs/latest/commands/sinter/
