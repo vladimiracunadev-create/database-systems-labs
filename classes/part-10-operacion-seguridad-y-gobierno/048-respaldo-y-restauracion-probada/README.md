@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-09-distribucion-replica-y-consistencia/047-consenso-y-transacciones-distribuidas/README.md) · [Siguiente →](../../part-10-operacion-seguridad-y-gobierno/049-migraciones-evolutivas-sin-caida/README.md)
 
-| | |
-|---|---|
-| **Parte** | 10 — Operación, seguridad y gobierno |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite`, `mongodb` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 10 — Operación, seguridad y gobierno · Intermedio ·
+4 horas estimadas · motores `postgresql`, `sqlite`, `mongodb` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `RPO` · `RTO` · `recuperación a un punto en el tiempo` · `prueba de restauración`
 
@@ -238,7 +233,7 @@ La métrica que resume la salud del plan es la fecha de la última restauración
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

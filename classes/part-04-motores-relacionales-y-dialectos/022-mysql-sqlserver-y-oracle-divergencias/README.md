@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-motores-relacionales-y-dialectos/021-postgresql-tipos-extensiones-y-procesos/README.md) · [Siguiente →](../../part-04-motores-relacionales-y-dialectos/023-sqlite-y-duckdb-motores-embebidos/README.md)
 
-| | |
-|---|---|
-| **Parte** | 04 — Motores relacionales y dialectos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `mysql`, `mariadb`, `sql-server`, `oracle-database` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 4 |
+Parte 04 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores `mysql`, `mariadb`, `sql-server`, `oracle-database` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `colación` · `modo estricto` · `cadena vacia frente a nulo` · `identificador citado`
 
@@ -192,7 +187,7 @@ Una migración de motor sin pruebas de equivalencia se descubre incompleta duran
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

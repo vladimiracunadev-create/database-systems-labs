@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-09-distribucion-replica-y-consistencia/043-replica-lider-unico-multilider-y-sin-lider/README.md) · [Siguiente →](../../part-09-distribucion-replica-y-consistencia/045-cap-pacelc-y-lo-que-realmente-se-elige/README.md)
 
-| | |
-|---|---|
-| **Parte** | 09 — Distribución, réplica y consistencia |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `cassandra`, `mongodb`, `postgresql` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 09 — Distribución, réplica y consistencia · Avanzado ·
+3 horas estimadas · motores `cassandra`, `mongodb`, `postgresql` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `hash consistente` · `partición por rango` · `punto caliente` · `reequilibrio`
 
@@ -217,7 +212,7 @@ La decisión de particionar es difícil de revertir: cambiar la clave de partici
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

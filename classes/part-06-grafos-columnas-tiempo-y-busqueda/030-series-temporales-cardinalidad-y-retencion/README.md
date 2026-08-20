@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/README.md) · [Siguiente →](../../part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/README.md)
 
-| | |
-|---|---|
-| **Parte** | 06 — Grafos, columnas, tiempo y búsqueda |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `timescaledb`, `influxdb` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
+3 horas estimadas · motores `timescaledb`, `influxdb` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `cardinalidad de etiquetas` · `submuestreo` · `retención` · `agregado continuo`
 
@@ -221,7 +216,7 @@ El fallo por cardinalidad no avisa: el sistema funciona bien hasta que una versi
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-01-modelado-conceptual-y-requisitos/005-de-requisitos-a-entidades/README.md) · [Siguiente →](../../part-01-modelado-conceptual-y-requisitos/007-claves-identidad-natural-y-sustituta/README.md)
 
-| | |
-|---|---|
-| **Parte** | 01 — Modelado conceptual y requisitos |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `entidad débil` · `cardinalidad` · `participación total` · `atributo de relación`
 

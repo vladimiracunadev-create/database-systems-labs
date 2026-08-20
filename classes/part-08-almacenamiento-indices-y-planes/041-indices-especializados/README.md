@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-08-almacenamiento-indices-y-planes/040-lsm-tree-compactacion-y-amplificacion/README.md) · [Siguiente →](../../part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 08 — Almacenamiento, índices y planes |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 08 — Almacenamiento, índices y planes · Avanzado ·
+3 horas estimadas · motores `postgresql` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `índice parcial` · `índice de expresión` · `GIN` · `BRIN` · `costo de mantenimiento`
 
@@ -242,7 +237,7 @@ Cambiar un B-Tree de 15 GB por un índice parcial de 1,5 MB no es una micro-opti
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

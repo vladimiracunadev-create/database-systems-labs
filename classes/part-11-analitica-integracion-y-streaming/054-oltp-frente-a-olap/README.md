@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 11](../README.md) · [← Anterior](../../part-10-operacion-seguridad-y-gobierno/053-privacidad-retencion-y-gobierno-del-dato/README.md) · [Siguiente →](../../part-11-analitica-integracion-y-streaming/055-modelado-dimensional/README.md)
 
-| | |
-|---|---|
-| **Parte** | 11 — Analítica, integración y streaming |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `duckdb`, `clickhouse` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 11 — Analítica, integración y streaming · Intermedio ·
+3 horas estimadas · motores `postgresql`, `duckdb`, `clickhouse` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `carga transaccional` · `carga analítica` · `contención` · `formato de almacenamiento`
 
@@ -200,7 +195,7 @@ La conversación productiva no es «¿necesitamos un almacén de datos?», sino 
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

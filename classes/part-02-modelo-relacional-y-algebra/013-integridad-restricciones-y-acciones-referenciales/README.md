@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/README.md)
 
-| | |
-|---|---|
-| **Parte** | 02 — Modelo relacional y álgebra |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 02 — Modelo relacional y álgebra · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `integridad de entidad` · `integridad referencial` · `CHECK` · `ON DELETE` · `aplazamiento`
 

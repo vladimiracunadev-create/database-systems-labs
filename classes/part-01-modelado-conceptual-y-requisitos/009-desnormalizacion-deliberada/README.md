@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/README.md) · [Siguiente →](../../part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/README.md)
 
-| | |
-|---|---|
-| **Parte** | 01 — Modelado conceptual y requisitos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mongodb` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 01 — Modelado conceptual y requisitos · Intermedio ·
+3 horas estimadas · motores `postgresql`, `mongodb` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `redundancia controlada` · `costo de escritura` · `agregado` · `patrón de lectura`
 
@@ -177,7 +172,7 @@ Toda desnormalización envejece: llega el día en que un proceso masivo escribe 
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

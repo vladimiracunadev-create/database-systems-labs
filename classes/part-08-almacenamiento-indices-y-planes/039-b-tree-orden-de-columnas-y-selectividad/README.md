@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-08-almacenamiento-indices-y-planes/038-paginas-filas-y-buffer-pool/README.md) · [Siguiente →](../../part-08-almacenamiento-indices-y-planes/040-lsm-tree-compactacion-y-amplificacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 08 — Almacenamiento, índices y planes |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `mysql`, `sqlite` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 08 — Almacenamiento, índices y planes · Intermedio ·
+4 horas estimadas · motores `postgresql`, `mysql`, `sqlite` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `B-Tree` · `prefijo más a la izquierda` · `selectividad` · `índice cubriente`
 
@@ -255,7 +250,7 @@ Los índices se acumulan: cada incidencia añade uno y nadie retira los anterior
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

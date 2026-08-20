@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 11](../README.md) · [← Anterior](../../part-11-analitica-integracion-y-streaming/055-modelado-dimensional/README.md) · [Siguiente →](../../part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/README.md)
 
-| | |
-|---|---|
-| **Parte** | 11 — Analítica, integración y streaming |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `kafka` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 4 |
+Parte 11 — Analítica, integración y streaming · Avanzado ·
+3 horas estimadas · motores `postgresql`, `kafka` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `ETL` · `ELT` · `CDC` · `escritura dual` · `idempotencia de carga`
 
@@ -257,7 +252,7 @@ Un canal de datos roto no da errores: da cifras ligeramente distintas que nadie 
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

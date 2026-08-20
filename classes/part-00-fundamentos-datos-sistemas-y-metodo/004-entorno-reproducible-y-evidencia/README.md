@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/README.md) · [Siguiente →](../../part-01-modelado-conceptual-y-requisitos/005-de-requisitos-a-entidades/README.md)
 
-| | |
-|---|---|
-| **Parte** | 00 — Fundamentos, sistemas y método |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `sqlite`, `postgresql`, `mongodb` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores `sqlite`, `postgresql`, `mongodb` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `reproducibilidad` · `semilla` · `contenedor` · `invariante` · `evidencia`
 

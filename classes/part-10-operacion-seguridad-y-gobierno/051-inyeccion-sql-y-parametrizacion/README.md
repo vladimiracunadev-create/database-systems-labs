@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/README.md) · [Siguiente →](../../part-10-operacion-seguridad-y-gobierno/052-observabilidad-slo-y-capacidad/README.md)
 
-| | |
-|---|---|
-| **Parte** | 10 — Operación, seguridad y gobierno |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 10 — Operación, seguridad y gobierno · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `consulta parametrizada` · `identificador dinamico` · `lista blanca` · `defensa en profundidad`
 

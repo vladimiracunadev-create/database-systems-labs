@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/README.md) · [Siguiente →](../../part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/README.md)
 
-| | |
-|---|---|
-| **Parte** | 06 — Grafos, columnas, tiempo y búsqueda |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `neo4j`, `postgresql` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
+3 horas estimadas · motores `neo4j`, `postgresql` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `nodo` · `arista` · `recorrido de profundidad variable` · `reunión sin índice`
 
@@ -190,7 +185,7 @@ Añadir un motor de grafos añade un sistema que replicar, respaldar, asegurar y
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

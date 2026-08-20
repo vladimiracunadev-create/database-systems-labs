@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/README.md) · [Siguiente →](../../part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/README.md)
 
-| | |
-|---|---|
-| **Parte** | 05 — Documentos y clave-valor |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `mongodb` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 05 — Documentos y clave-valor · Intermedio ·
+4 horas estimadas · motores `mongodb` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `incrustación` · `referencia` · `crecimiento no acotado` · `patrón de extensión`
 
@@ -197,7 +192,7 @@ Cambiar la forma de los documentos con datos en producción exige una migración
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

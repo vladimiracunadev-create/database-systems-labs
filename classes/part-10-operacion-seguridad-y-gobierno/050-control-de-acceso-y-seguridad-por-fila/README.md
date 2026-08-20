@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-operacion-seguridad-y-gobierno/049-migraciones-evolutivas-sin-caida/README.md) · [Siguiente →](../../part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 10 — Operación, seguridad y gobierno |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mysql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 4 |
+Parte 10 — Operación, seguridad y gobierno · Intermedio ·
+3 horas estimadas · motores `postgresql`, `mysql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `privilegio mínimo` · `rol` · `seguridad por fila` · `separación de funciones`
 
@@ -247,7 +242,7 @@ Las filtraciones de datos multiinquilino rara vez son un fallo del motor: son un
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

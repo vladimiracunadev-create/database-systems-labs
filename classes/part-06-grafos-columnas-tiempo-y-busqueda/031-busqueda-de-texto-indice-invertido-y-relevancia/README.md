@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/README.md) · [Siguiente →](../../part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 06 — Grafos, columnas, tiempo y búsqueda |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `opensearch`, `postgresql` |
-| **Laboratorio** | [`labs/06-vector-search`](../../../labs/06-vector-search/README.md) |
-| **Fuentes** | 3 |
+Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
+3 horas estimadas · motores `opensearch`, `postgresql` · laboratorio
+[`labs/06-vector-search`](../../../labs/06-vector-search/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `índice invertido` · `analizador` · `TF-IDF` · `BM25` · `precisión y exhaustividad`
 
@@ -236,7 +231,7 @@ Los cambios de relevancia se hacen a ciegas si no hay medición: alguien se quej
 
 ```bash
 python scripts/validate_repository.py
-python labs/06-vector-search/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

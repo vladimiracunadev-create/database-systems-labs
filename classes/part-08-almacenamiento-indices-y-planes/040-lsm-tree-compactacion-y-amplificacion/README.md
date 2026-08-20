@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-08-almacenamiento-indices-y-planes/039-b-tree-orden-de-columnas-y-selectividad/README.md) · [Siguiente →](../../part-08-almacenamiento-indices-y-planes/041-indices-especializados/README.md)
 
-| | |
-|---|---|
-| **Parte** | 08 — Almacenamiento, índices y planes |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `cassandra`, `scylladb`, `redis` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 08 — Almacenamiento, índices y planes · Avanzado ·
+3 horas estimadas · motores `cassandra`, `scylladb`, `redis` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `memtable` · `SSTable` · `compactación` · `amplificación de escritura` · `filtro de Bloom`
 
@@ -200,7 +195,7 @@ Las incidencias de un LSM se ven como picos de latencia y de espacio, no como le
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

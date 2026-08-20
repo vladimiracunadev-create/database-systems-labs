@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-09-distribucion-replica-y-consistencia/045-cap-pacelc-y-lo-que-realmente-se-elige/README.md) · [Siguiente →](../../part-09-distribucion-replica-y-consistencia/047-consenso-y-transacciones-distribuidas/README.md)
 
-| | |
-|---|---|
-| **Parte** | 09 — Distribución, réplica y consistencia |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `cassandra`, `mongodb`, `spanner` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 5 |
+Parte 09 — Distribución, réplica y consistencia · Avanzado ·
+3 horas estimadas · motores `cassandra`, `mongodb`, `spanner` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 5 fuentes.
 
 **Conceptos centrales:** `linealizabilidad` · `consistencia causal` · `lectura monotona` · `convergencia`
 
@@ -221,7 +216,7 @@ Casi todas las quejas de «datos que aparecen y desaparecen» se resuelven con l
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

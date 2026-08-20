@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/README.md) · [Siguiente →](../../part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/README.md)
 
-| | |
-|---|---|
-| **Parte** | 04 — Motores relacionales y dialectos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 04 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores `postgresql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `extensión` · `tipo compuesto` · `proceso por conexión` · `autovacuum`
 
@@ -201,7 +196,7 @@ Los incidentes típicos de PostgreSQL son tres: agotamiento de conexiones, hinch
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

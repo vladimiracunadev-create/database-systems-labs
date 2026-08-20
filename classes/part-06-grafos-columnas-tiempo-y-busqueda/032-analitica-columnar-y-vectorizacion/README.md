@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/README.md)
 
-| | |
-|---|---|
-| **Parte** | 06 — Grafos, columnas, tiempo y búsqueda |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `clickhouse`, `duckdb` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 4 |
+Parte 06 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
+3 horas estimadas · motores `clickhouse`, `duckdb` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `almacenamiento columnar` · `compresión` · `ejecución vectorizada` · `poda de particiones`
 
@@ -211,7 +206,7 @@ Migrar informes de un motor por filas a uno columnar suele dar mejoras de uno o 
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

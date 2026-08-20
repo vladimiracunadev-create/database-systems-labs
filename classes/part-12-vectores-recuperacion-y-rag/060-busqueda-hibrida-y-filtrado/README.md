@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-vectores-recuperacion-y-rag/059-indices-vectoriales-aproximados/README.md) · [Siguiente →](../../part-12-vectores-recuperacion-y-rag/061-rag-evaluable/README.md)
 
-| | |
-|---|---|
-| **Parte** | 12 — Vectores, recuperación y RAG |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `opensearch`, `qdrant`, `postgresql` |
-| **Laboratorio** | [`labs/06-vector-search`](../../../labs/06-vector-search/README.md) |
-| **Fuentes** | 4 |
+Parte 12 — Vectores, recuperación y RAG · Avanzado ·
+3 horas estimadas · motores `opensearch`, `qdrant`, `postgresql` · laboratorio
+[`labs/06-vector-search`](../../../labs/06-vector-search/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `BM25` · `fusión de rangos` · `filtro previo` · `filtro posterior`
 
@@ -222,7 +217,7 @@ La mejora de un buscador se demuestra o no existe. El conjunto de consultas juzg
 
 ```bash
 python scripts/validate_repository.py
-python labs/06-vector-search/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

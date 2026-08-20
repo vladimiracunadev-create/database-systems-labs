@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md) · [Siguiente →](../../part-08-almacenamiento-indices-y-planes/038-paginas-filas-y-buffer-pool/README.md)
 
-| | |
-|---|---|
-| **Parte** | 07 — Transacciones, concurrencia y recuperación |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `redis` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
+3 horas estimadas · motores `postgresql`, `redis` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `idempotencia` · `clave de idempotencia` · `bloqueo optimista` · `reintento con retroceso`
 
@@ -239,7 +234,7 @@ Los duplicados en producción —dos cobros, dos pedidos, dos correos— casi nu
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

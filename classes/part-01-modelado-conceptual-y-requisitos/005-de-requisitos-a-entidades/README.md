@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/README.md) · [Siguiente →](../../part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 01 — Modelado conceptual y requisitos |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `regla de negocio` · `diccionario de datos` · `alcance` · `patrón de acceso`
 

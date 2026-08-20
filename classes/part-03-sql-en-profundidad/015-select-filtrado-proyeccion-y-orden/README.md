@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 03 — SQL en profundidad · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `predicado` · `orden de evaluación` · `colación` · `determinismo de orden`
 

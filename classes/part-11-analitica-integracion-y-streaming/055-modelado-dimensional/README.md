@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 11](../README.md) · [← Anterior](../../part-11-analitica-integracion-y-streaming/054-oltp-frente-a-olap/README.md) · [Siguiente →](../../part-11-analitica-integracion-y-streaming/056-integracion-etl-elt-y-captura-de-cambios/README.md)
 
-| | |
-|---|---|
-| **Parte** | 11 — Analítica, integración y streaming |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `duckdb`, `clickhouse`, `postgresql` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 11 — Analítica, integración y streaming · Intermedio ·
+4 horas estimadas · motores `duckdb`, `clickhouse`, `postgresql` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `tabla de hechos` · `dimensión` · `grano` · `dimensión de cambio lento`
 
@@ -262,7 +257,7 @@ La causa más frecuente de «los informes no cuadran» no está en los datos: es
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [Siguiente →](../../part-00-fundamentos-datos-sistemas-y-metodo/002-arquitectura-interna-de-un-gestor/README.md)
 
-| | |
-|---|---|
-| **Parte** | 00 — Fundamentos, sistemas y método |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `persistencia` · `concurrencia` · `integridad` · `recuperación` · `independencia de datos`
 

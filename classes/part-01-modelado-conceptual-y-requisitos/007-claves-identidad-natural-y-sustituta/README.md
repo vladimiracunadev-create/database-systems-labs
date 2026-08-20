@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/README.md) · [Siguiente →](../../part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/README.md)
 
-| | |
-|---|---|
-| **Parte** | 01 — Modelado conceptual y requisitos |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `clave candidata` · `clave primaria` · `clave sustituta` · `identidad estable`
 

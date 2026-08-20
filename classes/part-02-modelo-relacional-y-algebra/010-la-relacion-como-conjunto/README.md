@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/README.md) · [Siguiente →](../../part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/README.md)
 
-| | |
-|---|---|
-| **Parte** | 02 — Modelo relacional y álgebra |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 02 — Modelo relacional y álgebra · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `relación` · `tupla` · `dominio` · `acceso por valor` · `cierre`
 

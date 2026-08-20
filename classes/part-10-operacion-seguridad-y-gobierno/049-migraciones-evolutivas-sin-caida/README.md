@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/README.md) · [Siguiente →](../../part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/README.md)
 
-| | |
-|---|---|
-| **Parte** | 10 — Operación, seguridad y gobierno |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mysql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 10 — Operación, seguridad y gobierno · Avanzado ·
+3 horas estimadas · motores `postgresql`, `mysql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `expandir y contraer` · `doble escritura` · `relleno` · `compatibilidad hacia atras`
 
@@ -236,7 +231,7 @@ Las migraciones son el cambio con mayor probabilidad de causar una caída, porqu
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

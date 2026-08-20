@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-05-documentos-y-clave-valor/025-modelado-documental-incrustar-o-referenciar/README.md) · [Siguiente →](../../part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 05 — Documentos y clave-valor |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `mongodb` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 05 — Documentos y clave-valor · Intermedio ·
+3 horas estimadas · motores `mongodb` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `índice compuesto` · `canalización de agregación` · `índice multiclave` · `cobertura`
 
@@ -220,7 +215,7 @@ El síntoma habitual —«MongoDB se puso lento al crecer»— casi siempre sign
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

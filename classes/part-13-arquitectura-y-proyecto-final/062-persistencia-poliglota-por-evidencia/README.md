@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 13](../README.md) · [← Anterior](../../part-12-vectores-recuperacion-y-rag/061-rag-evaluable/README.md) · [Siguiente →](../../part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md)
 
-| | |
-|---|---|
-| **Parte** | 13 — Arquitectura y proyecto final |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mongodb`, `redis`, `qdrant` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 13 — Arquitectura y proyecto final · Avanzado ·
+3 horas estimadas · motores `postgresql`, `mongodb`, `redis`, `qdrant` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `carga de trabajo` · `criterio de selección` · `costo de operación` · `complejidad añadida`
 
@@ -228,7 +223,7 @@ Cada almacén añadido multiplica los estados posibles del sistema, y por tanto 
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

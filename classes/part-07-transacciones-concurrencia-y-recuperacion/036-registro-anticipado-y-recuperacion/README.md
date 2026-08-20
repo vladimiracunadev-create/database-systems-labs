@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/035-bloqueo-en-dos-fases-y-mvcc/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 07 — Transacciones, concurrencia y recuperación |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
+4 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `WAL` · `punto de control` · `rehacer` · `deshacer` · `LSN`
 
@@ -191,7 +186,7 @@ El WAL es también la base de la replicación (clase 043) y de la captura de cam
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

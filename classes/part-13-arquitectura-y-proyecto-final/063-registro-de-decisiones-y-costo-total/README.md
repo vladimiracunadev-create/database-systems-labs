@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 13](../README.md) · [← Anterior](../../part-13-arquitectura-y-proyecto-final/062-persistencia-poliglota-por-evidencia/README.md) · [Siguiente →](../../part-13-arquitectura-y-proyecto-final/064-proyecto-final-disenar-medir-y-defender/README.md)
 
-| | |
-|---|---|
-| **Parte** | 13 — Arquitectura y proyecto final |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 13 — Arquitectura y proyecto final · Avanzado ·
+3 horas estimadas · motores `postgresql` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `ADR` · `contexto` · `consecuencia` · `costo total de propiedad` · `reversibilidad`
 
@@ -247,7 +242,7 @@ El valor del ADR se cobra dos años después, cuando alguien propone cambiar alg
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/README.md) · [Siguiente →](../../part-12-vectores-recuperacion-y-rag/059-indices-vectoriales-aproximados/README.md)
 
-| | |
-|---|---|
-| **Parte** | 12 — Vectores, recuperación y RAG |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `qdrant`, `postgresql` |
-| **Laboratorio** | [`labs/06-vector-search`](../../../labs/06-vector-search/README.md) |
-| **Fuentes** | 3 |
+Parte 12 — Vectores, recuperación y RAG · Intermedio ·
+3 horas estimadas · motores `qdrant`, `postgresql` · laboratorio
+[`labs/06-vector-search`](../../../labs/06-vector-search/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `espacio vectorial` · `coseno` · `producto interno` · `normalización` · `dimensión`
 
@@ -228,7 +223,7 @@ Cambiar de modelo de embeddings no es cambiar una llamada: es recalcular la cole
 
 ```bash
 python scripts/validate_repository.py
-python labs/06-vector-search/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

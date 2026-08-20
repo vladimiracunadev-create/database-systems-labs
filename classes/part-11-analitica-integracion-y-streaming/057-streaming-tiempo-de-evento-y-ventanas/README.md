@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 11](../README.md) · [← Anterior](../../part-11-analitica-integracion-y-streaming/056-integracion-etl-elt-y-captura-de-cambios/README.md) · [Siguiente →](../../part-12-vectores-recuperacion-y-rag/058-embeddings-y-metricas-de-distancia/README.md)
 
-| | |
-|---|---|
-| **Parte** | 11 — Analítica, integración y streaming |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `kafka`, `clickhouse` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 11 — Analítica, integración y streaming · Avanzado ·
+3 horas estimadas · motores `kafka`, `clickhouse` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `tiempo de evento` · `marca de agua` · `ventana` · `entrega al menos una vez`
 
@@ -257,7 +252,7 @@ La pregunta que ordena cualquier discusión sobre streaming es: **¿cuánto se e
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/017-agregacion-group-by-y-having/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 03 — SQL en profundidad · Intermedio ·
+4 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `reunión interna` · `reunión externa` · `semirreunion` · `antirreunion` · `multiplicación de filas`
 

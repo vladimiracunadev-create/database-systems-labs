@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/017-agregacion-group-by-y-having/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/019-nulos-y-logica-de-tres-valores/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite`, `duckdb` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 03 — SQL en profundidad · Intermedio ·
+4 horas estimadas · motores `postgresql`, `sqlite`, `duckdb` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `CTE` · `recursión` · `subconsulta correlacionada` · `partición de ventana` · `marco`
 

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/README.md) · [Siguiente →](../../part-09-distribucion-replica-y-consistencia/046-modelos-de-consistencia-y-garantias-de-sesion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 09 — Distribución, réplica y consistencia |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `cassandra`, `spanner`, `postgresql` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 4 |
+Parte 09 — Distribución, réplica y consistencia · Avanzado ·
+3 horas estimadas · motores `cassandra`, `spanner`, `postgresql` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `partición de red` · `disponibilidad` · `latencia frente a consistencia`
 
@@ -204,7 +199,7 @@ La pregunta útil en una revisión de arquitectura no es «¿somos CP o AP?», s
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -78,8 +78,12 @@ def cita(fuente: dict) -> str:
 
 
 def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
-           anterior: tuple[dict, dict] | None, siguiente: tuple[dict, dict] | None) -> str:
+           anterior: tuple[dict, dict] | None, siguiente: tuple[dict, dict] | None,
+           laboratorios: dict[str, dict]) -> str:
     ruta_parte = f"part-{parte['id']}-{parte['slug']}"
+    lab = laboratorios.get(clase["lab"], {})
+    comando_lab = lab.get("comando") or (
+        f"# {clase['lab']} se entrega escrito: no hay guion que ejecutar")
 
     def enlace(vecino: tuple[dict, dict] | None, texto: str) -> str:
         if vecino is None:
@@ -105,14 +109,9 @@ def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
 
 > {nav}
 
-| | |
-|---|---|
-| **Parte** | {parte['id']} — {parte['title']} |
-| **Nivel** | {NIVEL_ETIQUETA[clase['level']]} |
-| **Horas estimadas** | {clase['hours']} |
-| **Motores** | {motores} |
-| **Laboratorio** | [`{clase['lab']}`](../../../{clase['lab']}/README.md) |
-| **Fuentes** | {len(clase['sources'])} |
+Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
+{clase['hours']} horas estimadas · motores {motores} · laboratorio
+[`{clase['lab']}`](../../../{clase['lab']}/README.md) · {len(clase['sources'])} fuentes.
 
 **Conceptos centrales:** {conceptos}
 
@@ -126,7 +125,7 @@ def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
 
 ```bash
 python scripts/validate_repository.py
-python {clase['lab']}/run_lab.py
+{comando_lab}
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o
@@ -222,6 +221,7 @@ def main() -> int:
 
     curriculo, fuentes = cargar()
     plano = indice_plano(curriculo)
+    laboratorios = {lab["ruta"]: lab for lab in curriculo["laboratorios"]}
     pendientes: list[str] = []
     faltan_lecciones: list[str] = []
     salidas: dict[Path, str] = {}
@@ -236,6 +236,7 @@ def main() -> int:
             parte, clase, leccion.read_text(encoding="utf-8"), fuentes,
             plano[posicion - 1] if posicion > 0 else None,
             plano[posicion + 1] if posicion + 1 < len(plano) else None,
+            laboratorios,
         )
 
     for parte in curriculo["parts"]:

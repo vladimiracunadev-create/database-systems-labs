@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-vectores-recuperacion-y-rag/060-busqueda-hibrida-y-filtrado/README.md) · [Siguiente →](../../part-13-arquitectura-y-proyecto-final/062-persistencia-poliglota-por-evidencia/README.md)
 
-| | |
-|---|---|
-| **Parte** | 12 — Vectores, recuperación y RAG |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `qdrant`, `postgresql` |
-| **Laboratorio** | [`labs/06-vector-search`](../../../labs/06-vector-search/README.md) |
-| **Fuentes** | 3 |
+Parte 12 — Vectores, recuperación y RAG · Avanzado ·
+3 horas estimadas · motores `qdrant`, `postgresql` · laboratorio
+[`labs/06-vector-search`](../../../labs/06-vector-search/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `recall@k` · `precisión@k` · `MRR` · `fragmentación` · `trazabilidad de la cita`
 
@@ -235,7 +230,7 @@ Un RAG en producción se degrada por causas de base de datos: documentos nuevos 
 
 ```bash
 python scripts/validate_repository.py
-python labs/06-vector-search/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

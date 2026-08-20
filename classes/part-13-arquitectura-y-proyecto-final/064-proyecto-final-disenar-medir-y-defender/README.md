@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 13](../README.md) · [← Anterior](../../part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md)
 
-| | |
-|---|---|
-| **Parte** | 13 — Arquitectura y proyecto final |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 6 |
-| **Motores** | `postgresql`, `mongodb`, `redis`, `qdrant`, `duckdb` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 4 |
+Parte 13 — Arquitectura y proyecto final · Avanzado ·
+6 horas estimadas · motores `postgresql`, `mongodb`, `redis`, `qdrant`, `duckdb` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `defensa técnica` · `evidencia reproducible` · `límite declarado` · `plan de evolución`
 
@@ -255,7 +250,7 @@ El proyecto final es el reto. Entrega:
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

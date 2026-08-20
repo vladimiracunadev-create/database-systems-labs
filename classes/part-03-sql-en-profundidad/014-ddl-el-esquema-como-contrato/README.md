@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 03 — SQL en profundidad · Fundamentos ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `tipo de dato` · `restricción` · `valor por defecto` · `DDL transaccional`
 

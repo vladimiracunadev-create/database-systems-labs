@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-vectores-recuperacion-y-rag/058-embeddings-y-metricas-de-distancia/README.md) · [Siguiente →](../../part-12-vectores-recuperacion-y-rag/060-busqueda-hibrida-y-filtrado/README.md)
 
-| | |
-|---|---|
-| **Parte** | 12 — Vectores, recuperación y RAG |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `qdrant`, `milvus`, `postgresql` |
-| **Laboratorio** | [`labs/06-vector-search`](../../../labs/06-vector-search/README.md) |
-| **Fuentes** | 4 |
+Parte 12 — Vectores, recuperación y RAG · Avanzado ·
+4 horas estimadas · motores `qdrant`, `milvus`, `postgresql` · laboratorio
+[`labs/06-vector-search`](../../../labs/06-vector-search/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `búsqueda aproximada` · `recall` · `HNSW` · `cuantización` · `latencia frente a exactitud`
 
@@ -238,7 +233,7 @@ El recall se degrada silenciosamente al crecer la colección o al cambiar la dis
 
 ```bash
 python scripts/validate_repository.py
-python labs/06-vector-search/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

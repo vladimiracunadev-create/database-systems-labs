@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/README.md) · [Siguiente →](../../part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/README.md)
 
-| | |
-|---|---|
-| **Parte** | 05 — Documentos y clave-valor |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `redis`, `dynamodb` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 05 — Documentos y clave-valor · Intermedio ·
+3 horas estimadas · motores `redis`, `dynamodb` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `TTL` · `invalidación` · `estampida de caché` · `durabilidad configurable`
 
@@ -215,7 +210,7 @@ La caída más habitual asociada a caché no es la caché: es el origen, cuando 
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

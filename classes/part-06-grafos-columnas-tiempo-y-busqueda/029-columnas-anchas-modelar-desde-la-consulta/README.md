@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/README.md) · [Siguiente →](../../part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 06 — Grafos, columnas, tiempo y búsqueda |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 3 |
-| **Motores** | `cassandra`, `scylladb` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 06 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
+3 horas estimadas · motores `cassandra`, `scylladb` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `clave de partición` · `clave de agrupamiento` · `desnormalización por consulta`
 
@@ -225,7 +220,7 @@ Una consulta no prevista en un modelo de columnas anchas no es un `SELECT` nuevo
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

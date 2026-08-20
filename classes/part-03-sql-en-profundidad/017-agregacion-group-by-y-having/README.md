@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/README.md) · [Siguiente →](../../part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `duckdb` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 03 — SQL en profundidad · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `duckdb` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `agrupación` · `agregado` · `HAVING` · `doble conteo` · `dependencia funcional en GROUP BY`
 

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/035-bloqueo-en-dos-fases-y-mvcc/README.md)
 
-| | |
-|---|---|
-| **Parte** | 07 — Transacciones, concurrencia y recuperación |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `mysql`, `sqlite` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 5 |
+Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
+4 horas estimadas · motores `postgresql`, `mysql`, `sqlite` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 5 fuentes.
 
 **Conceptos centrales:** `lectura sucia` · `lectura no repetible` · `fantasma` · `sesgo de escritura` · `snapshot isolation`
 
@@ -205,7 +200,7 @@ El sesgo de escritura produce los datos imposibles que aparecen «una vez cada t
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

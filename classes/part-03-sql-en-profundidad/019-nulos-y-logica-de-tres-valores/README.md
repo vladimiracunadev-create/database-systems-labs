@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/README.md) · [Siguiente →](../../part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/README.md)
 
-| | |
-|---|---|
-| **Parte** | 03 — SQL en profundidad |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 03 — SQL en profundidad · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `UNKNOWN` · `IS DISTINCT FROM` · `NOT IN con nulos` · `agregados y nulos`
 

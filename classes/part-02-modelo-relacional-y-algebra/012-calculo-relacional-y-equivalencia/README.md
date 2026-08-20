@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/README.md) · [Siguiente →](../../part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/README.md)
 
-| | |
-|---|---|
-| **Parte** | 02 — Modelo relacional y álgebra |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 02 — Modelo relacional y álgebra · Intermedio ·
+3 horas estimadas · motores `postgresql` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `cálculo de tuplas` · `seguridad de expresión` · `equivalencia` · `declaratividad`
 

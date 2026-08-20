@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/README.md) · [Siguiente →](../../part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/README.md)
 
-| | |
-|---|---|
-| **Parte** | 02 — Modelo relacional y álgebra |
-| **Nivel** | Fundamentos |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 02 — Modelo relacional y álgebra · Fundamentos ·
+4 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `selección` · `proyección` · `producto cartesiano` · `reunión natural` · `división`
 

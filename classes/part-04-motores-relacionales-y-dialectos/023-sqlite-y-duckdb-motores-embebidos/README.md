@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/README.md) · [Siguiente →](../../part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/README.md)
 
-| | |
-|---|---|
-| **Parte** | 04 — Motores relacionales y dialectos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `sqlite`, `duckdb` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 3 |
+Parte 04 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores `sqlite`, `duckdb` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `motor embebido` · `tipado dinamico` · `almacenamiento columnar` · `vectorización`
 

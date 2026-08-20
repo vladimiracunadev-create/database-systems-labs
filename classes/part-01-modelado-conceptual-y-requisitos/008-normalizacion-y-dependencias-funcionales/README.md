@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-01-modelado-conceptual-y-requisitos/007-claves-identidad-natural-y-sustituta/README.md) · [Siguiente →](../../part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/README.md)
 
-| | |
-|---|---|
-| **Parte** | 01 — Modelado conceptual y requisitos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) |
-| **Fuentes** | 4 |
+Parte 01 — Modelado conceptual y requisitos · Intermedio ·
+4 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `dependencia funcional` · `anomalía de actualización` · `BCFN` · `descomposición sin pérdida`
 

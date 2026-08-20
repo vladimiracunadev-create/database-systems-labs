@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md)
 
-| | |
-|---|---|
-| **Parte** | 07 — Transacciones, concurrencia y recuperación |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite`, `mysql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 07 — Transacciones, concurrencia y recuperación · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite`, `mysql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `atomicidad` · `consistencia` · `aislamiento` · `durabilidad` · `unidad de recuperación`
 
@@ -182,7 +177,7 @@ Medición típica: una transacción abierta 40 minutos en una base con 2 000 act
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

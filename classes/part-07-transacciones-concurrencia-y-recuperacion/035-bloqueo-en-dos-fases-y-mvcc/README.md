@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md)
 
-| | |
-|---|---|
-| **Parte** | 07 — Transacciones, concurrencia y recuperación |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `mysql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 3 |
+Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
+4 horas estimadas · motores `postgresql`, `mysql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `2PL` · `versión de fila` · `instantánea` · `interbloqueo` · `vacuum`
 
@@ -239,7 +234,7 @@ Los interbloqueos aumentan de golpe tras un despliegue que cambió el orden de l
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-03-sql-en-profundidad/019-nulos-y-logica-de-tres-valores/README.md) · [Siguiente →](../../part-04-motores-relacionales-y-dialectos/021-postgresql-tipos-extensiones-y-procesos/README.md)
 
-| | |
-|---|---|
-| **Parte** | 04 — Motores relacionales y dialectos |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mysql`, `sqlite`, `sql-server`, `oracle-database` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 4 |
+Parte 04 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores `postgresql`, `mysql`, `sqlite`, `sql-server`, `oracle-database` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `norma frente a producto` · `matriz de portabilidad` · `extensión propietaria`
 
@@ -192,7 +187,7 @@ La migración de motor rara vez se decide por gusto: llega por licencias, por co
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

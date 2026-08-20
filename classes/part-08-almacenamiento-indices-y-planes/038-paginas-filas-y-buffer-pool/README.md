@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md) · [Siguiente →](../../part-08-almacenamiento-indices-y-planes/039-b-tree-orden-de-columnas-y-selectividad/README.md)
 
-| | |
-|---|---|
-| **Parte** | 08 — Almacenamiento, índices y planes |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `sqlite` |
-| **Laboratorio** | [`labs/04-indexing`](../../../labs/04-indexing/README.md) |
-| **Fuentes** | 3 |
+Parte 08 — Almacenamiento, índices y planes · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `pagina` · `factor de bloque` · `buffer pool` · `localidad` · `lectura secuencial`
 
@@ -222,7 +217,7 @@ Cuando una base «se pone lenta al crecer», casi siempre significa que el conju
 
 ```bash
 python scripts/validate_repository.py
-python labs/04-indexing/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

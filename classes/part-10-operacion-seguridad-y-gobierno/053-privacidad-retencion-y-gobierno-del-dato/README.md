@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-operacion-seguridad-y-gobierno/052-observabilidad-slo-y-capacidad/README.md) · [Siguiente →](../../part-11-analitica-integracion-y-streaming/054-oltp-frente-a-olap/README.md)
 
-| | |
-|---|---|
-| **Parte** | 10 — Operación, seguridad y gobierno |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `postgresql`, `mongodb` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 10 — Operación, seguridad y gobierno · Intermedio ·
+3 horas estimadas · motores `postgresql`, `mongodb` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `minimización` · `limitación de finalidad` · `seudonimización` · `derecho de supresión`
 
@@ -256,7 +251,7 @@ La mayor parte del trabajo de cumplimiento se ahorra al diseñar: separar identi
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

@@ -37,16 +37,6 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 </div>
 
-| | |
-|---|---|
-| **Partes** | 14 |
-| **Clases** | 64 |
-| **Horas estimadas** | 210 |
-| **Fuentes verificadas** | 109 |
-| **Motores en catálogo** | 27 |
-| **Laboratorios ejecutables en CI** | 5 de 6 |
-| **Preguntas de evaluación** | 256 |
-
 ## La regla del repositorio
 
 > **Ninguna clase se publica sin fuentes, y ninguna cita apunta al vacío.**

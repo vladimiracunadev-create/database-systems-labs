@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-04-motores-relacionales-y-dialectos/023-sqlite-y-duckdb-motores-embebidos/README.md) · [Siguiente →](../../part-05-documentos-y-clave-valor/025-modelado-documental-incrustar-o-referenciar/README.md)
 
-| | |
-|---|---|
-| **Parte** | 05 — Documentos y clave-valor |
-| **Nivel** | Intermedio |
-| **Horas estimadas** | 3 |
-| **Motores** | `mongodb`, `redis`, `dynamodb` |
-| **Laboratorio** | [`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) |
-| **Fuentes** | 3 |
+Parte 05 — Documentos y clave-valor · Intermedio ·
+3 horas estimadas · motores `mongodb`, `redis`, `dynamodb` · laboratorio
+[`labs/02-polyglot-modeling`](../../../labs/02-polyglot-modeling/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `agregado` · `frontera transaccional` · `entidad` · `actividad`
 
@@ -191,7 +186,7 @@ El punto caliente por agregado demasiado grande no se ve en desarrollo: aparece 
 
 ```bash
 python scripts/validate_repository.py
-python labs/02-polyglot-modeling/run_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

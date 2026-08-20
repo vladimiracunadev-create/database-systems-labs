@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-09-distribucion-replica-y-consistencia/046-modelos-de-consistencia-y-garantias-de-sesion/README.md) · [Siguiente →](../../part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/README.md)
 
-| | |
-|---|---|
-| **Parte** | 09 — Distribución, réplica y consistencia |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `spanner`, `cockroachdb`, `postgresql` |
-| **Laboratorio** | [`labs/03-transactions`](../../../labs/03-transactions/README.md) |
-| **Fuentes** | 4 |
+Parte 09 — Distribución, réplica y consistencia · Avanzado ·
+4 horas estimadas · motores `spanner`, `cockroachdb`, `postgresql` · laboratorio
+[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 4 fuentes.
 
 **Conceptos centrales:** `consenso` · `elección de líder` · `commit en dos fases` · `saga` · `compensación`
 
@@ -227,7 +222,7 @@ La mayoría de las «transacciones distribuidas» que se plantean en un diseño 
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_lab.py
+python labs/03-transactions/run_transactions_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

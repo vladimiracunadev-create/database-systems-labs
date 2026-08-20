@@ -2,14 +2,9 @@
 
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/README.md) · [Siguiente →](../../part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/README.md)
 
-| | |
-|---|---|
-| **Parte** | 09 — Distribución, réplica y consistencia |
-| **Nivel** | Avanzado |
-| **Horas estimadas** | 4 |
-| **Motores** | `postgresql`, `mysql`, `cassandra` |
-| **Laboratorio** | [`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) |
-| **Fuentes** | 3 |
+Parte 09 — Distribución, réplica y consistencia · Avanzado ·
+4 horas estimadas · motores `postgresql`, `mysql`, `cassandra` · laboratorio
+[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `replicación sincrónica` · `retraso de réplica` · `quórum` · `lectura de tu propia escritura`
 
@@ -222,7 +217,7 @@ El retraso de réplica es la métrica que más incidencias explica y la que meno
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o
