@@ -172,6 +172,8 @@ def test_archivo_obligatorio_ausente(repo: Path) -> None:
     "labs/04-indexing/run_indexing_lab.py",
     "labs/05-nosql-workloads/run_nosql_lab.py",
     "labs/06-vector-search/run_vector_lab.py",
+    "labs/07-replication/run_replication_lab.py",
+    "labs/08-recovery/run_recovery_lab.py",
 ])
 def test_laboratorio_declarado_como_obligatorio(guion: str) -> None:
     """Los laboratorios ejecutables deben estar en la lista que el validador exige."""

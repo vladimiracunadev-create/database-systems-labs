@@ -230,6 +230,41 @@ laboratorios:
       - recall@k sobre el conjunto relevante declarado
     fuentes: [malkov-hnsw-2018, karpukhin-dpr-2020, robertson-bm25-2009, docs-qdrant]
 
+  - id: "07"
+    titulo: Réplica, retraso y garantías de sesión
+    ruta: labs/07-replication
+    comando: python labs/07-replication/run_replication_lab.py
+    marca: REPLICATION_LAB_OK
+    duracion: 90
+    resumen: >-
+      Un líder y dos seguidores con retraso declarado. Cuenta las lecturas
+      obsoletas y las que rompen garantías que la aplicación daba por hechas, y
+      aplica las tres correcciones: leer del líder, esperar la posición propia o
+      exigir quórum.
+    mide:
+      - lecturas que no ven la escritura propia del cliente
+      - lecturas no monótonas al repartir entre réplicas con distinto retraso
+      - espera que cuesta cada garantía y cola pendiente del seguidor más lento
+    fuentes: [gray-danger-replication-1996, bailis-hat-2013, vogels-eventually-consistent-2009, docs-postgresql]
+
+  - id: "08"
+    titulo: Respaldo, restauración y punto en el tiempo
+    ruta: labs/08-recovery
+    comando: python labs/08-recovery/run_recovery_lab.py
+    marca: RECOVERY_LAB_OK
+    duracion: 90
+    resumen: >-
+      Respalda una base real con la API del motor, sigue escribiendo mientras
+      archiva cada transacción, provoca un borrado sin filtro y reconstruye la
+      base a un instante anterior al desastre. Un respaldo que no se restaura no
+      es un respaldo.
+    mide:
+      - transacciones perdidas (RPO) con cada estrategia de recuperación
+      - trabajo de recuperación en operaciones reproducidas
+      - igualdad exacta entre la base restaurada y el estado bueno
+
+    fuentes: [mohan-aries-1992, docs-postgresql-backup, docs-sqlite-wal, campbell-majors-dbre]
+
 parts:
   - id: "00"
     slug: fundamentos-datos-sistemas-y-metodo
@@ -695,7 +730,7 @@ parts:
         level: avanzado
         concepts: [replicación sincrónica, retraso de réplica, quórum, lectura de tu propia escritura]
         engines: [postgresql, mysql, cassandra]
-        lab: labs/05-nosql-workloads
+        lab: labs/07-replication
         sources: [kleppmann-ddia, gray-danger-replication-1996, decandia-dynamo-2007]
       - id: "044"
         slug: particionado-rebalanceo-y-claves-calientes
@@ -722,7 +757,7 @@ parts:
         level: avanzado
         concepts: [linealizabilidad, consistencia causal, lectura monotona, convergencia]
         engines: [cassandra, mongodb, spanner]
-        lab: labs/05-nosql-workloads
+        lab: labs/07-replication
         sources: [kingsbury-jepsen-consistency, kingsbury-jepsen-analyses, vogels-eventually-consistent-2009, lamport-time-clocks-1978, shapiro-crdt-2011]
       - id: "047"
         slug: consenso-y-transacciones-distribuidas
@@ -748,7 +783,7 @@ parts:
         level: intermedio
         concepts: [RPO, RTO, recuperación a un punto en el tiempo, prueba de restauración]
         engines: [postgresql, sqlite, mongodb]
-        lab: labs/03-transactions
+        lab: labs/08-recovery
         sources: [docs-postgresql-backup, campbell-majors-dbre, google-sre-book]
       - id: "049"
         slug: migraciones-evolutivas-sin-caida

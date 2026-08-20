@@ -4,7 +4,7 @@
 
 Parte 10 — Operación, seguridad y gobierno · Intermedio ·
 4 horas estimadas · motores `postgresql`, `sqlite`, `mongodb` · laboratorio
-[`labs/03-transactions`](../../../labs/03-transactions/README.md) · 3 fuentes.
+[`labs/08-recovery`](../../../labs/08-recovery/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `RPO` · `RTO` · `recuperación a un punto en el tiempo` · `prueba de restauración`
 
@@ -233,7 +233,7 @@ La métrica que resume la salud del plan es la fecha de la última restauración
 
 ```bash
 python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/08-recovery/run_recovery_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

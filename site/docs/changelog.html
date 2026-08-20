@@ -36,6 +36,7 @@
     <a href="../classes/indice.html">Clases</a>
     <a href="../rutas/index.html">Rutas por rol</a>
     <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
@@ -71,7 +72,7 @@ el validador deja de ser el único componente sin pruebas.</p>
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.</li>
-<li><strong>Pruebas</strong> (<code>tests/</code>): 93 pruebas que ejecutan los laboratorios, comprueban
+<li><strong>Pruebas</strong> (<code>tests/</code>): 112 pruebas que ejecutan los laboratorios, comprueban
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo <code>--check</code>, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
@@ -81,7 +82,7 @@ el validador deja de ser el único componente sin pruebas.</p>
 <li><code>requirements-dev.txt</code> y <code>pytest.ini</code> para el entorno de desarrollo.</li>
 <li>Trabajo <code>pruebas</code> en integración continua, y los tres laboratorios nuevos en
   la matriz de Python 3.11, 3.12 y 3.13.</li>
-<li><strong>Sitio como producto</strong>: barra de navegación y pie comunes a las 111 páginas,
+<li><strong>Sitio como producto</strong>: barra de navegación y pie comunes a las 115 páginas,
   tema claro y oscuro con conmutador que recuerda la elección, progreso de
   lectura por clase guardado en el navegador, filtro «solo pendientes»,
   anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
@@ -124,6 +125,27 @@ el validador deja de ser el único componente sin pruebas.</p>
   estructurados de itinerario y las fuentes enlazadas a su ficha.</li>
 <li>Pruebas de coherencia del README: la tabla del programa, la de rutas y las cifras de las
   insignias se comprueban contra <code>curriculum.yaml</code> y contra el propio repositorio.</li>
+<li><strong>Laboratorio 07 ejecutable</strong> (<code>labs/07-replication/run_replication_lab.py</code>): un líder y dos
+  seguidores con retraso declarado. Cuenta las lecturas que no ven la escritura propia del
+  cliente y las no monótonas al repartir entre réplicas, y aplica las tres correcciones —leer
+  del líder, esperar la posición propia, exigir quórum— midiendo lo que cuesta cada una.</li>
+<li><strong>Laboratorio 08 ejecutable</strong> (<code>labs/08-recovery/run_recovery_lab.py</code>): respalda una base real
+  con la API del motor, archiva cada transacción, provoca un borrado sin filtro y compara tres
+  recuperaciones. Solo la restauración a un punto en el tiempo devuelve el estado bueno, y se
+  demuestra comparando el contenido, no mirándolo por encima.</li>
+<li><strong>Guías de laboratorio completas</strong>: las ocho pasan de una página de instrucciones a una guía
+  con qué demuestra, hipótesis que predecir antes de ejecutar, la salida real, por qué el
+  experimento está hecho así, <strong>lo que no demuestra</strong>, extensiones, cómo llevarlo a un motor
+  real, y las clases, rutas y certificaciones donde encaja.</li>
+<li><strong>Certificaciones</strong> (<code>certificaciones/</code>): mapeo del temario oficial de DP-300, DP-900 y AWS
+  Data Engineer Associate contra las clases del programa, con la cobertura calculada desde los
+  pesos que publica cada proveedor. Dos métodos declarados —medición por subáreas oficiales y
+  estimación por dominio— y la brecha explicada en cada ficha.</li>
+<li>Google Professional Data Engineer, CDMP y las credenciales de Oracle se listan <strong>sin
+  porcentaje</strong>, con el motivo: su ponderación no está disponible en una fuente verificable, y
+  este repositorio no publica un número que no pueda comprobar.</li>
+<li><code>scripts/generar_certificaciones.py</code> calcula la cobertura y genera las fichas, con <code>--check</code>
+  en integración continua como el resto de los generadores.</li>
 </ul>
 <h3 id="cambiado">Cambiado</h3>
 <ul>
@@ -132,7 +154,7 @@ el validador deja de ser el único componente sin pruebas.</p>
   buscar fuentes huérfanas.</li>
 <li><code>labs/README.md</code> declara qué mide cada laboratorio y por qué ninguno afirma
   nada en milisegundos.</li>
-<li><code>scripts/generate_site.py</code> pasa de 82 a 111 páginas y admite artefactos
+<li><code>scripts/generate_site.py</code> pasa de 82 a 115 páginas y admite artefactos
   binarios, con <code>--check</code> byte a byte también para los iconos.</li>
 <li>Los README de clase pierden la tabla de metadatos y las cifras del README raíz dejan de
   duplicar las insignias; la ficha de clase pasa a una línea corrida.</li>
@@ -142,6 +164,8 @@ el validador deja de ser el único componente sin pruebas.</p>
   suman 17.</li>
 <li>El sistema visual se reescribe sobre variables CSS: un solo bloque de tokens
   define color y ritmo, y de ahí sale el tema claro sin excepciones.</li>
+<li>Las clases de réplica (043, 046) y de respaldo (048) pasan a apuntar a su laboratorio propio
+  en vez de a uno prestado.</li>
 <li>El flujo de Pages vigila todas las entradas del generador; antes ignoraba
   <code>docs/</code>, <code>assessments/</code>, <code>projects/</code> y los documentos de la raíz, así que un
   cambio en ellos no llegaba a publicarse.</li>

@@ -40,9 +40,13 @@ ARCHIVOS_OBLIGATORIOS = [
     "labs/04-indexing/run_indexing_lab.py",
     "labs/05-nosql-workloads/run_nosql_lab.py",
     "labs/06-vector-search/run_vector_lab.py",
+    "labs/07-replication/run_replication_lab.py",
+    "labs/08-recovery/run_recovery_lab.py",
     "reference-data/school/schema.sqlite.sql", "reference-data/school/seed.sqlite.sql",
     "assessments/rubric.md",
     "rutas/README.md",
+    "certificaciones/README.md",
+    "certificaciones/_mapeo.json",
     "scripts/build_classes.py", "scripts/generate_site.py",
     "site/index.html",
 ]
@@ -157,8 +161,8 @@ def validar_curriculo(curriculo: dict, fuentes: dict, motores: dict,
     # que nadie la revise: se trata como error, no como aviso.
     huerfanas = sorted(ids_fuente - citadas)
     if huerfanas:
-        fallo("fuentes registradas y no citadas por ninguna clase, laboratorio ni ruta: "
-              f"{huerfanas}")
+        fallo("fuentes registradas y no citadas por ninguna clase, laboratorio, ruta ni "
+              f"certificacion: {huerfanas}")
 
 
 def validar_laboratorios(curriculo: dict, fuentes: dict) -> set[str]:
@@ -280,6 +284,97 @@ def validar_rutas(curriculo: dict, fuentes: dict) -> set[str]:
 
     if not (ROOT / "rutas" / "README.md").exists():
         fallo("falta el indice de rutas rutas/README.md")
+    return citadas
+
+
+def validar_certificaciones(curriculo: dict, fuentes: dict) -> set[str]:
+    """Comprueba el mapeo de certificaciones y devuelve las fuentes que cita.
+
+    Un porcentaje de cobertura es una afirmacion como cualquier otra: si el
+    peso no es el oficial, si la clase que dice cubrir un dominio no existe o
+    si la suma de los pesos no da 100, el numero publicado miente.
+    """
+    ruta = ROOT / "certificaciones" / "_mapeo.json"
+    if not ruta.exists():
+        fallo("falta certificaciones/_mapeo.json")
+        return set()
+
+    mapeo = json.loads(ruta.read_text(encoding="utf-8"))
+    ids_fuente = {f["id"] for f in fuentes["sources"]}
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    ids_lab = {lab["id"] for lab in curriculo.get("laboratorios", [])}
+    citadas: set[str] = set()
+    vistos: set[str] = set()
+
+    for cert in mapeo["certificaciones"]:
+        cid = cert["id"]
+        if cid in vistos:
+            fallo(f"certificacion duplicada: {cid}")
+        vistos.add(cid)
+
+        if cert["metodo"] not in mapeo["metodos"]:
+            fallo(f"certificacion {cid}: metodo desconocido {cert['metodo']!r}")
+        if cert["nivel"] not in {"entrada", "intermedio", "avanzado"}:
+            fallo(f"certificacion {cid}: nivel desconocido {cert['nivel']!r}")
+        for campo in ("url", "temario"):
+            if not cert[campo].startswith("https://"):
+                fallo(f"certificacion {cid}: {campo} no es una URL segura")
+        if cert["ruta"] not in curriculo["rutas"]:
+            fallo(f"certificacion {cid}: la ruta {cert['ruta']!r} no existe")
+        for lid in cert["laboratorios"]:
+            if lid not in ids_lab:
+                fallo(f"certificacion {cid}: el laboratorio {lid} no esta declarado")
+
+        # Los pesos son los oficiales del temario. Cuando el proveedor los
+        # publica como rangos ("15-20 %"), el punto medio no suma exactamente
+        # 100 y el generador normaliza; aqui solo se comprueba que la desviacion
+        # sea la de un redondeo y no la de un dominio olvidado.
+        suma = sum(d["peso"] for d in cert["dominios"])
+        if abs(suma - 100) > 10:
+            fallo(f"certificacion {cid}: los pesos suman {suma}; falta o sobra un dominio")
+
+        for dominio in cert["dominios"]:
+            if cert["metodo"] == "subareas":
+                if not dominio.get("subareas"):
+                    fallo(f"certificacion {cid}: el dominio {dominio['nombre']!r} no lista subareas")
+                for sub in dominio.get("subareas", []):
+                    if sub["cubierto"] and not sub["clases"]:
+                        fallo(f"certificacion {cid}: {sub['nombre']!r} se declara cubierta "
+                              f"sin decir por que clases")
+                    if not sub["cubierto"] and sub["clases"]:
+                        fallo(f"certificacion {cid}: {sub['nombre']!r} no esta cubierta "
+                              f"pero cita clases")
+                    for clase in sub["clases"]:
+                        if clase not in ids_clase:
+                            fallo(f"certificacion {cid}: la clase {clase} no existe")
+            else:
+                cobertura = dominio.get("cobertura")
+                if not isinstance(cobertura, (int, float)) or not 0 <= cobertura <= 100:
+                    fallo(f"certificacion {cid}: cobertura fuera de rango en "
+                          f"{dominio['nombre']!r}")
+                if not dominio.get("clases"):
+                    fallo(f"certificacion {cid}: el dominio {dominio['nombre']!r} estima "
+                          f"cobertura sin citar clases")
+                for clase in dominio.get("clases", []):
+                    if clase not in ids_clase:
+                        fallo(f"certificacion {cid}: la clase {clase} no existe")
+
+        if len(cert["fuentes"]) < MINIMO_FUENTES_POR_CLASE:
+            fallo(f"certificacion {cid}: {len(cert['fuentes'])} fuentes; el minimo es "
+                  f"{MINIMO_FUENTES_POR_CLASE}")
+        for sid in cert["fuentes"]:
+            citadas.add(sid)
+            if sid not in ids_fuente:
+                fallo(f"certificacion {cid}: cita la fuente inexistente {sid!r}")
+
+        if not (ROOT / "certificaciones" / f"{cid}.md").exists():
+            fallo(f"certificacion {cid}: falta la ficha; ejecuta "
+                  f"scripts/generar_certificaciones.py")
+
+    for item in mapeo["sin_mapeo"]:
+        if not item.get("motivo"):
+            fallo(f"certificacion sin mapear {item['nombre']!r}: sin motivo declarado")
+
     return citadas
 
 
@@ -420,7 +515,9 @@ def main() -> int:
     validar_catalogo_motores(motores)
     citadas_labs = validar_laboratorios(curriculo, fuentes)
     citadas_rutas = validar_rutas(curriculo, fuentes)
-    validar_curriculo(curriculo, fuentes, motores, citadas_labs | citadas_rutas)
+    citadas_certs = validar_certificaciones(curriculo, fuentes)
+    validar_curriculo(curriculo, fuentes, motores,
+                      citadas_labs | citadas_rutas | citadas_certs)
     validar_clases(curriculo)
     validar_datos_referencia()
     validar_enlaces_relativos()

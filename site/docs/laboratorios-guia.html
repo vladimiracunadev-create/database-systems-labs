@@ -36,6 +36,7 @@
     <a href="../classes/indice.html">Clases</a>
     <a href="../rutas/index.html">Rutas por rol</a>
     <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
@@ -51,66 +52,140 @@
 </nav>
 <main class="content" id="principal">
 <h1 id="laboratorios">Laboratorios</h1>
-<p>Cinco de los seis laboratorios se ejecutan sin instalar nada y sin levantar ningún servidor: usan solo la biblioteca estándar de Python y se comprueban en integración continua sobre Python 3.11, 3.12 y 3.13. Los contenedores son opcionales y sirven para contrastar contra los motores reales.</p>
+<p>Siete de los ocho laboratorios se ejecutan sin instalar nada y sin levantar ningún servidor:
+usan solo la biblioteca estándar de Python y se comprueban en integración continua sobre
+Python 3.11, 3.12 y 3.13. Los contenedores son opcionales y sirven para contrastar contra los
+motores reales.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>Laboratorio</th>
 <th>Ejecutable</th>
-<th>Dependencias</th>
-<th>Resultado</th>
+<th>Qué demuestra</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>01 SQL foundations</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md">01 SQL foundations</a></td>
 <td><code>python labs/01-sql-foundations/run_lab.py</code></td>
-<td>Python 3.11+</td>
-<td>esquema, datos, consultas e invariantes</td>
+<td>consultas e invariantes sobre el dominio canónico</td>
 </tr>
 <tr>
-<td>02 Polyglot modeling</td>
-<td>— (diseño)</td>
-<td>editor de texto</td>
-<td>modelo relacional, documental y grafo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md">02 Polyglot modeling</a></td>
+<td>— (se entrega escrito)</td>
+<td>el mismo dominio en relacional, documental y grafo</td>
 </tr>
 <tr>
-<td>03 Transactions</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md">03 Transactions</a></td>
 <td><code>python labs/03-transactions/run_transactions_lab.py</code></td>
-<td>Python 3.11+</td>
 <td>actualización perdida reproducida y tres correcciones</td>
 </tr>
 <tr>
-<td>04 Indexing</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md">04 Indexing</a></td>
 <td><code>python labs/04-indexing/run_indexing_lab.py</code></td>
-<td>Python 3.11+</td>
-<td>plan antes/después y costo de escritura</td>
+<td>plan y trabajo antes y después del índice, y su costo</td>
 </tr>
 <tr>
-<td>05 NoSQL workloads</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md">05 NoSQL workloads</a></td>
 <td><code>python labs/05-nosql-workloads/run_nosql_lab.py</code></td>
-<td>Python 3.11+</td>
-<td>elección por patrón de acceso, medida</td>
+<td>TTL frente a coherencia, incrustar frente a referenciar</td>
 </tr>
 <tr>
-<td>06 Vector search</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md">06 Vector search</a></td>
 <td><code>python labs/06-vector-search/run_vector_lab.py</code></td>
-<td>Python 3.11+</td>
-<td>similitud y métricas de recuperación</td>
+<td>similitud coseno y <code>recall@k</code> sobre vectores deterministas</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md">07 Replication</a></td>
+<td><code>python labs/07-replication/run_replication_lab.py</code></td>
+<td>lecturas obsoletas, garantías de sesión y quórum</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md">08 Recovery</a></td>
+<td><code>python labs/08-recovery/run_recovery_lab.py</code></td>
+<td>RPO, RTO y restauración a un punto en el tiempo</td>
 </tr>
 </tbody>
 </table></div>
-<p>Cada script termina con su marca (<code>LAB_OK</code>, <code>TRANSACTIONS_LAB_OK</code>, <code>INDEXING_LAB_OK</code>, <code>NOSQL_LAB_OK</code>, <code>VECTOR_LAB_OK</code>). Si no aparece, el laboratorio falló: el problema está en el código, no en el entorno.</p>
+<p>Cada guion termina con su marca (<code>LAB_OK</code>, <code>TRANSACTIONS_LAB_OK</code>, <code>INDEXING_LAB_OK</code>,
+<code>NOSQL_LAB_OK</code>, <code>VECTOR_LAB_OK</code>, <code>REPLICATION_LAB_OK</code>, <code>RECOVERY_LAB_OK</code>). Si no aparece, el
+laboratorio falló: el problema está en el código, no en el entorno.</p>
 <h2 id="qué-se-mide-y-qué-no">Qué se mide y qué no</h2>
-<p>Ningún laboratorio afirma nada en milisegundos. Un tiempo depende de la máquina, de la carga del momento y del sistema de archivos, así que no sirve como evidencia compartida. Lo que sí se afirma:</p>
+<p>Ningún laboratorio afirma nada en milisegundos. Un tiempo depende de la máquina, de la carga del
+momento y del sistema de archivos, así que no sirve como evidencia compartida. Lo que sí se
+afirma:</p>
 <ul>
 <li><strong>invariantes</strong>: cuántas reservas se aceptaron para una plaza;</li>
 <li><strong>planes</strong>: si el motor recorre la tabla o busca por índice;</li>
 <li><strong>trabajo</strong>: instrucciones de la máquina virtual, accesos, bytes reescritos, páginas;</li>
-<li><strong>métricas de recuperación</strong>: <code>recall@k</code> sobre vectores deterministas.</li>
+<li><strong>garantías</strong>: cuántas lecturas no vieron la escritura propia del cliente;</li>
+<li><strong>recuperación</strong>: transacciones perdidas (RPO) y operaciones reproducidas;</li>
+<li><strong>métricas de recuperación de información</strong>: <code>recall@k</code> sobre vectores deterministas.</li>
 </ul>
-<p>Cuando midas tiempos en tu propio motor, hazlo aparte, con repeticiones, mediana y dispersión, y declara la máquina.</p>
-<p>Cada laboratorio debe registrar hipótesis, entorno, resultado, explicación y limpieza. No ejecutes comandos destructivos fuera de datos creados específicamente para el ejercicio.</p>
+<p>Cuando midas tiempos en tu propio motor, hazlo aparte, con repeticiones, mediana y dispersión, y
+declara la máquina.</p>
+<h2 id="cómo-se-lee-una-guía-de-laboratorio">Cómo se lee una guía de laboratorio</h2>
+<p>Todas siguen la misma estructura, para que puedas ir directo a lo que necesitas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Para qué sirve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué demuestra</td>
+<td>La afirmación que el laboratorio sostiene</td>
+</tr>
+<tr>
+<td>Hipótesis</td>
+<td>Lo que deberías predecir <strong>antes</strong> de ejecutar</td>
+</tr>
+<tr>
+<td>Ejecutar</td>
+<td>El comando exacto</td>
+</tr>
+<tr>
+<td>Lo que verás</td>
+<td>La salida real, para comparar</td>
+</tr>
+<tr>
+<td>Por qué está hecho así</td>
+<td>Las decisiones de diseño del experimento</td>
+</tr>
+<tr>
+<td>Lo que <strong>no</strong> demuestra</td>
+<td>El límite declarado, que es lo que separa evidencia de propaganda</td>
+</tr>
+<tr>
+<td>Extensiones</td>
+<td>Qué cambiar y qué debería pasar</td>
+</tr>
+<tr>
+<td>Llevarlo a un motor real</td>
+<td>El mismo experimento con contenedores</td>
+</tr>
+<tr>
+<td>Dónde encaja</td>
+<td>Clases, rutas por rol y certificaciones</td>
+</tr>
+<tr>
+<td>Fuentes</td>
+<td>De dónde sale el criterio</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="registro-de-evidencia">Registro de evidencia</h2>
+<p>Cada laboratorio debe registrar hipótesis, entorno, resultado, explicación y limpieza. Una
+captura sin comando no es evidencia: no se puede repetir. No ejecutes comandos destructivos
+fuera de datos creados específicamente para el ejercicio.</p>
+<h2 id="contenedores">Contenedores</h2>
+<pre><code class="language-bash">docker compose --profile relational up -d          # PostgreSQL y MySQL
+docker compose --profile document --profile cache up -d   # MongoDB y Redis
+</code></pre>
+<p>Las credenciales del <code>compose</code> son locales y están a la vista en un archivo versionado. <strong>Nunca
+deben copiarse a otro entorno.</strong> Al terminar: <code>docker compose --profile &lt;perfil&gt; down -v</code>.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/README.md" rel="noopener"><code>labs/README.md</code></a></p>
 </main>

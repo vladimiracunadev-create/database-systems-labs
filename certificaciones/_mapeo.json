@@ -1,0 +1,443 @@
+{
+  "schema_version": 1,
+  "verificado_el": "2026-08-20",
+  "politica": "Cada certificación mapeada declara de dónde salen sus pesos y con qué método se calcula la cobertura. Un porcentaje sin método es propaganda: aquí el cálculo es reproducible con scripts/generar_certificaciones.py y auditable en este archivo. La cobertura mide temario, no probabilidad de aprobar: un examen práctico exige además horas de producto.",
+  "metodos": {
+    "subareas": "Se listan las subáreas oficiales del temario y se marca cuáles cubre el programa y con qué clases. La cobertura del dominio es subáreas cubiertas / subáreas totales, y el total es la media ponderada por el peso oficial del dominio. Es una medición, no una opinión.",
+    "dominio": "El proveedor publica el peso del dominio pero no un desglose citable con exactitud, así que la cobertura del dominio es una estimación declarada, justificada con las partes y clases que la sostienen. Se marca como estimación en la ficha."
+  },
+  "aviso": "Mapeo orientativo, no avalado por Microsoft, Amazon Web Services ni ningún otro proveedor. Los temarios cambian: la fecha de verificación de cada uno está en su ficha, y conviene comprobar la versión vigente antes de inscribirse.",
+  "certificaciones": [
+    {
+      "id": "dp-300",
+      "nombre": "Microsoft Certified: Azure Database Administrator Associate",
+      "codigo": "DP-300",
+      "proveedor": "Microsoft",
+      "nivel": "intermedio",
+      "metodo": "subareas",
+      "url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-database-administrator-associate/",
+      "temario": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/dp-300",
+      "temario_vigente": "2026-04-24",
+      "pesos_oficiales": true,
+      "renovacion": "anual",
+      "ruta": "fiabilidad-y-operacion",
+      "laboratorios": [
+        "03",
+        "04",
+        "07",
+        "08"
+      ],
+      "fuentes": [
+        "cert-microsoft-dp300",
+        "temario-dp300"
+      ],
+      "resumen": "La credencial más directa para el rol de operación: planificación, seguridad, monitorización, automatización y alta disponibilidad sobre SQL Server y Azure SQL. Su temario es, casi punto por punto, la Parte 10 de este programa más partes de la 07, la 08 y la 09.",
+      "dominios": [
+        {
+          "nombre": "Plan and implement data platform resources",
+          "peso": 17.5,
+          "peso_oficial": "15–20%",
+          "subareas": [
+            {
+              "nombre": "Plan and deploy Azure SQL solutions",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Despliegue específico de Azure: fuera del alcance de un programa neutral de motor."
+            },
+            {
+              "nombre": "Configure resources for scale and performance",
+              "cubierto": true,
+              "clases": [
+                "038",
+                "044"
+              ],
+              "nota": "Particionado, compresión y el efecto del almacenamiento en el rendimiento, como mecanismo."
+            },
+            {
+              "nombre": "Plan and implement a migration strategy",
+              "cubierto": true,
+              "clases": [
+                "049",
+                "020"
+              ],
+              "nota": "Migración evolutiva sin caída y matriz de dialectos entre motores."
+            }
+          ]
+        },
+        {
+          "nombre": "Implement a secure environment",
+          "peso": 22.5,
+          "peso_oficial": "20–25%",
+          "subareas": [
+            {
+              "nombre": "Configure database authentication and authorization",
+              "cubierto": true,
+              "clases": [
+                "050"
+              ],
+              "nota": "Privilegio mínimo, roles y seguridad por fila."
+            },
+            {
+              "nombre": "Implement security for data at rest and data in transit",
+              "cubierto": false,
+              "clases": [],
+              "nota": "TDE, Always Encrypted y enclaves son características de producto; el programa no las cubre."
+            },
+            {
+              "nombre": "Implement compliance controls for sensitive data",
+              "cubierto": true,
+              "clases": [
+                "053",
+                "050"
+              ],
+              "nota": "Clasificación, retención, auditoría y seguridad por fila."
+            }
+          ]
+        },
+        {
+          "nombre": "Monitor, configure, and optimize database resources",
+          "peso": 22.5,
+          "peso_oficial": "20–25%",
+          "subareas": [
+            {
+              "nombre": "Monitor resource activity and performance",
+              "cubierto": true,
+              "clases": [
+                "052",
+                "038"
+              ],
+              "nota": "Línea base, métricas que importan y objetivos de servicio."
+            },
+            {
+              "nombre": "Monitor and optimize query performance",
+              "cubierto": true,
+              "clases": [
+                "042",
+                "039"
+              ],
+              "nota": "Lectura de planes, bloqueo de sesiones y decisiones de índice."
+            },
+            {
+              "nombre": "Configure database solutions for optimal performance",
+              "cubierto": true,
+              "clases": [
+                "039",
+                "041",
+                "038"
+              ],
+              "nota": "Mantenimiento de índices y estadísticas, y su costo."
+            }
+          ]
+        },
+        {
+          "nombre": "Configure and manage automation of tasks",
+          "peso": 17.5,
+          "peso_oficial": "15–20%",
+          "subareas": [
+            {
+              "nombre": "Create and manage SQL Server Agent jobs",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Herramienta del producto."
+            },
+            {
+              "nombre": "Automate deployment of database resources",
+              "cubierto": false,
+              "clases": [],
+              "nota": "ARM, Bicep, PowerShell y CLI de Azure: fuera del alcance."
+            },
+            {
+              "nombre": "Create and manage database tasks in Azure",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Trabajos elásticos y automatización específica de Azure."
+            }
+          ]
+        },
+        {
+          "nombre": "Plan and configure a high availability and disaster recovery (HA/DR) environment",
+          "peso": 22.5,
+          "peso_oficial": "20–25%",
+          "subareas": [
+            {
+              "nombre": "Plan an HA/DR strategy for database solutions",
+              "cubierto": true,
+              "clases": [
+                "043",
+                "045",
+                "048"
+              ],
+              "nota": "Estrategia por RPO/RTO, réplica y lo que se elige de verdad al distribuir."
+            },
+            {
+              "nombre": "Plan and perform backup and restore of a database",
+              "cubierto": true,
+              "clases": [
+                "048",
+                "036"
+              ],
+              "nota": "Restauración probada y punto en el tiempo; el laboratorio 08 lo ejecuta."
+            },
+            {
+              "nombre": "Configure HA/DR for database solutions",
+              "cubierto": true,
+              "clases": [
+                "043",
+                "046"
+              ],
+              "nota": "El mecanismo de réplica y conmutación sí; la consola de Azure no."
+            }
+          ]
+        }
+      ],
+      "brecha": "La automatización en Azure (dominio de 15–20%) queda sin cubrir por diseño: este programa es neutral de proveedor. Ciérrala con la ruta de aprendizaje oficial de Microsoft Learn y con práctica en un portal de Azure real, y usa el resto del temario como está aquí.",
+      "para_quien": "Quien opera SQL Server o Azure SQL y necesita una credencial reconocible en empresas grandes y en consultoría."
+    },
+    {
+      "id": "dp-900",
+      "nombre": "Microsoft Certified: Azure Data Fundamentals",
+      "codigo": "DP-900",
+      "proveedor": "Microsoft",
+      "nivel": "entrada",
+      "metodo": "subareas",
+      "url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-data-fundamentals/",
+      "temario": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/dp-900",
+      "temario_vigente": "2026-07-21",
+      "pesos_oficiales": true,
+      "renovacion": "no caduca",
+      "ruta": "desarrollo-de-aplicaciones",
+      "laboratorios": [
+        "01",
+        "02",
+        "05"
+      ],
+      "fuentes": [
+        "temario-dp900",
+        "cert-microsoft-dp900"
+      ],
+      "resumen": "Credencial de entrada al mundo del dato: conceptos, cargas transaccionales y analíticas, datos relacionales y no relacionales. La mitad conceptual la cubre este programa con holgura; la mitad de servicios de Azure, no.",
+      "dominios": [
+        {
+          "nombre": "Describe core data concepts",
+          "peso": 27.5,
+          "peso_oficial": "25–30%",
+          "subareas": [
+            {
+              "nombre": "Describe ways to represent data",
+              "cubierto": true,
+              "clases": [
+                "010",
+                "024",
+                "032"
+              ],
+              "nota": "Estructurado, semiestructurado y no estructurado, con sus modelos."
+            },
+            {
+              "nombre": "Identify options for data storage",
+              "cubierto": true,
+              "clases": [
+                "023",
+                "038",
+                "020"
+              ],
+              "nota": "Formatos, motores embebidos y almacenamiento por páginas."
+            },
+            {
+              "nombre": "Describe common data workloads",
+              "cubierto": true,
+              "clases": [
+                "054"
+              ],
+              "nota": "OLTP frente a OLAP, que es justo la clase 054."
+            },
+            {
+              "nombre": "Identify roles and responsibilities for data workloads",
+              "cubierto": true,
+              "clases": [
+                "001",
+                "063"
+              ],
+              "nota": "Las rutas por rol del repositorio desarrollan esto en detalle."
+            }
+          ]
+        },
+        {
+          "nombre": "Identify considerations for relational data on Azure",
+          "peso": 22.5,
+          "peso_oficial": "20–25%",
+          "subareas": [
+            {
+              "nombre": "Describe relational concepts",
+              "cubierto": true,
+              "clases": [
+                "010",
+                "014",
+                "016",
+                "008"
+              ],
+              "nota": "Relación, normalización, SQL y objetos de base de datos."
+            },
+            {
+              "nombre": "Describe relational Azure data services",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Catálogo de servicios de un proveedor concreto."
+            }
+          ]
+        },
+        {
+          "nombre": "Describe considerations for working with non-relational data on Azure",
+          "peso": 17.5,
+          "peso_oficial": "15–20%",
+          "subareas": [
+            {
+              "nombre": "Describe the capabilities of Azure storage",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Blob, Files y Table storage: servicios de Azure."
+            },
+            {
+              "nombre": "Describe the capabilities and features of Azure Cosmos DB",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Producto concreto; el programa enseña los modelos que hay debajo (documento, clave-valor, grafo, columna ancha)."
+            }
+          ]
+        },
+        {
+          "nombre": "Describe an analytics workload on Azure",
+          "peso": 27.5,
+          "peso_oficial": "25–30%",
+          "subareas": [
+            {
+              "nombre": "Describe common elements of large-scale analytics",
+              "cubierto": true,
+              "clases": [
+                "054",
+                "055",
+                "056",
+                "032"
+              ],
+              "nota": "Ingesta, procesamiento, almacén analítico y formato columnar."
+            },
+            {
+              "nombre": "Describe considerations for real-time data analytics",
+              "cubierto": true,
+              "clases": [
+                "057",
+                "030"
+              ],
+              "nota": "Lote frente a flujo, tiempo de evento y ventanas."
+            },
+            {
+              "nombre": "Describe data visualization in Microsoft Power BI",
+              "cubierto": false,
+              "clases": [],
+              "nota": "Herramienta de visualización: fuera del alcance del programa."
+            }
+          ]
+        }
+      ],
+      "brecha": "Todo lo que es catálogo de servicios de Azure —SQL Database, Cosmos DB, Storage, Power BI— queda fuera. Es la mitad barata de estudiar: con el temario conceptual ya cubierto aquí, bastan unas horas de documentación oficial y del portal.",
+      "para_quien": "Quien empieza y quiere una credencial de entrada reconocible, o quien necesita hablar con propiedad de datos sin ser especialista."
+    },
+    {
+      "id": "aws-dea-c01",
+      "nombre": "AWS Certified Data Engineer – Associate",
+      "codigo": "DEA-C01",
+      "proveedor": "Amazon Web Services",
+      "nivel": "intermedio",
+      "metodo": "dominio",
+      "url": "https://aws.amazon.com/certification/certified-data-engineer-associate/",
+      "temario": "https://d1.awsstatic.com/training-and-certification/docs-data-engineer-associate/AWS-Certified-Data-Engineer-Associate_Exam-Guide.pdf",
+      "temario_vigente": "2026-08-20",
+      "pesos_oficiales": true,
+      "renovacion": "3 años",
+      "ruta": "ingenieria-de-datos",
+      "laboratorios": [
+        "01",
+        "02",
+        "05"
+      ],
+      "fuentes": [
+        "cert-aws-dea-c01",
+        "temario-aws-dea-c01"
+      ],
+      "resumen": "La credencial de ingeniería de datos de AWS: ingesta y transformación, gestión de almacenes, operación y gobierno. Los pesos por dominio son oficiales; el desglose por tarea vive en un PDF que este repositorio no puede citar con exactitud, así que la cobertura se declara por dominio y se marca como estimación.",
+      "dominios": [
+        {
+          "nombre": "Data Ingestion and Transformation",
+          "peso": 34,
+          "peso_oficial": "34%",
+          "cobertura": 60,
+          "clases": [
+            "056",
+            "057",
+            "030",
+            "018"
+          ],
+          "nota": "El programa cubre ETL/ELT, captura de cambios, streaming con tiempo de evento y transformación en SQL. No cubre los servicios de AWS (Glue, Kinesis, EMR, Lambda) que el examen evalúa por nombre."
+        },
+        {
+          "nombre": "Data Store Management",
+          "peso": 26,
+          "peso_oficial": "26%",
+          "cobertura": 70,
+          "clases": [
+            "020",
+            "023",
+            "032",
+            "038",
+            "055"
+          ],
+          "nota": "Elección de almacén por carga, formato columnar, particionado, modelado y ciclo de vida del dato están cubiertos como mecanismo; el catálogo de servicios de AWS, no."
+        },
+        {
+          "nombre": "Data Operations and Support",
+          "peso": 22,
+          "peso_oficial": "22%",
+          "cobertura": 55,
+          "clases": [
+            "017",
+            "018",
+            "042",
+            "052"
+          ],
+          "nota": "SQL analítico, planes y observabilidad sí; la automatización con servicios de AWS y sus herramientas de calidad de datos, no."
+        },
+        {
+          "nombre": "Data Security and Governance",
+          "peso": 18,
+          "peso_oficial": "18%",
+          "cobertura": 65,
+          "clases": [
+            "050",
+            "051",
+            "053",
+            "013"
+          ],
+          "nota": "Autenticación, autorización, privilegio mínimo, privacidad y retención están cubiertos; el cifrado gestionado y la auditoría específicos de AWS, no."
+        }
+      ],
+      "brecha": "Todo el catálogo de servicios de AWS. El programa te deja el criterio —qué almacén, qué formato, qué semántica de entrega— y el examen te pedirá además el nombre del servicio que lo hace. Complétalo con la documentación oficial y con práctica en una cuenta real.",
+      "para_quien": "Quien construye tuberías sobre AWS y necesita una credencial que lo acredite ante clientes."
+    }
+  ],
+  "sin_mapeo": [
+    {
+      "nombre": "Google Cloud Professional Data Engineer",
+      "url": "https://cloud.google.com/learn/certification/data-engineer",
+      "motivo": "La guía del examen se publica como PDF con fuentes incrustadas cuyo texto no se puede extraer de forma fiable. Los pesos por sección circulan en blogs, pero este repositorio no publica un porcentaje que no pueda comprobar en la fuente. La credencial sigue siendo relevante para la ruta de ingeniería de datos y aparece citada en ella."
+    },
+    {
+      "nombre": "Certified Data Management Professional (CDMP)",
+      "url": "https://cdmp.info/",
+      "motivo": "DAMA International publica los niveles del programa, pero la ponderación por área de conocimiento no está disponible en una página verificable sin comprar el material. Se cita en la ruta de gobierno y privacidad del dato como credencial de referencia."
+    },
+    {
+      "nombre": "Oracle Database Administration Professional",
+      "url": "https://education.oracle.com/certification",
+      "motivo": "El temario es de producto y el peso por objetivo no se publica de forma estable. El programa cubre los mecanismos de Oracle en la clase 022, no su administración."
+    }
+  ]
+}

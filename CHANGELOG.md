@@ -23,7 +23,7 @@ el validador deja de ser el único componente sin pruebas.
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.
-- **Pruebas** (`tests/`): 93 pruebas que ejecutan los laboratorios, comprueban
+- **Pruebas** (`tests/`): 112 pruebas que ejecutan los laboratorios, comprueban
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo `--check`, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
@@ -33,7 +33,7 @@ el validador deja de ser el único componente sin pruebas.
 - `requirements-dev.txt` y `pytest.ini` para el entorno de desarrollo.
 - Trabajo `pruebas` en integración continua, y los tres laboratorios nuevos en
   la matriz de Python 3.11, 3.12 y 3.13.
-- **Sitio como producto**: barra de navegación y pie comunes a las 111 páginas,
+- **Sitio como producto**: barra de navegación y pie comunes a las 115 páginas,
   tema claro y oscuro con conmutador que recuerda la elección, progreso de
   lectura por clase guardado en el navegador, filtro «solo pendientes»,
   anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
@@ -76,6 +76,27 @@ el validador deja de ser el único componente sin pruebas.
   estructurados de itinerario y las fuentes enlazadas a su ficha.
 - Pruebas de coherencia del README: la tabla del programa, la de rutas y las cifras de las
   insignias se comprueban contra `curriculum.yaml` y contra el propio repositorio.
+- **Laboratorio 07 ejecutable** (`labs/07-replication/run_replication_lab.py`): un líder y dos
+  seguidores con retraso declarado. Cuenta las lecturas que no ven la escritura propia del
+  cliente y las no monótonas al repartir entre réplicas, y aplica las tres correcciones —leer
+  del líder, esperar la posición propia, exigir quórum— midiendo lo que cuesta cada una.
+- **Laboratorio 08 ejecutable** (`labs/08-recovery/run_recovery_lab.py`): respalda una base real
+  con la API del motor, archiva cada transacción, provoca un borrado sin filtro y compara tres
+  recuperaciones. Solo la restauración a un punto en el tiempo devuelve el estado bueno, y se
+  demuestra comparando el contenido, no mirándolo por encima.
+- **Guías de laboratorio completas**: las ocho pasan de una página de instrucciones a una guía
+  con qué demuestra, hipótesis que predecir antes de ejecutar, la salida real, por qué el
+  experimento está hecho así, **lo que no demuestra**, extensiones, cómo llevarlo a un motor
+  real, y las clases, rutas y certificaciones donde encaja.
+- **Certificaciones** (`certificaciones/`): mapeo del temario oficial de DP-300, DP-900 y AWS
+  Data Engineer Associate contra las clases del programa, con la cobertura calculada desde los
+  pesos que publica cada proveedor. Dos métodos declarados —medición por subáreas oficiales y
+  estimación por dominio— y la brecha explicada en cada ficha.
+- Google Professional Data Engineer, CDMP y las credenciales de Oracle se listan **sin
+  porcentaje**, con el motivo: su ponderación no está disponible en una fuente verificable, y
+  este repositorio no publica un número que no pueda comprobar.
+- `scripts/generar_certificaciones.py` calcula la cobertura y genera las fichas, con `--check`
+  en integración continua como el resto de los generadores.
 
 ### Cambiado
 
@@ -84,7 +105,7 @@ el validador deja de ser el único componente sin pruebas.
   buscar fuentes huérfanas.
 - `labs/README.md` declara qué mide cada laboratorio y por qué ninguno afirma
   nada en milisegundos.
-- `scripts/generate_site.py` pasa de 82 a 111 páginas y admite artefactos
+- `scripts/generate_site.py` pasa de 82 a 115 páginas y admite artefactos
   binarios, con `--check` byte a byte también para los iconos.
 - Los README de clase pierden la tabla de metadatos y las cifras del README raíz dejan de
   duplicar las insignias; la ficha de clase pasa a una línea corrida.
@@ -94,6 +115,8 @@ el validador deja de ser el único componente sin pruebas.
   suman 17.
 - El sistema visual se reescribe sobre variables CSS: un solo bloque de tokens
   define color y ritmo, y de ahí sale el tema claro sin excepciones.
+- Las clases de réplica (043, 046) y de respaldo (048) pasan a apuntar a su laboratorio propio
+  en vez de a uno prestado.
 - El flujo de Pages vigila todas las entradas del generador; antes ignoraba
   `docs/`, `assessments/`, `projects/` y los documentos de la raíz, así que un
   cambio en ellos no llegaba a publicarse.

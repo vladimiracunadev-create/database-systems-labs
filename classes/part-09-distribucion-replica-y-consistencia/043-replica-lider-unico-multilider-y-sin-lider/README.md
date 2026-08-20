@@ -4,7 +4,7 @@
 
 Parte 09 — Distribución, réplica y consistencia · Avanzado ·
 4 horas estimadas · motores `postgresql`, `mysql`, `cassandra` · laboratorio
-[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 3 fuentes.
+[`labs/07-replication`](../../../labs/07-replication/README.md) · 3 fuentes.
 
 **Conceptos centrales:** `replicación sincrónica` · `retraso de réplica` · `quórum` · `lectura de tu propia escritura`
 
@@ -217,7 +217,7 @@ El retraso de réplica es la métrica que más incidencias explica y la que meno
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/07-replication/run_replication_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

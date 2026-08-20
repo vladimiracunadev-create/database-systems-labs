@@ -4,7 +4,7 @@
 
 # 🗄️ Database Systems Labs
 
-## **14 partes · 64 clases · 210 horas · 115 fuentes verificables**
+## **14 partes · 64 clases · 210 horas · 120 fuentes verificables**
 
 **Programa abierto de ingeniería de bases de datos, del modelado conceptual a la
 arquitectura distribuida, la operación y los sistemas de recuperación para
@@ -18,13 +18,13 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 [![Versión](https://img.shields.io/badge/versión-2.0.0-orange?style=for-the-badge)](CHANGELOG.md)
 [![Clases](https://img.shields.io/badge/clases-64%20·%2014%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
-[![Fuentes](https://img.shields.io/badge/fuentes-115%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
-[![Laboratorios](https://img.shields.io/badge/laboratorios-5%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)
+[![Fuentes](https://img.shields.io/badge/fuentes-120%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
+[![Laboratorios](https://img.shields.io/badge/laboratorios-7%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-3fb950?style=for-the-badge)](LICENSE)
 
 [![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
 [![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
-[![Pruebas](https://img.shields.io/badge/pruebas-93%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Pruebas](https://img.shields.io/badge/pruebas-112%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
@@ -130,6 +130,28 @@ del U.S. Bureau of Labor Statistics y la
 [Stack Overflow Developer Survey](https://survey.stackoverflow.co/2025/technology)—
 y donde no hay fuente pública para el mercado local, **no se publican cifras**.
 
+## Certificaciones
+
+Para cada examen se cruza su **temario oficial**, con los pesos que publica el proveedor,
+contra las clases del programa, y se calcula qué parte queda cubierta. El cálculo es
+reproducible —lo hace [`scripts/generar_certificaciones.py`](scripts/generar_certificaciones.py)
+desde [`certificaciones/_mapeo.json`](certificaciones/_mapeo.json)— y la brecha se declara:
+saber qué te falta vale más que un porcentaje redondo.
+
+| Certificación | Código | Cobertura del programa | Cómo se calcula |
+|---|---|---|---|
+| [Azure Database Administrator Associate](certificaciones/dp-300.md) | DP-300 | 70 % | medida sobre las 15 subáreas oficiales |
+| [AWS Certified Data Engineer – Associate](certificaciones/aws-dea-c01.md) | DEA-C01 | 62 % | estimada por dominio, justificada con clases |
+| [Azure Data Fundamentals](certificaciones/dp-900.md) | DP-900 | 60 % | medida sobre las 11 subáreas oficiales |
+
+Lo que la cobertura **no** mide: tu probabilidad de aprobar. Un examen de proveedor pregunta
+además por nombres de servicios y consolas que este programa no enseña a propósito. Un 70 %
+significa «te faltará estudiar el 30 %, y ya sabes cuál es».
+
+Tres credenciales relevantes —Google Professional Data Engineer, CDMP de DAMA y las de Oracle—
+aparecen listadas **sin porcentaje**, porque su ponderación oficial no está disponible en una
+fuente verificable. Este repositorio no publica un número que no pueda comprobar.
+
 ## Empezar
 
 Requiere Python 3.11 o superior. Sin instalar ningún servidor:
@@ -143,8 +165,8 @@ El laboratorio base usa SQLite en memoria: carga el dominio educativo canónico,
 ejecuta consultas y comprueba invariantes. Si falla, el problema está en el
 código, no en el entorno.
 
-Cinco de los seis laboratorios se ejecutan igual, sin dependencias y sin
-servidores, y los cinco corren en integración continua sobre Python 3.11, 3.12
+Siete de los ocho laboratorios se ejecutan igual, sin dependencias y sin
+servidores, y los siete corren en integración continua sobre Python 3.11, 3.12
 y 3.13:
 
 ```bash
@@ -152,6 +174,8 @@ python labs/03-transactions/run_transactions_lab.py   # reproduce una actualizac
 python labs/04-indexing/run_indexing_lab.py           # plan y trabajo antes y después del índice
 python labs/05-nosql-workloads/run_nosql_lab.py       # TTL, incrustar o referenciar, y clave de partición caliente
 python labs/06-vector-search/run_vector_lab.py        # similitud coseno y recall@k
+python labs/07-replication/run_replication_lab.py     # lecturas obsoletas, garantías de sesión y quórum
+python labs/08-recovery/run_recovery_lab.py           # RPO, RTO y restauración a un punto en el tiempo
 ```
 
 Ninguno afirma nada en milisegundos: un tiempo depende de la máquina. Lo que
@@ -179,7 +203,7 @@ versionado. **Nunca deben copiarse a otro entorno.**
 ## El sitio
 
 [**vladimiracunadev-create.github.io/database-systems-labs**](https://vladimiracunadev-create.github.io/database-systems-labs/)
-— 111 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
+— 115 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
 
 | | |
 |---|---|
@@ -188,7 +212,8 @@ versionado. **Nunca deben copiarse a otro entorno.**
 | **[Laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)** | qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio |
 | **[Autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)** | las 256 preguntas del programa, enlazadas a su clase |
 | **[Rutas por rol](https://vladimiracunadev-create.github.io/database-systems-labs/rutas/index.html)** | siete recorridos con su guía de carrera: recorrido, credenciales, mercado y mitos |
-| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 115 entradas con ISBN, DOI o URL oficial y quién las cita |
+| **[Certificaciones](https://vladimiracunadev-create.github.io/database-systems-labs/certificaciones/index.html)** | qué parte del temario oficial de cada examen cubre el programa, calculado |
+| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 120 entradas con ISBN, DOI o URL oficial y quién las cita |
 | **[Documentación](https://vladimiracunadev-create.github.io/database-systems-labs/docs/index.html)** | arquitectura, método, rúbrica, entornos y roadmap, publicados desde sus `.md` |
 | **Progreso** | marcar clases como completadas; se guarda solo en tu navegador |
 | **Tema** | claro y oscuro, siguiendo la preferencia del sistema o tu elección |
@@ -208,6 +233,8 @@ classes/            lesson.md (escrito a mano) → README.md (generado)
 labs/               experimentos reproducibles
 reference-data/     dominio, esquema y datos sintéticos
 site/               sitio de GitHub Pages (generado)
+rutas/              guías de carrera por rol
+certificaciones/    mapeo de temarios oficiales y su cobertura
 scripts/            generadores y validadores
 tests/              pruebas de los generadores y del validador
 docs/               arquitectura, metodología, seguridad y decisiones
@@ -222,9 +249,10 @@ edita en el `lesson.md` de cada clase.
 ```bash
 python scripts/build_classes.py          # regenera los README de clase
 python scripts/generate_site.py          # regenera el sitio, los iconos y el sitemap
+python scripts/generar_certificaciones.py  # recalcula la cobertura de cada certificación
 python scripts/brand_assets.py           # solo la marca gráfica (iconos y portada social)
-python scripts/check_external_links.py   # comprueba las 115 fuentes
-python -m pytest                         # 93 pruebas: laboratorios, generadores, validador, sitio y rutas
+python scripts/check_external_links.py   # comprueba las 120 fuentes
+python -m pytest                         # 112 pruebas: laboratorios, generadores, validador, sitio, rutas y certificaciones
 ```
 
 ## Alcance de la cobertura de motores

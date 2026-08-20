@@ -23,6 +23,8 @@ LABORATORIOS = [
     ("labs/04-indexing/run_indexing_lab.py", "INDEXING_LAB_OK"),
     ("labs/05-nosql-workloads/run_nosql_lab.py", "NOSQL_LAB_OK"),
     ("labs/06-vector-search/run_vector_lab.py", "VECTOR_LAB_OK"),
+    ("labs/07-replication/run_replication_lab.py", "REPLICATION_LAB_OK"),
+    ("labs/08-recovery/run_recovery_lab.py", "RECOVERY_LAB_OK"),
 ]
 
 

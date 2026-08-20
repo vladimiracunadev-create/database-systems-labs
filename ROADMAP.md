@@ -29,13 +29,19 @@ Hecho:
 - pruebas que someten al validador a un repositorio roto a propósito, para que
   la regla de las fuentes esté demostrada y no solo declarada.
 
+- laboratorio de réplica que cuenta lecturas obsoletas, garantías de sesión rotas y el
+  costo de cada corrección;
+- laboratorio de respaldo y restauración a un punto en el tiempo, con RPO y trabajo de
+  recuperación medidos;
+- mapeo de certificaciones con la cobertura calculada desde los pesos oficiales del examen.
+
 Pendiente:
 
 - reproducción automatizada de las anomalías de aislamiento (método de
   Hermitage) contra PostgreSQL y MySQL en contenedor;
-- laboratorio de réplica con medición del retraso bajo carga;
-- laboratorio de recuperación a un punto en el tiempo, cronometrado;
-- cobertura del resto de las partes: quedan nueve sin laboratorio propio.
+- medición del retraso de réplica contra un motor real, no solo sobre el modelo;
+- cronometrar la restauración sobre PostgreSQL con archivado de WAL;
+- cobertura del resto de las partes: quedan siete sin laboratorio propio.
 
 ## 2.2 — Autoevaluación y trazabilidad del aprendizaje
 
@@ -76,9 +82,8 @@ clase que lo trate; nunca solo con una línea en el catálogo:
 - guion de defensa técnica con criterios públicos;
 - portafolio verificable a partir de las evidencias generadas;
 - traducción al inglés, conservando el mismo registro de fuentes;
-- mapa de cobertura por certificación, al estilo del que ya existe para las rutas: qué
-  parte del temario de DP-300, Professional Data Engineer o CDMP cubre cada parte del
-  programa, medido y no afirmado.
+- ampliar el mapeo de certificaciones a los exámenes cuyo temario hoy no es verificable
+  —Google Professional Data Engineer, CDMP— si sus proveedores publican pesos citables.
 
 ## Criterios para cerrar un hito
 

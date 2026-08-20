@@ -4,7 +4,7 @@
 
 Parte 09 — Distribución, réplica y consistencia · Avanzado ·
 3 horas estimadas · motores `cassandra`, `mongodb`, `spanner` · laboratorio
-[`labs/05-nosql-workloads`](../../../labs/05-nosql-workloads/README.md) · 5 fuentes.
+[`labs/07-replication`](../../../labs/07-replication/README.md) · 5 fuentes.
 
 **Conceptos centrales:** `linealizabilidad` · `consistencia causal` · `lectura monotona` · `convergencia`
 
@@ -216,7 +216,7 @@ Casi todas las quejas de «datos que aparecen y desaparecen» se resuelven con l
 
 ```bash
 python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/07-replication/run_replication_lab.py
 ```
 
 Guarda como evidencia la salida completa, la versión del motor y la semilla o

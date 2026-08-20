@@ -47,6 +47,7 @@ NAV = [
     ("clases", "Clases", "classes/indice.html"),
     ("rutas", "Rutas por rol", "rutas/index.html"),
     ("laboratorios", "Laboratorios", "laboratorios.html"),
+    ("certificaciones", "Certificaciones", "certificaciones/index.html"),
     ("autoevaluacion", "Autoevaluación", "autoevaluacion.html"),
     ("fuentes", "Fuentes", "fuentes.html"),
     ("motores", "Motores", "motores.html"),
@@ -229,7 +230,7 @@ def reescribir_enlaces(texto: str) -> str:
     return texto
 
 
-def enlaces_de_ruta(texto: str) -> str:
+def enlaces_de_ruta(texto: str, indice: str = "guia.html", base: str = "rutas") -> str:
     """Lleva los enlaces de una guia de rol a sus paginas del sitio.
 
     Las guias viven en `rutas/` y enlazan al repositorio; el sitio publica las
@@ -255,13 +256,18 @@ def enlaces_de_ruta(texto: str) -> str:
         texto = texto.replace(f"]({viejo})", f"]({nuevo})")
     # cualquier laboratorio concreto -> la pagina de laboratorios
     texto = re.sub(r"\]\(\.\./labs/[^)]+\)", "](../laboratorios.html)", texto)
-    # el indice de rutas se publica como `guia.html`
-    texto = texto.replace("](README.md)", "](guia.html)")
+    # el indice de la carpeta se publica con otro nombre
+    texto = texto.replace("](README.md)", f"]({indice})")
+    # guias de rol enlazadas desde otra carpeta del sitio
+    texto = re.sub(r"\]\(\.\./rutas/([a-z0-9-]+)\.md\)", r"](../rutas/\1.html)", texto)
     # guias hermanas
     texto = re.sub(r"\]\((?!https?:|\.\./|#)([a-z0-9-]+)\.md\)", r"](\1.html)", texto)
     # lo que quede apuntando al repositorio, al codigo fuente
     texto = re.sub(r"\]\(\.\./([A-Za-z0-9_\-./]+\.(?:md|py|sql|json|yaml|yml))\)",
                    lambda m: f"]({REPO}/blob/main/{m.group(1)})", texto)
+    # y los archivos de la propia carpeta que no tienen pagina (datos, guiones)
+    texto = re.sub(r"\]\((?!https?:|\.\./|#)([A-Za-z0-9_\-]+\.(?:json|yaml|yml|py|sql))\)",
+                   lambda m: f"]({REPO}/blob/main/{base}/{m.group(1)})", texto)
     return texto
 
 
@@ -288,6 +294,13 @@ def enlaces_de_documento(texto: str, origen: str, publicados: dict[str, str]) ->
         return f"[{etiqueta}]({REPO}/blob/main/{resuelto})"
 
     return re.sub(r"\[([^\]]*)\]\(([^)]+)\)", destino, texto)
+
+
+def cobertura_cert(cert: dict) -> float:
+    """Cobertura ponderada de una certificacion; el calculo vive en un solo sitio."""
+    import generar_certificaciones
+
+    return generar_certificaciones.cobertura_total(cert)
 
 
 def preguntas_de_leccion(texto: str) -> list[str]:
@@ -773,6 +786,60 @@ def construir() -> dict[Path, str | bytes]:
 </nav>
 <main class="content" id="principal">
 {render_markdown(guia)}
+</main>""")
+
+    # ---------- certificaciones ----------
+    mapeo = json.loads((ROOT / "certificaciones" / "_mapeo.json").read_text(encoding="utf-8"))
+    certificaciones = mapeo["certificaciones"]
+
+    tarjetas_cobertura = chr(10).join(
+        f'    <div class="stat"><strong>{cobertura_cert(c):.0f} %</strong>'
+        f'<span>{escapar(c["codigo"])}</span></div>' for c in certificaciones)
+
+    indice_certs = enlaces_de_ruta(
+        (ROOT / "certificaciones" / "README.md").read_text(encoding="utf-8"),
+        indice="index.html", base="certificaciones")
+    salidas[SITE / "certificaciones" / "index.html"] = pagina(
+        titulo="Certificaciones · Database Systems Labs",
+        descripcion=("Qué parte del temario de cada certificación de bases de datos cubre este "
+                     "programa, calculado desde los pesos oficiales del examen."),
+        prefijo="../", ruta="certificaciones/index.html", programa=programa,
+        activo="certificaciones",
+        extra_css='<link rel="stylesheet" href="../assets/class.css">\n',
+        cuerpo=f"""<header class="hero">
+  <p class="eyebrow">Temario medido, no prometido</p>
+  <h1>Certificaciones: <span class="gradient">cuánto cubre</span> este programa</h1>
+  <p class="lead">Para cada examen se cruza su temario oficial —con los pesos que publica el
+  proveedor— contra las clases del programa, y se calcula qué parte queda cubierta. El cálculo
+  es reproducible y la brecha se declara: saber qué te falta vale más que un porcentaje
+  redondo.</p>
+  <div class="stats">
+{tarjetas_cobertura}
+  </div>
+</header>
+<main class="content" id="principal">
+{render_markdown(indice_certs)}
+</main>""")
+
+    for cert in certificaciones:
+        ficha = enlaces_de_ruta(
+            (ROOT / "certificaciones" / f"{cert['id']}.md").read_text(encoding="utf-8"),
+            indice="index.html", base="certificaciones")
+        salidas[SITE / "certificaciones" / f"{cert['id']}.html"] = pagina(
+            titulo=f"{cert['nombre']} ({cert['codigo']}) · Database Systems Labs",
+            descripcion=" ".join(cert["resumen"].split())[:300],
+            prefijo="../", ruta=f"certificaciones/{cert['id']}.html", programa=programa,
+            activo="certificaciones",
+            extra_css='<link rel="stylesheet" href="../assets/class.css">\n',
+            scripts='  <script src="../assets/class.js"></script>\n',
+            cuerpo=f"""<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Certificaciones</a><span aria-hidden="true">/</span>
+  <span>{escapar(cert['codigo'])}</span>
+</nav>
+<main class="content" id="principal">
+{render_markdown(ficha)}
 </main>""")
 
     # ---------- documentacion ----------
