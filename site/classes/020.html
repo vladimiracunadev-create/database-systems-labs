@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>sqlite</code>, <code>sql-server</code>, <code>oracle-database</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>norma frente a producto</code> · <code>matriz de portabilidad</code> · <code>extensión propietaria</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir SQL que sobreviva a un cambio de motor, y saber exactamente dónde se paga por no hacerlo. La portabilidad total no existe; la portabilidad <em>gestionada</em> sí.</p>
@@ -327,6 +328,327 @@ INSERT INTO t (id, v) VALUES (1,'x') ON DUPLICATE KEY UPDATE v = VALUES(v);
 <li>Escribe el <code>UPSERT</code> de tu dominio en tres dialectos.</li>
 <li>Justifica un caso donde usarías una extensión propietaria a sabiendas, y cómo la documentarías.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Una etiqueta concatenada y las dos primeras filas, escrito de forma portable</p>
+<p>Pedir «los dos mejores de DB-101 con su nombre y su curso en una sola
+cadena» parece trivial hasta que hay que ejecutarlo en cinco motores. Dos
+detalles minúsculos rompen el código al migrar: <strong>cómo se concatenan dos
+cadenas</strong> y <strong>cómo se limita el número de filas</strong>.</p>
+<p>La norma ISO/IEC 9075 define <code>||</code> para lo primero y <code>FETCH FIRST n ROWS
+ONLY</code> para lo segundo. Casi ningún motor implementa exactamente eso: MySQL
+interpreta <code>||</code> como el <code>OR</code> lógico salvo que se cambie el modo, SQL Server
+concatena con <code>+</code> y limita con <code>TOP</code>, y SQLite y PostgreSQL usan <code>LIMIT</code>,
+que no está en la norma pero es el estándar de facto.</p>
+<p>La salida es la misma en todos. Lo que cambia —y esta clase obliga a
+escribir— es cuánto hay que tocar para conseguirla.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>etiqueta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada - DB-101</code></td>
+</tr>
+<tr>
+<td><code>Grace - DB-101</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 020</code>: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-string.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sql-server/consulta.sql">código</a></td>
+<td><a href="https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql">doc oficial</a></td>
+</tr>
+<tr>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/oracle-database/consulta.sql">código</a></td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MariaDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+-- nota: || es el operador de la norma. LIMIT no lo es, pero lo entienden
+--       SQLite, PostgreSQL, MySQL, MariaDB y DuckDB: es el estandar de facto.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Implementa <code>||</code> como manda la norma y <code>LIMIT</code> como el estándar de facto: es el subconjunto que más motores entienden sin cambios.</li>
+<li><strong>Por qué no:</strong> Su tolerancia con los tipos hace que expresiones que en otro motor darían error aquí devuelvan algo: el código «funciona» en SQLite y revienta al llegar a PostgreSQL.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_expr.html">https://sqlite.org/lang_expr.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Acepta el dialecto de PostgreSQL casi por completo, así que sirve de banco de pruebas de portabilidad sin levantar un servidor.</li>
+<li><strong>Por qué no:</strong> Añade extensiones cómodas que no existen en ningún otro sitio (<code>SELECT * EXCLUDE</code>, <code>GROUP BY ALL</code>, <code>QUALIFY</code>): probar aquí no garantiza que la consulta sea portable, solo que es válida aquí.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html">https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-string.html
+-- nota: PostgreSQL tambien acepta la forma de la norma,
+--         FETCH FIRST 2 ROWS ONLY
+--       que es la que hay que usar si el destino puede ser Oracle o SQL Server.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es el motor generalista más cercano a la norma y el que más avisa cuando algo no lo es: rechaza conversiones implícitas que otros aceptan en silencio, de modo que el código que pasa aquí suele pasar en el resto.</li>
+<li><strong>Por qué no:</strong> Su catálogo de extensiones propias —tipos de rango, <code>LATERAL</code>, <code>DISTINCT ON</code>, arreglos— es tan cómodo que la portabilidad se pierde sin darse cuenta. La única defensa es decidir de antemano si se quiere y probarlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-string.html">https://www.postgresql.org/docs/current/functions-string.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
+-- nota: aqui esta la trampa de la clase. Por omision,
+--         SELECT estudiante || ' - ' || curso
+--       NO concatena: || es el OR logico y la consulta devuelve 0 en cada fila,
+--       sin error. Con SET sql_mode = 'PIPES_AS_CONCAT' pasaria a concatenar.
+--       CONCAT() evita la ambiguedad y ademas es portable a SQL Server y Oracle.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT CONCAT(estudiante, ' - ', curso) AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>CONCAT()</code> y <code>LIMIT</code> resuelve el caso, y <code>CONCAT</code> sí es portable a SQL Server (2012+) y a Oracle.</li>
+<li><strong>Por qué no:</strong> Por omisión, <code>'a' || 'b'</code> no concatena: devuelve <code>0</code>, porque <code>||</code> es el <code>OR</code> lógico salvo que se active <code>PIPES_AS_CONCAT</code>. Es el error de migración más silencioso de todos, porque no falla: devuelve un número.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html</a></li>
+</ul>
+<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql
+-- nota: implementacion declarada. Se escribe con CONCAT y con OFFSET/FETCH
+--       —las formas de la norma— en vez de con + y TOP, que es lo que aparece
+--       en el codigo heredado. La diferencia importa: `'Ada' + 5` intenta
+--       convertir la cadena a numero y falla; CONCAT convierte a texto.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.notas;
+
+CREATE TABLE dbo.notas (
+    estudiante NVARCHAR(50) NOT NULL,
+    curso      NVARCHAR(20) NOT NULL,
+    nota       INT NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO dbo.notas (estudiante, curso, nota) VALUES
+    (N'Ada', N'DB-101', 90), (N'Grace', N'DB-101', 72),
+    (N'Linus', N'DB-101', 58), (N'Ada', N'SE-201', 66);
+
+-- === consulta ===
+SELECT CONCAT(estudiante, N' - ', curso) AS etiqueta
+FROM dbo.notas
+WHERE curso = N'DB-101'
+ORDER BY nota DESC
+OFFSET 0 ROWS FETCH NEXT 2 ROWS ONLY;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Desde SQL Server 2012 admite <code>CONCAT()</code> y <code>OFFSET ... FETCH NEXT</code>, que es la forma de la norma: escrito así, el mismo código vale para Oracle.</li>
+<li><strong>Por qué no:</strong> El <code>TOP n</code> heredado sigue siendo lo que aparece en todo el código existente, y <code>+</code> sobre una cadena y un número intenta convertir el texto a número y falla, en vez de concatenar.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql">https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql</a></li>
+</ul>
+<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html
+-- nota: implementacion declarada. Oracle si implementa || de la norma, y desde
+--       12c admite FETCH FIRST. Antes habia que envolver la consulta:
+--         SELECT * FROM (SELECT ... ORDER BY nota DESC) WHERE ROWNUM &lt;= 2;
+--       Y ojo con la cadena vacia: en Oracle '' ES NULL, asi que concatenar con
+--       una columna vacia no da lo mismo que en el resto de motores.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR2(50) NOT NULL,
+    curso      VARCHAR2(20) NOT NULL,
+    nota       NUMBER NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 72);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'SE-201', 66);
+COMMIT;
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+FETCH FIRST 2 ROWS ONLY;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Implementa <code>||</code> de la norma, y desde la versión 12c admite <code>FETCH FIRST n ROWS ONLY</code>, que sustituye al viejo rodeo con <code>ROWNUM</code> en una subconsulta.</li>
+<li><strong>Por qué no:</strong> Trata la cadena vacía como <code>NULL</code>, así que concatenar con una cadena vacía no siempre hace lo que se espera; y en versiones anteriores a 12c hay que envolver la consulta para poder limitar.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MariaDB</td>
+<td>Aquí no aporta una fila distinta: comparte el dialecto de MySQL en todo lo que este caso toca, incluida la interpretación de <code>\|\|</code>. Repetirlo sería inflar la matriz sin enseñar nada.</td>
+<td>Se trata donde sí diverge —secuencias, <code>RETURNING</code>, motores de almacenamiento y el catálogo de funciones JSON— en la clase de divergencias entre dialectos.</td>
+<td><a href="https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

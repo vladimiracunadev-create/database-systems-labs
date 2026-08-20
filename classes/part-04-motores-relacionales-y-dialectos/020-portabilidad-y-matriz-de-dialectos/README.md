@@ -8,6 +8,8 @@ Parte 04 — Motores relacionales y dialectos · Intermedio ·
 
 **Conceptos centrales:** `norma frente a producto` · `matriz de portabilidad` · `extensión propietaria`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -180,6 +182,280 @@ La migración de motor rara vez se decide por gusto: llega por licencias, por co
 2. ¿Por qué `LIMIT` es más portable en la práctica que `FETCH FIRST`, pese a no estar en la norma?
 3. Escribe el `UPSERT` de tu dominio en tres dialectos.
 4. Justifica un caso donde usarías una extensión propietaria a sabiendas, y cómo la documentarías.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Una etiqueta concatenada y las dos primeras filas, escrito de forma portable
+
+Pedir «los dos mejores de DB-101 con su nombre y su curso en una sola
+cadena» parece trivial hasta que hay que ejecutarlo en cinco motores. Dos
+detalles minúsculos rompen el código al migrar: **cómo se concatenan dos
+cadenas** y **cómo se limita el número de filas**.
+
+La norma ISO/IEC 9075 define `||` para lo primero y `FETCH FIRST n ROWS
+ONLY` para lo segundo. Casi ningún motor implementa exactamente eso: MySQL
+interpreta `||` como el `OR` lógico salvo que se cambie el modo, SQL Server
+concatena con `+` y limita con `TOP`, y SQLite y PostgreSQL usan `LIMIT`,
+que no está en la norma pero es el estándar de facto.
+
+La salida es la misma en todos. Lo que cambia —y esta clase obliga a
+escribir— es cuánto hay que tocar para conseguirla.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| etiqueta |
+|---|
+| `Ada - DB-101` |
+| `Grace - DB-101` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 020`: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_expr.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-string.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html) |
+| Microsoft SQL Server | sí | declarado | [código](implementaciones/sql-server/consulta.sql) | [doc oficial](https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql) |
+| Oracle Database | sí | declarado | [código](implementaciones/oracle-database/consulta.sql) | [doc oficial](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html) |
+| MariaDB | **no** | — | — | [doc oficial](https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+-- nota: || es el operador de la norma. LIMIT no lo es, pero lo entienden
+--       SQLite, PostgreSQL, MySQL, MariaDB y DuckDB: es el estandar de facto.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+```
+
+- **Por qué sí:** Implementa `||` como manda la norma y `LIMIT` como el estándar de facto: es el subconjunto que más motores entienden sin cambios.
+- **Por qué no:** Su tolerancia con los tipos hace que expresiones que en otro motor darían error aquí devuelvan algo: el código «funciona» en SQLite y revienta al llegar a PostgreSQL.
+- 📄 Documentación oficial: <https://sqlite.org/lang_expr.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+```
+
+- **Por qué sí:** Acepta el dialecto de PostgreSQL casi por completo, así que sirve de banco de pruebas de portabilidad sin levantar un servidor.
+- **Por qué no:** Añade extensiones cómodas que no existen en ningún otro sitio (`SELECT * EXCLUDE`, `GROUP BY ALL`, `QUALIFY`): probar aquí no garantiza que la consulta sea portable, solo que es válida aquí.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-string.html
+-- nota: PostgreSQL tambien acepta la forma de la norma,
+--         FETCH FIRST 2 ROWS ONLY
+--       que es la que hay que usar si el destino puede ser Oracle o SQL Server.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+```
+
+- **Por qué sí:** Es el motor generalista más cercano a la norma y el que más avisa cuando algo no lo es: rechaza conversiones implícitas que otros aceptan en silencio, de modo que el código que pasa aquí suele pasar en el resto.
+- **Por qué no:** Su catálogo de extensiones propias —tipos de rango, `LATERAL`, `DISTINCT ON`, arreglos— es tan cómodo que la portabilidad se pierde sin darse cuenta. La única defensa es decidir de antemano si se quiere y probarlo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-string.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
+-- nota: aqui esta la trampa de la clase. Por omision,
+--         SELECT estudiante || ' - ' || curso
+--       NO concatena: || es el OR logico y la consulta devuelve 0 en cada fila,
+--       sin error. Con SET sql_mode = 'PIPES_AS_CONCAT' pasaria a concatenar.
+--       CONCAT() evita la ambiguedad y ademas es portable a SQL Server y Oracle.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT CONCAT(estudiante, ' - ', curso) AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+LIMIT 2;
+```
+
+- **Por qué sí:** Con `CONCAT()` y `LIMIT` resuelve el caso, y `CONCAT` sí es portable a SQL Server (2012+) y a Oracle.
+- **Por qué no:** Por omisión, `'a' || 'b'` no concatena: devuelve `0`, porque `||` es el `OR` lógico salvo que se active `PIPES_AS_CONCAT`. Es el error de migración más silencioso de todos, porque no falla: devuelve un número.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html>
+
+#### Microsoft SQL Server · [`implementaciones/sql-server/consulta.sql`](implementaciones/sql-server/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql
+-- nota: implementacion declarada. Se escribe con CONCAT y con OFFSET/FETCH
+--       —las formas de la norma— en vez de con + y TOP, que es lo que aparece
+--       en el codigo heredado. La diferencia importa: `'Ada' + 5` intenta
+--       convertir la cadena a numero y falla; CONCAT convierte a texto.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.notas;
+
+CREATE TABLE dbo.notas (
+    estudiante NVARCHAR(50) NOT NULL,
+    curso      NVARCHAR(20) NOT NULL,
+    nota       INT NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO dbo.notas (estudiante, curso, nota) VALUES
+    (N'Ada', N'DB-101', 90), (N'Grace', N'DB-101', 72),
+    (N'Linus', N'DB-101', 58), (N'Ada', N'SE-201', 66);
+
+-- === consulta ===
+SELECT CONCAT(estudiante, N' - ', curso) AS etiqueta
+FROM dbo.notas
+WHERE curso = N'DB-101'
+ORDER BY nota DESC
+OFFSET 0 ROWS FETCH NEXT 2 ROWS ONLY;
+```
+
+- **Por qué sí:** Desde SQL Server 2012 admite `CONCAT()` y `OFFSET ... FETCH NEXT`, que es la forma de la norma: escrito así, el mismo código vale para Oracle.
+- **Por qué no:** El `TOP n` heredado sigue siendo lo que aparece en todo el código existente, y `+` sobre una cadena y un número intenta convertir el texto a número y falla, en vez de concatenar.
+- 📄 Documentación oficial: <https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql>
+
+#### Oracle Database · [`implementaciones/oracle-database/consulta.sql`](implementaciones/oracle-database/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html
+-- nota: implementacion declarada. Oracle si implementa || de la norma, y desde
+--       12c admite FETCH FIRST. Antes habia que envolver la consulta:
+--         SELECT * FROM (SELECT ... ORDER BY nota DESC) WHERE ROWNUM <= 2;
+--       Y ojo con la cadena vacia: en Oracle '' ES NULL, asi que concatenar con
+--       una columna vacia no da lo mismo que en el resto de motores.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR2(50) NOT NULL,
+    curso      VARCHAR2(20) NOT NULL,
+    nota       NUMBER NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 72);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'SE-201', 66);
+COMMIT;
+
+-- === consulta ===
+SELECT estudiante || ' - ' || curso AS etiqueta
+FROM notas
+WHERE curso = 'DB-101'
+ORDER BY nota DESC
+FETCH FIRST 2 ROWS ONLY;
+```
+
+- **Por qué sí:** Implementa `||` de la norma, y desde la versión 12c admite `FETCH FIRST n ROWS ONLY`, que sustituye al viejo rodeo con `ROWNUM` en una subconsulta.
+- **Por qué no:** Trata la cadena vacía como `NULL`, así que concatenar con una cadena vacía no siempre hace lo que se espera; y en versiones anteriores a 12c hay que envolver la consulta para poder limitar.
+- 📄 Documentación oficial: <https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MariaDB | Aquí no aporta una fila distinta: comparte el dialecto de MySQL en todo lo que este caso toca, incluida la interpretación de `\|\|`. Repetirlo sería inflar la matriz sin enseñar nada. | Se trata donde sí diverge —secuencias, `RETURNING`, motores de almacenamiento y el catálogo de funciones JSON— en la clase de divergencias entre dialectos. | [doc](https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat) |
 
 ---
 

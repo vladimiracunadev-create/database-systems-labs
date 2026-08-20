@@ -1,0 +1,113 @@
+---
+caso:
+  titulo: Una etiqueta concatenada y las dos primeras filas, escrito de forma portable
+  contrato: |
+    Pedir «los dos mejores de DB-101 con su nombre y su curso en una sola
+    cadena» parece trivial hasta que hay que ejecutarlo en cinco motores. Dos
+    detalles minúsculos rompen el código al migrar: **cómo se concatenan dos
+    cadenas** y **cómo se limita el número de filas**.
+
+    La norma ISO/IEC 9075 define `||` para lo primero y `FETCH FIRST n ROWS
+    ONLY` para lo segundo. Casi ningún motor implementa exactamente eso: MySQL
+    interpreta `||` como el `OR` lógico salvo que se cambie el modo, SQL Server
+    concatena con `+` y limita con `TOP`, y SQLite y PostgreSQL usan `LIMIT`,
+    que no está en la norma pero es el estándar de facto.
+
+    La salida es la misma en todos. Lo que cambia —y esta clase obliga a
+    escribir— es cuánto hay que tocar para conseguirla.
+  columnas: [etiqueta]
+  esperado:
+    - ["Ada - DB-101"]
+    - ["Grace - DB-101"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Implementa `||` como manda la norma y `LIMIT` como el estándar de facto:
+      es el subconjunto que más motores entienden sin cambios.
+    porque_no: >-
+      Su tolerancia con los tipos hace que expresiones que en otro motor darían
+      error aquí devuelvan algo: el código «funciona» en SQLite y revienta al
+      llegar a PostgreSQL.
+    doc: https://sqlite.org/lang_expr.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Acepta el dialecto de PostgreSQL casi por completo, así que sirve de banco
+      de pruebas de portabilidad sin levantar un servidor.
+    porque_no: >-
+      Añade extensiones cómodas que no existen en ningún otro sitio (`SELECT *
+      EXCLUDE`, `GROUP BY ALL`, `QUALIFY`): probar aquí no garantiza que la
+      consulta sea portable, solo que es válida aquí.
+    doc: https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es el motor generalista más cercano a la norma y el que más avisa cuando
+      algo no lo es: rechaza conversiones implícitas que otros aceptan en
+      silencio, de modo que el código que pasa aquí suele pasar en el resto.
+    porque_no: >-
+      Su catálogo de extensiones propias —tipos de rango, `LATERAL`, `DISTINCT
+      ON`, arreglos— es tan cómodo que la portabilidad se pierde sin darse
+      cuenta. La única defensa es decidir de antemano si se quiere y probarlo.
+    doc: https://www.postgresql.org/docs/current/functions-string.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Con `CONCAT()` y `LIMIT` resuelve el caso, y `CONCAT` sí es portable a
+      SQL Server (2012+) y a Oracle.
+    porque_no: >-
+      Por omisión, `'a' || 'b'` no concatena: devuelve `0`, porque `||` es el
+      `OR` lógico salvo que se active `PIPES_AS_CONCAT`. Es el error de
+      migración más silencioso de todos, porque no falla: devuelve un número.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
+
+  - id: sql-server
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/sql-server/consulta.sql
+    porque_si: >-
+      Desde SQL Server 2012 admite `CONCAT()` y `OFFSET ... FETCH NEXT`, que es
+      la forma de la norma: escrito así, el mismo código vale para Oracle.
+    porque_no: >-
+      El `TOP n` heredado sigue siendo lo que aparece en todo el código
+      existente, y `+` sobre una cadena y un número intenta convertir el texto a
+      número y falla, en vez de concatenar.
+    doc: https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql
+
+  - id: oracle-database
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/oracle-database/consulta.sql
+    porque_si: >-
+      Implementa `||` de la norma, y desde la versión 12c admite `FETCH FIRST n
+      ROWS ONLY`, que sustituye al viejo rodeo con `ROWNUM` en una subconsulta.
+    porque_no: >-
+      Trata la cadena vacía como `NULL`, así que concatenar con una cadena vacía
+      no siempre hace lo que se espera; y en versiones anteriores a 12c hay que
+      envolver la consulta para poder limitar.
+    doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html
+
+  - id: mariadb
+    aplica: no
+    porque_no: >-
+      Aquí no aporta una fila distinta: comparte el dialecto de MySQL en todo lo
+      que este caso toca, incluida la interpretación de `||`. Repetirlo sería
+      inflar la matriz sin enseñar nada.
+    alternativa: >-
+      Se trata donde sí diverge —secuencias, `RETURNING`, motores de
+      almacenamiento y el catálogo de funciones JSON— en la clase de
+      divergencias entre dialectos.
+    doc: https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat

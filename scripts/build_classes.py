@@ -90,6 +90,15 @@ SELLO = {
 }
 
 
+def celda(texto: str) -> str:
+    """Texto seguro dentro de una celda de tabla.
+
+    Una barra vertical en el texto —y aparece de verdad: `||` es el operador de
+    concatenacion— parte la fila y markdownlint lo detecta como columnas de mas.
+    """
+    return texto.replace("|", "\\|")
+
+
 def bloque_motores(comparacion: ml.Comparacion, catalogo: dict[str, dict]) -> str:
     """La sección comparada: el mismo caso resuelto —o no— en cada motor.
 
@@ -135,7 +144,8 @@ def bloque_motores(comparacion: ml.Comparacion, catalogo: dict[str, dict]) -> st
     tabla_descartados = ""
     if descartados:
         cuerpo_descartados = "\n".join(
-            f"| {nombre(m.id)} | {m.porque_no} | {m.alternativa or '—'} | [doc]({m.doc}) |"
+            f"| {nombre(m.id)} | {celda(m.porque_no)} "
+            f"| {celda(m.alternativa or '—')} | [doc]({m.doc}) |"
             for m in descartados
         )
         tabla_descartados = (
@@ -159,7 +169,7 @@ afirmación."""
     else:
         cabecera_tabla = " | ".join(caso.columnas) if caso.columnas else "resultado"
         separador = "|".join("---" for _ in (caso.columnas or ["x"]))
-        filas = "\n".join("| " + " | ".join(f"`{v}`" for v in fila) + " |"
+        filas = "\n".join("| " + " | ".join(f"`{celda(v)}`" for v in fila) + " |"
                           for fila in caso.esperado)
         contrato = f"""{caso.contrato}
 

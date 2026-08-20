@@ -8,6 +8,8 @@ Parte 04 — Motores relacionales y dialectos · Intermedio ·
 
 **Conceptos centrales:** `motor embebido` · `tipado dinamico` · `almacenamiento columnar` · `vectorización`
 
+**En este caso se comparan 6 motores**: 4 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -191,6 +193,204 @@ Una parte grande de los sistemas que usan PostgreSQL solo por costumbre funciona
 2. Explica con números por qué el formato columnar reduce la E/S de una consulta analítica.
 3. ¿Por qué el modo WAL no permite dos escritores simultáneos?
 4. Da un sistema real de tu experiencia que hoy usa un servidor y podría usar SQLite, y defiende la decisión.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** El mismo agregado, sin servidor, en el proceso de la propia aplicación
+
+Un motor embebido no es un motor pequeño: es un motor **sin servidor**, que
+vive dentro del proceso de la aplicación. No hay red, no hay conexión, no
+hay usuario que autenticar. Y la base de datos es un archivo que se puede
+copiar, adjuntar en un correo o versionar.
+
+El caso es deliberadamente simple —filas y suma de notas por curso— porque
+lo que se compara no es la consulta sino **dónde se ejecuta**. SQLite y
+DuckDB dan la misma respuesta y son la misma clase de sistema; lo que los
+separa es para qué está optimizado cada uno: uno guarda filas y sirve
+transacciones, el otro guarda columnas y sirve análisis.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso | filas | suma |
+|---|---|---|
+| `DB-101` | `3` | `220` |
+| `SE-201` | `1` | `66` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 023`: 3 de
+las 4 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/whentouse.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/why_duckdb) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/tutorial-arch.html) |
+| ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/operations/utilities/clickhouse-local) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/administration/install-community/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/whentouse.html
+-- nota: guarda FILAS completas, una detras de otra en la pagina. Para sumar la
+--       columna `nota` hay que leer tambien `estudiante` y `curso` de cada fila:
+--       con veinte columnas y un millon de filas, sumar una sola cuesta leerlo
+--       casi todo.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
+```
+
+- **Por qué sí:** Es el motor embebido transaccional: guarda filas completas, cumple ACID sobre un archivo y está en cada teléfono, cada navegador y cada avión. Si la aplicación escribe registros de uno en uno y los vuelve a leer de uno en uno, es exactamente la herramienta.
+- **Por qué no:** Al guardar filas, un agregado sobre una columna tiene que leer todas las demás columnas de todas las filas. Con un millón de registros y veinte columnas, sumar una sola cuesta leerlo casi todo.
+- 📄 Documentación oficial: <https://sqlite.org/whentouse.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/why_duckdb
+-- nota: guarda COLUMNAS. Este agregado lee la columna `nota` y la columna
+--       `curso`, y ninguna otra. Ademas, la misma consulta funciona sobre un
+--       archivo sin cargarlo:
+--         SELECT curso, COUNT(*), SUM(nota) FROM 'notas.parquet' GROUP BY curso;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
+```
+
+- **Por qué sí:** Es el motor embebido analítico: guarda columnas, las comprime y las procesa en lotes vectorizados. El mismo agregado sobre millones de filas lee solo la columna que necesita, y además puede consultar directamente un CSV o un Parquet sin cargarlo.
+- **Por qué no:** Un solo proceso escritor y sin control de concurrencia entre aplicaciones: no es el sitio donde vive la verdad del negocio, sino donde se analiza una copia de ella.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/why_duckdb>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-arch.html
+-- nota: la misma respuesta, con un proceso servidor detras. Lo que se gana
+--       —usuarios, permisos, conexiones remotas, replica, concurrencia— y lo
+--       que se paga —instalar, configurar, actualizar, respaldar— es la
+--       decision entera de esta clase.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
+```
+
+- **Por qué sí:** Está aquí como contraste: la misma respuesta, con un servidor detrás que aporta lo que ningún embebido tiene —usuarios, permisos, conexiones remotas, réplica y escrituras concurrentes de muchas aplicaciones.
+- **Por qué no:** Todo eso hay que instalarlo, configurarlo, actualizarlo y respaldarlo. Para una aplicación de escritorio, una herramienta de línea de órdenes o una prueba automatizada, es infraestructura que no resuelve nada.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/tutorial-arch.html>
+
+#### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/operations/utilities/clickhouse-local
+-- nota: implementacion declarada. Se ejecuta con `clickhouse-local`, sin
+--       servidor ni configuracion:
+--         clickhouse-local --queries-file consulta.sql
+--       Sirve para ver que «embebido» y «columnar» son dos ejes distintos:
+--       SQLite es embebido y de filas, DuckDB embebido y columnar, ClickHouse
+--       servidor columnar... y tambien columnar sin servidor con esta utilidad.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante String,
+    curso      String,
+    nota       Int32
+) ENGINE = MergeTree ORDER BY (curso, estudiante);
+
+INSERT INTO notas VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
+
+-- === consulta ===
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
+```
+
+- **Por qué sí:** También tiene un modo embebido, `clickhouse-local`, que ejecuta consultas sobre archivos sin servidor. Sirve para comprobar que «embebido» y «columnar» son dos ejes independientes: hay cuatro combinaciones y las cuatro existen.
+- **Por qué no:** Ese modo es una herramienta de línea de órdenes, no una biblioteca que se enlaza en la aplicación: no se puede empotrar en un programa como se hace con SQLite o DuckDB.
+- 📄 Documentación oficial: <https://clickhouse.com/docs/en/operations/utilities/clickhouse-local>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | Aunque corra en la misma máquina, sigue siendo un servidor con su protocolo y su puerto: hay serialización y viaje de red aunque sea por bucle local. No es un motor embebido, es un servidor cercano. | Para una caché dentro del proceso, una estructura en memoria del propio lenguaje; Redis empieza a valer cuando esa caché tiene que compartirse entre varios procesos o máquinas. | [doc](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
+| MongoDB | No hay versión embebida disponible: la biblioteca `mongodb-embedded` se retiró, así que MongoDB implica siempre un proceso servidor aparte. | Para almacenamiento documental dentro del proceso, SQLite con sus funciones JSON cubre buena parte del caso sin añadir un servicio. | [doc](https://www.mongodb.com/docs/manual/administration/install-community/) |
 
 ---
 

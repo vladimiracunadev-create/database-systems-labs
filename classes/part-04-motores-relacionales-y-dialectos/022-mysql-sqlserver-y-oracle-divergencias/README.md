@@ -8,6 +8,8 @@ Parte 04 — Motores relacionales y dialectos · Intermedio ·
 
 **Conceptos centrales:** `colación` · `modo estricto` · `cadena vacia frente a nulo` · `identificador citado`
 
+**En este caso se comparan 7 motores**: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -180,6 +182,260 @@ Una migración de motor sin pruebas de equivalencia se descubre incompleta duran
 2. Explica qué código de tu dominio se rompería al migrar a Oracle por el tratamiento de la cadena vacía.
 3. ¿Qué implica que SQL Server use bloqueo en `READ COMMITTED` para una consulta de informe larga?
 4. Escribe un `ORDER BY` con posición de nulos fijada que funcione en los cinco motores de la tabla.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cuántos nombres distintos hay, cuando el motor decide si «Ada» y «ada» son el mismo
+
+Una tabla con cuatro filas: `Ada`, `ada`, `ADA` y `Linus`. La pregunta es
+cuántos nombres distintos hay, y la respuesta correcta —cuatro— no depende
+de la consulta: depende de la **intercalación** de la columna, que no está
+escrita en ninguna parte de la consulta.
+
+Con la configuración por omisión, MySQL responde **2**: su intercalación
+`utf8mb4_0900_ai_ci` ignora mayúsculas y acentos, así que las tres primeras
+filas son el mismo valor. SQL Server responde lo que diga la intercalación
+de la instancia, que se eligió al instalarla y que casi nadie recuerda.
+PostgreSQL, SQLite y DuckDB responden 4, porque comparan byte a byte.
+
+Esta es la divergencia que rompe migraciones sin dar un solo error: los
+recuentos cambian, los `UNIQUE` aceptan o rechazan cosas distintas, y el
+`ORDER BY` devuelve otro orden. El caso obliga a escribir en cada motor la
+versión que responde 4.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| distintos |
+|---|
+| `4` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 022`: 4 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/datatype3.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/expressions/collations.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/collation.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html) |
+| MariaDB | sí | declarado | [código](implementaciones/mariadb/consulta.sql) | [doc oficial](https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets) |
+| Microsoft SQL Server | sí | declarado | [código](implementaciones/sql-server/consulta.sql) | [doc oficial](https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support) |
+| Oracle Database | sí | declarado | [código](implementaciones/oracle-database/consulta.sql) | [doc oficial](https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/datatype3.html
+-- nota: la intercalacion por omision es BINARY: compara byte a byte. Cambiar
+--       la columna a `TEXT COLLATE NOCASE` haria que esta consulta devolviera 2.
+
+-- === preparacion ===
+CREATE TABLE registros (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** Su intercalación por omisión es `BINARY`: compara byte a byte y responde 4 sin configurar nada. Para comparar sin mayúsculas hay que pedirlo expresamente con `COLLATE NOCASE`.
+- **Por qué no:** `NOCASE` solo ignora mayúsculas en el alfabeto ASCII: `Á` y `á` siguen siendo distintas. Cualquier aplicación con texto en español necesita algo más que la intercalación integrada.
+- 📄 Documentación oficial: <https://sqlite.org/datatype3.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/expressions/collations.html
+-- nota: al analizar un volcado que viene de MySQL, este recuento NO coincide
+--       con el del origen. No es un fallo: es la intercalacion.
+
+-- === preparacion ===
+CREATE TABLE registros (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** Compara respetando mayúsculas por omisión y ofrece intercalaciones ICU como extensión cuando hace falta ordenar por idioma.
+- **Por qué no:** Al analizar datos que vienen de MySQL, el recuento distinto que devuelve DuckDB **no coincide** con el del origen: no es un fallo, es la intercalación, y descubrirlo tarde invalida el informe entero.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/expressions/collations.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/collation.html
+-- nota: la comparacion por omision distingue mayusculas. Lo que hay que vigilar
+--       aqui es otra cosa: la intercalacion viene de la biblioteca del sistema,
+--       y una actualizacion de glibc puede cambiar el orden y dejar los indices
+--       B-Tree de texto en un estado incoherente. De ahi el proveedor `icu`.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS registros;
+
+CREATE TABLE registros (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** La intercalación es explícita y se puede fijar por columna o por expresión; el comportamiento por omisión distingue mayúsculas, que es lo que casi siempre se quiere para una identidad.
+- **Por qué no:** La intercalación depende de la biblioteca del sistema operativo: una actualización de `glibc` puede cambiar el orden y **corromper los índices B-Tree** sobre columnas de texto. Por eso existe el proveedor `icu` y por eso hay que declararlo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/collation.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html
+-- nota: SIN el COLLATE utf8mb4_bin de abajo, esta consulta devuelve 2, no 4:
+--       la intercalacion por omision utf8mb4_0900_ai_ci ignora mayusculas y
+--       acentos. Es la divergencia mas cara de las migraciones a y desde MySQL.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS registros;
+
+CREATE TABLE registros (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** Se puede pedir la comparación exacta con `COLLATE utf8mb4_bin` en la columna o en la propia consulta, sin cambiar la configuración del servidor.
+- **Por qué no:** Por omisión hace justo lo contrario, y en silencio: `utf8mb4_0900_ai_ci` ignora mayúsculas y acentos. Un `UNIQUE` sobre un correo acepta `Ada@x.org` **o** `ada@x.org`, pero no las dos, y eso es una decisión de producto que nadie tomó.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html>
+
+#### MariaDB · [`implementaciones/mariadb/consulta.sql`](implementaciones/mariadb/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: mariadb
+-- doc: https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets
+-- nota: implementacion declarada. La sintaxis es la de MySQL, pero la
+--       intercalacion por omision NO es la misma (utf8mb4_general_ci frente a
+--       utf8mb4_0900_ai_ci): dos motores que se anuncian compatibles ordenan
+--       distinto. Por eso el COLLATE explicito no es opcional al migrar.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS registros;
+
+CREATE TABLE registros (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** Comparte la sintaxis de MySQL, así que la corrección con `COLLATE` es la misma y el código migra sin cambios.
+- **Por qué no:** Sus intercalaciones por omisión **no son las mismas** que las de MySQL 8 (`utf8mb4_general_ci` frente a `utf8mb4_0900_ai_ci`), y ordenan distinto: dos motores que se anuncian compatibles devuelven listas en otro orden.
+- 📄 Documentación oficial: <https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets>
+
+#### Microsoft SQL Server · [`implementaciones/sql-server/consulta.sql`](implementaciones/sql-server/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support
+-- nota: implementacion declarada. La intercalacion por omision se elige AL
+--       INSTALAR la instancia y afecta tambien a los nombres de objetos y a
+--       tempdb. Fijarla en la columna, como aqui, es la unica forma de que el
+--       resultado no dependa de la maquina.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.registros;
+
+CREATE TABLE dbo.registros (
+    id     INT PRIMARY KEY,
+    nombre NVARCHAR(50) COLLATE Latin1_General_BIN2 NOT NULL
+);
+INSERT INTO dbo.registros (id, nombre) VALUES
+    (1, N'Ada'), (2, N'ada'), (3, N'ADA'), (4, N'Linus');
+
+-- === consulta ===
+SELECT COUNT(DISTINCT nombre) AS distintos FROM dbo.registros;
+```
+
+- **Por qué sí:** La intercalación se puede fijar en la propia consulta con `COLLATE Latin1_General_BIN2`, sin tocar la base ni la instancia.
+- **Por qué no:** La intercalación por omisión se elige **al instalar la instancia** y afecta también a los nombres de objetos y a las tablas temporales: mezclar dos bases con intercalaciones distintas produce errores al reunir columnas de texto que no se pueden resolver sin conversiones explícitas.
+- 📄 Documentación oficial: <https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support>
+
+#### Oracle Database · [`implementaciones/oracle-database/consulta.sql`](implementaciones/oracle-database/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html
+-- nota: implementacion declarada. Aqui el comportamiento se controla POR SESION
+--       con NLS_SORT y NLS_COMP: la misma consulta puede devolver 2 o 4 segun
+--       quien la lance. Dejarlo en BINARY es la unica forma de que el resultado
+--       sea el mismo para todos.
+
+-- === preparacion ===
+ALTER SESSION SET NLS_SORT = 'BINARY';
+ALTER SESSION SET NLS_COMP = 'BINARY';
+
+CREATE TABLE registros (
+    id     NUMBER PRIMARY KEY,
+    nombre VARCHAR2(50) NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada');
+INSERT INTO registros (id, nombre) VALUES (2, 'ada');
+INSERT INTO registros (id, nombre) VALUES (3, 'ADA');
+INSERT INTO registros (id, nombre) VALUES (4, 'Linus');
+COMMIT;
+
+-- === consulta ===
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+```
+
+- **Por qué sí:** Con `NLS_SORT` y `NLS_COMP` se controla el mismo comportamiento por sesión, lo que permite ajustar la comparación sin cambiar el esquema.
+- **Por qué no:** Que sea por sesión es también el problema: la misma consulta devuelve resultados distintos según quién la lance. Y la cadena vacía sigue siendo `NULL`, lo que suma una divergencia más al recuento.
+- 📄 Documentación oficial: <https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html>
 
 ---
 
