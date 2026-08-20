@@ -8,6 +8,8 @@ Parte 12 — Vectores, recuperación y RAG · Avanzado ·
 
 **Conceptos centrales:** `búsqueda aproximada` · `recall` · `HNSW` · `cuantización` · `latencia frente a exactitud`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -226,6 +228,89 @@ El recall se degrada silenciosamente al crecer la colección o al cambiar la dis
 2. Explica por qué el post-filtrado devuelve cero resultados con un filtro del 0,8 %.
 3. ¿Qué diferencia hay entre `ef_construction` y `ef_search` en cuanto a cuándo se pueden cambiar?
 4. Con un filtro que selecciona el 0,3 % del corpus, ¿qué estrategia elegirías y por qué?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Renunciar a encontrar siempre el vecino más cercano, y saber exactamente cuánto se renuncia
+
+La búsqueda exacta del vecino más cercano en muchas dimensiones no tiene
+atajo: hay que comparar contra todos. Por eso los índices vectoriales son
+**aproximados**: renuncian a garantizar el resultado correcto a cambio de
+ser miles de veces más rápidos.
+
+Esa renuncia se mide, y tiene nombre: **recall@k**, la fracción de los k
+vecinos verdaderos que el índice devolvió. Un índice con recall 0,95
+devuelve, de media, 19 de cada 20 correctos. Y aquí está lo importante: el
+recall **no se puede saber sin medirlo** contra una búsqueda exacta sobre el
+mismo conjunto.
+
+Los tres compromisos son siempre los mismos —velocidad, memoria y recall— y
+cada familia de índice los reparte distinto. Esta comparación enumera qué
+ofrece cada motor y **qué parámetro mueve cada eje**, porque elegirlos a ojo
+es lo habitual y es un error.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| Qdrant | sí | conceptual | — | [doc oficial](https://qdrant.tech/documentation/concepts/indexing/) |
+| Milvus | sí | conceptual | — | [doc oficial](https://milvus.io/docs/index.md) |
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/indexes-types.html) |
+| OpenSearch | sí | conceptual | — | [doc oficial](https://docs.opensearch.org/latest/vector-search/) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/extensions/vss) |
+| SQLite | **no** | — | — | [doc oficial](https://sqlite.org/lang_expr.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) |
+
+### Los que resuelven el caso
+
+#### Qdrant
+
+- **Cómo se hace aquí:** HNSW con parámetros explícitos: `m` (conexiones por nodo, memoria y calidad), `ef_construct` (esfuerzo al construir) y `ef` en cada consulta (esfuerzo al buscar). Añade cuantización escalar, binaria y por producto para reducir memoria, y permite guardar el original en disco y reordenar los candidatos con él.
+- **Por qué sí:** El compromiso se ajusta **por consulta** con `ef`, sin reconstruir nada: la misma colección puede servir una búsqueda rápida y otra exhaustiva.
+- **Por qué no:** HNSW es un grafo en memoria: su tamaño crece con `m` y con el número de vectores, y no se puede reducir sin perder recall. La cuantización lo alivia y **baja el recall**; medir cuánto es obligatorio, no opcional.
+- 📄 Documentación oficial: <https://qdrant.tech/documentation/concepts/indexing/>
+
+#### Milvus
+
+- **Cómo se hace aquí:** Ofrece la mayor variedad de familias: **IVF** —agrupa en celdas y busca solo en `nprobe` de ellas—, **HNSW**, **DiskANN** para conjuntos que no caben en memoria, y variantes cuantizadas de cada una.
+- **Por qué sí:** Poder elegir familia permite ajustarse al presupuesto real: IVF con cuantización por producto cabe en una fracción de la memoria que pide HNSW, a cambio de recall.
+- **Por qué no:** IVF tiene un fallo propio que sorprende: si el vecino verdadero cayó en una celda que `nprobe` no visitó, **no aparece nunca**, por mucho que se suba el límite de resultados. Y construir el índice exige entrenar con una muestra representativa.
+- 📄 Documentación oficial: <https://milvus.io/docs/index.md>
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Con pgvector, dos índices: **HNSW** —mejor recall, construcción lenta, más memoria— e **IVFFlat** —construcción rápida, menos memoria, hay que elegir el número de listas y **reconstruirlo** cuando los datos crecen—. El esfuerzo de búsqueda se ajusta con `hnsw.ef_search` o `ivfflat.probes`.
+- **Por qué sí:** El índice vive junto a los datos: se puede combinar con `WHERE` sobre columnas normales y todo ocurre en una transacción. Para la mayoría de los sistemas, eso vale más que unos puntos de recall.
+- **Por qué no:** El filtrado y el índice conviven mal: si el `WHERE` es muy selectivo, PostgreSQL puede recorrer el índice vectorial y descartar casi todo después, devolviendo menos resultados de los pedidos. Es el mismo problema del filtrado que Qdrant resuelve dentro del grafo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/indexes-types.html>
+
+#### OpenSearch
+
+- **Cómo se hace aquí:** Índice `knn_vector` con HNSW sobre las bibliotecas Lucene, nmslib o FAISS, con `ef_search` y `m` configurables, y búsqueda exacta disponible para medir el recall contra ella.
+- **Por qué sí:** Que la búsqueda exacta esté a mano en el mismo sistema hace fácil lo que casi nadie hace: **medir** el recall real en vez de suponerlo.
+- **Por qué no:** El índice vectorial se suma al invertido en la misma memoria del clúster, y competir por ella degrada las dos búsquedas a la vez. Dimensionar deja de ser un problema de una sola estructura.
+- 📄 Documentación oficial: <https://docs.opensearch.org/latest/vector-search/>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** Fuerza bruta vectorizada, y una extensión HNSW experimental. Su papel aquí no es servir búsquedas: es **calcular la verdad** contra la que se mide el recall de los demás.
+- **Por qué sí:** Sin una lista de vecinos verdaderos, la palabra «recall» no significa nada. Calcularla por fuerza bruta sobre una muestra es exactamente el trabajo para el que sirve.
+- **Por qué no:** Ese cálculo es caro por definición: sirve para una muestra de consultas de evaluación, no para el tráfico real.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/extensions/vss>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| SQLite | No hay índice vectorial en el motor: solo fuerza bruta escrita a mano, que es lo que la clase anterior ya mostró. Aquí no aportaría una fila distinta. | Extensiones de terceros construidas sobre SQLite para búsqueda vectorial en el dispositivo, con las mismas familias de índice y los mismos compromisos. | [doc](https://sqlite.org/lang_expr.html) |
+| Redis | Su índice vectorial vive en el módulo de búsqueda, no en el servidor base: compararlo aquí exigiría una imagen distinta de la que este repositorio levanta. | Con el módulo, HNSW o fuerza bruta sobre campos de hash o JSON; sin él, Redis como caché de los resultados que devuelve otro sistema. | [doc](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) |
 
 ---
 

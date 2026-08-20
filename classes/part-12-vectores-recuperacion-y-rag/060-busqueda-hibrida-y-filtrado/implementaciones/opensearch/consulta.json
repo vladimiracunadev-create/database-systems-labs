@@ -1,0 +1,38 @@
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/",
+    "nota: implementacion declarada. Aqui «hibrido» es una CONFIGURACION, no un",
+    "desarrollo: un procesador de fase de busqueda normaliza y combina las dos",
+    "listas antes de devolverlas, asi que el cliente no fusiona nada.",
+    "La eleccion entre normalizacion (min-max, l2) y fusion por rango no es",
+    "menor: la normalizacion depende de la distribucion de puntuaciones de ESA",
+    "consulta, y el rango no depende de nada. Por eso RRF es mas robusto cuando",
+    "las consultas son muy distintas entre si.",
+    "Se aplica con:  PUT /_search/pipeline/hibrida   (bloque canalizacion)",
+    "y se consulta:  POST /documentos/_search?search_pipeline=hibrida  (bloque consulta)"
+  ],
+
+  "canalizacion": {
+    "description": "Fusiona la lista lexica y la vectorial",
+    "phase_results_processors": [
+      {
+        "normalization-processor": {
+          "normalization": { "technique": "min_max" },
+          "combination": { "technique": "arithmetic_mean", "parameters": { "weights": [0.5, 0.5] } }
+        }
+      }
+    ]
+  },
+
+  "consulta": {
+    "query": {
+      "hybrid": {
+        "queries": [
+          { "match": { "titulo": { "query": "bases de datos" } } },
+          { "knn": { "v": { "vector": [2, 0, 0], "k": 10 } } }
+        ]
+      }
+    }
+  }
+}

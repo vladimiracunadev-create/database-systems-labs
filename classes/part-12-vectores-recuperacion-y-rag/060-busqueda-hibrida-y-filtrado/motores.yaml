@@ -1,0 +1,121 @@
+---
+caso:
+  titulo: >-
+    Fusionar el ranking léxico y el vectorial sin comparar puntuaciones que no
+    son comparables
+  contrato: |
+    La búsqueda léxica encuentra las palabras exactas —nombres propios, códigos,
+    siglas— y falla con los sinónimos. La vectorial encuentra el significado y
+    falla con los identificadores literales. Ninguna gana siempre, así que se
+    usan las dos y hay que combinarlas.
+
+    Y ahí está el problema: **sus puntuaciones no son comparables**. Un BM25 de
+    7,3 y un coseno de 0,82 no están en la misma escala, ni en el mismo rango, ni
+    tienen la misma distribución; sumarlos o promediarlos no significa nada.
+
+    La solución estándar es la **fusión por rango recíproco**: olvidar las
+    puntuaciones y usar solo las **posiciones**, que siempre significan lo
+    mismo. Con `k = 60` —el valor del artículo original y el que traen casi todos
+    los sistemas—, el caso fusiona dos rankings de cuatro documentos. Gana `A`
+    por estar bien situado en las dos listas sin ser el primero de ninguna, que
+    es exactamente lo que se le pide a una búsqueda híbrida.
+  columnas: [doc]
+  esperado:
+    - [A]
+    - [C]
+    - [B]
+    - [D]
+
+motores:
+  - id: opensearch
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/opensearch/consulta.json
+    porque_si: >-
+      Tiene las dos búsquedas en el mismo índice —invertido y `knn_vector`— y un
+      procesador de fase de búsqueda que hace la normalización o la fusión sin
+      que el cliente combine nada. Es el sistema donde «híbrido» es una
+      configuración, no un desarrollo.
+    porque_no: >-
+      Ese procesador hay que declararlo por adelantado y afecta a la
+      canalización entera; y mantener índice invertido y vectorial en la misma
+      memoria del clúster hace que dimensionar sea un compromiso entre los dos.
+    doc: https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/
+
+  - id: qdrant
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/qdrant/consulta.json
+    porque_si: >-
+      Su API de consulta admite varias fuentes —vectores densos, dispersos para
+      la parte léxica— y las fusiona con RRF o con reordenación en una sola
+      llamada, con el filtrado por carga útil aplicado dentro del recorrido.
+    porque_no: >-
+      La parte léxica hay que darle el vector disperso ya calculado (BM25 o
+      SPLADE): no hay analizador de texto ni motor de búsqueda dentro. La mitad
+      del trabajo sigue estando fuera.
+    doc: https://qdrant.tech/documentation/concepts/hybrid-queries/
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Puede hacer las dos búsquedas y la fusión **en una sola consulta y una
+      sola transacción**: `tsvector` con GIN para la léxica, pgvector para la
+      vectorial, y una CTE con `ROW_NUMBER()` para los rangos. Sin sistemas
+      adicionales que sincronizar.
+    porque_no: >-
+      Su relevancia léxica (`ts_rank`) es más pobre que BM25 y no tiene
+      corrección de errores ni sinónimos; y la consulta fusionada es larga y hay
+      que escribirla a mano cada vez.
+    doc: https://www.postgresql.org/docs/current/functions-window.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Deja la fórmula a la vista, que es lo que hace falta para entenderla: RRF
+      son dos líneas de SQL, no una biblioteca. Y con FTS5 y una tabla de
+      vectores, la búsqueda híbrida completa cabe en un archivo.
+    porque_no: >-
+      La parte vectorial sería fuerza bruta, así que el conjunto tiene que ser
+      pequeño: sirve para una aplicación de escritorio, no para un corpus
+      grande.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es donde se **ajusta** la fusión: probar distintos valores de `k`, o pesos
+      distintos para cada lista, sobre un conjunto de evaluación completo es una
+      consulta analítica, y aquí cuesta segundos.
+    porque_no: >-
+      No sirve el resultado a nadie: es el banco de pruebas de la fórmula, no el
+      buscador.
+    doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      La búsqueda híbrida existe en Atlas —con `$rankFusion` en versiones
+      recientes—, pero no en la edición Community que este repositorio levanta:
+      presentarla como una capacidad del motor sería inexacto.
+    alternativa: >-
+      Ejecutar las dos búsquedas por separado y fusionar los rangos en la
+      aplicación con la misma fórmula del caso: RRF no necesita soporte del
+      motor, solo dos listas ordenadas.
+    doc: https://www.mongodb.com/docs/atlas/atlas-search/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      Sin el módulo de búsqueda no hay ni índice invertido ni vectorial: no hay
+      dos listas que fusionar.
+    alternativa: >-
+      Redis como caché del resultado fusionado, con la consulta normalizada como
+      clave: la fusión la hace otro y aquí solo se guarda.
+    doc: https://redis.io/docs/latest/develop/interact/search-and-query/

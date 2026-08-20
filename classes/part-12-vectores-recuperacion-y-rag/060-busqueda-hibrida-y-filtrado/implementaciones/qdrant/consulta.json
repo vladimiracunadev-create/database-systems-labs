@@ -1,0 +1,29 @@
+{
+  "_comentario": [
+    "motor: qdrant",
+    "doc: https://qdrant.tech/documentation/concepts/hybrid-queries/",
+    "nota: implementacion declarada. La API de consulta admite varias fuentes en",
+    "una sola llamada —un vector denso para el significado y uno DISPERSO para",
+    "la parte lexica— y las fusiona con RRF, con el filtro aplicado dentro del",
+    "recorrido del grafo.",
+    "El limite que hay que tener claro: Qdrant NO analiza texto. El vector",
+    "disperso (BM25, SPLADE) hay que calcularlo fuera y enviarlo ya hecho. La",
+    "mitad lexica del trabajo sigue estando en otro sitio.",
+    "Se consulta con:  POST /collections/documentos/points/query"
+  ],
+
+  "consulta": {
+    "prefetch": [
+      { "query": [2, 0, 0], "using": "denso", "limit": 20 },
+      {
+        "query": { "indices": [12, 87, 401], "values": [0.9, 0.6, 0.3] },
+        "using": "disperso",
+        "limit": 20
+      }
+    ],
+    "query": { "fusion": "rrf" },
+    "limit": 4,
+    "with_payload": true,
+    "_orden_esperado": ["A", "C", "B", "D"]
+  }
+}

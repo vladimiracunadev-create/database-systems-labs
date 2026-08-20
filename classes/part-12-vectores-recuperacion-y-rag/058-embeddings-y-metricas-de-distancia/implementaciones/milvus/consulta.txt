@@ -1,0 +1,40 @@
+# motor: milvus
+# doc: https://milvus.io/docs/metric.md
+# nota: implementacion declarada. Milvus separa almacenamiento y computo y
+#       admite varios tipos de indice; la eleccion de METRICA tiene que
+#       coincidir con la usada al entrenar el modelo de embeddings:
+#         L2      distancia euclidea
+#         IP      producto interno (para vectores normalizados)
+#         COSINE  coseno
+#       Elegir una metrica distinta de la del modelo no da error: da resultados
+#       silenciosamente peores, y es uno de los fallos mas dificiles de detectar
+#       en un sistema de recuperacion.
+
+# === preparacion ===
+# from pymilvus import MilvusClient, DataType
+#
+# cliente = MilvusClient("http://localhost:19530")
+# esquema = cliente.create_schema()
+# esquema.add_field("id", DataType.VARCHAR, is_primary=True, max_length=8)
+# esquema.add_field("v", DataType.FLOAT_VECTOR, dim=3)
+# cliente.create_collection("documentos", schema=esquema)
+#
+# cliente.insert("documentos", [
+#     {"id": "A", "v": [2.0, 0.0, 0.0]},
+#     {"id": "B", "v": [0.0, 2.0, 0.0]},
+#     {"id": "C", "v": [1.0, 1.0, 0.0]},
+# ])
+#
+# cliente.create_index("documentos", index_params=[{
+#     "field_name": "v", "index_type": "HNSW",
+#     "metric_type": "L2", "params": {"M": 16, "efConstruction": 200},
+# }])
+
+# === consulta ===
+# resultado = cliente.search(
+#     collection_name="documentos",
+#     data=[[2.0, 0.0, 0.0]],
+#     limit=3,
+#     search_params={"metric_type": "L2", "params": {"ef": 64}},
+# )
+# -> orden esperado: A (0.0), C (2.0), B (8.0)

@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>ADR</code> · <code>contexto</code> · <code>consecuencia</code> · <code>costo total de propiedad</code> · <code>reversibilidad</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Dejar constancia de por qué el sistema es como es. Sin registro de decisiones, cada relevo del equipo debe reconstruir el razonamiento por arqueología, o lo cambia sin saber qué rompe.</p>
@@ -341,6 +342,150 @@ La cuarta se revisa en cada planificación trimestral.
 <li>Estima el costo de salida de tu almacén principal, en horas.</li>
 <li>Escribe la condición de revisión de una decisión vigente en tu equipo.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Lo que cuesta un motor cuando ya nadie mira la comparativa</p>
+<p>Las comparativas de motores hablan de rendimiento y de funcionalidades. El
+costo total de una decisión de persistencia está en otro sitio, y se paga
+durante años: <strong>licencia</strong>, <strong>operación</strong> —respaldos, actualizaciones, alta
+disponibilidad, vigilancia—, <strong>personal</strong> que sepa diagnosticarlo a las tres
+de la mañana, y <strong>salida</strong>, que es lo que costaría dejarlo.</p>
+<p>Un registro de decisión de arquitectura sirve exactamente para dejar eso por
+escrito: el contexto, las alternativas consideradas, la decisión, las
+consecuencias aceptadas y <strong>qué evidencia obligaría a revisarla</strong>. Sin ese
+último punto, un registro es una justificación; con él, es una decisión de
+ingeniería.</p>
+<p>Esta comparación no mide nada: enumera, motor por motor, dónde está el costo
+que no aparece en la portada.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/about/licence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/legal/licensing/server-side-public-license">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/legal/licenses/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Google BigQuery</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cloud.google.com/bigquery/pricing">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://sqlite.org/copyright.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Licencia permisiva y sin costo. El costo real es de <strong>operación</strong>: la alta disponibilidad la aporta una herramienta externa que hay que elegir y operar, el vacío hay que vigilarlo, y las actualizaciones de versión mayor exigen planificación. A cambio, el conocimiento es abundante y transferible.</li>
+<li><strong>Por qué sí:</strong> Coste de salida bajo: es SQL estándar en su mayor parte, hay decenas de servicios administrados compatibles y el volcado es portable. La decisión se puede revertir.</li>
+<li><strong>Por qué no:</strong> «Gratis» esconde el costo de personal: una instalación sin nadie que entienda el vacío, los planes y la réplica acaba siendo más cara que un servicio administrado que nadie tiene que atender de madrugada.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/about/licence/">https://www.postgresql.org/about/licence/</a></li>
+</ul>
+<h4 id="oracle-database">Oracle Database</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Licencia por núcleo, con opciones que se cobran aparte —particionado, diagnóstico, alta disponibilidad avanzada— y auditorías de cumplimiento. El costo es explícito, alto y predecible.</li>
+<li><strong>Por qué sí:</strong> A cambio hay soporte contractual, herramientas de diagnóstico muy maduras y un mercado de profesionales con décadas de experiencia. En sistemas donde una hora de caída cuesta más que la licencia anual, la cuenta sale.</li>
+<li><strong>Por qué no:</strong> El costo de <strong>salida</strong> es el más alto de la lista: PL/SQL, paquetes, disparadores y particularidades del dialecto atan la aplicación al motor. Migrar de Oracle es un proyecto de años, y eso forma parte del precio aunque no aparezca en la factura.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/">https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/</a></li>
+</ul>
+<h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Licencia por núcleo con ediciones escalonadas; la gratuita, Express, está limitada a 10 GB por base y a un socket. Integración muy fuerte con el resto del ecosistema de su fabricante.</li>
+<li><strong>Por qué sí:</strong> Herramientas de administración y diagnóstico excelentes y un costo de personal bajo en organizaciones que ya trabajan con ese ecosistema: la curva de aprendizaje ya está pagada.</li>
+<li><strong>Por qué no:</strong> El límite de la edición gratuita se alcanza antes de lo que parece, y el salto a la de pago es escalonado y caro. Y la decisión rara vez es técnica: la toma el contrato marco de la organización.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022">https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La edición Community usa la licencia SSPL, que <strong>no</strong> está reconocida como libre por la OSI y afecta a quien quiera ofrecerlo como servicio. Para uso interno no cambia nada; para un producto que se despliega en casa del cliente, hay que leerla.</li>
+<li><strong>Por qué sí:</strong> Costo de operación bajo para lo que ofrece: la alta disponibilidad viene en el producto, sin herramientas externas, y su servicio administrado quita casi toda la administración.</li>
+<li><strong>Por qué no:</strong> El costo de salida es alto de una forma poco visible: no es el motor, es el <strong>modelo de datos</strong>. Los documentos incrustados y la ausencia de esquema no se traducen a tablas sin rediseñar la aplicación.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/legal/licensing/server-side-public-license">https://www.mongodb.com/legal/licensing/server-side-public-license</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Su licencia cambió en 2024 —a un esquema dual que no es libre según la OSI— y de ahí salieron bifurcaciones mantenidas por fundaciones. Es el ejemplo más reciente de un riesgo real: <strong>la licencia de un motor puede cambiar después de haberlo adoptado</strong>.</li>
+<li><strong>Por qué sí:</strong> Operación mínima y costo de salida bajo: se usa para datos desechables, y cambiar de implementación compatible es de las migraciones más baratas que existen.</li>
+<li><strong>Por qué no:</strong> El costo oculto es la memoria: es el almacenamiento más caro por gibibyte, y un conjunto de datos que crece sin política de caducidad se traduce directamente en factura.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/legal/licenses/">https://redis.io/legal/licenses/</a></li>
+</ul>
+<h4 id="google-bigquery">Google BigQuery</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Sin licencia y sin operación: se paga por almacenamiento y por <strong>bytes leídos</strong> en cada consulta, o por capacidad reservada. El costo se traslada por completo del personal a la factura.</li>
+<li><strong>Por qué sí:</strong> Para una carga analítica esporádica es imbatible en costo total: cero administración, cero servidores y cero personal dedicado.</li>
+<li><strong>Por qué no:</strong> El costo es <strong>variable y lo controla quien escribe las consultas</strong>: un <code>SELECT *</code> mal filtrado sobre una tabla grande cuesta dinero real, y se repite cada vez que alguien recarga un panel. Hay que poner cuotas antes de dar acceso, no después.</li>
+<li>📄 Documentación oficial: <a href="https://cloud.google.com/bigquery/pricing">https://cloud.google.com/bigquery/pricing</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>Es de dominio público y su costo de operación es cero porque no hay nada que operar: no hay decisión de costo total que documentar. Incluirlo aquí sería rellenar la matriz.</td>
+<td>Su costo aparece en otro sitio y es real: el día en que el sistema necesita dos escritores o acceso remoto, hay que migrar. Ese es el registro de decisión que conviene escribir el primer día, no el último.</td>
+<td><a href="https://sqlite.org/copyright.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

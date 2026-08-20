@@ -1,0 +1,35 @@
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/api-reference/rank-eval/",
+    "nota: implementacion declarada. La API _rank_eval calcula precision, recall,",
+    "MRR y nDCG DENTRO del motor, contra un conjunto de juicios de relevancia:",
+    "se evalua la configuracion real de busqueda, no una reproduccion.",
+    "Su limite: solo evalua su propia recuperacion. Para comparar contra un",
+    "sistema vectorial externo hay que volver al calculo de este caso, que es",
+    "independiente del motor y por eso sirve para todos.",
+    "Se consulta con:  POST /documentos/_rank_eval"
+  ],
+
+  "requests": [
+    {
+      "id": "q1",
+      "request": { "query": { "match": { "titulo": "bases de datos" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d1", "rating": 1 }]
+    },
+    {
+      "id": "q2",
+      "request": { "query": { "match": { "titulo": "replicacion" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d2", "rating": 1 }]
+    },
+    {
+      "id": "q3",
+      "request": { "query": { "match": { "titulo": "protocolos de red" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d9", "rating": 1 }]
+    }
+  ],
+
+  "metric": {
+    "mean_reciprocal_rank": { "k": 3, "relevant_rating_threshold": 1 }
+  }
+}

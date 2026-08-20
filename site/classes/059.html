@@ -61,6 +61,7 @@
 4 horas estimadas · motores <code>qdrant</code>, <code>milvus</code>, <code>postgresql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>búsqueda aproximada</code> · <code>recall</code> · <code>HNSW</code> · <code>cuantización</code> · <code>latencia frente a exactitud</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Buscar entre millones de vectores en milisegundos aceptando no encontrar siempre el mejor resultado. El índice aproximado cambia exactitud por velocidad, y hay que saber cuánta.</p>
@@ -386,6 +387,150 @@ CREATE INDEX ON fragmentos USING hnsw (embedding vector_cosine_ops)
 <li>¿Qué diferencia hay entre <code>ef_construction</code> y <code>ef_search</code> en cuanto a cuándo se pueden cambiar?</li>
 <li>Con un filtro que selecciona el 0,3 % del corpus, ¿qué estrategia elegirías y por qué?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Renunciar a encontrar siempre el vecino más cercano, y saber exactamente cuánto se renuncia</p>
+<p>La búsqueda exacta del vecino más cercano en muchas dimensiones no tiene
+atajo: hay que comparar contra todos. Por eso los índices vectoriales son
+<strong>aproximados</strong>: renuncian a garantizar el resultado correcto a cambio de
+ser miles de veces más rápidos.</p>
+<p>Esa renuncia se mide, y tiene nombre: <strong>recall@k</strong>, la fracción de los k
+vecinos verdaderos que el índice devolvió. Un índice con recall 0,95
+devuelve, de media, 19 de cada 20 correctos. Y aquí está lo importante: el
+recall <strong>no se puede saber sin medirlo</strong> contra una búsqueda exacta sobre el
+mismo conjunto.</p>
+<p>Los tres compromisos son siempre los mismos —velocidad, memoria y recall— y
+cada familia de índice los reparte distinto. Esta comparación enumera qué
+ofrece cada motor y <strong>qué parámetro mueve cada eje</strong>, porque elegirlos a ojo
+es lo habitual y es un error.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qdrant</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://qdrant.tech/documentation/concepts/indexing/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Milvus</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://milvus.io/docs/index.md">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/vector-search/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/extensions/vss">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="qdrant">Qdrant</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> HNSW con parámetros explícitos: <code>m</code> (conexiones por nodo, memoria y calidad), <code>ef_construct</code> (esfuerzo al construir) y <code>ef</code> en cada consulta (esfuerzo al buscar). Añade cuantización escalar, binaria y por producto para reducir memoria, y permite guardar el original en disco y reordenar los candidatos con él.</li>
+<li><strong>Por qué sí:</strong> El compromiso se ajusta <strong>por consulta</strong> con <code>ef</code>, sin reconstruir nada: la misma colección puede servir una búsqueda rápida y otra exhaustiva.</li>
+<li><strong>Por qué no:</strong> HNSW es un grafo en memoria: su tamaño crece con <code>m</code> y con el número de vectores, y no se puede reducir sin perder recall. La cuantización lo alivia y <strong>baja el recall</strong>; medir cuánto es obligatorio, no opcional.</li>
+<li>📄 Documentación oficial: <a href="https://qdrant.tech/documentation/concepts/indexing/">https://qdrant.tech/documentation/concepts/indexing/</a></li>
+</ul>
+<h4 id="milvus">Milvus</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Ofrece la mayor variedad de familias: <strong>IVF</strong> —agrupa en celdas y busca solo en <code>nprobe</code> de ellas—, <strong>HNSW</strong>, <strong>DiskANN</strong> para conjuntos que no caben en memoria, y variantes cuantizadas de cada una.</li>
+<li><strong>Por qué sí:</strong> Poder elegir familia permite ajustarse al presupuesto real: IVF con cuantización por producto cabe en una fracción de la memoria que pide HNSW, a cambio de recall.</li>
+<li><strong>Por qué no:</strong> IVF tiene un fallo propio que sorprende: si el vecino verdadero cayó en una celda que <code>nprobe</code> no visitó, <strong>no aparece nunca</strong>, por mucho que se suba el límite de resultados. Y construir el índice exige entrenar con una muestra representativa.</li>
+<li>📄 Documentación oficial: <a href="https://milvus.io/docs/index.md">https://milvus.io/docs/index.md</a></li>
+</ul>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Con pgvector, dos índices: <strong>HNSW</strong> —mejor recall, construcción lenta, más memoria— e <strong>IVFFlat</strong> —construcción rápida, menos memoria, hay que elegir el número de listas y <strong>reconstruirlo</strong> cuando los datos crecen—. El esfuerzo de búsqueda se ajusta con <code>hnsw.ef_search</code> o <code>ivfflat.probes</code>.</li>
+<li><strong>Por qué sí:</strong> El índice vive junto a los datos: se puede combinar con <code>WHERE</code> sobre columnas normales y todo ocurre en una transacción. Para la mayoría de los sistemas, eso vale más que unos puntos de recall.</li>
+<li><strong>Por qué no:</strong> El filtrado y el índice conviven mal: si el <code>WHERE</code> es muy selectivo, PostgreSQL puede recorrer el índice vectorial y descartar casi todo después, devolviendo menos resultados de los pedidos. Es el mismo problema del filtrado que Qdrant resuelve dentro del grafo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-types.html">https://www.postgresql.org/docs/current/indexes-types.html</a></li>
+</ul>
+<h4 id="opensearch">OpenSearch</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Índice <code>knn_vector</code> con HNSW sobre las bibliotecas Lucene, nmslib o FAISS, con <code>ef_search</code> y <code>m</code> configurables, y búsqueda exacta disponible para medir el recall contra ella.</li>
+<li><strong>Por qué sí:</strong> Que la búsqueda exacta esté a mano en el mismo sistema hace fácil lo que casi nadie hace: <strong>medir</strong> el recall real en vez de suponerlo.</li>
+<li><strong>Por qué no:</strong> El índice vectorial se suma al invertido en la misma memoria del clúster, y competir por ella degrada las dos búsquedas a la vez. Dimensionar deja de ser un problema de una sola estructura.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/vector-search/">https://docs.opensearch.org/latest/vector-search/</a></li>
+</ul>
+<h4 id="duckdb">DuckDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Fuerza bruta vectorizada, y una extensión HNSW experimental. Su papel aquí no es servir búsquedas: es <strong>calcular la verdad</strong> contra la que se mide el recall de los demás.</li>
+<li><strong>Por qué sí:</strong> Sin una lista de vecinos verdaderos, la palabra «recall» no significa nada. Calcularla por fuerza bruta sobre una muestra es exactamente el trabajo para el que sirve.</li>
+<li><strong>Por qué no:</strong> Ese cálculo es caro por definición: sirve para una muestra de consultas de evaluación, no para el tráfico real.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/extensions/vss">https://duckdb.org/docs/stable/extensions/vss</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>No hay índice vectorial en el motor: solo fuerza bruta escrita a mano, que es lo que la clase anterior ya mostró. Aquí no aportaría una fila distinta.</td>
+<td>Extensiones de terceros construidas sobre SQLite para búsqueda vectorial en el dispositivo, con las mismas familias de índice y los mismos compromisos.</td>
+<td><a href="https://sqlite.org/lang_expr.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>Su índice vectorial vive en el módulo de búsqueda, no en el servidor base: compararlo aquí exigiría una imagen distinta de la que este repositorio levanta.</td>
+<td>Con el módulo, HNSW o fuerza bruta sobre campos de hash o JSON; sin él, Redis como caché de los resultados que devuelve otro sistema.</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

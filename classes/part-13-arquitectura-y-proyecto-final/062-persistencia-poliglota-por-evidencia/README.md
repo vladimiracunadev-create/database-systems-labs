@@ -8,6 +8,8 @@ Parte 13 — Arquitectura y proyecto final · Avanzado ·
 
 **Conceptos centrales:** `carga de trabajo` · `criterio de selección` · `costo de operación` · `complejidad añadida`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -216,6 +218,90 @@ Cada almacén añadido multiplica los estados posibles del sistema, y por tanto 
 2. Da una carga tuya que hoy usa un motor especializado y podría volver al principal.
 3. ¿Qué medirías antes de añadir un motor de búsqueda dedicado?
 4. Escribe el umbral de revisión de una de tus decisiones y cómo lo vigilarías.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Un sistema real con cinco cargas distintas, y la pregunta de si hacen falta cinco motores
+
+Una plataforma educativa tiene cinco cargas: **inscripciones** (transaccional,
+con invariantes que no se pueden romper), **sesiones** (clave-valor, alta
+frecuencia, desechable), **búsqueda del catálogo** (texto, con relevancia),
+**panel de dirección** (analítico, sobre todo el histórico) y **recomendación
+semántica** (vectorial).
+
+La respuesta fácil es un motor por carga. Es casi siempre la respuesta
+equivocada, porque el costo de la persistencia políglota no está en licencias
+ni en servidores: está en la **coherencia entre sistemas**, que ninguna
+transacción cubre, y en las cinco formas distintas de respaldar, monitorizar,
+actualizar y contratar personal.
+
+La regla que esta parte defiende: **un motor entra en la arquitectura cuando
+hay evidencia medida de que el anterior no puede**, y esa evidencia se anota
+en un registro de decisión. Aquí se compara qué carga justifica de verdad a
+cada motor y a partir de qué umbral.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/develop/) |
+| OpenSearch | sí | conceptual | — | [doc oficial](https://docs.opensearch.org/latest/) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/) |
+| Qdrant | sí | conceptual | — | [doc oficial](https://qdrant.tech/documentation/) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** La opción por omisión, y con frecuencia la única necesaria: transaccional para inscripciones, `jsonb` para lo semiestructurado, búsqueda de texto con `tsvector`, analítica de tamaño medio con vistas materializadas, y vectorial con pgvector. Cuatro de las cinco cargas, en un sistema, en una transacción.
+- **Por qué sí:** Cada sistema que **no** entra en la arquitectura ahorra un plan de respaldo, un panel, un ciclo de actualizaciones y una coherencia que mantener. Empezar aquí y salir con evidencia es una decisión defendible; empezar repartido, casi nunca.
+- **Por qué no:** Ninguna de esas cuatro capacidades es la mejor de su categoría, y llega un punto en que se nota: la búsqueda sin sinónimos ni corrección de errores, el panel compitiendo por la caché con las inscripciones, el índice vectorial con millones de vectores. El error simétrico —quedarse aquí después de que la evidencia diga lo contrario— también existe.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/>
+
+#### Redis
+
+- **Cómo se hace aquí:** La carga de **sesiones**: alta frecuencia, latencia de microsegundos, caducidad automática y datos que se pueden perder sin consecuencias.
+- **Por qué sí:** Es la separación más fácil de justificar de las cinco, porque el dato es **desechable por naturaleza**: no hay coherencia que mantener con la verdad, solo una caché que se puede reconstruir.
+- **Por qué no:** La frontera se cruza sola. En cuanto alguien guarda ahí algo que no se puede perder —un carrito, un contador de facturación—, el sistema pasa a tener dos verdades y ninguna transacción que las una.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/develop/>
+
+#### OpenSearch
+
+- **Cómo se hace aquí:** La carga de **búsqueda del catálogo**, cuando el buscador deja de ser una caja de texto y pasa a ser el producto: sinónimos, corrección de errores, facetas, resaltado y relevancia ajustable.
+- **Por qué sí:** El umbral es claro y medible: cuando `ts_rank` de PostgreSQL deja de dar resultados aceptables en el conjunto de evaluación, hay evidencia. Y esa medición es la de la clase 061.
+- **Por qué no:** Es un índice secundario que va por detrás del origen: hay que alimentarlo, reindexarlo cuando cambia el analizador, y aceptar que puede mostrar algo que ya no existe. Añade un sistema entero con su propia operación.
+- 📄 Documentación oficial: <https://docs.opensearch.org/latest/>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** La carga del **panel de dirección**, sobre una copia exportada del histórico. Sin servidor y sin competir por los recursos del sistema transaccional.
+- **Por qué sí:** Es la separación más barata que existe: no añade un servicio, solo un fichero y un proceso de exportación. Resuelve el conflicto entre analítica y transaccional sin montar un almacén de datos.
+- **Por qué no:** El panel va con el retraso de la última exportación, y eso hay que declararlo en el propio panel. Cuando el negocio exige el dato al minuto, esta opción se acaba.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/>
+
+#### Qdrant
+
+- **Cómo se hace aquí:** La carga **vectorial**, cuando el número de vectores o la exigencia de filtrado superan lo que pgvector sostiene con el recall requerido.
+- **Por qué sí:** El umbral vuelve a ser medible: recall y latencia sobre el mismo conjunto de evaluación, comparados contra pgvector. Si pgvector cumple, no hay decisión que tomar.
+- **Por qué no:** Los vectores viven separados de los datos de negocio, sin transacción común: un documento borrado puede seguir apareciendo en los resultados hasta que alguien sincronice. Esa incoherencia hay que diseñarla, no descubrirla.
+- 📄 Documentación oficial: <https://qdrant.tech/documentation/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | En este sistema no hay ninguna carga que lo justifique **frente a PostgreSQL**: lo semiestructurado cabe en `jsonb` con índices GIN y con las transacciones y las claves foráneas del resto del esquema al lado. Añadirlo sería sumar un sistema sin una carga que solo él resuelva. | Se justifica cuando el modelo documental **es** el dominio —agregados grandes que se leen y escriben enteros y no se relacionan entre sí— o cuando el esquema tiene que evolucionar sin migraciones coordinadas. Esa es la evidencia que hay que aportar, no la preferencia. | [doc](https://www.mongodb.com/docs/manual/) |
+| Apache Cassandra | Su modelo cuesta lo que cuesta —una tabla por consulta, sin reuniones, sin transacciones, con reparaciones periódicas— y solo se paga cuando el volumen de escritura supera lo que un nodo primario puede absorber. Una plataforma educativa no llega ahí, y adoptarlo «por si crecemos» es pagar el costo sin recibir el beneficio. | Particionado dentro de PostgreSQL y réplicas de lectura, que cubren un crecimiento de dos órdenes de magnitud sin cambiar de modelo de datos ni de forma de razonar. | [doc](https://cassandra.apache.org/doc/latest/) |
 
 ---
 

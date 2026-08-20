@@ -8,6 +8,8 @@ Parte 12 — Vectores, recuperación y RAG · Avanzado ·
 
 **Conceptos centrales:** `recall@k` · `precisión@k` · `MRR` · `fragmentación` · `trazabilidad de la cita`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -223,6 +225,350 @@ Un RAG en producción se degrada por causas de base de datos: documentos nuevos 
 2. Explica por qué el reordenador sube la precisión y no el recall.
 3. ¿Cómo distingues un fallo de recuperación de uno de generación con la traza?
 4. Da una comprobación mecánica de alucinación que no requiera otro modelo.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Medir si el documento correcto llegó al contexto, antes de juzgar ninguna respuesta
+
+En un sistema de generación aumentada por recuperación, la parte que más se
+mira es la que menos se puede arreglar: el modelo. La que sí se puede
+arreglar es la recuperación, y la regla es dura y simple: **si el documento
+correcto no llega al contexto, el modelo no puede responder bien**; como
+mucho, puede inventar algo plausible.
+
+Por eso la evaluación empieza antes de la generación, con métricas de
+recuperación sobre un conjunto de preguntas con respuesta conocida. El caso
+calcula dos: cuántas preguntas tienen su documento entre los tres primeros, y
+el **MRR** —la media del inverso de la posición—, que premia que el documento
+correcto esté arriba y no solo presente.
+
+Con tres preguntas, una acertada en el primer puesto, otra en el tercero y
+una fallada: 2 de 3 en el top 3, y MRR = 0,44. Esos dos números son el punto
+de partida de cualquier mejora, y se pueden calcular con SQL: no hace falta
+ninguna plataforma.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| metrica | valor |
+|---|---|
+| `aciertos_top3` | `2` |
+| `mrr` | `0.44` |
+| `preguntas` | `3` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 061`: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/functions/aggregates) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_aggfunc.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-aggregate.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html) |
+| OpenSearch | sí | declarado | [código](implementaciones/opensearch/consulta.json) | [doc oficial](https://docs.opensearch.org/latest/api-reference/rank-eval/) |
+| Qdrant | **no** | — | — | [doc oficial](https://qdrant.tech/documentation/concepts/search/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/hashes/) |
+
+### Los que resuelven el caso
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/aggregates
+-- nota: en un trabajo real, la tabla de evaluacion no se escribe a mano: es el
+--       fichero que produjo la corrida de recuperacion.
+--         SELECT ... FROM read_parquet('corrida-2026-08-19.parquet')
+--       Y comparar dos configuraciones es anadir una columna y un GROUP BY.
+
+-- === preparacion ===
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            VARCHAR PRIMARY KEY,
+    posicion_relevante  INTEGER
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS VARCHAR) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante <= 3 THEN 1 ELSE 0 END) AS VARCHAR)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS VARCHAR)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+```
+
+- **Por qué sí:** Es la herramienta natural de la evaluación: los resultados de la recuperación son un fichero, las métricas son agregaciones, y comparar dos configuraciones es un `GROUP BY` más. Sin servicios y sin plataforma.
+- **Por qué no:** No recupera nada: evalúa lo que otro recuperó. La calidad del conjunto de evaluación —que es lo que de verdad decide si la métrica significa algo— sigue siendo trabajo humano.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/functions/aggregates>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_aggfunc.html
+-- nota: el nulo de q3 es la parte delicada. Si se escribiera
+--         AVG(1.0 / posicion_relevante)
+--       SQLite ignoraria la fila nula y el MRR saldria 0,67 en vez de 0,44: el
+--       fallo de recuperacion desapareceria de la metrica. Por eso el CASE
+--       convierte el nulo en 0,0 explicitamente.
+
+-- === preparacion ===
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            TEXT PRIMARY KEY,
+    posicion_relevante  INTEGER
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS TEXT) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante <= 3 THEN 1 ELSE 0 END) AS TEXT)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS TEXT)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+```
+
+- **Por qué sí:** Sirve para lo mismo sin instalar nada, y deja la fórmula del MRR a la vista: es una división y una media, no una caja negra.
+- **Por qué no:** Con conjuntos de evaluación grandes y muchas configuraciones que comparar, se queda corto; y no tiene funciones estadísticas para acompañar la métrica con un intervalo de confianza, que es lo que separa una medición de una anécdota.
+- 📄 Documentación oficial: <https://sqlite.org/lang_aggfunc.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-aggregate.html
+-- nota: el valor de tenerlo aqui no es el calculo —es aritmetica— sino la
+--       compania: el corpus, los vectores y el historico de evaluaciones en la
+--       misma base permiten preguntar como evoluciono el MRR entre versiones
+--       sin exportar nada.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS evaluacion;
+
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            text PRIMARY KEY,
+    posicion_relevante  integer
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS text) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante <= 3 THEN 1 ELSE 0 END) AS text)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS text)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+```
+
+- **Por qué sí:** Permite guardar el histórico de evaluaciones junto al corpus y a los vectores: se puede consultar cómo evolucionó el MRR entre versiones del sistema con una sola consulta, sin exportar nada.
+- **Por qué no:** No aporta nada específico a la evaluación: es aritmética. Su valor está en tener los datos juntos, no en el cálculo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-aggregate.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html
+-- nota: mismo aviso sobre los nulos que en SQLite, y aqui con mas motivo: los
+--       agregados de MySQL ignoran nulos en silencio, asi que un fallo de
+--       recuperacion se convierte en una metrica inflada sin que nada avise.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS evaluacion;
+
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            VARCHAR(20) PRIMARY KEY,
+    posicion_relevante  INT
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS CHAR) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante <= 3 THEN 1 ELSE 0 END) AS CHAR)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS CHAR)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+```
+
+- **Por qué sí:** La misma aritmética con la misma sintaxis estándar: la evaluación no depende del motor, y eso es precisamente lo que conviene demostrar.
+- **Por qué no:** Su tratamiento de la división decimal y de los nulos en agregados obliga a escribir los `CASE` con cuidado: un nulo mal tratado convierte un fallo de recuperación en un cero silencioso y **infla** la métrica.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html>
+
+#### OpenSearch · [`implementaciones/opensearch/consulta.json`](implementaciones/opensearch/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/api-reference/rank-eval/",
+    "nota: implementacion declarada. La API _rank_eval calcula precision, recall,",
+    "MRR y nDCG DENTRO del motor, contra un conjunto de juicios de relevancia:",
+    "se evalua la configuracion real de busqueda, no una reproduccion.",
+    "Su limite: solo evalua su propia recuperacion. Para comparar contra un",
+    "sistema vectorial externo hay que volver al calculo de este caso, que es",
+    "independiente del motor y por eso sirve para todos.",
+    "Se consulta con:  POST /documentos/_rank_eval"
+  ],
+
+  "requests": [
+    {
+      "id": "q1",
+      "request": { "query": { "match": { "titulo": "bases de datos" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d1", "rating": 1 }]
+    },
+    {
+      "id": "q2",
+      "request": { "query": { "match": { "titulo": "replicacion" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d2", "rating": 1 }]
+    },
+    {
+      "id": "q3",
+      "request": { "query": { "match": { "titulo": "protocolos de red" } } },
+      "ratings": [{ "_index": "documentos", "_id": "d9", "rating": 1 }]
+    }
+  ],
+
+  "metric": {
+    "mean_reciprocal_rank": { "k": 3, "relevant_rating_threshold": 1 }
+  }
+}
+```
+
+- **Por qué sí:** Tiene una API dedicada a esto, `_rank_eval`, que calcula precisión, recall, MRR y nDCG contra un conjunto de juicios de relevancia **dentro del propio motor**: se evalúa la configuración real de búsqueda, no una reproducción aproximada.
+- **Por qué no:** Solo evalúa su propia recuperación: no sirve para comparar contra otro motor ni contra un sistema vectorial externo, que es justamente lo que hay que hacer al elegir.
+- 📄 Documentación oficial: <https://docs.opensearch.org/latest/api-reference/rank-eval/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Qdrant | Devuelve resultados, no métricas: no hay API de evaluación. Y no la necesita, porque la evaluación tiene que ser **externa al sistema evaluado** para poder comparar alternativas. | Guardar las posiciones devueltas en un fichero y calcular las métricas fuera, exactamente como hace este caso: así el mismo cálculo sirve para Qdrant, para pgvector y para lo que venga después. | [doc](https://qdrant.tech/documentation/concepts/search/) |
+| Redis | No participa en la evaluación: no guarda el conjunto de juicios ni calcula agregados sobre él. | Cachear las respuestas de las preguntas frecuentes ya evaluadas, para no pagar la recuperación y la generación dos veces por la misma pregunta. | [doc](https://redis.io/docs/latest/develop/data-types/hashes/) |
 
 ---
 

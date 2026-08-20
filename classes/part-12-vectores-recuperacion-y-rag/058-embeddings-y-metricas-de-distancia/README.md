@@ -8,6 +8,8 @@ Parte 12 — Vectores, recuperación y RAG · Intermedio ·
 
 **Conceptos centrales:** `espacio vectorial` · `coseno` · `producto interno` · `normalización` · `dimensión`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -216,6 +218,283 @@ Cambiar de modelo de embeddings no es cambiar una llamada: es recalcular la cole
 2. Explica qué ocurre exactamente al consultar con vectores de dos modelos mezclados.
 3. Calcula el almacenamiento de 10 M de vectores de 1 536 dimensiones en float32 e int8.
 4. ¿Qué compromiso hay al elegir el tamaño del fragmento, y cómo lo resolverías?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué documento se parece más al vector de la consulta, y en qué se mide
+
+Un *embedding* convierte un texto en una lista de números de forma que los
+textos con significado parecido queden cerca. «Cerca» deja de ser una
+metáfora: es una distancia entre puntos, y hay que elegir cuál.
+
+El caso usa tres documentos de dimensión 3 con coordenadas enteras y busca
+el más parecido al vector `[2, 0, 0]`, con la **distancia euclídea al
+cuadrado** —que ordena igual que la euclídea, se calcula sin raíz y, si los
+vectores están normalizados, ordena igual que el coseno. Por eso casi todos
+los sistemas normalizan al indexar y luego hablan de coseno.
+
+El resultado es el ranking completo: A a distancia 0, C a 2 y B a 8. Lo que
+la matriz añade es qué ofrece cada motor cuando en vez de tres documentos
+hay diez millones.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| id | distancia |
+|---|---|
+| `A` | `0` |
+| `C` | `2` |
+| `B` | `8` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 058`: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_expr.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/functions/array) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-math.html) |
+| Qdrant | sí | declarado | [código](implementaciones/qdrant/consulta.json) | [doc oficial](https://qdrant.tech/documentation/concepts/search/) |
+| Milvus | sí | declarado | [código](implementaciones/milvus/consulta.txt) | [doc oficial](https://milvus.io/docs/metric.md) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/interact/search-and-query/query/vector-search/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+-- nota: esto es busqueda EXACTA por fuerza bruta: calcula la distancia a todos
+--       los documentos, siempre. Y no hay indice B-Tree que ayude, porque el
+--       orden depende de una funcion de TODAS las coordenadas, no del valor de
+--       una columna. De ahi que los indices vectoriales sean otra familia
+--       entera de estructuras.
+
+-- === preparacion ===
+-- Vectores de dimension 3, con enteros a proposito: asi la distancia
+-- euclidea al cuadrado es un entero exacto y se puede comparar entre motores
+-- sin discutir sobre decimales. En un sistema real serian 384, 768 o 1536
+-- numeros en coma flotante.
+CREATE TABLE documentos (
+    id TEXT PRIMARY KEY,
+    v1 INTEGER NOT NULL,
+    v2 INTEGER NOT NULL,
+    v3 INTEGER NOT NULL
+);
+INSERT INTO documentos (id, v1, v2, v3) VALUES
+    ('A', 2, 0, 0),
+    ('B', 0, 2, 0),
+    ('C', 1, 1, 0);
+
+-- === consulta ===
+-- La consulta es el vector [2, 0, 0]. «Parecido» es una operacion aritmetica
+-- sobre coordenadas, no una comparacion de texto: por eso la busqueda vectorial
+-- encuentra lo que significa lo mismo aunque no comparta ni una palabra.
+--
+-- Se usa la distancia euclidea AL CUADRADO, que ordena igual que la euclidea y
+-- se calcula sin raiz. Con vectores normalizados, ademas, ordena igual que el
+-- coseno: por eso casi todos los sistemas normalizan al indexar.
+SELECT id,
+       (v1 - 2) * (v1 - 2) + (v2 - 0) * (v2 - 0) + (v3 - 0) * (v3 - 0) AS distancia
+FROM documentos
+ORDER BY distancia, id;
+```
+
+- **Por qué sí:** Deja la operación a la vista: la distancia es aritmética sobre columnas, y escribirla a mano una vez vale más que cualquier explicación de qué hace un índice vectorial por dentro.
+- **Por qué no:** Esto es una **búsqueda exacta por fuerza bruta**: calcula la distancia a todos los documentos, siempre. Con tres es instantáneo; con diez millones de vectores de 768 dimensiones, es inviable, y ningún índice B-Tree ayuda porque el orden es por una función de todas las coordenadas.
+- 📄 Documentación oficial: <https://sqlite.org/lang_expr.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/array
+-- nota: aqui el vector es un tipo, no tres columnas. La forma idiomatica seria
+--         CREATE TABLE documentos (id VARCHAR, v FLOAT[3]);
+--         SELECT id, array_distance(v, [2,0,0]::FLOAT[3]) AS d
+--         FROM documentos ORDER BY d;
+--       Se escribe con enteros y aritmetica explicita para que el resultado sea
+--       exacto y comparable con el resto de motores, sin discutir decimales.
+
+-- === preparacion ===
+CREATE TABLE documentos (
+    id VARCHAR PRIMARY KEY,
+    v1 INTEGER NOT NULL,
+    v2 INTEGER NOT NULL,
+    v3 INTEGER NOT NULL
+);
+INSERT INTO documentos VALUES ('A', 2, 0, 0), ('B', 0, 2, 0), ('C', 1, 1, 0);
+
+-- === consulta ===
+SELECT id,
+       (v1 - 2) * (v1 - 2) + (v2 - 0) * (v2 - 0) + (v3 - 0) * (v3 - 0) AS distancia
+FROM documentos
+ORDER BY distancia, id;
+```
+
+- **Por qué sí:** Tiene tipo `ARRAY` de tamaño fijo y funciones de distancia nativas —`array_distance`, `array_cosine_similarity`—, así que la fuerza bruta vectorizada sobre millones de vectores es viable en un portátil. Para **evaluar** la calidad de una recuperación es justo lo que hace falta.
+- **Por qué no:** Su índice HNSW está en una extensión y es experimental; y sigue sin ser un servicio: no atiende consultas de una aplicación en producción.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/functions/array>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-math.html
+-- nota: con la extension pgvector, esto se escribe asi:
+--         CREATE EXTENSION vector;
+--         CREATE TABLE documentos (id text PRIMARY KEY, v vector(3));
+--         CREATE INDEX ON documentos USING hnsw (v vector_l2_ops);
+--         SELECT id, v <-> '[2,0,0]' AS distancia
+--         FROM documentos ORDER BY v <-> '[2,0,0]' LIMIT 10;
+--       Aqui se usa aritmetica a mano porque la imagen de este repositorio no
+--       trae la extension, y afirmar que la trae seria falso.
+--
+--       Lo que hace valiosa esa extension no es la distancia: es poder FILTRAR
+--       por metadatos y buscar por vector en la MISMA consulta, sobre datos
+--       que estan en la misma transaccion.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS documentos;
+
+CREATE TABLE documentos (
+    id text PRIMARY KEY,
+    v1 integer NOT NULL,
+    v2 integer NOT NULL,
+    v3 integer NOT NULL
+);
+INSERT INTO documentos (id, v1, v2, v3) VALUES
+    ('A', 2, 0, 0), ('B', 0, 2, 0), ('C', 1, 1, 0);
+
+-- === consulta ===
+SELECT id,
+       (v1 - 2) * (v1 - 2) + (v2 - 0) * (v2 - 0) + (v3 - 0) * (v3 - 0) AS distancia
+FROM documentos
+ORDER BY distancia, id;
+```
+
+- **Por qué sí:** Con la extensión **pgvector** aparece el tipo `vector`, los operadores de distancia (`<->`, `<=>`, `<#>`) e índices HNSW e IVFFlat, todo dentro del motor donde ya están los datos: se pueden filtrar por metadatos y buscar por vector **en la misma consulta y en la misma transacción**.
+- **Por qué no:** Es una extensión que hay que instalar y que no está en toda imagen —esta implementación usa aritmética a mano precisamente por eso—, y su rendimiento con muchos millones de vectores exige ajustar `hnsw.ef_search`, memoria de mantenimiento y tiempos de construcción del índice que se cuentan en horas.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-math.html>
+
+#### Qdrant · [`implementaciones/qdrant/consulta.json`](implementaciones/qdrant/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: qdrant",
+    "doc: https://qdrant.tech/documentation/concepts/search/",
+    "nota: implementacion declarada. Lo que distingue a Qdrant de calcular la",
+    "distancia a mano no es la formula: es que el FILTRO por carga util se",
+    "aplica DENTRO del recorrido del grafo HNSW, no despues. Filtrar despues",
+    "de recuperar los k mas cercanos puede dejar cero resultados utiles cuando",
+    "el filtro es selectivo; ese es el problema del filtrado en busqueda",
+    "vectorial, y resolverlo es su razon de ser.",
+    "El precio: los vectores viven en un sistema distinto del de los datos de",
+    "negocio, sin transaccion que abarque a los dos. Un documento borrado en la",
+    "base puede seguir apareciendo aqui hasta que alguien lo sincronice.",
+    "Se aplica con:  PUT /collections/documentos  (bloque coleccion)",
+    "y se consulta:  POST /collections/documentos/points/query  (bloque consulta)"
+  ],
+
+  "coleccion": {
+    "vectors": { "size": 3, "distance": "Euclid" }
+  },
+
+  "puntos": {
+    "points": [
+      { "id": 1, "vector": [2, 0, 0], "payload": { "doc": "A" } },
+      { "id": 2, "vector": [0, 2, 0], "payload": { "doc": "B" } },
+      { "id": 3, "vector": [1, 1, 0], "payload": { "doc": "C" } }
+    ]
+  },
+
+  "consulta": {
+    "query": [2, 0, 0],
+    "limit": 3,
+    "with_payload": true,
+    "_orden_esperado": ["A", "C", "B"]
+  }
+}
+```
+
+- **Por qué sí:** Está construido solo para esto: HNSW con cuantización opcional, filtrado por carga útil **integrado en el recorrido del grafo** —no aplicado después— y una API pensada para búsqueda vectorial y nada más.
+- **Por qué no:** Es un sistema aparte: los vectores y los datos de negocio viven separados, así que hay que mantenerlos sincronizados y no hay transacción que abarque a los dos. Un documento borrado en la base puede seguir apareciendo en los resultados.
+- 📄 Documentación oficial: <https://qdrant.tech/documentation/concepts/search/>
+
+#### Milvus · [`implementaciones/milvus/consulta.txt`](implementaciones/milvus/consulta.txt)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```text
+# motor: milvus
+# doc: https://milvus.io/docs/metric.md
+# nota: implementacion declarada. Milvus separa almacenamiento y computo y
+#       admite varios tipos de indice; la eleccion de METRICA tiene que
+#       coincidir con la usada al entrenar el modelo de embeddings:
+#         L2      distancia euclidea
+#         IP      producto interno (para vectores normalizados)
+#         COSINE  coseno
+#       Elegir una metrica distinta de la del modelo no da error: da resultados
+#       silenciosamente peores, y es uno de los fallos mas dificiles de detectar
+#       en un sistema de recuperacion.
+
+# === preparacion ===
+# from pymilvus import MilvusClient, DataType
+#
+# cliente = MilvusClient("http://localhost:19530")
+# esquema = cliente.create_schema()
+# esquema.add_field("id", DataType.VARCHAR, is_primary=True, max_length=8)
+# esquema.add_field("v", DataType.FLOAT_VECTOR, dim=3)
+# cliente.create_collection("documentos", schema=esquema)
+#
+# cliente.insert("documentos", [
+#     {"id": "A", "v": [2.0, 0.0, 0.0]},
+#     {"id": "B", "v": [0.0, 2.0, 0.0]},
+#     {"id": "C", "v": [1.0, 1.0, 0.0]},
+# ])
+#
+# cliente.create_index("documentos", index_params=[{
+#     "field_name": "v", "index_type": "HNSW",
+#     "metric_type": "L2", "params": {"M": 16, "efConstruction": 200},
+# }])
+
+# === consulta ===
+# resultado = cliente.search(
+#     collection_name="documentos",
+#     data=[[2.0, 0.0, 0.0]],
+#     limit=3,
+#     search_params={"metric_type": "L2", "params": {"ef": 64}},
+# )
+# -> orden esperado: A (0.0), C (2.0), B (8.0)
+```
+
+- **Por qué sí:** Está pensado para escala distribuida desde el diseño: separa almacenamiento y cómputo, admite muchos tipos de índice (IVF, HNSW, DiskANN) y permite elegir el compromiso entre memoria, disco y exactitud.
+- **Por qué no:** Esa flexibilidad es también su costo: son varios componentes que operar —almacenamiento de objetos, registro de mensajes, coordinadores— y para unos pocos millones de vectores es infraestructura de sobra.
+- 📄 Documentación oficial: <https://milvus.io/docs/metric.md>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | La búsqueda vectorial existe, pero solo en Atlas —el servicio administrado—, no en la edición Community que se puede levantar aquí. Presentarla como una capacidad del motor sería inexacto. | Guardar el vector como arreglo y calcular la distancia en la tubería de agregación para conjuntos pequeños, o usar Atlas Vector Search, que por debajo es Lucene con HNSW. | [doc](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/) |
+| Redis | La búsqueda vectorial de Redis vive en su módulo de búsqueda, no en el servidor base que se levanta en este repositorio: sin el módulo, un vector es una cadena opaca. | Con el módulo, un índice vectorial sobre campos de hash o JSON, con HNSW o fuerza bruta; sin él, Redis como caché de resultados de búsqueda ya calculados. | [doc](https://redis.io/docs/latest/develop/interact/search-and-query/query/vector-search/) |
 
 ---
 

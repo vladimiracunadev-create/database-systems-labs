@@ -8,6 +8,8 @@ Parte 12 — Vectores, recuperación y RAG · Avanzado ·
 
 **Conceptos centrales:** `BM25` · `fusión de rangos` · `filtro previo` · `filtro posterior`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -210,6 +212,328 @@ La mejora de un buscador se demuestra o no existe. El conjunto de consultas juzg
 2. Da una consulta de tu dominio donde el vectorial falle y BM25 acierte, y explica por qué.
 3. Calcula el RRF de un documento que quedó 3.º en léxico y 15.º en vectorial.
 4. ¿En qué caso la búsqueda solo léxica sería la decisión correcta?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Fusionar el ranking léxico y el vectorial sin comparar puntuaciones que no son comparables
+
+La búsqueda léxica encuentra las palabras exactas —nombres propios, códigos,
+siglas— y falla con los sinónimos. La vectorial encuentra el significado y
+falla con los identificadores literales. Ninguna gana siempre, así que se
+usan las dos y hay que combinarlas.
+
+Y ahí está el problema: **sus puntuaciones no son comparables**. Un BM25 de
+7,3 y un coseno de 0,82 no están en la misma escala, ni en el mismo rango, ni
+tienen la misma distribución; sumarlos o promediarlos no significa nada.
+
+La solución estándar es la **fusión por rango recíproco**: olvidar las
+puntuaciones y usar solo las **posiciones**, que siempre significan lo
+mismo. Con `k = 60` —el valor del artículo original y el que traen casi todos
+los sistemas—, el caso fusiona dos rankings de cuatro documentos. Gana `A`
+por estar bien situado en las dos listas sin ser el primero de ninguna, que
+es exactamente lo que se le pide a una búsqueda híbrida.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| doc |
+|---|
+| `A` |
+| `C` |
+| `B` |
+| `D` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 060`: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| OpenSearch | sí | declarado | [código](implementaciones/opensearch/consulta.json) | [doc oficial](https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/) |
+| Qdrant | sí | declarado | [código](implementaciones/qdrant/consulta.json) | [doc oficial](https://qdrant.tech/documentation/concepts/hybrid-queries/) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-window.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_select.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/functions/window_functions.html) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/atlas/atlas-search/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/interact/search-and-query/) |
+
+### Los que resuelven el caso
+
+#### OpenSearch · [`implementaciones/opensearch/consulta.json`](implementaciones/opensearch/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/",
+    "nota: implementacion declarada. Aqui «hibrido» es una CONFIGURACION, no un",
+    "desarrollo: un procesador de fase de busqueda normaliza y combina las dos",
+    "listas antes de devolverlas, asi que el cliente no fusiona nada.",
+    "La eleccion entre normalizacion (min-max, l2) y fusion por rango no es",
+    "menor: la normalizacion depende de la distribucion de puntuaciones de ESA",
+    "consulta, y el rango no depende de nada. Por eso RRF es mas robusto cuando",
+    "las consultas son muy distintas entre si.",
+    "Se aplica con:  PUT /_search/pipeline/hibrida   (bloque canalizacion)",
+    "y se consulta:  POST /documentos/_search?search_pipeline=hibrida  (bloque consulta)"
+  ],
+
+  "canalizacion": {
+    "description": "Fusiona la lista lexica y la vectorial",
+    "phase_results_processors": [
+      {
+        "normalization-processor": {
+          "normalization": { "technique": "min_max" },
+          "combination": { "technique": "arithmetic_mean", "parameters": { "weights": [0.5, 0.5] } }
+        }
+      }
+    ]
+  },
+
+  "consulta": {
+    "query": {
+      "hybrid": {
+        "queries": [
+          { "match": { "titulo": { "query": "bases de datos" } } },
+          { "knn": { "v": { "vector": [2, 0, 0], "k": 10 } } }
+        ]
+      }
+    }
+  }
+}
+```
+
+- **Por qué sí:** Tiene las dos búsquedas en el mismo índice —invertido y `knn_vector`— y un procesador de fase de búsqueda que hace la normalización o la fusión sin que el cliente combine nada. Es el sistema donde «híbrido» es una configuración, no un desarrollo.
+- **Por qué no:** Ese procesador hay que declararlo por adelantado y afecta a la canalización entera; y mantener índice invertido y vectorial en la misma memoria del clúster hace que dimensionar sea un compromiso entre los dos.
+- 📄 Documentación oficial: <https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/>
+
+#### Qdrant · [`implementaciones/qdrant/consulta.json`](implementaciones/qdrant/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: qdrant",
+    "doc: https://qdrant.tech/documentation/concepts/hybrid-queries/",
+    "nota: implementacion declarada. La API de consulta admite varias fuentes en",
+    "una sola llamada —un vector denso para el significado y uno DISPERSO para",
+    "la parte lexica— y las fusiona con RRF, con el filtro aplicado dentro del",
+    "recorrido del grafo.",
+    "El limite que hay que tener claro: Qdrant NO analiza texto. El vector",
+    "disperso (BM25, SPLADE) hay que calcularlo fuera y enviarlo ya hecho. La",
+    "mitad lexica del trabajo sigue estando en otro sitio.",
+    "Se consulta con:  POST /collections/documentos/points/query"
+  ],
+
+  "consulta": {
+    "prefetch": [
+      { "query": [2, 0, 0], "using": "denso", "limit": 20 },
+      {
+        "query": { "indices": [12, 87, 401], "values": [0.9, 0.6, 0.3] },
+        "using": "disperso",
+        "limit": 20
+      }
+    ],
+    "query": { "fusion": "rrf" },
+    "limit": 4,
+    "with_payload": true,
+    "_orden_esperado": ["A", "C", "B", "D"]
+  }
+}
+```
+
+- **Por qué sí:** Su API de consulta admite varias fuentes —vectores densos, dispersos para la parte léxica— y las fusiona con RRF o con reordenación en una sola llamada, con el filtrado por carga útil aplicado dentro del recorrido.
+- **Por qué no:** La parte léxica hay que darle el vector disperso ya calculado (BM25 o SPLADE): no hay analizador de texto ni motor de búsqueda dentro. La mitad del trabajo sigue estando fuera.
+- 📄 Documentación oficial: <https://qdrant.tech/documentation/concepts/hybrid-queries/>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-window.html
+-- nota: con pgvector instalado, las dos busquedas y la fusion caben en UNA
+--       consulta y UNA transaccion:
+--         WITH lexico AS (
+--           SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(buscado, q) DESC) AS pos
+--           FROM documentos, to_tsquery('spanish', 'bases & datos') q
+--           WHERE buscado @@ q LIMIT 50),
+--         vectorial AS (
+--           SELECT id, ROW_NUMBER() OVER (ORDER BY v <-> :consulta) AS pos
+--           FROM documentos ORDER BY v <-> :consulta LIMIT 50)
+--         SELECT id FROM (...) GROUP BY id ORDER BY SUM(1.0/(60+pos)) DESC;
+--       Sin sistemas adicionales que sincronizar: esa es toda la ventaja.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS ranking_lexico, ranking_vectorial;
+
+-- Dos rankings del mismo documento: el lexico (indice invertido, encuentra
+-- las palabras exactas) y el vectorial (embeddings, encuentra el significado).
+-- No coinciden, y esa discrepancia es justamente lo que los hace
+-- complementarios: el lexico acierta con nombres propios, codigos y siglas; el
+-- vectorial, con sinonimos y parafrasis.
+CREATE TABLE ranking_lexico (
+    doc      text PRIMARY KEY,
+    posicion integer NOT NULL
+);
+CREATE TABLE ranking_vectorial (
+    doc      text PRIMARY KEY,
+    posicion integer NOT NULL
+);
+INSERT INTO ranking_lexico (doc, posicion) VALUES ('A', 1), ('B', 2), ('C', 3);
+INSERT INTO ranking_vectorial (doc, posicion) VALUES ('C', 1), ('A', 2), ('D', 3);
+
+-- === consulta ===
+-- Fusion por rango reciproco (RRF): cada lista aporta 1/(k + posicion) y se
+-- suman. La clave es que usa POSICIONES, no puntuaciones: las de BM25 y las de
+-- coseno no son comparables entre si —ni siquiera estan en la misma escala— y
+-- normalizarlas exige conocer sus distribuciones. El rango, en cambio, siempre
+-- significa lo mismo.
+--
+-- El k = 60 amortigua el peso de los primeros puestos. Es el valor del articulo
+-- original de Cormack (2009) y el que casi todos los sistemas traen de fabrica.
+--
+-- Resultado: A gana por aparecer bien situado en LAS DOS listas, aunque no sea
+-- el primero de ninguna de las dos. Eso es exactamente lo que se busca.
+SELECT doc
+FROM (
+    SELECT doc, 1.0 / (60 + posicion) AS aporte FROM ranking_lexico
+    UNION ALL
+    SELECT doc, 1.0 / (60 + posicion) FROM ranking_vectorial
+) todos
+GROUP BY doc
+ORDER BY SUM(aporte) DESC, doc;
+```
+
+- **Por qué sí:** Puede hacer las dos búsquedas y la fusión **en una sola consulta y una sola transacción**: `tsvector` con GIN para la léxica, pgvector para la vectorial, y una CTE con `ROW_NUMBER()` para los rangos. Sin sistemas adicionales que sincronizar.
+- **Por qué no:** Su relevancia léxica (`ts_rank`) es más pobre que BM25 y no tiene corrección de errores ni sinónimos; y la consulta fusionada es larga y hay que escribirla a mano cada vez.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-window.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: en un sistema completo, las dos tablas de rangos no se escriben a mano:
+--       salen de FTS5 y de la busqueda vectorial, con ROW_NUMBER() sobre cada
+--       resultado. La fusion —lo unico que esta clase compara— es exactamente
+--       este SELECT.
+
+-- === preparacion ===
+-- Dos rankings del mismo documento: el lexico (indice invertido, encuentra
+-- las palabras exactas) y el vectorial (embeddings, encuentra el significado).
+-- No coinciden, y esa discrepancia es justamente lo que los hace
+-- complementarios: el lexico acierta con nombres propios, codigos y siglas; el
+-- vectorial, con sinonimos y parafrasis.
+CREATE TABLE ranking_lexico (
+    doc      TEXT PRIMARY KEY,
+    posicion INTEGER NOT NULL
+);
+CREATE TABLE ranking_vectorial (
+    doc      TEXT PRIMARY KEY,
+    posicion INTEGER NOT NULL
+);
+INSERT INTO ranking_lexico (doc, posicion) VALUES ('A', 1), ('B', 2), ('C', 3);
+INSERT INTO ranking_vectorial (doc, posicion) VALUES ('C', 1), ('A', 2), ('D', 3);
+
+-- === consulta ===
+-- Fusion por rango reciproco (RRF): cada lista aporta 1/(k + posicion) y se
+-- suman. La clave es que usa POSICIONES, no puntuaciones: las de BM25 y las de
+-- coseno no son comparables entre si —ni siquiera estan en la misma escala— y
+-- normalizarlas exige conocer sus distribuciones. El rango, en cambio, siempre
+-- significa lo mismo.
+--
+-- El k = 60 amortigua el peso de los primeros puestos. Es el valor del articulo
+-- original de Cormack (2009) y el que casi todos los sistemas traen de fabrica.
+--
+-- Resultado: A gana por aparecer bien situado en LAS DOS listas, aunque no sea
+-- el primero de ninguna de las dos. Eso es exactamente lo que se busca.
+SELECT doc
+FROM (
+    SELECT doc, 1.0 / (60 + posicion) AS aporte FROM ranking_lexico
+    UNION ALL
+    SELECT doc, 1.0 / (60 + posicion) FROM ranking_vectorial
+) todos
+GROUP BY doc
+ORDER BY SUM(aporte) DESC, doc;
+```
+
+- **Por qué sí:** Deja la fórmula a la vista, que es lo que hace falta para entenderla: RRF son dos líneas de SQL, no una biblioteca. Y con FTS5 y una tabla de vectores, la búsqueda híbrida completa cabe en un archivo.
+- **Por qué no:** La parte vectorial sería fuerza bruta, así que el conjunto tiene que ser pequeño: sirve para una aplicación de escritorio, no para un corpus grande.
+- 📄 Documentación oficial: <https://sqlite.org/lang_select.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
+-- nota: aqui es donde se AJUSTA la formula. Probar varios valores de k sobre un
+--       conjunto de evaluacion completo es una consulta mas:
+--         SELECT k, ... FROM UNNEST([10,30,60,100]) AS s(k), ...
+--       y comparar el MRR resultante de cada uno. Elegir k = 60 porque lo dice
+--       el articulo es razonable; comprobarlo con los datos propios es mejor.
+
+-- === preparacion ===
+-- Dos rankings del mismo documento: el lexico (indice invertido, encuentra
+-- las palabras exactas) y el vectorial (embeddings, encuentra el significado).
+-- No coinciden, y esa discrepancia es justamente lo que los hace
+-- complementarios: el lexico acierta con nombres propios, codigos y siglas; el
+-- vectorial, con sinonimos y parafrasis.
+CREATE TABLE ranking_lexico (
+    doc      VARCHAR PRIMARY KEY,
+    posicion INTEGER NOT NULL
+);
+CREATE TABLE ranking_vectorial (
+    doc      VARCHAR PRIMARY KEY,
+    posicion INTEGER NOT NULL
+);
+INSERT INTO ranking_lexico (doc, posicion) VALUES ('A', 1), ('B', 2), ('C', 3);
+INSERT INTO ranking_vectorial (doc, posicion) VALUES ('C', 1), ('A', 2), ('D', 3);
+
+-- === consulta ===
+-- Fusion por rango reciproco (RRF): cada lista aporta 1/(k + posicion) y se
+-- suman. La clave es que usa POSICIONES, no puntuaciones: las de BM25 y las de
+-- coseno no son comparables entre si —ni siquiera estan en la misma escala— y
+-- normalizarlas exige conocer sus distribuciones. El rango, en cambio, siempre
+-- significa lo mismo.
+--
+-- El k = 60 amortigua el peso de los primeros puestos. Es el valor del articulo
+-- original de Cormack (2009) y el que casi todos los sistemas traen de fabrica.
+--
+-- Resultado: A gana por aparecer bien situado en LAS DOS listas, aunque no sea
+-- el primero de ninguna de las dos. Eso es exactamente lo que se busca.
+SELECT doc
+FROM (
+    SELECT doc, 1.0 / (60 + posicion) AS aporte FROM ranking_lexico
+    UNION ALL
+    SELECT doc, 1.0 / (60 + posicion) FROM ranking_vectorial
+) todos
+GROUP BY doc
+ORDER BY SUM(aporte) DESC, doc;
+```
+
+- **Por qué sí:** Es donde se **ajusta** la fusión: probar distintos valores de `k`, o pesos distintos para cada lista, sobre un conjunto de evaluación completo es una consulta analítica, y aquí cuesta segundos.
+- **Por qué no:** No sirve el resultado a nadie: es el banco de pruebas de la fórmula, no el buscador.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/functions/window_functions.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | La búsqueda híbrida existe en Atlas —con `$rankFusion` en versiones recientes—, pero no en la edición Community que este repositorio levanta: presentarla como una capacidad del motor sería inexacto. | Ejecutar las dos búsquedas por separado y fusionar los rangos en la aplicación con la misma fórmula del caso: RRF no necesita soporte del motor, solo dos listas ordenadas. | [doc](https://www.mongodb.com/docs/atlas/atlas-search/) |
+| Redis | Sin el módulo de búsqueda no hay ni índice invertido ni vectorial: no hay dos listas que fusionar. | Redis como caché del resultado fusionado, con la consulta normalizada como clave: la fusión la hace otro y aquí solo se guarda. | [doc](https://redis.io/docs/latest/develop/interact/search-and-query/) |
 
 ---
 

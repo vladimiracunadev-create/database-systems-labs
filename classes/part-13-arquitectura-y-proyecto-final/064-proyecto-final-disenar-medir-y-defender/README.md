@@ -8,6 +8,8 @@ Parte 13 — Arquitectura y proyecto final · Avanzado ·
 
 **Conceptos centrales:** `defensa técnica` · `evidencia reproducible` · `límite declarado` · `plan de evolución`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -243,6 +245,87 @@ El proyecto final es el reto. Entrega:
 2. ¿Qué invariante de tu sistema no puede garantizar el motor y cómo la vigilas?
 3. Da una alternativa que descartaste siendo mejor en alguna métrica, y por qué.
 4. ¿Qué se rompe primero cuando tu sistema crezca diez veces, y cómo te enterarás?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué hay que poder defender de cada motor que entra en el proyecto
+
+El proyecto final no se aprueba por funcionar: se aprueba por **defenderse**.
+Y defender una decisión de persistencia significa contestar cuatro preguntas
+sobre cada motor que aparezca en la arquitectura, con evidencia y no con
+preferencias:
+
+1. **Qué carga resuelve** que ningún otro del proyecto resuelve mejor.
+2. **Qué medición lo demuestra**, con protocolo, semilla y límites declarados.
+3. **Qué garantía se pierde** al usarlo, y quién asume esa pérdida.
+4. **Qué evidencia obligaría a sacarlo** de la arquitectura.
+
+Esta última sección del programa recoge, motor por motor, lo que el tribunal
+va a preguntar. No es una lista de defectos: es la lista de las cosas que hay
+que haber pensado antes de que las pregunte alguien.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/) |
+| Qdrant | sí | conceptual | — | [doc oficial](https://qdrant.tech/documentation/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/) |
+| SQLite | **no** | — | — | [doc oficial](https://sqlite.org/whentouse.html) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Hay que defender el **modelo**, no el motor: los invariantes declarados en el esquema, la anomalía de concurrencia reproducida y corregida, el plan de ejecución de la consulta crítica antes y después, y la restauración probada con la comparación de cifras.
+- **Por qué sí:** Es el motor donde casi todo lo exigible se puede demostrar con evidencia reproducible y sin infraestructura adicional: no hay excusa para no traerla.
+- **Por qué no:** Que sea la opción por omisión no exime de justificarla: «usamos PostgreSQL porque es lo que sé» es tan poco defendible como adoptar un motor de moda. Hay que decir qué carga tiene y por qué le sirve.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/>
+
+#### Redis
+
+- **Cómo se hace aquí:** Hay que declarar **qué se pierde si se cae**: qué datos vivían solo ahí, cuánto tarda en reconstruirse la caché y qué le pasa al sistema mientras está fría. Y demostrar que hay política de caducidad.
+- **Por qué sí:** Es la separación más fácil de justificar y también la más fácil de justificar mal: basta un dato que no se pueda perder para que la defensa se caiga entera.
+- **Por qué no:** La pregunta que más se falla: «¿qué pasa si Redis arranca vacío en hora punta?». Si la respuesta no está medida, la arquitectura tiene una avería que nadie ha visto todavía.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** Hay que defender el **límite del agregado**: qué documento contiene qué, por qué eso no crece sin techo, y qué operaciones cruzan la frontera del documento y por tanto no son atómicas.
+- **Por qué sí:** Cuando el agregado está bien elegido, la defensa es sólida y corta: una escritura, una unidad de consistencia, sin transacción.
+- **Por qué no:** Cuando no lo está, aparecen transacciones de varios documentos por todas partes, y eso es la señal de que se está usando un motor documental para un problema relacional. El tribunal lo verá en el código antes que en la explicación.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/data-modeling-introduction/>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** Hay que declarar el **retraso**: de cuándo son los datos del panel, cómo se exportan, qué pasa si la exportación falla y cómo se nota que el panel está mostrando algo viejo.
+- **Por qué sí:** Es la forma más barata de separar la analítica de lo transaccional, y defenderla es fácil si el retraso está declarado en el propio panel.
+- **Por qué no:** Un panel sin fecha de datos es un panel que miente en cuanto la exportación falla una noche. Esa es la pregunta que hay que tener contestada.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/>
+
+#### Qdrant
+
+- **Cómo se hace aquí:** Hay que traer **recall y latencia medidos** contra la alternativa que no añade un sistema —pgvector—, sobre el mismo conjunto de evaluación, y explicar cómo se mantiene sincronizado con la base de datos.
+- **Por qué sí:** Si esa medición existe, la decisión es defendible en una frase. Si no existe, no hay decisión: hay una preferencia.
+- **Por qué no:** La pregunta difícil no es el recall: es qué pasa cuando alguien borra un documento en la base y el vector sigue ahí. Esa incoherencia hay que haberla diseñado.
+- 📄 Documentación oficial: <https://qdrant.tech/documentation/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | Salvo que el proyecto tenga un volumen de escritura que una máquina no pueda absorber —y eso hay que **medirlo**, no suponerlo—, incluirlo es añadir un modelo sin reuniones, sin transacciones y con reparaciones periódicas para resolver un problema que no se tiene. | Si aun así entra, hay que defender la tabla por consulta, el tamaño máximo de partición previsto y quién ejecuta las reparaciones. Sin esas tres respuestas, la defensa no se sostiene. | [doc](https://cassandra.apache.org/doc/latest/) |
+| SQLite | Para un proyecto con varios usuarios concurrentes y acceso remoto no es una opción defendible como almacén principal, por mucho que simplifique el desarrollo. | Sí es defendible —y muy buena— para las **pruebas** del proyecto: un esquema idéntico en memoria hace que la batería de pruebas corra en segundos y sin servicios. Esa decisión también se documenta. | [doc](https://sqlite.org/whentouse.html) |
 
 ---
 

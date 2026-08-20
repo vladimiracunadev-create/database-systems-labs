@@ -1,0 +1,119 @@
+---
+caso:
+  titulo: >-
+    Medir si el documento correcto llegó al contexto, antes de juzgar ninguna
+    respuesta
+  contrato: |
+    En un sistema de generación aumentada por recuperación, la parte que más se
+    mira es la que menos se puede arreglar: el modelo. La que sí se puede
+    arreglar es la recuperación, y la regla es dura y simple: **si el documento
+    correcto no llega al contexto, el modelo no puede responder bien**; como
+    mucho, puede inventar algo plausible.
+
+    Por eso la evaluación empieza antes de la generación, con métricas de
+    recuperación sobre un conjunto de preguntas con respuesta conocida. El caso
+    calcula dos: cuántas preguntas tienen su documento entre los tres primeros, y
+    el **MRR** —la media del inverso de la posición—, que premia que el documento
+    correcto esté arriba y no solo presente.
+
+    Con tres preguntas, una acertada en el primer puesto, otra en el tercero y
+    una fallada: 2 de 3 en el top 3, y MRR = 0,44. Esos dos números son el punto
+    de partida de cualquier mejora, y se pueden calcular con SQL: no hace falta
+    ninguna plataforma.
+  columnas: [metrica, valor]
+  esperado:
+    - [aciertos_top3, "2"]
+    - [mrr, "0.44"]
+    - [preguntas, "3"]
+
+motores:
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es la herramienta natural de la evaluación: los resultados de la
+      recuperación son un fichero, las métricas son agregaciones, y comparar dos
+      configuraciones es un `GROUP BY` más. Sin servicios y sin plataforma.
+    porque_no: >-
+      No recupera nada: evalúa lo que otro recuperó. La calidad del conjunto de
+      evaluación —que es lo que de verdad decide si la métrica significa algo—
+      sigue siendo trabajo humano.
+    doc: https://duckdb.org/docs/stable/sql/functions/aggregates
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Sirve para lo mismo sin instalar nada, y deja la fórmula del MRR a la
+      vista: es una división y una media, no una caja negra.
+    porque_no: >-
+      Con conjuntos de evaluación grandes y muchas configuraciones que comparar,
+      se queda corto; y no tiene funciones estadísticas para acompañar la métrica
+      con un intervalo de confianza, que es lo que separa una medición de una
+      anécdota.
+    doc: https://sqlite.org/lang_aggfunc.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Permite guardar el histórico de evaluaciones junto al corpus y a los
+      vectores: se puede consultar cómo evolucionó el MRR entre versiones del
+      sistema con una sola consulta, sin exportar nada.
+    porque_no: >-
+      No aporta nada específico a la evaluación: es aritmética. Su valor está en
+      tener los datos juntos, no en el cálculo.
+    doc: https://www.postgresql.org/docs/current/functions-aggregate.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      La misma aritmética con la misma sintaxis estándar: la evaluación no
+      depende del motor, y eso es precisamente lo que conviene demostrar.
+    porque_no: >-
+      Su tratamiento de la división decimal y de los nulos en agregados obliga a
+      escribir los `CASE` con cuidado: un nulo mal tratado convierte un fallo de
+      recuperación en un cero silencioso y **infla** la métrica.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html
+
+  - id: opensearch
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/opensearch/consulta.json
+    porque_si: >-
+      Tiene una API dedicada a esto, `_rank_eval`, que calcula precisión,
+      recall, MRR y nDCG contra un conjunto de juicios de relevancia **dentro del
+      propio motor**: se evalúa la configuración real de búsqueda, no una
+      reproducción aproximada.
+    porque_no: >-
+      Solo evalúa su propia recuperación: no sirve para comparar contra otro
+      motor ni contra un sistema vectorial externo, que es justamente lo que hay
+      que hacer al elegir.
+    doc: https://docs.opensearch.org/latest/api-reference/rank-eval/
+
+  - id: qdrant
+    aplica: no
+    porque_no: >-
+      Devuelve resultados, no métricas: no hay API de evaluación. Y no la
+      necesita, porque la evaluación tiene que ser **externa al sistema
+      evaluado** para poder comparar alternativas.
+    alternativa: >-
+      Guardar las posiciones devueltas en un fichero y calcular las métricas
+      fuera, exactamente como hace este caso: así el mismo cálculo sirve para
+      Qdrant, para pgvector y para lo que venga después.
+    doc: https://qdrant.tech/documentation/concepts/search/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No participa en la evaluación: no guarda el conjunto de juicios ni calcula
+      agregados sobre él.
+    alternativa: >-
+      Cachear las respuestas de las preguntas frecuentes ya evaluadas, para no
+      pagar la recuperación y la generación dos veces por la misma pregunta.
+    doc: https://redis.io/docs/latest/develop/data-types/hashes/

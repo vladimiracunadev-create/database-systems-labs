@@ -8,6 +8,8 @@ Parte 13 — Arquitectura y proyecto final · Avanzado ·
 
 **Conceptos centrales:** `ADR` · `contexto` · `consecuencia` · `costo total de propiedad` · `reversibilidad`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -235,6 +237,94 @@ El valor del ADR se cobra dos años después, cuando alguien propone cambiar alg
 2. Da una decisión tuya prácticamente irreversible y di qué rigor recibió.
 3. Estima el costo de salida de tu almacén principal, en horas.
 4. Escribe la condición de revisión de una decisión vigente en tu equipo.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Lo que cuesta un motor cuando ya nadie mira la comparativa
+
+Las comparativas de motores hablan de rendimiento y de funcionalidades. El
+costo total de una decisión de persistencia está en otro sitio, y se paga
+durante años: **licencia**, **operación** —respaldos, actualizaciones, alta
+disponibilidad, vigilancia—, **personal** que sepa diagnosticarlo a las tres
+de la mañana, y **salida**, que es lo que costaría dejarlo.
+
+Un registro de decisión de arquitectura sirve exactamente para dejar eso por
+escrito: el contexto, las alternativas consideradas, la decisión, las
+consecuencias aceptadas y **qué evidencia obligaría a revisarla**. Sin ese
+último punto, un registro es una justificación; con él, es una decisión de
+ingeniería.
+
+Esta comparación no mide nada: enumera, motor por motor, dónde está el costo
+que no aparece en la portada.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/about/licence/) |
+| Oracle Database | sí | conceptual | — | [doc oficial](https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/) |
+| Microsoft SQL Server | sí | conceptual | — | [doc oficial](https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/legal/licensing/server-side-public-license) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/legal/licenses/) |
+| Google BigQuery | sí | conceptual | — | [doc oficial](https://cloud.google.com/bigquery/pricing) |
+| SQLite | **no** | — | — | [doc oficial](https://sqlite.org/copyright.html) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Licencia permisiva y sin costo. El costo real es de **operación**: la alta disponibilidad la aporta una herramienta externa que hay que elegir y operar, el vacío hay que vigilarlo, y las actualizaciones de versión mayor exigen planificación. A cambio, el conocimiento es abundante y transferible.
+- **Por qué sí:** Coste de salida bajo: es SQL estándar en su mayor parte, hay decenas de servicios administrados compatibles y el volcado es portable. La decisión se puede revertir.
+- **Por qué no:** «Gratis» esconde el costo de personal: una instalación sin nadie que entienda el vacío, los planes y la réplica acaba siendo más cara que un servicio administrado que nadie tiene que atender de madrugada.
+- 📄 Documentación oficial: <https://www.postgresql.org/about/licence/>
+
+#### Oracle Database
+
+- **Cómo se hace aquí:** Licencia por núcleo, con opciones que se cobran aparte —particionado, diagnóstico, alta disponibilidad avanzada— y auditorías de cumplimiento. El costo es explícito, alto y predecible.
+- **Por qué sí:** A cambio hay soporte contractual, herramientas de diagnóstico muy maduras y un mercado de profesionales con décadas de experiencia. En sistemas donde una hora de caída cuesta más que la licencia anual, la cuenta sale.
+- **Por qué no:** El costo de **salida** es el más alto de la lista: PL/SQL, paquetes, disparadores y particularidades del dialecto atan la aplicación al motor. Migrar de Oracle es un proyecto de años, y eso forma parte del precio aunque no aparezca en la factura.
+- 📄 Documentación oficial: <https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/>
+
+#### Microsoft SQL Server
+
+- **Cómo se hace aquí:** Licencia por núcleo con ediciones escalonadas; la gratuita, Express, está limitada a 10 GB por base y a un socket. Integración muy fuerte con el resto del ecosistema de su fabricante.
+- **Por qué sí:** Herramientas de administración y diagnóstico excelentes y un costo de personal bajo en organizaciones que ya trabajan con ese ecosistema: la curva de aprendizaje ya está pagada.
+- **Por qué no:** El límite de la edición gratuita se alcanza antes de lo que parece, y el salto a la de pago es escalonado y caro. Y la decisión rara vez es técnica: la toma el contrato marco de la organización.
+- 📄 Documentación oficial: <https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** La edición Community usa la licencia SSPL, que **no** está reconocida como libre por la OSI y afecta a quien quiera ofrecerlo como servicio. Para uso interno no cambia nada; para un producto que se despliega en casa del cliente, hay que leerla.
+- **Por qué sí:** Costo de operación bajo para lo que ofrece: la alta disponibilidad viene en el producto, sin herramientas externas, y su servicio administrado quita casi toda la administración.
+- **Por qué no:** El costo de salida es alto de una forma poco visible: no es el motor, es el **modelo de datos**. Los documentos incrustados y la ausencia de esquema no se traducen a tablas sin rediseñar la aplicación.
+- 📄 Documentación oficial: <https://www.mongodb.com/legal/licensing/server-side-public-license>
+
+#### Redis
+
+- **Cómo se hace aquí:** Su licencia cambió en 2024 —a un esquema dual que no es libre según la OSI— y de ahí salieron bifurcaciones mantenidas por fundaciones. Es el ejemplo más reciente de un riesgo real: **la licencia de un motor puede cambiar después de haberlo adoptado**.
+- **Por qué sí:** Operación mínima y costo de salida bajo: se usa para datos desechables, y cambiar de implementación compatible es de las migraciones más baratas que existen.
+- **Por qué no:** El costo oculto es la memoria: es el almacenamiento más caro por gibibyte, y un conjunto de datos que crece sin política de caducidad se traduce directamente en factura.
+- 📄 Documentación oficial: <https://redis.io/legal/licenses/>
+
+#### Google BigQuery
+
+- **Cómo se hace aquí:** Sin licencia y sin operación: se paga por almacenamiento y por **bytes leídos** en cada consulta, o por capacidad reservada. El costo se traslada por completo del personal a la factura.
+- **Por qué sí:** Para una carga analítica esporádica es imbatible en costo total: cero administración, cero servidores y cero personal dedicado.
+- **Por qué no:** El costo es **variable y lo controla quien escribe las consultas**: un `SELECT *` mal filtrado sobre una tabla grande cuesta dinero real, y se repite cada vez que alguien recarga un panel. Hay que poner cuotas antes de dar acceso, no después.
+- 📄 Documentación oficial: <https://cloud.google.com/bigquery/pricing>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| SQLite | Es de dominio público y su costo de operación es cero porque no hay nada que operar: no hay decisión de costo total que documentar. Incluirlo aquí sería rellenar la matriz. | Su costo aparece en otro sitio y es real: el día en que el sistema necesita dos escritores o acceso remoto, hay que migrar. Ese es el registro de decisión que conviene escribir el primer día, no el último. | [doc](https://sqlite.org/copyright.html) |
 
 ---
 
