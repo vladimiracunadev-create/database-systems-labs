@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Qué mide cada laboratorio y por qué ninguno afirma nada en milisegundos.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/docs/laboratorios-guia.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Guía de los laboratorios · Database Systems Labs">
+<meta property="og:description" content="Qué mide cada laboratorio y por qué ninguno afirma nada en milisegundos.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/docs/laboratorios-guia.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<title>Guía de los laboratorios · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html" aria-current="page">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Documentación</a><span aria-hidden="true">/</span>
+  <span>Guía de los laboratorios</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="laboratorios">Laboratorios</h1>
+<p>Cinco de los seis laboratorios se ejecutan sin instalar nada y sin levantar ningún servidor: usan solo la biblioteca estándar de Python y se comprueban en integración continua sobre Python 3.11, 3.12 y 3.13. Los contenedores son opcionales y sirven para contrastar contra los motores reales.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Laboratorio</th>
+<th>Ejecutable</th>
+<th>Dependencias</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01 SQL foundations</td>
+<td><code>python labs/01-sql-foundations/run_lab.py</code></td>
+<td>Python 3.11+</td>
+<td>esquema, datos, consultas e invariantes</td>
+</tr>
+<tr>
+<td>02 Polyglot modeling</td>
+<td>— (diseño)</td>
+<td>editor de texto</td>
+<td>modelo relacional, documental y grafo</td>
+</tr>
+<tr>
+<td>03 Transactions</td>
+<td><code>python labs/03-transactions/run_transactions_lab.py</code></td>
+<td>Python 3.11+</td>
+<td>actualización perdida reproducida y tres correcciones</td>
+</tr>
+<tr>
+<td>04 Indexing</td>
+<td><code>python labs/04-indexing/run_indexing_lab.py</code></td>
+<td>Python 3.11+</td>
+<td>plan antes/después y costo de escritura</td>
+</tr>
+<tr>
+<td>05 NoSQL workloads</td>
+<td><code>python labs/05-nosql-workloads/run_nosql_lab.py</code></td>
+<td>Python 3.11+</td>
+<td>elección por patrón de acceso, medida</td>
+</tr>
+<tr>
+<td>06 Vector search</td>
+<td><code>python labs/06-vector-search/run_vector_lab.py</code></td>
+<td>Python 3.11+</td>
+<td>similitud y métricas de recuperación</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cada script termina con su marca (<code>LAB_OK</code>, <code>TRANSACTIONS_LAB_OK</code>, <code>INDEXING_LAB_OK</code>, <code>NOSQL_LAB_OK</code>, <code>VECTOR_LAB_OK</code>). Si no aparece, el laboratorio falló: el problema está en el código, no en el entorno.</p>
+<h2 id="qué-se-mide-y-qué-no">Qué se mide y qué no</h2>
+<p>Ningún laboratorio afirma nada en milisegundos. Un tiempo depende de la máquina, de la carga del momento y del sistema de archivos, así que no sirve como evidencia compartida. Lo que sí se afirma:</p>
+<ul>
+<li><strong>invariantes</strong>: cuántas reservas se aceptaron para una plaza;</li>
+<li><strong>planes</strong>: si el motor recorre la tabla o busca por índice;</li>
+<li><strong>trabajo</strong>: instrucciones de la máquina virtual, accesos, bytes reescritos, páginas;</li>
+<li><strong>métricas de recuperación</strong>: <code>recall@k</code> sobre vectores deterministas.</li>
+</ul>
+<p>Cuando midas tiempos en tu propio motor, hazlo aparte, con repeticiones, mediana y dispersión, y declara la máquina.</p>
+<p>Cada laboratorio debe registrar hipótesis, entorno, resultado, explicación y limpieza. No ejecutes comandos destructivos fuera de datos creados específicamente para el ejercicio.</p>
+<p class="fuente-meta">Fuente de esta página:
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/README.md" rel="noopener"><code>labs/README.md</code></a></p>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

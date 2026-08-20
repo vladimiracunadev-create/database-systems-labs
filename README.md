@@ -1,16 +1,41 @@
-# Database Systems Labs
+<div align="center">
 
-[![validación](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/ci.yml/badge.svg)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/ci.yml)
-[![sitio](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/pages.yml/badge.svg)](https://vladimiracunadev-create.github.io/database-systems-labs/)
-[![licencia MIT](https://img.shields.io/badge/licencia-MIT-2ee6c5)](LICENSE)
+<img src="site/assets/icon.svg" alt="" width="96" height="96">
 
-Programa de ingeniería de bases de datos que va del modelado conceptual a la
+# 🗄️ Database Systems Labs
+
+## **14 partes · 64 clases · 210 horas · 109 fuentes verificables**
+
+**Programa abierto de ingeniería de bases de datos, del modelado conceptual a la
 arquitectura distribuida, la operación y los sistemas de recuperación para
-inteligencia artificial.
+inteligencia artificial. Ninguna clase se publica sin fuentes, y ninguna cita
+apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
-**🌐 [Ver el programa completo](https://vladimiracunadev-create.github.io/database-systems-labs/)**
-· **[Empezar por la clase 001](classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/README.md)**
-· **[Bibliografía](catalog/sources.json)**
+[![Validación](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/ci.yml)
+[![Sitio](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/pages.yml)
+[![Enlaces](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/enlaces.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/enlaces.yml)
+[![CodeQL](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml)
+
+[![Versión](https://img.shields.io/badge/versión-2.0.0-orange?style=for-the-badge)](CHANGELOG.md)
+[![Clases](https://img.shields.io/badge/clases-64%20·%2014%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
+[![Fuentes](https://img.shields.io/badge/fuentes-109%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
+[![Laboratorios](https://img.shields.io/badge/laboratorios-5%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)
+[![Licencia](https://img.shields.io/badge/licencia-MIT-3fb950?style=for-the-badge)](LICENSE)
+
+[![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
+[![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
+[![Pruebas](https://img.shields.io/badge/pruebas-74%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
+
+[🌐 **Sitio de estudio**](https://vladimiracunadev-create.github.io/database-systems-labs/) ·
+[▶️ **Empezar por la clase 001**](classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/README.md) ·
+[🧪 **Laboratorios**](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html) ·
+[📝 **Autoevaluación**](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html) ·
+[📚 **Bibliografía**](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html) ·
+[🗺️ **Roadmap**](ROADMAP.md)
+
+</div>
 
 | | |
 |---|---|
@@ -19,6 +44,8 @@ inteligencia artificial.
 | **Horas estimadas** | 210 |
 | **Fuentes verificadas** | 109 |
 | **Motores en catálogo** | 27 |
+| **Laboratorios ejecutables en CI** | 5 de 6 |
+| **Preguntas de evaluación** | 256 |
 
 ## La regla del repositorio
 
@@ -34,6 +61,12 @@ La regla no es una intención: la hace cumplir
 `push` si una clase tiene menos de dos fuentes, si cita un identificador que no
 existe, si una fuente del registro no la cita nadie, si un libro no lleva ISBN o
 si un artículo no lleva DOI ni sede de publicación.
+
+Y el validador tampoco se cree a sí mismo: [`tests/`](tests/) lo somete a un
+repositorio roto a propósito —una clase con una sola fuente, una cita al vacío,
+un libro sin ISBN, una lección a la que le falta una sección, un enlace
+relativo muerto— y exige que lo detecte. Ver pasar a un validador sobre un
+repositorio sano no demuestra que sirva.
 
 ## Modelo pedagógico
 
@@ -100,6 +133,28 @@ El laboratorio base usa SQLite en memoria: carga el dominio educativo canónico,
 ejecuta consultas y comprueba invariantes. Si falla, el problema está en el
 código, no en el entorno.
 
+Cinco de los seis laboratorios se ejecutan igual, sin dependencias y sin
+servidores, y los cinco corren en integración continua sobre Python 3.11, 3.12
+y 3.13:
+
+```bash
+python labs/03-transactions/run_transactions_lab.py   # reproduce una actualización perdida y la corrige de tres formas
+python labs/04-indexing/run_indexing_lab.py           # plan y trabajo antes y después del índice
+python labs/05-nosql-workloads/run_nosql_lab.py       # TTL, incrustar o referenciar, y clave de partición caliente
+python labs/06-vector-search/run_vector_lab.py        # similitud coseno y recall@k
+```
+
+Ninguno afirma nada en milisegundos: un tiempo depende de la máquina. Lo que
+afirman son invariantes, planes de ejecución, accesos y bytes. El detalle está
+en [`labs/README.md`](labs/README.md).
+
+Para trabajar sobre el repositorio (generadores, validador y sus pruebas):
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
 ### Laboratorios con contenedores
 
 Los motores llegan por perfiles, para no levantarlos todos a la vez:
@@ -111,6 +166,28 @@ docker compose --profile relational up -d
 Las credenciales del `compose` son locales y están a la vista en un archivo
 versionado. **Nunca deben copiarse a otro entorno.**
 
+## El sitio
+
+[**vladimiracunadev-create.github.io/database-systems-labs**](https://vladimiracunadev-create.github.io/database-systems-labs/)
+— 102 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
+
+| | |
+|---|---|
+| **Catálogo** | las 64 clases con búsqueda en el cliente y filtros por parte, nivel y motor |
+| **Clase** | lectura larga con barra de avance, anterior/siguiente, diagramas Mermaid y copiar bloque de código |
+| **[Laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)** | qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio |
+| **[Autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)** | las 256 preguntas del programa, enlazadas a su clase |
+| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 109 entradas con ISBN, DOI o URL oficial y quién las cita |
+| **[Documentación](https://vladimiracunadev-create.github.io/database-systems-labs/docs/index.html)** | arquitectura, método, rúbrica, entornos y roadmap, publicados desde sus `.md` |
+| **Progreso** | marcar clases como completadas; se guarda solo en tu navegador |
+| **Tema** | claro y oscuro, siguiendo la preferencia del sistema o tu elección |
+| **Sin conexión** | aplicación instalable (PWA) con service worker y manifiesto |
+
+Los iconos y la portada social también son artefactos generados: se dibujan
+píxel a píxel con `zlib` y `struct` en
+[`scripts/brand_assets.py`](scripts/brand_assets.py), sin Pillow ni ninguna otra
+dependencia, para que cualquiera pueda reproducirlos byte a byte.
+
 ## Cómo está construido
 
 ```text
@@ -121,6 +198,7 @@ labs/               experimentos reproducibles
 reference-data/     dominio, esquema y datos sintéticos
 site/               sitio de GitHub Pages (generado)
 scripts/            generadores y validadores
+tests/              pruebas de los generadores y del validador
 docs/               arquitectura, metodología, seguridad y decisiones
 assessments/        diagnóstico y rúbricas
 projects/           casos integradores y proyecto final
@@ -132,8 +210,10 @@ edita en el `lesson.md` de cada clase.
 
 ```bash
 python scripts/build_classes.py          # regenera los README de clase
-python scripts/generate_site.py          # regenera el sitio
+python scripts/generate_site.py          # regenera el sitio, los iconos y el sitemap
+python scripts/brand_assets.py           # solo la marca gráfica (iconos y portada social)
 python scripts/check_external_links.py   # comprueba las 109 fuentes
+python -m pytest                         # 74 pruebas: laboratorios, generadores, validador y sitio
 ```
 
 ## Alcance de la cobertura de motores

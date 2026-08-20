@@ -111,7 +111,7 @@ Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislami
 |---|---|---|---:|
 | [033](part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/README.md) | ACID: qué garantiza cada letra y quién la implementa | Intermedio | 3 |
 | [034](part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) | Anomalías de aislamiento y la crítica a los niveles ANSI | Avanzado | 4 |
-| [035](part-07-transacciones-concurrencia-y-recuperacion/035-bloqueo-en-dos-fases-y-mvcc/README.md) | Bloqueo en dos fases, MVCC e instantaneas | Avanzado | 4 |
+| [035](part-07-transacciones-concurrencia-y-recuperacion/035-bloqueo-en-dos-fases-y-mvcc/README.md) | Bloqueo en dos fases, MVCC e instantáneas | Avanzado | 4 |
 | [036](part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md) | Registro anticipado y recuperación: WAL y ARIES | Avanzado | 4 |
 | [037](part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md) | Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista | Avanzado | 3 |
 

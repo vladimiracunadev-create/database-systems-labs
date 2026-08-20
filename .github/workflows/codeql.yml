@@ -1,0 +1,51 @@
+name: CodeQL
+
+# Analisis estatico de seguridad sobre el codigo propio del repositorio: los
+# generadores y validadores en Python y el poco JavaScript del sitio.
+#
+# Aqui no hay servidor ni datos de nadie, pero estos scripts leen archivos,
+# generan HTML y se ejecutan en cada `push`: una inyeccion en la plantilla o un
+# camino de archivo mal construido son fallos reales, no teoricos.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Lunes a las 06:20 UTC: las reglas cambian aunque el codigo no.
+    - cron: "20 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analizar:
+    name: Analizar (${{ matrix.lenguaje }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: ["python", "javascript-typescript"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.lenguaje }}
+          queries: security-and-quality
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.lenguaje }}"

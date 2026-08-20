@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Qué cambió en cada versión y por qué.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/docs/changelog.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Changelog · Database Systems Labs">
+<meta property="og:description" content="Qué cambió en cada versión y por qué.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/docs/changelog.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<title>Changelog · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html" aria-current="page">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Documentación</a><span aria-hidden="true">/</span>
+  <span>Changelog</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="changelog">Changelog</h1>
+<p>Formato basado en <a href="https://keepachangelog.com/es-ES/1.1.0/">Keep a Changelog</a>.</p>
+<h2 id="no-publicado">No publicado</h2>
+<p>Avance del hito 2.1: el núcleo ejecutable pasa de dos laboratorios a cinco, y
+el validador deja de ser el único componente sin pruebas.</p>
+<h3 id="añadido">Añadido</h3>
+<ul>
+<li><strong>Laboratorio 03 ejecutable</strong> (<code>labs/03-transactions/run_transactions_lab.py</code>):
+  reproduce una actualización perdida con dos hilos reales sincronizados en una
+  barrera, y la corrige con actualización atómica, control optimista por versión
+  y bloqueo pesimista (<code>BEGIN IMMEDIATE</code>). La evidencia es el invariante —una
+  plaza, una reserva—, no un tiempo.</li>
+<li><strong>Laboratorio 04 ejecutable</strong> (<code>labs/04-indexing/run_indexing_lab.py</code>): 20 000
+  filas deterministas, <code>EXPLAIN QUERY PLAN</code> y trabajo contado en instrucciones
+  de la máquina virtual con <code>set_progress_handler</code>. Muestra el prefijo izquierdo
+  de un índice compuesto, el recorrido por saltos (<em>skip-scan</em>) cuando hay
+  estadísticas, y el costo en trabajo y páginas de mantener dos índices.</li>
+<li><strong>Laboratorio 05 ejecutable</strong> (<code>labs/05-nosql-workloads/run_nosql_lab.py</code>):
+  mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
+  lectura y de escritura, el techo de un arreglo incrustado ante el límite de
+  16 MiB por documento, y el reparto de una clave de partición caliente.</li>
+<li><strong>Pruebas</strong> (<code>tests/</code>): 39 pruebas que ejecutan los laboratorios, comprueban
+  que no importan dependencias externas, verifican la idempotencia de los
+  generadores y su modo <code>--check</code>, y someten al validador a un repositorio roto
+  a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
+  sin ISBN, artículo sin DOI ni sede, motor fuera del catálogo, lección sin una
+  sección obligatoria, lección demasiado corta, enlace relativo roto,
+  codificación corrupta y archivo obligatorio ausente— exigiendo que lo detecte.</li>
+<li><code>requirements-dev.txt</code> y <code>pytest.ini</code> para el entorno de desarrollo.</li>
+<li>Trabajo <code>pruebas</code> en integración continua, y los tres laboratorios nuevos en
+  la matriz de Python 3.11, 3.12 y 3.13.</li>
+<li><strong>Sitio como producto</strong>: barra de navegación y pie comunes a las 102 páginas,
+  tema claro y oscuro con conmutador que recuerda la elección, progreso de
+  lectura por clase guardado en el navegador, filtro «solo pendientes»,
+  anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
+  código, enlace para saltar al contenido y estilos de impresión.</li>
+<li><strong>Páginas nuevas</strong>: <a href="https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html">laboratorios</a>
+  (qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio),
+  <a href="https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html">autoevaluación</a>
+  con las 256 preguntas enlazadas a su clase, 17 páginas de documentación
+  publicadas desde los <code>.md</code> del repositorio, y una página 404.</li>
+<li><strong>Aplicación instalable</strong>: <code>manifest.webmanifest</code> y service worker con nombre
+  de caché derivado de la huella del contenido, para que una versión nueva
+  invalide la anterior sin recordar subir ningún número a mano.</li>
+<li><strong>Descubrimiento</strong>: <code>sitemap.xml</code>, <code>robots.txt</code>, enlace canónico, etiquetas
+  Open Graph y Twitter con portada social, y datos estructurados
+  schema.org (<code>Course</code> en la portada, <code>LearningResource</code> en cada clase).</li>
+<li><strong>Marca gráfica generada</strong> (<code>scripts/brand_assets.py</code>): iconos de 192 y 512 px
+  y portada social de 1200×630, dibujados con <code>zlib</code> y <code>struct</code> de la biblioteca
+  estándar —sin Pillow— y reproducibles byte a byte.</li>
+<li><strong>Laboratorios como datos</strong>: sección <code>laboratorios</code> en <code>curriculum.yaml</code> con
+  el comando, la marca de éxito, lo que mide y sus fuentes; el validador
+  comprueba que el guion existe y que imprime de verdad la marca que declara.</li>
+<li>Análisis CodeQL semanal y en cada cambio, y Dependabot mensual para acciones y
+  dependencias de Python.</li>
+</ul>
+<h3 id="cambiado">Cambiado</h3>
+<ul>
+<li><code>scripts/validate_repository.py</code> exige la presencia de los cinco laboratorios
+  ejecutables, valida la sección <code>laboratorios</code> y cuenta también sus citas al
+  buscar fuentes huérfanas.</li>
+<li><code>labs/README.md</code> declara qué mide cada laboratorio y por qué ninguno afirma
+  nada en milisegundos.</li>
+<li><code>scripts/generate_site.py</code> pasa de 82 a 102 páginas y admite artefactos
+  binarios, con <code>--check</code> byte a byte también para los iconos.</li>
+<li>El sistema visual se reescribe sobre variables CSS: un solo bloque de tokens
+  define color y ritmo, y de ahí sale el tema claro sin excepciones.</li>
+<li>El flujo de Pages vigila todas las entradas del generador; antes ignoraba
+  <code>docs/</code>, <code>assessments/</code>, <code>projects/</code> y los documentos de la raíz, así que un
+  cambio en ellos no llegaba a publicarse.</li>
+</ul>
+<h2 id="200--2026-08-19">2.0.0 — 2026-08-19</h2>
+<p>Reescritura del programa en torno a una regla: <strong>ninguna clase se publica sin
+fuentes, y ninguna cita apunta al vacío</strong>.</p>
+<h3 id="añadido">Añadido</h3>
+<ul>
+<li><strong>Registro de fuentes</strong> (<code>catalog/sources.json</code>): 109 entradas —27 libros,
+  36 artículos, 9 normas y 37 documentaciones oficiales— con autoría, año, URL,
+  ISBN o DOI y una nota que explica su papel en el programa.</li>
+<li><strong>64 clases</strong> repartidas en 14 partes y 210 horas, cada una con propósito,
+  resultados de aprendizaje, fundamentos, ejemplo trabajado con números o código
+  reales, tabla comparativa, diagrama, errores frecuentes, paso a la operación,
+  reto de transferencia y preguntas de evaluación.</li>
+<li><strong><code>curriculum.yaml</code></strong> como fuente única de verdad: partes, clases, horas,
+  niveles, conceptos, motores, laboratorios, fuentes, rutas y evaluación.</li>
+<li><strong>Sitio de GitHub Pages</strong> (<code>site/</code>): 82 páginas con búsqueda en el cliente,
+  filtros por parte, nivel y motor, diagramas Mermaid, bibliografía renderizada
+  y catálogo de motores.</li>
+<li><strong>Generadores</strong>: <code>scripts/build_classes.py</code> y <code>scripts/generate_site.py</code>,
+  ambos con modo <code>--check</code> para detectar artefactos desactualizados.</li>
+<li><strong>Verificador de enlaces</strong> (<code>scripts/check_external_links.py</code>) que distingue
+  enlace roto de enlace protegido contra clientes automáticos.</li>
+<li><strong>Integración continua</strong> en cuatro trabajos: estructura y fuentes, artefactos
+  regenerados, lint de Markdown y laboratorios sobre Python 3.11, 3.12 y 3.13.</li>
+<li>Comprobación semanal del estado de las 109 fuentes.</li>
+<li>Apache Kafka en el catálogo de motores.</li>
+</ul>
+<h3 id="cambiado">Cambiado</h3>
+<ul>
+<li><strong><code>scripts/validate_repository.py</code></strong> pasa de comprobar la existencia de unos
+  archivos a hacer cumplir el contrato completo: mínimo de fuentes por clase,
+  citas existentes, ausencia de fuentes huérfanas, ISBN en libros y DOI o sede
+  en artículos, motores presentes en el catálogo, secuencia de clases sin
+  huecos, secciones obligatorias en cada lección, enlaces relativos resueltos y
+  codificación UTF-8 sin mojibake.</li>
+<li><code>docs/SOURCES.md</code> deja de ser un listado y pasa a ser la política de citación;
+  el listado vive solo en el registro.</li>
+<li><code>PROMPT_MAESTRO.md</code> y <code>docs/ARCHITECTURE.md</code> reescritos alrededor de la
+  separación entre fuentes y artefactos derivados.</li>
+<li>El README raíz declara las cifras del programa y cómo se verifican.</li>
+</ul>
+<h3 id="eliminado">Eliminado</h3>
+<ul>
+<li><code>curriculum/</code> (13 archivos Markdown): sustituido por <code>curriculum.yaml</code> más las
+  64 clases. Mantener ambos garantizaba que acabaran contradiciéndose.</li>
+</ul>
+<h2 id="010--2026-08-19">0.1.0 — 2026-08-19</h2>
+<ul>
+<li>estructura inicial del programa;</li>
+<li>prompt maestro interno;</li>
+<li>doce módulos progresivos;</li>
+<li>catálogo extensible de sistemas de datos;</li>
+<li>dominio educativo y laboratorio SQLite ejecutable;</li>
+<li>perfiles de contenedores para laboratorios;</li>
+<li>evaluaciones, proyectos y plantillas.</li>
+</ul>
+<p class="fuente-meta">Fuente de esta página:
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/CHANGELOG.md" rel="noopener"><code>CHANGELOG.md</code></a></p>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# 035 — Bloqueo en dos fases, MVCC e instantaneas
+# 035 — Bloqueo en dos fases, MVCC e instantáneas
 
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) · [Siguiente →](../../part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md)
 

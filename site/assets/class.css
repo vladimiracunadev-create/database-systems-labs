@@ -1,31 +1,40 @@
-/* Pagina de clase: se prioriza la lectura larga sobre el efecto visual. */
+/* Pagina de lectura larga: clase, parte, fuentes, motores y documentos.
+ *
+ * Se prioriza la lectura sobre el efecto visual. Todo el color sale de los
+ * tokens de styles.css, para que el tema claro funcione sin excepciones.
+ */
 
-.topbar {
-  position: sticky; top: 0; z-index: 6;
-  display: flex; flex-wrap: wrap; gap: .8rem; align-items: center;
-  justify-content: space-between;
-  padding: .8rem max(1.2rem, 6vw);
-  background: #05090fee; backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border); font-size: .9rem;
+/* Barra de avance de lectura: la unica animacion de la pagina. */
+.avance {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--teal), var(--azure));
+  z-index: 20;
 }
-.topbar a { text-decoration: none; font-weight: 650; }
-.topbar .crumb { color: var(--muted); font-weight: 400; }
+
+.migas {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .9rem var(--paso) 0; color: var(--muted); font-size: .86rem;
+}
+.migas a { color: var(--muted); text-decoration: none; }
+.migas a:hover { color: var(--teal); }
+.migas span[aria-hidden] { opacity: .5; }
 
 .content {
-  max-width: 76ch; margin: 0 auto; padding: 2.4rem max(1.2rem, 6vw) 5rem;
+  max-width: var(--lectura); margin: 0 auto;
+  padding: 1.6rem var(--paso) 4rem;
   font-size: 1.02rem;
 }
 .content h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; margin-bottom: .6rem; }
 .content h2 {
   margin-top: 2.6rem; padding-top: .9rem; font-size: 1.42rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border); scroll-margin-top: 4.5rem;
 }
-.content h3 { margin-top: 1.9rem; font-size: 1.12rem; color: var(--teal); }
+.content h3 { margin-top: 1.9rem; font-size: 1.12rem; color: var(--teal); scroll-margin-top: 4.5rem; }
 .content h4 { margin-top: 1.4rem; font-size: 1rem; color: var(--muted); }
 .content p, .content li { line-height: 1.72; }
 .content ul, .content ol { padding-left: 1.3rem; }
 .content li { margin: .35rem 0; }
-.content strong { color: #fff; }
+.content strong { color: var(--text-fuerte); }
 
 .content blockquote {
   margin: 1.4rem 0; padding: .7rem 1.1rem;
@@ -37,16 +46,27 @@
 
 code {
   padding: .12em .38em; border-radius: 5px;
-  background: #12203055; border: 1px solid var(--border);
+  background: var(--panel-2); border: 1px solid var(--border);
   font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: .88em;
 }
 pre {
+  position: relative;
   overflow-x: auto; padding: 1rem 1.15rem; margin: 1.2rem 0;
-  background: #070e17; border: 1px solid var(--border); border-radius: 11px;
-  line-height: 1.55;
+  background: var(--panel-code); border: 1px solid var(--border); border-radius: 11px;
+  line-height: 1.55; color: #e6f0fb;
 }
-pre code { padding: 0; background: none; border: none; font-size: .86rem; }
+pre code { padding: 0; background: none; border: none; font-size: .86rem; color: inherit; }
+
+/* Copiar el bloque de codigo: aparece al pasar por encima o al enfocarlo. */
+.copiar {
+  position: absolute; top: .5rem; right: .5rem;
+  padding: .2rem .6rem; border-radius: 7px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font: inherit; font-size: .74rem;
+  opacity: 0; transition: opacity .15s ease;
+}
+pre:hover .copiar, .copiar:focus-visible { opacity: 1; }
 
 .content table { font-size: .9rem; }
 .content th { color: var(--teal); }
@@ -54,7 +74,10 @@ pre code { padding: 0; background: none; border: none; font-size: .86rem; }
 .tabla-scroll { overflow-x: auto; margin: 1.2rem 0; }
 .tabla-scroll table { margin: 0; }
 
-.mermaid { margin: 1.6rem 0; padding: 1rem; background: #070e17; border: 1px solid var(--border); border-radius: 11px; text-align: center; }
+.mermaid {
+  margin: 1.6rem 0; padding: 1rem; background: var(--panel-code);
+  border: 1px solid var(--border); border-radius: 11px; text-align: center;
+}
 
 .ficha { width: 100%; margin: 1.2rem 0 2rem; font-size: .92rem; }
 .ficha td:first-child { color: var(--muted); width: 12rem; }
@@ -62,3 +85,37 @@ pre code { padding: 0; background: none; border: none; font-size: .86rem; }
 hr { border: none; border-top: 1px solid var(--border); margin: 2.4rem 0; }
 
 .fuentes-clase li { margin: .7rem 0; }
+
+/* Marcar la clase como completada; el estado vive en el navegador. */
+.completar {
+  display: inline-flex; align-items: center; gap: .5rem;
+  margin: 1.6rem 0 0; padding: .6rem 1.1rem;
+  border: 1px solid var(--border); border-radius: 11px;
+  background: var(--panel); color: var(--text); font: inherit;
+  font-weight: 600; cursor: pointer;
+}
+.completar:hover { border-color: var(--teal); }
+.completar[aria-pressed="true"] { border-color: var(--teal); color: var(--teal); }
+
+/* Anterior y siguiente al pie de cada clase. */
+.paso-a-paso {
+  display: flex; flex-wrap: wrap; gap: .8rem; justify-content: space-between;
+  margin-top: 3rem; padding-top: 1.4rem; border-top: 1px solid var(--border);
+}
+.paso-a-paso a {
+  flex: 1 1 16rem; padding: .9rem 1.1rem; text-decoration: none;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text);
+}
+.paso-a-paso a:hover { border-color: var(--teal); }
+.paso-a-paso .sentido { display: block; color: var(--muted); font-size: .78rem; }
+.paso-a-paso .siguiente { text-align: right; }
+
+@media print {
+  .avance, .migas, .completar, .paso-a-paso, .copiar { display: none !important; }
+  .content { max-width: none; padding: 0; }
+  pre { background: #f4f6f9; color: #000; border-color: #ccc; }
+  a { color: #000; text-decoration: underline; }
+  .content h2 { break-after: avoid; }
+  pre, table, .mermaid { break-inside: avoid; }
+}

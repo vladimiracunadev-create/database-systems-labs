@@ -2,6 +2,77 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## No publicado
+
+Avance del hito 2.1: el núcleo ejecutable pasa de dos laboratorios a cinco, y
+el validador deja de ser el único componente sin pruebas.
+
+### Añadido
+
+- **Laboratorio 03 ejecutable** (`labs/03-transactions/run_transactions_lab.py`):
+  reproduce una actualización perdida con dos hilos reales sincronizados en una
+  barrera, y la corrige con actualización atómica, control optimista por versión
+  y bloqueo pesimista (`BEGIN IMMEDIATE`). La evidencia es el invariante —una
+  plaza, una reserva—, no un tiempo.
+- **Laboratorio 04 ejecutable** (`labs/04-indexing/run_indexing_lab.py`): 20 000
+  filas deterministas, `EXPLAIN QUERY PLAN` y trabajo contado en instrucciones
+  de la máquina virtual con `set_progress_handler`. Muestra el prefijo izquierdo
+  de un índice compuesto, el recorrido por saltos (*skip-scan*) cuando hay
+  estadísticas, y el costo en trabajo y páginas de mantener dos índices.
+- **Laboratorio 05 ejecutable** (`labs/05-nosql-workloads/run_nosql_lab.py`):
+  mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
+  lectura y de escritura, el techo de un arreglo incrustado ante el límite de
+  16 MiB por documento, y el reparto de una clave de partición caliente.
+- **Pruebas** (`tests/`): 39 pruebas que ejecutan los laboratorios, comprueban
+  que no importan dependencias externas, verifican la idempotencia de los
+  generadores y su modo `--check`, y someten al validador a un repositorio roto
+  a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
+  sin ISBN, artículo sin DOI ni sede, motor fuera del catálogo, lección sin una
+  sección obligatoria, lección demasiado corta, enlace relativo roto,
+  codificación corrupta y archivo obligatorio ausente— exigiendo que lo detecte.
+- `requirements-dev.txt` y `pytest.ini` para el entorno de desarrollo.
+- Trabajo `pruebas` en integración continua, y los tres laboratorios nuevos en
+  la matriz de Python 3.11, 3.12 y 3.13.
+- **Sitio como producto**: barra de navegación y pie comunes a las 102 páginas,
+  tema claro y oscuro con conmutador que recuerda la elección, progreso de
+  lectura por clase guardado en el navegador, filtro «solo pendientes»,
+  anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
+  código, enlace para saltar al contenido y estilos de impresión.
+- **Páginas nuevas**: [laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)
+  (qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio),
+  [autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)
+  con las 256 preguntas enlazadas a su clase, 17 páginas de documentación
+  publicadas desde los `.md` del repositorio, y una página 404.
+- **Aplicación instalable**: `manifest.webmanifest` y service worker con nombre
+  de caché derivado de la huella del contenido, para que una versión nueva
+  invalide la anterior sin recordar subir ningún número a mano.
+- **Descubrimiento**: `sitemap.xml`, `robots.txt`, enlace canónico, etiquetas
+  Open Graph y Twitter con portada social, y datos estructurados
+  schema.org (`Course` en la portada, `LearningResource` en cada clase).
+- **Marca gráfica generada** (`scripts/brand_assets.py`): iconos de 192 y 512 px
+  y portada social de 1200×630, dibujados con `zlib` y `struct` de la biblioteca
+  estándar —sin Pillow— y reproducibles byte a byte.
+- **Laboratorios como datos**: sección `laboratorios` en `curriculum.yaml` con
+  el comando, la marca de éxito, lo que mide y sus fuentes; el validador
+  comprueba que el guion existe y que imprime de verdad la marca que declara.
+- Análisis CodeQL semanal y en cada cambio, y Dependabot mensual para acciones y
+  dependencias de Python.
+
+### Cambiado
+
+- `scripts/validate_repository.py` exige la presencia de los cinco laboratorios
+  ejecutables, valida la sección `laboratorios` y cuenta también sus citas al
+  buscar fuentes huérfanas.
+- `labs/README.md` declara qué mide cada laboratorio y por qué ninguno afirma
+  nada en milisegundos.
+- `scripts/generate_site.py` pasa de 82 a 102 páginas y admite artefactos
+  binarios, con `--check` byte a byte también para los iconos.
+- El sistema visual se reescribe sobre variables CSS: un solo bloque de tokens
+  define color y ritmo, y de ahí sale el tema claro sin excepciones.
+- El flujo de Pages vigila todas las entradas del generador; antes ignoraba
+  `docs/`, `assessments/`, `projects/` y los documentos de la raíz, así que un
+  cambio en ellos no llegaba a publicarse.
+
 ## 2.0.0 — 2026-08-19
 
 Reescritura del programa en torno a una regla: **ninguna clase se publica sin

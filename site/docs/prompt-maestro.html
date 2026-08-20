@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="El contrato para ampliar el programa con ayuda de un modelo de lenguaje.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/docs/prompt-maestro.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Prompt maestro · Database Systems Labs">
+<meta property="og:description" content="El contrato para ampliar el programa con ayuda de un modelo de lenguaje.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/docs/prompt-maestro.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<title>Prompt maestro · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html" aria-current="page">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Documentación</a><span aria-hidden="true">/</span>
+  <span>Prompt maestro</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="contrato-para-ampliar-el-programa">Contrato para ampliar el programa</h1>
+<p>Este documento es el contrato interno —para personas y para asistentes de
+inteligencia artificial— que permite añadir clases, motores y laboratorios sin
+degradar la coherencia del repositorio.</p>
+<p>Si una instrucción de este archivo choca con lo que pide quien encarga el
+cambio, gana este archivo o se cambia este archivo primero. Lo que no se puede
+es saltárselo en silencio.</p>
+<h2 id="1-la-regla-que-no-se-negocia">1. La regla que no se negocia</h2>
+<blockquote>
+<p><strong>Ninguna clase se publica sin fuentes, y ninguna cita apunta al vacío.</strong></p>
+</blockquote>
+<p>Consecuencias operativas:</p>
+<ul>
+<li>Toda clase declara <strong>al menos dos</strong> fuentes existentes en <code>catalog/sources.json</code>.</li>
+<li>Toda fuente del registro está citada por al menos una clase.</li>
+<li>Todo libro lleva ISBN; todo artículo, DOI o sede de publicación.</li>
+<li>Ninguna afirmación técnica se apoya en un blog anónimo, un foro o material
+  generado por un modelo de lenguaje.</li>
+</ul>
+<p><code>scripts/validate_repository.py</code> comprueba lo anterior y falla el <code>push</code>. No es
+una guía de estilo: es una puerta.</p>
+<h2 id="2-dónde-se-edita-cada-cosa">2. Dónde se edita cada cosa</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Quieres cambiar</th>
+<th>Edita</th>
+<th><strong>No</strong> edites</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>La materia de una clase</td>
+<td><code>classes/**/lesson.md</code></td>
+<td><code>classes/**/README.md</code></td>
+</tr>
+<tr>
+<td>Horas, nivel, conceptos, fuentes</td>
+<td><code>curriculum.yaml</code></td>
+<td>los README</td>
+</tr>
+<tr>
+<td>La bibliografía</td>
+<td><code>catalog/sources.json</code></td>
+<td><code>docs/SOURCES.md</code></td>
+</tr>
+<tr>
+<td>Los motores cubiertos</td>
+<td><code>catalog/databases.json</code></td>
+<td>el sitio</td>
+</tr>
+<tr>
+<td>El aspecto del sitio</td>
+<td><code>site/assets/*</code> y <code>scripts/generate_site.py</code></td>
+<td>el HTML de <code>site/</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>classes/**/README.md</code>, <code>classes/README.md</code>, los índices de parte y <strong>todo</strong>
+<code>site/</code> son artefactos generados. Editarlos a mano es trabajo que se pierde en
+la siguiente generación, y la integración continua lo detecta.</p>
+<h2 id="3-añadir-una-clase">3. Añadir una clase</h2>
+<ol>
+<li><strong>Declararla en <code>curriculum.yaml</code></strong> dentro de su parte, con identificador
+   correlativo (sin huecos), <code>slug</code> en ASCII-kebab, horas entre 1 y 12, nivel,
+   conceptos, motores existentes en el catálogo, laboratorio existente y sus
+   fuentes.</li>
+<li><strong>Escribir <code>classes/part-NN-.../NNN-slug/lesson.md</code></strong> con estas secciones,
+   todas obligatorias:</li>
+</ol>
+<p><code>markdown
+   ## Propósito
+   ## Resultados de aprendizaje
+   ## Fundamentos
+   ## Ejemplo trabajado
+   ## Comparación
+   ## Errores frecuentes
+   ## De la clase a la operación
+   ## Reto de transferencia
+   ## Preguntas de evaluación</code></p>
+<ol start="3">
+<li><strong>Regenerar y validar:</strong></li>
+</ol>
+<p><code>bash
+   python scripts/build_classes.py
+   python scripts/generate_site.py
+   python scripts/validate_repository.py</code></p>
+<h2 id="4-qué-es-una-clase-aceptable">4. Qué es una clase aceptable</h2>
+<p>No basta con que las secciones existan. El criterio de contenido:</p>
+<ul>
+<li><strong>El ejemplo trabajado lleva números o código reales</strong>, con su traza. «Es más
+  rápido» no es un ejemplo; «de 65 790 páginas a 4, con este plan» sí lo es.</li>
+<li><strong>Se explica el mecanismo, no la receta.</strong> Quien lea debe poder predecir el
+  comportamiento en un caso que la clase no cubre.</li>
+<li><strong>Los errores frecuentes traen causa y corrección</strong>, no solo el síntoma.</li>
+<li><strong>Se declara lo que la clase no demuestra.</strong> Es la sección que distingue el
+  material honesto del promocional.</li>
+<li><strong>Se enlaza con las clases vecinas</strong> por su número, para que el programa se
+  lea como un cuerpo y no como 64 fichas sueltas.</li>
+<li><strong>Ninguna comparación entre productos se apoya en material comercial.</strong></li>
+</ul>
+<p>Longitud mínima comprobada: 2 500 caracteres y al menos un bloque de código.
+Son mínimos, no objetivos.</p>
+<h2 id="5-añadir-un-motor">5. Añadir un motor</h2>
+<ol>
+<li>Entrada en <code>catalog/databases.json</code> con <code>id</code>, <code>name</code>, <code>families</code>,
+   <code>core_lab</code>, <code>query</code> y <code>official_docs</code> en HTTPS.</li>
+<li>Si <code>core_lab</code> es <code>true</code>, debe existir un laboratorio ejecutable que lo use.
+   Declarar <code>true</code> sin laboratorio es prometer de más.</li>
+<li>Añadir su documentación oficial a <code>catalog/sources.json</code> y citarla desde la
+   clase que lo trate.</li>
+</ol>
+<h2 id="6-seguridad-y-ética">6. Seguridad y ética</h2>
+<ul>
+<li>Las credenciales del repositorio son <strong>locales y públicas</strong>: están en archivos
+  versionados. Nunca se copian a otro entorno, y ninguna clase sugiere lo contrario.</li>
+<li>Ninguna clase incluye datos personales reales. El dominio canónico es sintético.</li>
+<li>Las técnicas ofensivas se tratan solo en su vertiente defensiva: la clase de
+  inyección SQL enseña a impedirla, con el ejemplo mínimo necesario para
+  entender por qué la defensa funciona.</li>
+<li>Toda afirmación de rendimiento declara sus condiciones y lo que <strong>no</strong>
+  demuestra.</li>
+</ul>
+<h2 id="7-antes-de-abrir-un-cambio">7. Antes de abrir un cambio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py     # estructura, fuentes, enlaces, codificación
+python scripts/build_classes.py --check   # ¿quedaron README sin regenerar?
+python scripts/generate_site.py --check   # ¿quedó el sitio desactualizado?
+python labs/01-sql-foundations/run_lab.py
+python labs/06-vector-search/run_vector_lab.py
+python scripts/check_external_links.py    # opcional; obligatorio si tocaste el registro
+</code></pre>
+<p>Los cinco primeros son los que ejecuta la integración continua. Si pasan en
+local, <code>main</code> seguirá en verde.</p>
+<p class="fuente-meta">Fuente de esta página:
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/PROMPT_MAESTRO.md" rel="noopener"><code>PROMPT_MAESTRO.md</code></a></p>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislami
 |---|---|---|---:|---:|
 | [033](033-acid-que-garantiza-cada-letra/README.md) | [ACID: qué garantiza cada letra y quién la implementa](033-acid-que-garantiza-cada-letra/README.md) | Intermedio | 3 | 3 |
 | [034](034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) | [Anomalías de aislamiento y la crítica a los niveles ANSI](034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) | Avanzado | 4 | 5 |
-| [035](035-bloqueo-en-dos-fases-y-mvcc/README.md) | [Bloqueo en dos fases, MVCC e instantaneas](035-bloqueo-en-dos-fases-y-mvcc/README.md) | Avanzado | 4 | 3 |
+| [035](035-bloqueo-en-dos-fases-y-mvcc/README.md) | [Bloqueo en dos fases, MVCC e instantáneas](035-bloqueo-en-dos-fases-y-mvcc/README.md) | Avanzado | 4 | 3 |
 | [036](036-registro-anticipado-y-recuperacion/README.md) | [Registro anticipado y recuperación: WAL y ARIES](036-registro-anticipado-y-recuperacion/README.md) | Avanzado | 4 | 3 |
 | [037](037-concurrencia-en-la-aplicacion/README.md) | [Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista](037-concurrencia-en-la-aplicacion/README.md) | Avanzado | 3 | 3 |
 

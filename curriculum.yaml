@@ -17,7 +17,7 @@ programa:
   licencia: MIT
   actualizado: 2026-08-19
   resumen: >-
-    Programa de ingenieria de datos y bases de datos que va del modelado
+    Programa de ingeniería de datos y bases de datos que va del modelado
     conceptual a la arquitectura distribuida, la operación y los sistemas de
     recuperación para inteligencia artificial. Cada clase declara de qué libro,
     artículo, norma o documentación oficial procede lo que afirma.
@@ -51,6 +51,99 @@ rutas:
     titulo: Arquitecto de datos
     descripcion: Elegir por evidencia y defender el costo de la decisión.
     partes: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"]
+
+# Los laboratorios, con lo que cada uno demuestra y de donde procede el
+# criterio. `comando` vacio significa que el laboratorio es de diseno y se
+# entrega escrito, no ejecutado. Los ejecutables corren en integracion continua.
+# El texto de este bloque se publica tal cual en el sitio: va acentuado.
+laboratorios:
+  - id: "01"
+    titulo: Fundamentos de SQL sobre el dominio educativo
+    ruta: labs/01-sql-foundations
+    comando: python labs/01-sql-foundations/run_lab.py
+    marca: LAB_OK
+    duracion: 90
+    resumen: >-
+      Carga el esquema y los datos canónicos en SQLite en memoria, ejecuta
+      reuniones y agregaciones, y comprueba invariantes sobre el resultado.
+    mide:
+      - filas devueltas por cada consulta frente a las esperadas
+      - integridad referencial del conjunto de datos
+    fuentes: [docs-sqlite, docs-python-sqlite3, iso-9075]
+
+  - id: "02"
+    titulo: Modelado políglota del mismo dominio
+    ruta: labs/02-polyglot-modeling
+    comando: ""
+    marca: ""
+    duracion: 120
+    resumen: >-
+      Traduce el mismo dominio a tres modelos —relacional, documental y de
+      grafo— y obliga a declarar qué gana y qué se pierde en cada uno.
+    mide:
+      - consultas que cada modelo resuelve sin trabajo adicional
+      - duplicación y riesgo de divergencia que introduce cada modelo
+    fuentes: [sadalage-fowler-nosql, docs-mongodb-modeling, docs-neo4j, graph-databases-2ed]
+
+  - id: "03"
+    titulo: Actualización perdida y sus tres correcciones
+    ruta: labs/03-transactions
+    comando: python labs/03-transactions/run_transactions_lab.py
+    marca: TRANSACTIONS_LAB_OK
+    duracion: 90
+    resumen: >-
+      Dos hilos reales compiten por la última plaza de un curso. El laboratorio
+      reproduce la actualización perdida y la corrige con actualización
+      atómica, control optimista por versión y bloqueo pesimista.
+    mide:
+      - reservas aceptadas frente a plazas existentes
+      - conflictos detectados por el control optimista
+    fuentes: [berenson-isolation-1995, gray-reuter-tp, docs-sqlite-isolation, docs-postgresql-mvcc, kleppmann-hermitage]
+
+  - id: "04"
+    titulo: Planes de ejecución y costo real de un índice
+    ruta: labs/04-indexing
+    comando: python labs/04-indexing/run_indexing_lab.py
+    marca: INDEXING_LAB_OK
+    duracion: 90
+    resumen: >-
+      Veinte mil filas deterministas, tres consultas y dos índices. Las
+      aserciones son sobre el plan y sobre el trabajo —instrucciones de la
+      máquina virtual—, nunca sobre el tiempo.
+    mide:
+      - forma del plan antes y después de cada índice
+      - trabajo de la consulta y costo en páginas de la escritura
+    fuentes: [winand-sql-performance, docs-sqlite-optoverview, docs-postgresql-explain, bayer-mccreight-1972]
+
+  - id: "05"
+    titulo: Elección por carga de trabajo en almacenes no relacionales
+    ruta: labs/05-nosql-workloads
+    comando: python labs/05-nosql-workloads/run_nosql_lab.py
+    marca: NOSQL_LAB_OK
+    duracion: 90
+    resumen: >-
+      Cuenta accesos, bytes y tamaño de partición para decidir entre incrustar
+      y referenciar, y para mostrar que un TTL no es coherencia ni una clave de
+      partición cualquiera reparte la carga.
+    mide:
+      - lecturas obsoletas con y sin invalidación en la escritura
+      - accesos y bytes reescritos de cada modelo bajo la misma carga
+      - tamaño de la partición mayor según la clave elegida
+    fuentes: [docs-mongodb-modeling, docs-redis, docs-cassandra, sadalage-fowler-nosql, decandia-dynamo-2007]
+
+  - id: "06"
+    titulo: Recuperación vectorial explicable
+    ruta: labs/06-vector-search
+    comando: python labs/06-vector-search/run_vector_lab.py
+    marca: VECTOR_LAB_OK
+    duracion: 60
+    resumen: >-
+      Similitud coseno y recall@k sobre vectores deterministas, antes de
+      introducir cualquier modelo de embeddings externo.
+    mide:
+      - orden del ranking frente al esperado
+      - recall@k sobre el conjunto relevante declarado
+    fuentes: [malkov-hnsw-2018, karpukhin-dpr-2020, robertson-bm25-2009, docs-qdrant]
 
 parts:
   - id: "00"
@@ -424,7 +517,7 @@ parts:
         sources: [berenson-isolation-1995, adya-generalized-isolation-1999, kleppmann-hermitage, docs-postgresql-mvcc, docs-sqlite-isolation]
       - id: "035"
         slug: bloqueo-en-dos-fases-y-mvcc
-        title: Bloqueo en dos fases, MVCC e instantaneas
+        title: Bloqueo en dos fases, MVCC e instantáneas
         hours: 4
         level: avanzado
         concepts: [2PL, versión de fila, instantánea, interbloqueo, vacuum]

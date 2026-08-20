@@ -35,7 +35,11 @@ ARCHIVOS_OBLIGATORIOS = [
     "catalog/databases.json", "catalog/sources.json",
     "classes/README.md",
     "docs/ARCHITECTURE.md", "docs/LEARNING-MODEL.md", "docs/SOURCES.md",
-    "labs/01-sql-foundations/run_lab.py", "labs/06-vector-search/run_vector_lab.py",
+    "labs/01-sql-foundations/run_lab.py",
+    "labs/03-transactions/run_transactions_lab.py",
+    "labs/04-indexing/run_indexing_lab.py",
+    "labs/05-nosql-workloads/run_nosql_lab.py",
+    "labs/06-vector-search/run_vector_lab.py",
     "reference-data/school/schema.sqlite.sql", "reference-data/school/seed.sqlite.sql",
     "assessments/rubric.md",
     "scripts/build_classes.py", "scripts/generate_site.py",
@@ -81,12 +85,13 @@ def validar_archivos() -> None:
             fallo(f"falta el archivo obligatorio: {item}")
 
 
-def validar_curriculo(curriculo: dict, fuentes: dict, motores: dict) -> None:
+def validar_curriculo(curriculo: dict, fuentes: dict, motores: dict,
+                      citadas_por_laboratorios: set[str]) -> None:
     ids_fuente = {f["id"] for f in fuentes["sources"]}
     ids_motor = {m["id"] for m in motores["systems"]}
     ids_clase: list[str] = []
     slugs_parte: set[str] = set()
-    citadas: set[str] = set()
+    citadas: set[str] = set(citadas_por_laboratorios)
 
     for parte in curriculo["parts"]:
         if not SLUG_VALIDO.match(parte["slug"]):
@@ -134,7 +139,64 @@ def validar_curriculo(curriculo: dict, fuentes: dict, motores: dict) -> None:
     # que nadie la revise: se trata como error, no como aviso.
     huerfanas = sorted(ids_fuente - citadas)
     if huerfanas:
-        fallo(f"fuentes registradas y no citadas por ninguna clase: {huerfanas}")
+        fallo(f"fuentes registradas y no citadas por ninguna clase ni laboratorio: {huerfanas}")
+
+
+def validar_laboratorios(curriculo: dict, fuentes: dict) -> set[str]:
+    """Comprueba los laboratorios declarados y devuelve las fuentes que citan.
+
+    Un laboratorio que dice ser ejecutable y no lo es seria la peor mentira del
+    repositorio: aqui se comprueba que el guion existe y que la marca que dice
+    imprimir esta de verdad en su codigo.
+    """
+    ids_fuente = {f["id"] for f in fuentes["sources"]}
+    citadas: set[str] = set()
+    vistos: set[str] = set()
+    rutas: set[str] = set()
+
+    for lab in curriculo.get("laboratorios", []):
+        lid = lab["id"]
+        if lid in vistos:
+            fallo(f"laboratorio duplicado: {lid}")
+        vistos.add(lid)
+        rutas.add(lab["ruta"])
+
+        if not (ROOT / lab["ruta"]).is_dir():
+            fallo(f"laboratorio {lid}: la ruta {lab['ruta']} no existe")
+        if not (ROOT / lab["ruta"] / "README.md").exists():
+            fallo(f"laboratorio {lid}: sin README.md")
+        if not lab.get("mide"):
+            fallo(f"laboratorio {lid}: no declara que mide")
+
+        comando = lab.get("comando", "")
+        if comando:
+            guion = comando.split()[-1]
+            ruta_guion = ROOT / guion
+            if not ruta_guion.exists():
+                fallo(f"laboratorio {lid}: el comando apunta a {guion}, que no existe")
+            elif not lab.get("marca"):
+                fallo(f"laboratorio {lid}: es ejecutable y no declara marca de exito")
+            elif lab["marca"] not in ruta_guion.read_text(encoding="utf-8"):
+                fallo(f"laboratorio {lid}: el guion no imprime la marca {lab['marca']!r}")
+        elif lab.get("marca"):
+            fallo(f"laboratorio {lid}: declara marca sin comando que la produzca")
+
+        if len(lab["fuentes"]) < MINIMO_FUENTES_POR_CLASE:
+            fallo(f"laboratorio {lid}: {len(lab['fuentes'])} fuentes; el minimo es "
+                  f"{MINIMO_FUENTES_POR_CLASE}")
+        for sid in lab["fuentes"]:
+            citadas.add(sid)
+            if sid not in ids_fuente:
+                fallo(f"laboratorio {lid}: cita la fuente inexistente {sid!r}")
+
+    # Un laboratorio al que apunta una clase pero que nadie declara queda fuera
+    # del sitio y del control: se trata como error.
+    for parte in curriculo["parts"]:
+        for clase in parte["classes"]:
+            if clase["lab"] not in rutas:
+                fallo(f"clase {clase['id']}: el laboratorio {clase['lab']} no esta "
+                      f"declarado en la seccion `laboratorios`")
+    return citadas
 
 
 def validar_fuentes(fuentes: dict) -> None:
@@ -272,7 +334,8 @@ def main() -> int:
     curriculo, fuentes, motores = cargar()
     validar_fuentes(fuentes)
     validar_catalogo_motores(motores)
-    validar_curriculo(curriculo, fuentes, motores)
+    citadas_labs = validar_laboratorios(curriculo, fuentes)
+    validar_curriculo(curriculo, fuentes, motores, citadas_labs)
     validar_clases(curriculo)
     validar_datos_referencia()
     validar_enlaces_relativos()

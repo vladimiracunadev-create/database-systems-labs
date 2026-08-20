@@ -14,23 +14,45 @@ registro antes de escribir una sola línea de clase.
 
 ## 2.1 — Laboratorios ejecutables por parte
 
-Hoy el núcleo ejecutable son dos laboratorios sin dependencias y cuatro guías
-con contenedores. El objetivo es que **cada parte** tenga al menos un
-laboratorio que se ejecute en integración continua:
+El núcleo ejecutable pasó de dos laboratorios a cinco: todos sin dependencias
+externas y comprobados en integración continua sobre Python 3.11, 3.12 y 3.13.
+
+Hecho:
+
+- actualización perdida reproducida con hilos reales y corregida con
+  actualización atómica, control optimista y bloqueo pesimista;
+- laboratorio de planes de ejecución con aserciones sobre el plan y sobre el
+  trabajo —instrucciones de la máquina virtual—, no sobre el tiempo, para que
+  sea reproducible en cualquier máquina;
+- laboratorio de cargas NoSQL que mide TTL frente a coherencia, incrustar
+  frente a referenciar y el efecto de una clave de partición caliente;
+- pruebas que someten al validador a un repositorio roto a propósito, para que
+  la regla de las fuentes esté demostrada y no solo declarada.
+
+Pendiente:
 
 - reproducción automatizada de las anomalías de aislamiento (método de
   Hermitage) contra PostgreSQL y MySQL en contenedor;
-- laboratorio de planes de ejecución con aserciones sobre el plan, no sobre el
-  tiempo, para que sea reproducible en cualquier máquina;
 - laboratorio de réplica con medición del retraso bajo carga;
-- laboratorio de recuperación a un punto en el tiempo, cronometrado.
+- laboratorio de recuperación a un punto en el tiempo, cronometrado;
+- cobertura del resto de las partes: quedan nueve sin laboratorio propio.
 
 ## 2.2 — Autoevaluación y trazabilidad del aprendizaje
 
-- banco de preguntas derivado de las 256 preguntas de evaluación existentes;
-- cuestionario en el sitio, resuelto en el cliente y sin servidor;
-- registro de avance por clase, guardado localmente en el navegador;
-- rúbrica del proyecto final aplicable por una tercera persona.
+Hecho:
+
+- banco de preguntas publicado en el sitio con las 256 preguntas de evaluación,
+  cada una enlazada a su clase y a la rúbrica que la corrige;
+- registro de avance por clase, guardado localmente en el navegador, con
+  contador en la portada y filtro de clases pendientes.
+
+Pendiente:
+
+- cuestionario interactivo con corrección orientativa en el cliente, sin
+  servidor y sin convertir preguntas de explicación en preguntas de opción
+  múltiple, que sería empobrecerlas;
+- rúbrica del proyecto final aplicable por una tercera persona sin conocer el
+  programa.
 
 ## 2.3 — Material descargable
 

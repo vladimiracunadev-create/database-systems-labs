@@ -1,6 +1,6 @@
 name: CI
 
-# Lo que decide si `main` esta en verde. Cuatro trabajos independientes, para
+# Lo que decide si `main` esta en verde. Cinco trabajos independientes, para
 # que un fallo de lint no oculte un fallo de contenido y al reves.
 #
 # El trabajo `artefactos` es el que evita la incoherencia clasica de este tipo
@@ -130,5 +130,31 @@ jobs:
       - name: Laboratorio de fundamentos SQL
         run: python labs/01-sql-foundations/run_lab.py
 
+      - name: Laboratorio de transacciones y concurrencia
+        run: python labs/03-transactions/run_transactions_lab.py
+
+      - name: Laboratorio de índices y planes
+        run: python labs/04-indexing/run_indexing_lab.py
+
+      - name: Laboratorio de cargas NoSQL
+        run: python labs/05-nosql-workloads/run_nosql_lab.py
+
       - name: Laboratorio de búsqueda vectorial
         run: python labs/06-vector-search/run_vector_lab.py
+
+  pruebas:
+    name: Pruebas de generadores y validadores
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --quiet -r requirements-dev.txt
+
+      # Ver pasar al validador sobre un repositorio sano no demuestra nada:
+      # estas pruebas lo rompen a proposito y exigen que se de cuenta.
+      - name: pytest
+        run: python -m pytest
