@@ -8,6 +8,8 @@ Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **Conceptos centrales:** `lectura sucia` · `lectura no repetible` · `fantasma` · `sesgo de escritura` · `snapshot isolation`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -193,6 +195,92 @@ El sesgo de escritura produce los datos imposibles que aparecen «una vez cada t
 2. Escribe una operación de tu sistema que hoy sea lectura-modificación-escritura y conviértela en atómica.
 3. ¿Qué debe hacer la aplicación al recibir un error de serialización, y por qué no basta con reintentar sin límite?
 4. Diseña el guion de dos sesiones que demuestre si tu motor permite fantasmas en su nivel por defecto.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué anomalía deja pasar cada motor en el nivel que trae de fábrica
+
+La norma SQL define cuatro niveles de aislamiento por las anomalías que
+prohíben: lectura sucia, lectura no repetible y lectura fantasma. Berenson y
+otros demostraron en 1995 que esa definición está incompleta —hay anomalías
+que no encajan en ninguna de las tres, como la **actualización perdida** y el
+**sesgo de escritura**— y que los nombres no significan lo mismo en dos
+motores distintos.
+
+De ahí sale la trampa práctica: `REPEATABLE READ` de MySQL y `REPEATABLE
+READ` de PostgreSQL **no** son el mismo nivel, y el nivel por omisión cambia
+de un motor a otro. Aquí se compara qué trae cada uno de fábrica y qué deja
+pasar. La reproducción de una anomalía real, con dos procesos peleando, está
+en el laboratorio `labs/03-transactions`, que la ejecuta de verdad.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/transaction-iso.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/isolation.html) |
+| Microsoft SQL Server | sí | conceptual | — | [doc oficial](https://learn.microsoft.com/sql/t-sql/statements/set-transaction-isolation-level-transact-sql) |
+| Oracle Database | sí | conceptual | — | [doc oficial](https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/reference/read-concern/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Por omisión, `READ COMMITTED`. Ofrece los tres niveles útiles —el `READ UNCOMMITTED` de la norma se comporta como `READ COMMITTED`— y su `SERIALIZABLE` es **aislamiento de instantánea serializable** (SSI): no bloquea, detecta el conflicto al confirmar y aborta una de las transacciones con el error 40001. Es el único de esta lista que impide el sesgo de escritura sin que el programador haga nada.
+- **Por qué sí:** Permite subir a `SERIALIZABLE` y olvidarse de razonar sobre anomalías, con la única condición de reintentar las transacciones abortadas.
+- **Por qué no:** Ese reintento hay que escribirlo: si la aplicación no maneja el 40001, subir el nivel convierte una anomalía silenciosa en un error visible para el usuario. Y en `READ COMMITTED`, cada sentencia ve un instante distinto, cosa que sorprende a quien viene de MySQL.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/transaction-iso.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** Por omisión, `REPEATABLE READ`, un nivel más alto que el de PostgreSQL. Su implementación usa instantáneas para leer y **bloqueos de hueco** (`gap locks`) para escribir, lo que evita fantasmas en muchos casos pero introduce interbloqueos donde no los habría.
+- **Por qué sí:** El nivel por omisión ya evita la lectura no repetible, así que el código escrito sin pensar en aislamiento se comporta mejor de lo esperado.
+- **Por qué no:** Su `REPEATABLE READ` **no** impide la actualización perdida ni el sesgo de escritura, y mezcla lectura por instantánea con escritura por bloqueo: una transacción puede leer un valor viejo y escribir sobre el nuevo sin enterarse. Los bloqueos de hueco, además, son una fuente conocida de interbloqueos en cargas de inserción.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** No tiene niveles configurables como tales: en modo WAL, los lectores ven una instantánea coherente y **un solo escritor** puede actuar a la vez. El resultado equivale a `SERIALIZABLE`, conseguido por exclusión en vez de por detección.
+- **Por qué sí:** Es el modelo más simple de razonar: si solo puede haber un escritor, no hay anomalías de escritura concurrente que estudiar.
+- **Por qué no:** Esa simplicidad es el límite: el segundo escritor recibe `SQLITE_BUSY` y hay que reintentar, así que el problema no desaparece, cambia de sitio.
+- 📄 Documentación oficial: <https://sqlite.org/isolation.html>
+
+#### Microsoft SQL Server
+
+- **Cómo se hace aquí:** Por omisión, `READ COMMITTED` **con bloqueos** —no con versiones—, lo que hace que los lectores bloqueen a los escritores y al revés. Activando `READ_COMMITTED_SNAPSHOT` pasa a un modelo de versiones parecido al de PostgreSQL, y ofrece además `SNAPSHOT` explícito.
+- **Por qué sí:** Tener las dos implementaciones permite elegir por base de datos: bloqueo donde importa el orden estricto, versiones donde importa que los informes no bloqueen.
+- **Por qué no:** El comportamiento por omisión es el que más sorpresas da: informes largos que bloquean escrituras y escaladas de bloqueo a nivel de tabla. La mayoría de los sistemas acaban activando el modo de instantánea, y ese cambio altera la semántica de todo el código ya escrito.
+- 📄 Documentación oficial: <https://learn.microsoft.com/sql/t-sql/statements/set-transaction-isolation-level-transact-sql>
+
+#### Oracle Database
+
+- **Cómo se hace aquí:** Por omisión, `READ COMMITTED` con consistencia de lectura por versiones a nivel de sentencia. Su `SERIALIZABLE` es en realidad aislamiento de instantánea, no serializabilidad verdadera: **permite el sesgo de escritura**, y por eso existe `SELECT ... FOR UPDATE`.
+- **Por qué sí:** Los lectores nunca bloquean a los escritores ni al revés, lo que hace previsible la latencia de los informes sobre sistemas muy cargados.
+- **Por qué no:** El nombre `SERIALIZABLE` promete más de lo que da. Es exactamente la confusión que Berenson denunció, y sigue viva en un motor que sostiene buena parte de la banca mundial.
+- 📄 Documentación oficial: <https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** Fuera de una transacción no hay aislamiento entre operaciones: cada escritura de documento es atómica y nada más. Dentro de una transacción, el nivel es instantánea, con `readConcern` y `writeConcern` para elegir qué se lee y cuándo se considera escrito.
+- **Por qué sí:** Separar `readConcern` de `writeConcern` permite decidir la garantía operación por operación en vez de para toda la base.
+- **Por qué no:** Son dos ajustes más que hay que entender, y sus valores por omisión no son los más seguros en todas las versiones: una escritura con `w: 1` se considera hecha antes de que la hayan visto las réplicas, y puede perderse en una conmutación por error.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/read-concern/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | No hay transacciones ni niveles de aislamiento que comparar: cada escritura es independiente y la única elección es el nivel de consistencia, que responde a otra pregunta —cuántas réplicas contestan— y no a la de qué anomalías se evitan. | Se estudia en la parte de distribución, donde la pregunta correcta no es «qué anomalía deja pasar» sino «qué garantía pierde el usuario cuando algo falla». | [doc](https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html) |
 
 ---
 

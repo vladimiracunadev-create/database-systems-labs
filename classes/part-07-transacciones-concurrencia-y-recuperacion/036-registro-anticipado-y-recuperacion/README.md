@@ -8,6 +8,8 @@ Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **Conceptos centrales:** `WAL` · `punto de control` · `rehacer` · `deshacer` · `LSN`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -179,6 +181,92 @@ El WAL es también la base de la replicación (clase 043) y de la captura de cam
 2. Explica por qué la fase de rehacer reaplica transacciones que no se confirmaron.
 3. ¿Qué función cumplen los registros de compensación si el sistema cae durante la recuperación?
 4. Con `synchronous_commit = off`, ¿qué se pierde exactamente y ante qué fallo?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué se escribe primero para que un corte de luz no pierda nada
+
+La durabilidad no se consigue escribiendo los datos: se consigue escribiendo
+**la intención** antes que los datos. Esa es la regla del registro
+anticipado: el cambio se anota en un registro secuencial y se fuerza a disco
+**antes** de tocar las páginas de datos, que pueden esperar. Al arrancar tras
+una caída, el motor rehace lo confirmado y deshace lo que no llegó a
+confirmarse. ARIES puso nombre a ese protocolo en 1992 y sigue siendo el
+esquema de casi todos.
+
+Lo que hay que comparar aquí no es si cada motor lo tiene —lo tienen casi
+todos— sino **el parámetro con el que se cambia durabilidad por
+rendimiento**. Ese parámetro existe en todos y casi nadie lo declara al decir
+«nuestra base de datos es ACID».
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/wal-intro.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/wal.html) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/reference/write-concern/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/configuration/cass_yaml_file.html) |
+| DuckDB | **no** | — | — | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Registro anticipado (WAL) con puntos de control periódicos. `fsync = on` y `synchronous_commit = on` de fábrica: la confirmación no vuelve hasta que el registro está en disco. El mismo WAL sirve para la réplica y para la recuperación a un punto en el tiempo.
+- **Por qué sí:** Un solo mecanismo cubre durabilidad, réplica y respaldo continuo, y se puede aflojar **por transacción**: las escrituras críticas síncronas y las accesorias asíncronas, en la misma aplicación.
+- **Por qué no:** `synchronous_commit = off` multiplica el rendimiento y abre una ventana de pérdida de transacciones ya confirmadas; y `fsync = off` puede corromper la base entera. Los dos existen, los dos se usan, y casi nunca se documentan en el sitio donde alguien los vaya a leer.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/wal-intro.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** InnoDB escribe en el registro de rehacer y usa además el **búfer de doble escritura** para protegerse de páginas escritas a medias. El parámetro clave es `innodb_flush_log_at_trx_commit`: 1 vuelca en cada confirmación, 2 vuelca al sistema operativo y 0 vuelca una vez por segundo.
+- **Por qué sí:** Tener tres niveles explícitos permite decidir con conocimiento: 2 es un punto intermedio razonable si lo que puede caerse es el proceso y no la máquina.
+- **Por qué no:** El valor 2 —y sobre todo el 0— significan perder hasta un segundo de transacciones **confirmadas**. Muchas guías de rendimiento lo recomiendan sin decir eso, y aparece en sistemas de facturación.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** Dos modos. El diario de reversión clásico guarda las páginas originales antes de modificarlas; el modo WAL escribe los cambios en un archivo aparte y consolida con puntos de control. `PRAGMA synchronous` decide si se fuerza a disco: `FULL` es durable, `NORMAL` en modo WAL puede perder las últimas transacciones.
+- **Por qué sí:** Su implementación está entre las más probadas que existen —hay una batería de pruebas de fallo con cortes simulados— y funciona en dispositivos sin administrador.
+- **Por qué no:** La durabilidad depende de que el sistema de archivos no mienta al confirmar la escritura, y varios lo hacen (montajes en red, algunos teléfonos). El motor cumple; la capa de abajo a veces no.
+- 📄 Documentación oficial: <https://sqlite.org/wal.html>
+
+#### Redis
+
+- **Cómo se hace aquí:** Dos mecanismos combinables: instantáneas RDB —una copia completa cada cierto número de cambios— y AOF, un registro de las órdenes recibidas. `appendfsync` decide cuándo se fuerza: `always`, `everysec` (el valor por omisión) o `no`.
+- **Por qué sí:** Deja explícito que la durabilidad es una **elección**, no una promesa: se puede ir desde ninguna hasta forzar en cada orden, y el costo de cada opción es visible.
+- **Por qué no:** El valor por omisión, `everysec`, significa hasta un segundo de escrituras perdidas. Redis se usa como caché precisamente porque eso suele dar igual; el problema aparece cuando alguien empieza a guardar ahí lo que no puede perder.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** WiredTiger escribe un **diario** con puntos de control cada 60 segundos, y la garantía real de una escritura la fija `writeConcern`: `w: "majority"` con `j: true` significa que la mayoría de las réplicas lo tiene y lo ha escrito en su diario.
+- **Por qué sí:** La durabilidad se decide por operación y no por servidor: la escritura que importa puede exigir mayoría mientras el resto va rápido.
+- **Por qué no:** Con `w: 1`, una escritura se da por hecha cuando la tiene **un** nodo, y una conmutación por error puede revertirla: la operación tuvo éxito para el cliente y no existe en la base. Es la clase de pérdida más difícil de explicar después.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/write-concern/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** Cada nodo escribe en su **registro de compromiso** y en una tabla en memoria; el registro se vuelca según `commitlog_sync`, que por omisión es periódico cada 10 ms. La durabilidad real, sin embargo, la da la replicación: con `QUORUM`, el dato está en varios nodos antes de contestar.
+- **Por qué sí:** Reparte la garantía entre varias máquinas en vez de confiarla al disco de una: la pérdida de un nodo entero no pierde datos.
+- **Por qué no:** Con `commitlog_sync` periódico, un corte de corriente simultáneo en varios nodos puede perder los últimos milisegundos. Y la reparación de lo que quedó desincronizado no es automática: hay que ejecutar reparaciones periódicas, y olvidarlas es una de las averías clásicas del motor.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/configuration/cass_yaml_file.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| DuckDB | Tiene registro anticipado sobre su archivo, pero compararlo aquí no enseña nada nuevo: no hay réplica que alimentar con ese registro, ni recuperación a un punto en el tiempo, ni parámetros de durabilidad que decidir. | En analítica la recuperación no se hace con el registro: se hace **reconstruyendo** desde el origen, que es la copia de verdad. Se trata en la parte de integración. | [doc](https://duckdb.org/docs/stable/internals/storage.html) |
 
 ---
 

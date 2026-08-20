@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>atomicidad</code> · <code>consistencia</code> · <code>aislamiento</code> · <code>durabilidad</code> · <code>unidad de recuperación</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Precisar qué garantiza cada letra de ACID, quién la implementa y qué queda fuera. «Usamos una base ACID» no significa que el sistema sea correcto: significa que existen unas garantías concretas si se usan bien.</p>
@@ -256,6 +257,353 @@ COMMIT;
 <li>Enumera los cuatro fallos frente a los que puede exigirse durabilidad y el mecanismo de cada uno.</li>
 <li>Explica el efecto de una transacción abierta durante una hora en un motor MVCC.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Una transferencia que se completa y otra que se deshace sin dejar rastro</p>
+<p>ACID son cuatro promesas distintas y conviene no confundirlas. <strong>A</strong>tomicidad:
+o todo o nada. <strong>C</strong>onsistencia: las reglas declaradas siguen siendo ciertas
+al terminar. <strong>I</strong>slamiento: las transacciones concurrentes no se ven a
+medias. <strong>D</strong>urabilidad: lo confirmado sobrevive a un corte de luz.</p>
+<p>El caso ejercita las dos primeras. Una transferencia de 30 de A a B se
+confirma; otra de 500 se deshace, y con ella la mitad que ya se había
+escrito. Entre las dos sentencias de la transferencia hay un instante en el
+que el dinero está duplicado: la atomicidad es la garantía de que ese
+instante no existe para nadie más, y que al deshacer no queda rastro.</p>
+<p>Al final, A tiene 70 y B tiene 80: la suma sigue siendo 150, que es el
+invariante que ninguna transferencia debe romper.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>cuenta</th>
+<th>saldo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>A</code></td>
+<td><code>70</code></td>
+</tr>
+<tr>
+<td><code>B</code></td>
+<td><code>80</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 033</code>: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/transactional.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/transactions/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/transactional.html
+-- nota: el CHECK (saldo &gt;= 0) es la «C» de ACID: la regla que sigue siendo
+--       cierta al terminar. El ROLLBACK es la «A». Son dos garantias distintas
+--       y aqui se ven las dos en el mismo archivo.
+
+-- === preparacion ===
+CREATE TABLE cuentas (
+    id    TEXT PRIMARY KEY,
+    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es ACID completo desde su primera versión, sobre un archivo y sin servidor: la atomicidad se implementa con un diario de reversión o con WAL, y sobrevive a un corte de luz igual que un motor grande.</li>
+<li><strong>Por qué no:</strong> El aislamiento es de grano grueso: en el modo por omisión, un escritor bloquea la base entera. Y la durabilidad depende de <code>PRAGMA synchronous</code>, que muchas aplicaciones bajan a <code>NORMAL</code> para ganar velocidad sin declarar que están cambiando la «D» por rendimiento.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/transactional.html">https://sqlite.org/transactional.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+-- === preparacion ===
+CREATE TABLE cuentas (
+    id    VARCHAR PRIMARY KEY,
+    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> También es ACID sobre su archivo, con control de concurrencia por versiones: sirve para comprobar el invariante en el mismo sitio donde se analizan los datos.</li>
+<li><strong>Por qué no:</strong> Un solo proceso escritor: no hay transacciones entre aplicaciones, y por tanto el problema real de la concurrencia no se puede ni plantear aquí.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+-- nota: aqui el DDL tambien es transaccional. Esto es legal y se deshace entero:
+--         BEGIN; ALTER TABLE cuentas ADD COLUMN divisa text; ROLLBACK;
+--       En MySQL y en Oracle, ese ALTER confirma la transaccion y no hay vuelta
+--       atras. Es la razon por la que las migraciones de esquema son mucho mas
+--       seguras en PostgreSQL.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cuentas;
+
+CREATE TABLE cuentas (
+    id    text PRIMARY KEY,
+    saldo integer NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las cuatro letras están, y además el DDL es transaccional: se puede crear una tabla, cargarla y deshacerlo todo. Esa propiedad —que MySQL y Oracle no tienen— es la que hace seguras las migraciones de esquema.</li>
+<li><strong>Por qué no:</strong> La durabilidad se puede aflojar por sesión con <code>synchronous_commit = off</code>, que multiplica el rendimiento a cambio de poder perder las últimas transacciones confirmadas. Es legítimo y hay que declararlo, porque deja de ser ACID en el sentido estricto.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html
+-- nota: dos avisos que no estan en el codigo y hay que saber igual:
+--       1) El DDL NO es transaccional: un ALTER TABLE dentro de una transaccion
+--          la confirma implicitamente.
+--       2) innodb_flush_log_at_trx_commit distinto de 1 significa perder hasta
+--          un segundo de transacciones YA CONFIRMADAS tras una caida.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cuentas;
+
+CREATE TABLE cuentas (
+    id    VARCHAR(10) PRIMARY KEY,
+    saldo INT NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> InnoDB es ACID: registro de rehacer, registro de deshacer y confirmación en dos fases con el registro binario.</li>
+<li><strong>Por qué no:</strong> Dos trampas históricas. El DDL <strong>no</strong> es transaccional: un <code>ALTER TABLE</code> dentro de una transacción la confirma implícitamente y ya no hay vuelta atrás. Y <code>innodb_flush_log_at_trx_commit</code> distinto de 1 significa perder hasta un segundo de transacciones confirmadas tras una caída.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/transactions/
+// nota: implementacion DECLARADA, y el motivo es parte de la leccion: las
+//       transacciones de varios documentos exigen un CONJUNTO DE REPLICAS. En
+//       el servidor suelto que levanta este repositorio, este guion falla con
+//       «Transaction numbers are only allowed on a replica set member or
+//       mongos». No se ejecuta porque no se puede, y decirlo vale mas que
+//       fingir que si.
+//
+//       Con una sola cuenta por documento no haria falta nada de esto: la
+//       escritura de un documento ya es atomica. La transaccion aparece justo
+//       cuando el agregado se reparte en dos documentos, que es la senal de que
+//       el modelo documental se esta usando como si fuera relacional.
+
+// === preparacion ===
+db.cuentas.drop();
+db.cuentas.insertMany([
+  { _id: &quot;A&quot;, saldo: 100 },
+  { _id: &quot;B&quot;, saldo: 50 },
+]);
+
+const sesion = db.getMongo().startSession();
+const cuentas = sesion.getDatabase(db.getName()).cuentas;
+
+// Transferencia valida.
+sesion.startTransaction();
+cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -30 } });
+cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 30 } });
+sesion.commitTransaction();
+
+// Transferencia imposible: se comprueba DENTRO de la transaccion y se aborta.
+sesion.startTransaction();
+cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 500 } });
+const origen = cuentas.findOne({ _id: &quot;A&quot; });
+if (origen.saldo &lt; 500) {
+  sesion.abortTransaction();
+} else {
+  cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -500 } });
+  sesion.commitTransaction();
+}
+sesion.endSession();
+
+// === consulta ===
+db.cuentas
+  .find()
+  .sort({ _id: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.saldo));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Desde la versión 4.0 tiene transacciones de varios documentos con la misma semántica: <code>startTransaction</code>, <code>commitTransaction</code>, <code>abortTransaction</code>. Sobre un solo documento, la atomicidad es automática y no hace falta nada.</li>
+<li><strong>Por qué no:</strong> <strong>Exigen un conjunto de réplicas</strong>: en un servidor suelto —como el de este repositorio— sencillamente no se pueden usar, y por eso esta implementación se declara en vez de ejecutarse. Además tienen un límite de 60 segundos por omisión y un costo notable frente a escribir un solo documento, que es la señal de que el modelo debería haberse diseñado para no necesitarlas.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/transactions/">https://www.mongodb.com/docs/manual/core/transactions/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td><code>MULTI</code>/<code>EXEC</code> no es una transacción ACID: garantiza que las órdenes se ejecutan seguidas y sin intercalación, pero <strong>no hay reversión</strong>. Si una orden falla en medio, las anteriores ya se aplicaron y las siguientes se aplican igual. Su documentación lo dice sin rodeos.</td>
+<td>Un script Lua, que sí es atómico y aislado, comprobando las condiciones <strong>antes</strong> de escribir nada: la reversión se sustituye por no llegar a empezar.</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay transacciones entre particiones ni reversión. <code>BATCH</code> solo es atómico y aislado dentro de una partición, y su uso entre particiones lo desaconseja la propia documentación por el costo del registro de lotes.</td>
+<td>Diseñar para que la operación quepa en una partición, o implementar una saga con pasos compensatorios en la aplicación, asumiendo que hay estados intermedios visibles.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

@@ -61,6 +61,7 @@
 4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>2PL</code> · <code>versión de fila</code> · <code>instantánea</code> · <code>interbloqueo</code> · <code>vacuum</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Conocer los dos mecanismos con que los motores implementan el aislamiento —bloqueo y versiones— porque determinan qué operaciones se estorban entre sí y cómo se resuelve un interbloqueo.</p>
@@ -297,6 +298,149 @@ ORDER BY duracion DESC LIMIT 5;
 <li>¿Qué bloquea exactamente <code>FOR UPDATE</code> sobre una consulta sin índice en InnoDB?</li>
 <li>Da dos transacciones de tu sistema que podrían formar un ciclo y define su orden canónico.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Bloquear o versionar: las dos familias de control de concurrencia</p>
+<p>Solo hay dos formas de que dos transacciones no se pisen. <strong>Bloquear</strong>: la
+primera que llega retiene el dato y la segunda espera —es el bloqueo en dos
+fases, que da serializabilidad a cambio de esperas e interbloqueos.
+<strong>Versionar</strong>: cada escritura crea una versión nueva y cada lector ve la que
+existía cuando empezó, de modo que <strong>los lectores nunca bloquean a los
+escritores ni al revés</strong>; es MVCC.</p>
+<p>Casi todos los motores modernos usan MVCC para leer y algún bloqueo para
+escribir, pero el reparto exacto cambia mucho, y con él el trabajo de
+limpiar las versiones viejas: el vacío de PostgreSQL, el segmento de
+deshacer de Oracle y de InnoDB, y las lápidas de Cassandra son el mismo
+problema con tres nombres.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/mvcc-intro.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/wal.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">doc oficial</a></td>
+</tr>
+<tr>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/faq/concurrency/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> MVCC puro en el almacén: un <code>UPDATE</code> <strong>no modifica la fila</strong>, escribe una versión nueva y marca la vieja como muerta. Los lectores no toman ningún bloqueo. El precio es la limpieza: <code>VACUUM</code> recupera el espacio de las versiones muertas, y <code>autovacuum</code> lo hace solo.</li>
+<li><strong>Por qué sí:</strong> Los informes largos no bloquean nunca la escritura, y el aislamiento serializable se consigue sin bloqueos gracias a SSI.</li>
+<li><strong>Por qué no:</strong> El coste está en el mantenimiento: una transacción abierta durante horas impide vaciar y la tabla se hincha; y el contador de transacciones puede llegar a agotarse si el vacío se retrasa lo suficiente. Es la avería de operación más común del motor.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/mvcc-intro.html">https://www.postgresql.org/docs/current/mvcc-intro.html</a></li>
+</ul>
+<h4 id="mysql">MySQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> MVCC para las lecturas mediante el <strong>registro de deshacer</strong> —la fila se modifica en su sitio y la versión anterior se reconstruye desde ese registro— y bloqueos de fila e índice para las escrituras, incluidos los bloqueos de hueco que evitan fantasmas.</li>
+<li><strong>Por qué sí:</strong> Modificar en el sitio evita la hinchazón de la tabla, y el espacio de las versiones viejas se reutiliza sin un proceso de vacío.</li>
+<li><strong>Por qué no:</strong> Los bloqueos de hueco producen interbloqueos donde no parece haberlos —dos inserciones en el mismo rango vacío— y una transacción larga hace crecer el registro de deshacer hasta llenar el disco, que es la misma avería con otro nombre.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html</a></li>
+</ul>
+<h4 id="sqlite">SQLite</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> En modo WAL, los lectores leen del archivo principal más el registro y ven una instantánea; el escritor añade al registro. Es una forma mínima de MVCC: <strong>un</strong> escritor y muchos lectores, sin bloqueos de lectura.</li>
+<li><strong>Por qué sí:</strong> Cabe entero en la cabeza: un escritor, cero interbloqueos, cero configuración.</li>
+<li><strong>Por qué no:</strong> No hay grados: no se puede tener dos escritores por mucho que escriban en tablas distintas. Y el registro WAL crece hasta que un punto de control lo recorta, cosa que un lector muy largo puede impedir.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/wal.html">https://sqlite.org/wal.html</a></li>
+</ul>
+<h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Bloqueo en dos fases de verdad como comportamiento por omisión, con granularidad de fila, página y tabla, y <strong>escalada</strong> automática de bloqueos cuando hay demasiados. Opcionalmente, versiones con <code>READ_COMMITTED_SNAPSHOT</code>, guardadas en <code>tempdb</code>.</li>
+<li><strong>Por qué sí:</strong> El bloqueo es el modelo que más fácil hace razonar sobre el orden de las operaciones, y su detector de interbloqueos elige víctima y devuelve un error claro.</li>
+<li><strong>Por qué no:</strong> La escalada de bloqueos convierte un <code>UPDATE</code> grande en un bloqueo de tabla entera; y al activar las versiones, toda la carga de versiones cae en <code>tempdb</code>, que pasa a ser el cuello de botella de la instancia.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide</a></li>
+</ul>
+<h4 id="oracle-database">Oracle Database</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> MVCC con segmentos de deshacer desde antes de que se llamara así: la lectura consistente reconstruye la versión que existía al empezar la sentencia. Si el segmento ya se reutilizó, la consulta falla con el célebre ORA-01555, «snapshot too old».</li>
+<li><strong>Por qué sí:</strong> Es la implementación más madura y probada del modelo, con décadas de carga real encima.</li>
+<li><strong>Por qué no:</strong> Ese ORA-01555 es exactamente el mismo problema que la hinchazón de PostgreSQL, resuelto al revés: en vez de que la tabla crezca, la consulta larga muere. Hay que dimensionar el espacio de deshacer, y eso es trabajo de administración.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> WiredTiger usa control de concurrencia optimista con versiones a nivel de documento: dos escrituras sobre el <strong>mismo</strong> documento entran en conflicto y una se reintenta, mientras que sobre documentos distintos no se estorban.</li>
+<li><strong>Por qué sí:</strong> El conflicto es por documento, no por página ni por tabla: la granularidad más fina posible en su modelo.</li>
+<li><strong>Por qué no:</strong> Un documento «caliente» —un contador global, un agregado muy actualizado— se convierte en el punto de contención, y la solución no es configurar nada, es rediseñar el modelo para repartirlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/faq/concurrency/">https://www.mongodb.com/docs/manual/faq/concurrency/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay control de concurrencia: no hay bloqueos ni versiones que un lector deba respetar. La última escritura gana según su marca de tiempo, y si dos llegan con la misma, gana la mayor por valor. No es una variante de MVCC: es renunciar al problema.</td>
+<td>Transacciones ligeras (<code>IF NOT EXISTS</code>, <code>IF condicion</code>) cuando de verdad hace falta comparar antes de escribir, sabiendo que cuestan un acuerdo entre réplicas y varias veces más que una escritura normal.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

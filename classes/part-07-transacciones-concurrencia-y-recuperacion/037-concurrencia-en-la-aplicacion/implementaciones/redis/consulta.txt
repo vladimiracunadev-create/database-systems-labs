@@ -1,0 +1,20 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/interact/transactions/
+# nota: el script Lua comprueba y escribe sin que nada se cuele en medio, y
+#       devuelve 1 o 0 segun haya ganado o perdido. La alternativa es
+#       WATCH cuenta:1 / MULTI / ... / EXEC, que aborta si la clave cambio: es
+#       bloqueo optimista integrado en el protocolo, a cambio de rehacer el
+#       ciclo entero en el cliente cuando falla.
+
+# === preparacion ===
+FLUSHDB
+HSET cuenta:1 saldo 100 version 1
+
+# Cliente A: leyo la version 1. Gana.
+EVAL "if redis.call('HGET',KEYS[1],'version')==ARGV[1] then redis.call('HINCRBY',KEYS[1],'saldo',-30) redis.call('HINCRBY',KEYS[1],'version',1) return 1 end return 0" 1 cuenta:1 1
+
+# Cliente B: leyo la MISMA version 1. Pierde, y se entera: devuelve 0.
+EVAL "if redis.call('HGET',KEYS[1],'version')==ARGV[1] then redis.call('HINCRBY',KEYS[1],'saldo',-50) redis.call('HINCRBY',KEYS[1],'version',1) return 1 end return 0" 1 cuenta:1 1
+
+# === consulta ===
+EVAL "return {'cuenta-1|'..redis.call('HGET',KEYS[1],'saldo')..'|'..redis.call('HGET',KEYS[1],'version')}" 1 cuenta:1
