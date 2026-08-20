@@ -23,7 +23,7 @@ el validador deja de ser el único componente sin pruebas.
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.
-- **Pruebas** (`tests/`): 112 pruebas que ejecutan los laboratorios, comprueban
+- **Pruebas** (`tests/`): 127 pruebas que ejecutan los laboratorios, comprueban
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo `--check`, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
@@ -33,7 +33,7 @@ el validador deja de ser el único componente sin pruebas.
 - `requirements-dev.txt` y `pytest.ini` para el entorno de desarrollo.
 - Trabajo `pruebas` en integración continua, y los tres laboratorios nuevos en
   la matriz de Python 3.11, 3.12 y 3.13.
-- **Sitio como producto**: barra de navegación y pie comunes a las 115 páginas,
+- **Sitio como producto**: barra de navegación y pie comunes a las 120 páginas,
   tema claro y oscuro con conmutador que recuerda la elección, progreso de
   lectura por clase guardado en el navegador, filtro «solo pendientes»,
   anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
@@ -97,6 +97,25 @@ el validador deja de ser el único componente sin pruebas.
   este repositorio no publica un número que no pueda comprobar.
 - `scripts/generar_certificaciones.py` calcula la cobertura y genera las fichas, con `--check`
   en integración continua como el resto de los generadores.
+- **Evaluación como datos**: la rúbrica del proyecto final pasa a `curriculum.yaml` con diez
+  dimensiones, sus **cuatro niveles descritos**, el mínimo exigido por dimensión, la evidencia
+  que hay que ver y las clases y laboratorios donde se aprende. Se genera con
+  `scripts/generar_evaluacion.py`, así que no puede contradecir al programa.
+- **Examen final por rol** (`assessments/examen-por-rol.md`): teoría, práctica y defensa para
+  cada una de las siete rutas, con sus laboratorios y clases clave, generado desde el currículo.
+- **Diagnóstico inicial con clave de corrección**: qué menciona una respuesta sólida, qué es
+  señal de alarma, y a qué parte o ruta te encamina cada resultado.
+- **[Evidencias de laboratorio](assessments/evidencias.md)**: qué cuenta como evidencia
+  —hipótesis previa, comando, entorno, salida completa y **límite declarado**—, con plantilla,
+  la afirmación que debe sostener cada uno de los ocho laboratorios y el criterio de corrección.
+- **Proyectos**: el proyecto final pasa de nueve viñetas a nueve fases con su entregable y su
+  dimensión de rúbrica, las siete preguntas de la defensa, la estructura de entrega y la lista
+  de comprobación previa. Los cinco dominios canónicos declaran ahora su invariante, su patrón
+  de acceso, su dato sensible y **la forma concreta en que cada uno rompe**.
+- **[Portafolio verificable](projects/portafolio.md)**: cómo convertir la evidencia acumulada en
+  algo que se enseñe, qué llevar a una entrevista según el puesto y qué **no** es un portafolio.
+- Seis páginas más en el sitio: cómo se evalúa, rúbrica, examen por rol, evidencias, proyectos y
+  portafolio.
 
 ### Cambiado
 
@@ -105,7 +124,7 @@ el validador deja de ser el único componente sin pruebas.
   buscar fuentes huérfanas.
 - `labs/README.md` declara qué mide cada laboratorio y por qué ninguno afirma
   nada en milisegundos.
-- `scripts/generate_site.py` pasa de 82 a 115 páginas y admite artefactos
+- `scripts/generate_site.py` pasa de 82 a 120 páginas y admite artefactos
   binarios, con `--check` byte a byte también para los iconos.
 - Los README de clase pierden la tabla de metadatos y las cifras del README raíz dejan de
   duplicar las insignias; la ficha de clase pasa a una línea corrida.

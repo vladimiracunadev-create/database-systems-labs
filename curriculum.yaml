@@ -34,6 +34,191 @@ evaluacion:
     aprobación exige ademas evidencia de restauración probada, control de
     acceso y pruebas.
 
+  # Escala común de la rúbrica. Cuatro niveles, y el 3 es el listón de lo
+  # aceptable en un sistema real: por debajo, el trabajo no se puede defender.
+  escala:
+    1: Inicial
+    2: Funcional
+    3: Sólido
+    4: Profesional
+
+  # Rúbrica analítica del proyecto final. Cada dimensión describe sus cuatro
+  # niveles para que dos correctores lleguen al mismo número sin hablar entre
+  # ellos, y declara qué evidencia del repositorio la sostiene.
+  dimensiones:
+    - id: requisitos
+      nombre: Requisitos e invariantes
+      peso: 10
+      minimo: 2
+      pregunta: ¿Se sabe qué tiene que ser siempre verdad en este sistema?
+      evidencia: Lista de invariantes con la prueba que los comprueba.
+      niveles:
+        1: Requisitos narrados, sin invariantes explícitos.
+        2: Invariantes declarados, pero ninguno comprobado por código.
+        3: Invariantes declarados, priorizados y comprobados al menos por una prueba.
+        4: Invariantes medibles y trazables hasta la consulta o restricción que los sostiene.
+      clases: ["005", "013"]
+
+    - id: modelado
+      nombre: Modelado
+      peso: 12
+      minimo: 3
+      pregunta: ¿El modelo responde a los patrones de acceso declarados?
+      evidencia: Modelo conceptual, lógico y físico, con los patrones de acceso al lado.
+      niveles:
+        1: Tablas dibujadas sin patrones de acceso.
+        2: Modelo correcto pero desconectado de las consultas que tendrá que servir.
+        3: Modelo coherente con los accesos, con normalización justificada.
+        4: Coherente en los tres niveles, con la desnormalización deliberada y su costo declarado.
+      clases: ["006", "008", "009"]
+
+    - id: consultas
+      nombre: Consultas y contratos
+      peso: 8
+      minimo: 3
+      pregunta: ¿Las consultas son correctas también en los límites?
+      evidencia: Consultas con sus casos de borde probados (nulos, vacíos, duplicados).
+      niveles:
+        1: Consultas que funcionan con el caso feliz.
+        2: Consultas correctas, sin parametrizar o sin probar límites.
+        3: Consultas parametrizadas y probadas con nulos, vacíos y duplicados.
+        4: Además, contrato de esquema versionado y probado ante cambios.
+      clases: ["014", "016", "019", "051"]
+
+    - id: transacciones
+      nombre: Transacciones y concurrencia
+      peso: 10
+      minimo: 3
+      pregunta: ¿Qué pasa cuando dos procesos hacen lo mismo a la vez?
+      evidencia: Una anomalía reproducida y su corrección, con la traza de ambas.
+      niveles:
+        1: Se menciona que hay transacciones.
+        2: Se usan transacciones sin declarar nivel de aislamiento ni anomalías.
+        3: Una anomalía reproducida y corregida, con el mecanismo explicado.
+        4: Anomalías reproducidas, corregidas y protegidas por una prueba automática.
+      laboratorios: ["03"]
+      clases: ["034", "037"]
+
+    - id: rendimiento
+      nombre: Rendimiento y planes
+      peso: 10
+      minimo: 2
+      pregunta: ¿La conclusión de rendimiento se puede repetir?
+      evidencia: Plan de ejecución antes y después, con protocolo y límites declarados.
+      niveles:
+        1: Afirmaciones de rendimiento sin medición.
+        2: Medición sin protocolo ni repeticiones.
+        3: Protocolo reproducible, plan de ejecución leído y conclusión acotada a la carga.
+        4: Además, costo de escritura del índice medido y decisión justificada con números.
+      laboratorios: ["04"]
+      clases: ["042"]
+
+    - id: distribucion
+      nombre: Distribución y consistencia
+      peso: 8
+      minimo: 2
+      pregunta: ¿Qué garantía pierde el usuario cuando algo falla?
+      evidencia: Modelo de consistencia declarado y una lectura obsoleta observada.
+      niveles:
+        1: Se dice "eventualmente consistente" sin definir nada.
+        2: Se declara el modelo de consistencia, sin observar su efecto.
+        3: Se observa el efecto de la réplica en una lectura y se declara la garantía de sesión.
+        4: Además, se mide el retraso y se elige la corrección con su costo.
+      laboratorios: ["07"]
+      clases: ["045", "046"]
+
+    - id: seguridad
+      nombre: Seguridad y privacidad
+      peso: 12
+      minimo: 3
+      pregunta: ¿Quién accede a qué, y qué pasa con el dato personal?
+      evidencia: Roles con privilegio mínimo probados y política de retención implementada.
+      niveles:
+        1: Un usuario administrador para todo.
+        2: Roles separados, sin prueba de que restringen.
+        3: Privilegio mínimo demostrado con una consulta que falla como debe, y datos sintéticos.
+        4: Además, retención implementada, minimización declarada y secretos fuera del repositorio.
+      clases: ["050", "051", "053"]
+
+    - id: recuperacion
+      nombre: Respaldo y recuperación
+      peso: 12
+      minimo: 3
+      pregunta: ¿Cuánto dato se puede perder y cuánto cuesta volver?
+      evidencia: Una restauración ejecutada, cronometrada y verificada contra el original.
+      niveles:
+        1: Existe un respaldo.
+        2: El respaldo se automatiza, pero nunca se ha restaurado.
+        3: Restauración ejecutada y verificada, con RPO y RTO declarados.
+        4: Además, restauración a un punto en el tiempo y prueba de que el archivo está íntegro.
+      laboratorios: ["08"]
+      clases: ["048", "036"]
+
+    - id: operacion
+      nombre: Operación y observabilidad
+      peso: 8
+      minimo: 2
+      pregunta: ¿Cómo se sabe que el sistema está sano antes de que alguien se queje?
+      evidencia: Objetivo de servicio, métricas que lo vigilan y un runbook.
+      niveles:
+        1: No hay métricas.
+        2: Métricas del sistema sin objetivo declarado.
+        3: Objetivo de servicio con las métricas que lo miden y una alerta accionable.
+        4: Además, capacidad proyectada y runbook probado por otra persona.
+      clases: ["052"]
+
+    - id: decisiones
+      nombre: Decisiones y comunicación
+      peso: 10
+      minimo: 3
+      pregunta: ¿Puede otra persona revisar la decisión dentro de dos años?
+      evidencia: ADR con contexto, alternativas, consecuencias y criterio de revisión.
+      niveles:
+        1: La decisión está en la cabeza de quien la tomó.
+        2: Decisión documentada sin alternativas ni consecuencias.
+        3: ADR completo, con alternativas descartadas y su porqué.
+        4: Además, costo total estimado, criterio de revisión y plan de vuelta atrás.
+      clases: ["063", "064"]
+
+  # Lo que suspende sin importar la nota: no son errores, son incumplimientos
+  # del contrato del programa.
+  faltas_criticas:
+    - Datos personales reales sin autorización, en cualquier parte de la entrega.
+    - Credenciales, tokens o cadenas de conexión en el repositorio.
+    - Medición de rendimiento inventada o imposible de repetir.
+    - Respaldo que nunca se restauró.
+    - Pérdida de un invariante en el caso concurrente obligatorio.
+    - "Conclusión que el trabajo no sostiene: afirmar más de lo que se midió."
+
+  # El examen final de cada ruta. Misma estructura para las siete; cambia el
+  # contenido, que sale de las partes y los laboratorios de la propia ruta.
+  examen:
+    bloques:
+      - id: teoria
+        nombre: Teoría
+        puntos: 25
+        formato: >-
+          Responder por escrito seis preguntas del banco de autoevaluación,
+          elegidas entre las partes de la ruta. Se corrige con la dimensión de
+          decisiones y comunicación: explicar el mecanismo, no repetir la
+          definición.
+      - id: practica
+        nombre: Práctica
+        puntos: 50
+        minimo: 30
+        formato: >-
+          Ejecutar los laboratorios de la ruta, extender uno de ellos con un
+          caso propio y entregar la evidencia: comando, salida completa,
+          entorno y explicación de por qué el resultado es el que es.
+      - id: informe
+        nombre: Informe y defensa
+        puntos: 25
+        formato: >-
+          Un documento breve —decisión, evidencia y límites— defendido en
+          quince minutos ante alguien que pregunte. Se corrige con la rúbrica
+          del proyecto final.
+    aprobacion: 70
+
 # Rutas por rol. Cada una declara su recorrido por partes, las clases que no
 # se pueden saltar, los laboratorios que la sostienen, los cargos a los que
 # apunta y las fuentes de las que salen sus afirmaciones de oficio y de

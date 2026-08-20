@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Qué cuenta como evidencia, con plantilla y criterio de corrección.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/docs/evidencias.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Evidencias de laboratorio · Database Systems Labs">
+<meta property="og:description" content="Qué cuenta como evidencia, con plantilla y criterio de corrección.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/docs/evidencias.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<title>Evidencias de laboratorio · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../rutas/index.html">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html" aria-current="page">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Documentación</a><span aria-hidden="true">/</span>
+  <span>Evidencias de laboratorio</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="evidencias-de-laboratorio">Evidencias de laboratorio</h1>
+<p>Las evidencias de laboratorio son el <strong>40 %</strong> de la nota: el bloque más pesado del programa.
+No porque ejecutar sea difícil —ocho comandos y ya está—, sino porque lo que se evalúa es lo
+que rodea a la ejecución.</p>
+<blockquote>
+<p>Una captura sin comando no es evidencia: no se puede repetir.</p>
+</blockquote>
+<h2 id="qué-cuenta-como-evidencia">Qué cuenta como evidencia</h2>
+<p>Cinco piezas por cada laboratorio. Faltar una baja el nivel; faltar la quinta lo baja mucho.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Qué es</th>
+<th>Por qué se pide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hipótesis</strong></td>
+<td>Qué esperabas, escrito antes de ejecutar</td>
+<td>Sin predicción, ejecutar es un trámite y no se aprende nada</td>
+</tr>
+<tr>
+<td><strong>Comando</strong></td>
+<td>Lo que ejecutaste, literal, con su ruta</td>
+<td>Es lo que permite repetirlo</td>
+</tr>
+<tr>
+<td><strong>Entorno</strong></td>
+<td>Versión del motor, del sistema y de Python</td>
+<td>Sin esto, un número no significa nada</td>
+</tr>
+<tr>
+<td><strong>Salida</strong></td>
+<td>Completa, sin recortar lo que no encaja</td>
+<td>La parte recortada suele ser la interesante</td>
+</tr>
+<tr>
+<td><strong>Explicación y límite</strong></td>
+<td>Por qué salió eso, y qué <strong>no</strong> demuestra</td>
+<td>Es donde se ve quién entendió el mecanismo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="plantilla">Plantilla</h2>
+<pre><code class="language-markdown"># Evidencia — Laboratorio 04 (índices y planes)
+
+## Hipótesis
+Espero que la consulta por (course_id, student_id) pase de recorrer la tabla a
+buscar por índice, y que insertar 5000 filas cueste más con dos índices.
+
+## Entorno
+Python 3.12.3 · SQLite 3.45.1 · Windows 11 · commit a1b2c3d
+
+## Comando
+python labs/04-indexing/run_indexing_lab.py
+
+## Salida
+(la salida completa, tal cual)
+
+## Explicación
+El plan pasa de SCAN a SEARCH porque el índice cubre las dos columnas del filtro...
+El trabajo baja de 60 810 a 20 pasos porque...
+
+## Qué NO demuestra
+No mide latencia real ni concurrencia; el planificador de SQLite es más simple
+que el de PostgreSQL, así que la forma se transfiere pero los costes no.
+</code></pre>
+<h2 id="qué-se-espera-de-cada-laboratorio">Qué se espera de cada laboratorio</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Laboratorio</th>
+<th>La afirmación que tu evidencia debe sostener</th>
+<th>Lo que casi nadie declara</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md">01 SQL foundations</a></td>
+<td>Predijiste el resultado de las tres consultas antes de ejecutar</td>
+<td>Que el promedio con <code>NULL</code> no es el promedio con cero</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md">02 Polyglot modeling</a></td>
+<td>Los tres modelos con lo que gana y pierde cada uno</td>
+<td>Bajo qué carga cambiarías de opinión</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md">03 Transactions</a></td>
+<td>Reprodujiste la actualización perdida y la corregiste</td>
+<td>Qué corrección elegirías en tu sistema y por qué</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md">04 Indexing</a></td>
+<td>El plan cambió y la escritura se encareció</td>
+<td>Que el skip-scan depende de las estadísticas y de la versión</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md">05 NoSQL workloads</a></td>
+<td>La conclusión se invierte al cambiar la carga</td>
+<td>Que los números modelan, no miden un motor real</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md">06 Vector search</a></td>
+<td>Calculaste <code>recall@k</code> y sabes qué cambia con <code>k</code></td>
+<td>Que sin declarar <code>k</code> la métrica no significa nada</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md">07 Replication</a></td>
+<td>Contaste las lecturas que no ven la escritura propia</td>
+<td>Qué cuesta cada corrección: carga, latencia o peticiones</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md">08 Recovery</a></td>
+<td>Restauraste y verificaste el contenido</td>
+<td>Tu RPO y tu RTO, en números, no en adjetivos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="cómo-se-puntúa">Cómo se puntúa</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Qué se observa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 · Inicial</td>
+<td>Está la salida, sin comando ni entorno</td>
+</tr>
+<tr>
+<td>2 · Funcional</td>
+<td>Comando, entorno y salida; la explicación repite lo que se ve</td>
+</tr>
+<tr>
+<td>3 · Sólido</td>
+<td>La explicación cuenta el mecanismo y hay una hipótesis previa</td>
+</tr>
+<tr>
+<td>4 · Profesional</td>
+<td>Además, el límite está declarado y hay una extensión propia ejecutada</td>
+</tr>
+</tbody>
+</table></div>
+<p>El salto de 3 a 4 es barato en tiempo y caro en honestidad: exige decir qué no probaste.</p>
+<h2 id="errores-que-hacen-perder-la-evidencia">Errores que hacen perder la evidencia</h2>
+<ul>
+<li><strong>Recortar la salida</strong> para que se lea mejor. Si sobra, se explica; no se borra.</li>
+<li><strong>Ejecutar y después escribir la hipótesis.</strong> Se nota siempre: la predicción coincide
+  demasiado.</li>
+<li><strong>Copiar la explicación de la guía del laboratorio.</strong> La guía dice qué pasa; tu evidencia
+  tiene que decir por qué pasó <strong>en tu ejecución</strong>.</li>
+<li><strong>Medir tiempos y presentarlos como conclusión.</strong> Ningún laboratorio de este programa afirma
+  nada en milisegundos, y tu evidencia tampoco debería.</li>
+<li><strong>Guardar credenciales o datos reales</strong> en la evidencia. Es una
+  <a href="rubrica.html#faltas-críticas">falta crítica</a>.</li>
+</ul>
+<h2 id="dónde-guardarla">Dónde guardarla</h2>
+<p>En tu propio repositorio, con una carpeta por laboratorio y el formato de la plantilla. Al
+terminar el programa, esa carpeta <strong>es</strong> tu portafolio: ocho experimentos con hipótesis,
+resultado y límite. Vale más en una entrevista que cualquier certificado, y se explica en
+<a href="portafolio.html"><code>projects/portafolio.md</code></a>.</p>
+<p class="fuente-meta">Fuente de esta página:
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/assessments/evidencias.md" rel="noopener"><code>assessments/evidencias.md</code></a></p>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

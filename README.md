@@ -24,7 +24,7 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 [![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
 [![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
-[![Pruebas](https://img.shields.io/badge/pruebas-112%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Pruebas](https://img.shields.io/badge/pruebas-127%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
@@ -203,7 +203,7 @@ versionado. **Nunca deben copiarse a otro entorno.**
 ## El sitio
 
 [**vladimiracunadev-create.github.io/database-systems-labs**](https://vladimiracunadev-create.github.io/database-systems-labs/)
-— 115 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
+— 120 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
 
 | | |
 |---|---|
@@ -250,10 +250,38 @@ edita en el `lesson.md` de cada clase.
 python scripts/build_classes.py          # regenera los README de clase
 python scripts/generate_site.py          # regenera el sitio, los iconos y el sitemap
 python scripts/generar_certificaciones.py  # recalcula la cobertura de cada certificación
+python scripts/generar_evaluacion.py       # regenera la rúbrica y el examen por rol
 python scripts/brand_assets.py           # solo la marca gráfica (iconos y portada social)
 python scripts/check_external_links.py   # comprueba las 120 fuentes
-python -m pytest                         # 112 pruebas: laboratorios, generadores, validador, sitio, rutas y certificaciones
+python -m pytest                         # 127 pruebas: laboratorios, generadores, validador, sitio, rutas, certificaciones y evaluación
 ```
+
+## Evaluación y proyecto final
+
+El programa no evalúa memoria. La regla es la misma que aparece en cada clase: **un resultado
+correcto sin explicación no demuestra transferencia**. De ahí que el 40 % de la nota sean
+evidencias de laboratorio —hipótesis previa, comando, entorno, salida y **límite declarado**— y
+que la rúbrica esté escrita para que la aplique alguien que no conoce el programa.
+
+| Pieza | Peso | Qué evalúa |
+|---|---:|---|
+| [Diagnóstico inicial](assessments/diagnostic.md) | 0 % | Por dónde empezar, con clave de corrección y encaminamiento |
+| [Evidencias de laboratorio](assessments/evidencias.md) | 40 % | Que ejecutaste, entendiste y declaraste qué **no** demuestra |
+| Retos de transferencia | 20 % | Que lo aplicaste a tu propio contexto |
+| [Decisiones de arquitectura](projects/capstone.md) | 15 % | Que puedes justificar y revertir una elección |
+| [Proyecto final](projects/capstone.md) | 25 % | Todo junto, defendido ante preguntas |
+
+La [rúbrica](assessments/rubric.md) —diez dimensiones, cuatro niveles descritos en cada una,
+mínimos por dimensión y seis faltas críticas— y el [examen final por rol](assessments/examen-por-rol.md)
+se **generan desde `curriculum.yaml`**: no pueden contradecir al programa, y si una clase cambia
+de laboratorio o una parte cambia de horas, la evaluación cambia con ella o la integración
+continua falla.
+
+Los [proyectos](projects/README.md) se construyen sobre cinco
+[dominios canónicos](projects/canonical-domains.md), cada uno elegido por la forma concreta en
+que rompe: la reserva concurrente del último artículo, el asiento que no puede duplicarse al
+reintentar, el feed que no escala, el fragmento que no debía recuperarse. Al terminar, la
+evidencia acumulada es un [portafolio verificable](projects/portafolio.md).
 
 ## Alcance de la cobertura de motores
 

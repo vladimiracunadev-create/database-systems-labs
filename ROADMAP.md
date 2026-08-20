@@ -54,11 +54,18 @@ Hecho:
 
 Pendiente:
 
+- rúbrica del proyecto final aplicable por una tercera persona: diez dimensiones
+  con sus cuatro niveles descritos, mínimos por dimensión y faltas críticas,
+  generada desde el currículo;
+- examen final por rol y criterio de evidencia de laboratorio, también generados.
+
+Pendiente:
+
 - cuestionario interactivo con corrección orientativa en el cliente, sin
   servidor y sin convertir preguntas de explicación en preguntas de opción
   múltiple, que sería empobrecerlas;
-- rúbrica del proyecto final aplicable por una tercera persona sin conocer el
-  programa.
+- ejemplos de entrega corregidos —un trabajo de nivel 2 y otro de nivel 4 sobre
+  el mismo dominio— para calibrar a quien corrige.
 
 ## 2.3 — Material descargable
 

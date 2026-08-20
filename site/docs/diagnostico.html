@@ -52,28 +52,131 @@
 </nav>
 <main class="content" id="principal">
 <h1 id="diagnóstico-inicial">Diagnóstico inicial</h1>
-<p>No tiene calificación. Responde con explicación y marca dónde tienes dudas.</p>
+<p><strong>No tiene calificación y no sirve para juzgarte: sirve para elegir por dónde entrar.</strong> Un
+programa de 210 horas empezado en el punto equivocado se abandona; empezado en el correcto, se
+termina.</p>
+<p>Respóndelo <strong>sin buscar nada</strong> y por escrito. Si una respuesta te sale en dos líneas, está
+bien; si te sale «depende», escribe de qué depende, que es la respuesta que importa.</p>
+<h2 id="parte-1--diez-preguntas">Parte 1 — Diez preguntas</h2>
+<p>Para cada una: responde, y marca si has dudado.</p>
 <ol>
-<li>¿Qué diferencia existe entre una base de datos y un DBMS?</li>
-<li>¿Qué protege una clave foránea?</li>
-<li>¿Por qué <code>NULL = NULL</code> no funciona como una igualdad ordinaria en SQL?</li>
-<li>¿Qué problema resuelve una transacción?</li>
-<li>¿Cuándo un índice puede empeorar el sistema?</li>
-<li>¿Qué diferencia hay entre respaldo y réplica?</li>
-<li>¿Qué significa que una consulta sea idempotente?</li>
-<li>¿Dónde se valida el esquema en una base documental?</li>
-<li>¿Qué es una partición de red?</li>
-<li>¿Qué mide <code>recall@k</code> en recuperación?</li>
+<li>¿Qué diferencia hay entre una base de datos y un gestor de bases de datos?</li>
+<li>¿Qué protege una clave foránea, y qué <strong>no</strong> protege?</li>
+<li>¿Por qué <code>NULL = NULL</code> no se comporta como una igualdad ordinaria en SQL?</li>
+<li>¿Qué problema resuelve una transacción que no resolvería escribir con cuidado?</li>
+<li>¿Cuándo un índice empeora el sistema?</li>
+<li>¿Qué diferencia hay entre un respaldo y una réplica?</li>
+<li>¿Qué significa que una operación sea idempotente, y por qué importa al reintentar?</li>
+<li>En una base documental, ¿dónde se valida el esquema?</li>
+<li>¿Qué es una partición de red y por qué obliga a elegir?</li>
+<li>¿Qué mide <code>recall@k</code> en un sistema de recuperación?</li>
 </ol>
-<h2 id="práctica">Práctica</h2>
-<p>Diseña tres tablas para estudiantes, cursos y matrículas. Escribe una consulta que liste estudiantes por curso y explica cómo impedir duplicados.</p>
-<h2 id="uso-del-resultado">Uso del resultado</h2>
-<ul>
-<li>0–3 respuestas sólidas: comenzar en módulo 00;</li>
-<li>4–6: comenzar en módulo 01 y realizar refuerzo SQL;</li>
-<li>7–8: prueba de transferencia de módulos 01–03;</li>
-<li>9–10: iniciar ruta avanzada, sin omitir seguridad y restauración.</li>
-</ul>
+<h3 id="clave-de-corrección">Clave de corrección</h3>
+<p>No hay respuestas «correctas» de una palabra. Esto es lo que distingue una respuesta sólida:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Una respuesta sólida menciona</th>
+<th>Señal de alarma</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Que el gestor aporta concurrencia, integridad, recuperación e independencia de datos</td>
+<td>«Es lo mismo»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Que garantiza que la referencia existe, pero no que el dato sea correcto</td>
+<td>«Que no se borren datos»</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Que <code>NULL</code> es «desconocido» y la comparación devuelve desconocido, no falso</td>
+<td>«Es un cero» o «es vacío»</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Atomicidad y aislamiento frente a fallo y frente a concurrencia</td>
+<td>«Para poder deshacer»</td>
+</tr>
+<tr>
+<td>5</td>
+<td>El costo en cada escritura y el espacio; que un índice no usado solo cuesta</td>
+<td>«Nunca empeora»</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Que la réplica copia también el error, y el respaldo permite volver atrás en el tiempo</td>
+<td>«Son lo mismo con otro nombre»</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Que repetirla deja el mismo estado, y que sin eso los reintentos duplican</td>
+<td>Confundirla con «sin efectos»</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Que se valida en la aplicación salvo que se declare validación en el motor</td>
+<td>«No hay esquema»</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Que los nodos siguen vivos pero incomunicados, y hay que elegir qué sacrificar</td>
+<td>«Que se cae la base»</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Qué proporción de lo relevante aparece entre los <code>k</code> primeros, y que sin <code>k</code> no significa nada</td>
+<td>Confundirlo con precisión</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="parte-2--una-práctica-de-quince-minutos">Parte 2 — Una práctica de quince minutos</h2>
+<p>Diseña tres tablas para estudiantes, cursos y matrículas. Después:</p>
+<ol>
+<li>Escribe la consulta que lista los estudiantes de cada curso.</li>
+<li>Explica <strong>con qué restricción</strong> impides que un estudiante se matricule dos veces en el mismo
+   curso, y por qué esa restricción va en el motor y no en la aplicación.</li>
+<li>Di qué devuelve tu consulta para un curso sin estudiantes, y si eso es lo que quieres.</li>
+</ol>
+<p>La tercera pregunta es la que más información da sobre tu nivel real.</p>
+<h2 id="cómo-usar-el-resultado">Cómo usar el resultado</h2>
+<p>Cuenta las respuestas que has escrito <strong>sin dudar</strong> y que mencionan lo que pide la clave:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Respuestas sólidas</th>
+<th>Por dónde empezar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–3</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md">Parte 00</a> completa, sin saltarte nada. Es el cimiento y se nota en todo lo demás.</td>
+</tr>
+<tr>
+<td>4–6</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md">Parte 00</a> en lectura rápida y <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/README.md">Parte 01</a> completa; refuerza <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/README.md">SQL</a> con el <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md">laboratorio 01</a>.</td>
+</tr>
+<tr>
+<td>7–8</td>
+<td>Empieza por la <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/README.md">Parte 03</a> y haz los <a href="laboratorios-guia.html">laboratorios 03 y 04</a> pronto: ahí suele estar la brecha de quien ya escribe SQL.</td>
+</tr>
+<tr>
+<td>9–10</td>
+<td>Elige tu <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/README.md">ruta por rol</a> y ve a las partes avanzadas, <strong>sin saltarte</strong> transacciones, seguridad ni recuperación. Son las que más gente da por sabidas.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Si has fallado la 6 o la 7 —respaldo frente a réplica, idempotencia—, no importa cuánto sepas
+de SQL: empieza por las Partes 07 y 10. Son los dos errores que más caros salen en producción.</p>
+<h2 id="y-después">Y después</h2>
+<p>El diagnóstico no se repite al final. Lo que cierra el programa es el
+<a href="examen-por-rol.html">examen por rol</a> y el
+<a href="proyecto-final.html">proyecto final</a>, evaluados con la <a href="rubrica.html">rúbrica</a>.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/assessments/diagnostic.md" rel="noopener"><code>assessments/diagnostic.md</code></a></p>
 </main>

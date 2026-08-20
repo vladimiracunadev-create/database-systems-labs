@@ -51,32 +51,198 @@
   <span>Proyecto final</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="proyecto-final--plataforma-de-datos-defendible">Proyecto final — Plataforma de datos defendible</h1>
-<h2 id="encargo">Encargo</h2>
-<p>Selecciona un dominio canónico y diseña su plataforma de datos para una primera versión y una evolución a tres años.</p>
-<h2 id="fases">Fases</h2>
-<ol>
-<li>Descubrimiento de requisitos y amenazas.</li>
-<li>Modelo conceptual y patrones de acceso.</li>
-<li>Alternativa simple con un solo motor.</li>
-<li>Prototipo ejecutable y pruebas de invariantes.</li>
-<li>Prueba de concurrencia y rendimiento.</li>
-<li>Respaldo, destrucción controlada y restauración.</li>
-<li>Evolución: decidir si se justifica persistencia políglota.</li>
-<li>Observabilidad, capacidad y costos.</li>
-<li>ADR final y defensa de 20 minutos.</li>
-</ol>
+<h1 id="proyecto-final--una-plataforma-de-datos-que-puedas-defender">Proyecto final — una plataforma de datos que puedas defender</h1>
+<blockquote>
+<p>El encargo no es construir algo que funcione. Es construir algo que puedas <strong>defender ante
+alguien que pregunte</strong>, con la medición delante y los límites declarados.</p>
+</blockquote>
+<p><strong>Duración estimada:</strong> 25–40 horas · <strong>Peso:</strong> 25 % de la nota ·
+<strong>Se corrige con:</strong> <a href="rubrica.html">la rúbrica</a> ·
+<strong>Cierra:</strong> las siete <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/README.md">rutas por rol</a></p>
+<h2 id="el-encargo">El encargo</h2>
+<p>Elige uno de los <a href="dominios.html">dominios canónicos</a> y diseña su plataforma de datos
+para dos horizontes: <strong>una primera versión que salga a producción</strong> y <strong>una evolución a tres
+años</strong>. Después demuestra, con evidencia, que las decisiones que tomaste eran las correctas
+para la carga que declaraste, y di en qué condiciones dejarían de serlo.</p>
+<p>No se evalúa la ambición del sistema. Un proyecto con un solo motor, bien medido y bien
+defendido, saca mejor nota que uno con cinco motores y ninguna medición.</p>
+<h2 id="las-nueve-fases-y-su-entregable">Las nueve fases y su entregable</h2>
+<p>Cada fase produce algo concreto. Si una fase no deja rastro, no ocurrió.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fase</th>
+<th>Entregable</th>
+<th>Dimensión de la rúbrica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Requisitos, invariantes y amenazas</td>
+<td>Lista de invariantes y de datos sensibles, con su clasificación</td>
+<td>Requisitos · Seguridad</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Modelo conceptual y patrones de acceso</td>
+<td>Modelo y la tabla de consultas que tendrá que servir</td>
+<td>Modelado</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Alternativa más simple</td>
+<td>Diseño con <strong>un solo motor</strong> y por qué bastaría o no</td>
+<td>Decisiones</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Prototipo ejecutable</td>
+<td>Esquema, datos sintéticos y pruebas de invariantes que se ejecutan</td>
+<td>Requisitos · Consultas</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Prueba de concurrencia</td>
+<td>Una anomalía reproducida y corregida, con su traza</td>
+<td>Transacciones</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Prueba de rendimiento</td>
+<td>Plan de ejecución antes y después, con protocolo declarado</td>
+<td>Rendimiento</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Respaldo, destrucción y restauración</td>
+<td>Restauración ejecutada, cronometrada y verificada</td>
+<td>Recuperación</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Operación</td>
+<td>Objetivo de servicio, métricas que lo vigilan y runbook</td>
+<td>Operación</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Decisión y defensa</td>
+<td>ADR final y defensa de veinte minutos</td>
+<td>Decisiones</td>
+</tr>
+</tbody>
+</table></div>
+<p>Las fases 5, 6 y 7 son las que separan este proyecto de un trabajo de clase: son las tres que
+exigen <strong>provocar el problema</strong> en vez de esperar a que aparezca.</p>
 <h2 id="restricciones">Restricciones</h2>
 <ul>
-<li>datos sintéticos;</li>
-<li>ningún secreto en Git;</li>
-<li>no más de tres motores sin justificación excepcional;</li>
-<li>una ruta local reproducible;</li>
-<li>resultados acompañados de entorno y protocolo;</li>
-<li>plan de salida para servicios propietarios.</li>
+<li><strong>Datos sintéticos.</strong> Ningún dato personal real, ni siquiera «anonimizado».</li>
+<li><strong>Sin secretos en el repositorio.</strong> Ni cadenas de conexión, ni tokens, ni volcados.</li>
+<li><strong>No más de tres motores</strong> sin una justificación medida. Cada motor añadido se paga en
+  respaldo, monitorización, actualizaciones y personas que deben saber operarlo.</li>
+<li><strong>Una ruta local reproducible.</strong> Otra persona clona, ejecuta y obtiene lo mismo.</li>
+<li><strong>Toda medición con su protocolo</strong> y su entorno declarado.</li>
+<li><strong>Plan de salida</strong> para cualquier servicio propietario que uses.</li>
 </ul>
 <h2 id="definición-de-terminado">Definición de terminado</h2>
-<p>Otra persona puede clonar, ejecutar, probar, destruir y restaurar el entorno siguiendo la documentación.</p>
+<blockquote>
+<p>Otra persona puede clonar el repositorio, levantar el entorno, ejecutar las pruebas,
+destruir los datos y restaurarlos siguiendo solo tu documentación.</p>
+</blockquote>
+<p>Si algo de esa frase falla, el proyecto no está terminado, por muy bien que funcione en tu
+máquina.</p>
+<h2 id="la-defensa">La defensa</h2>
+<p>Veinte minutos: diez de exposición y diez de preguntas. Quien pregunta no busca que falles,
+busca el borde de lo que sabes. Prepárate para estas, que son las que siempre salen:</p>
+<ol>
+<li><strong>«¿Por qué no lo hiciste con una sola base de datos?»</strong> Si tu respuesta no incluye una
+   medición o una restricción concreta, la arquitectura no está justificada.</li>
+<li><strong>«Enséñame la restauración.»</strong> No la política: la ejecución, con su duración.</li>
+<li><strong>«¿Qué pasa si dos usuarios hacen esto a la vez?»</strong> Debes poder mostrarlo, no describirlo.</li>
+<li><strong>«¿Qué mediste y en qué máquina?»</strong> Un número sin protocolo no se acepta.</li>
+<li><strong>«¿Qué se rompe cuando esto crezca diez veces?»</strong> La respuesta correcta suele ser un
+   componente concreto, no «escalamos horizontalmente».</li>
+<li><strong>«¿Qué harías distinto si empezaras hoy?»</strong> Es la pregunta que distingue el nivel 3 del 4.</li>
+<li><strong>«¿Qué </strong>no<strong> demuestra tu trabajo?»</strong> Si no tienes respuesta preparada, no terminaste.</li>
+</ol>
+<h2 id="estructura-de-entrega-sugerida">Estructura de entrega sugerida</h2>
+<pre><code class="language-text">mi-proyecto/
+  README.md                 qué es, cómo se levanta, cómo se prueba
+  docs/
+    01-requisitos.md        invariantes, patrones de acceso, clasificación de datos
+    02-modelo.md            conceptual, lógico y físico
+    03-alternativa-simple.md   el diseño de un solo motor y por qué se descartó (o no)
+    adr/
+      0001-eleccion-motor.md
+      0002-modelo-de-consistencia.md
+  esquema/                  DDL versionado y migraciones reversibles
+  datos/                    generador de datos sintéticos (determinista)
+  pruebas/
+    invariantes.py          las reglas que siempre deben cumplirse
+    concurrencia.py         la anomalía reproducida y su corrección
+    rendimiento.md          protocolo, planes y conclusión acotada
+  operacion/
+    respaldo.md             estrategia, y la restauración ejecutada con su tiempo
+    slo.md                  objetivo de servicio, métricas y alertas
+    runbook.md              qué hacer cuando suena la alerta
+  defensa.md                el guion de los veinte minutos
+</code></pre>
+<h2 id="variantes-por-rol">Variantes por rol</h2>
+<p>El encargo es el mismo; el peso cambia según tu <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/README.md">ruta</a>. Sin cambiar la
+rúbrica, esto es lo que se espera que <strong>brille</strong> en cada caso:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Ruta</th>
+<th>Lo que tiene que estar impecable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/desarrollo-de-aplicaciones.md">Desarrollador de aplicaciones</a></td>
+<td>Esquema como contrato, concurrencia en la aplicación y migraciones reversibles</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/ingenieria-de-datos.md">Ingeniero de datos</a></td>
+<td>Ingesta idempotente, modelo analítico con su grano y semántica del tiempo</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/fiabilidad-y-operacion.md">DBA / SRE de datos</a></td>
+<td>Restauración cronometrada, planes de ejecución y objetivos de servicio</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/arquitectura.md">Arquitecto de datos</a></td>
+<td>Alternativa simple, ADR con costo total y criterio de revisión</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/analitica-y-bi.md">Analytics engineer / BI</a></td>
+<td>Grano de los hechos, definiciones de métrica y pruebas de datos</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/ia-y-recuperacion.md">IA aplicada y recuperación</a></td>
+<td>Conjunto de evaluación propio, <code>recall@k</code> y filtrado por permisos</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/rutas/gobierno-y-privacidad.md">Gobierno y privacidad</a></td>
+<td>Privilegio mínimo demostrado, retención implementada y trazabilidad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="antes-de-entregar">Antes de entregar</h2>
+<ul>
+<li>[ ] Los invariantes tienen una prueba que los comprueba, no un párrafo que los describe.</li>
+<li>[ ] La anomalía de concurrencia está <strong>reproducida</strong>, no citada.</li>
+<li>[ ] Hay un plan de ejecución antes y después de la decisión de índice.</li>
+<li>[ ] La restauración se ejecutó y está cronometrada; el RPO y el RTO son números.</li>
+<li>[ ] Ningún secreto, ningún dato real, ninguna medición sin protocolo.</li>
+<li>[ ] Cada ADR dice qué alternativa se descartó y qué haría revisarla.</li>
+<li>[ ] Está escrito qué <strong>no</strong> demuestra el trabajo.</li>
+<li>[ ] Otra persona lo levantó siguiendo solo tu documentación. (Que lo intente de verdad.)</li>
+</ul>
+<p>Cuando termines, la evidencia acumulada es tu portafolio: cómo convertirla en algo que se
+enseñe está en <a href="portafolio.html"><code>portafolio.md</code></a>.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/projects/capstone.md" rel="noopener"><code>projects/capstone.md</code></a></p>
 </main>

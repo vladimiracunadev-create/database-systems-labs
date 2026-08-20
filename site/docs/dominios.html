@@ -52,29 +52,139 @@
 </nav>
 <main class="content" id="principal">
 <h1 id="dominios-canónicos">Dominios canónicos</h1>
+<p>Cinco dominios sobre los que se trabaja en todo el programa. No son ejemplos de juguete
+elegidos por comodidad: cada uno está aquí porque <strong>rompe</strong> de una forma distinta, y esas
+formas de romper son justo lo que hay que aprender a ver.</p>
+<p>Elige uno para el <a href="proyecto-final.html">proyecto final</a> y quédate con él. Cambiar de dominio a mitad
+del programa cuesta más de lo que parece, y perderse la evolución de un mismo sistema es
+perderse la parte interesante.</p>
+<h2 id="cómo-elegir">Cómo elegir</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Si te interesa…</th>
+<th>Elige</th>
+<th>Porque su dificultad central es…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>El modelado y la privacidad</td>
+<td>Plataforma educativa</td>
+<td>Datos personales de menores y agregados que no deben reidentificar</td>
+</tr>
+<tr>
+<td>La concurrencia y el dinero</td>
+<td>Comercio electrónico</td>
+<td>Dos personas comprando la última unidad</td>
+</tr>
+<tr>
+<td>La integridad absoluta</td>
+<td>Libro contable</td>
+<td>Ninguna operación puede crear ni destruir valor</td>
+</tr>
+<tr>
+<td>Los grafos y la escala de lectura</td>
+<td>Red social</td>
+<td>Un feed que no se puede calcular en tiempo real ingenuamente</td>
+</tr>
+<tr>
+<td>La recuperación y los permisos</td>
+<td>Memoria para agentes</td>
+<td>Aislar por usuario y borrar de verdad</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
 <h2 id="1-plataforma-educativa-y-psicométrica">1. Plataforma educativa y psicométrica</h2>
-<p>Personas, cursos, instrumentos, aplicaciones, respuestas, puntajes e informes. Requiere privacidad, operación offline eventual, trazabilidad de correcciones y agregados que no reidentifiquen grupos pequeños.</p>
-<h2 id="2-comercio-electrónico">2. Comercio electrónico</h2>
-<p>Catálogo, inventario, precios, carritos, pedidos, pagos y envíos. Permite estudiar reservas concurrentes, búsquedas, eventos, idempotencia y consistencia entre servicios.</p>
-<h2 id="3-libro-contable-y-pagos">3. Libro contable y pagos</h2>
-<p>Cuentas, asientos de doble entrada, transferencias, conciliación y auditoría. Ninguna operación puede crear o destruir valor por un reintento. El saldo es una proyección verificable del libro.</p>
-<h2 id="4-red-social">4. Red social</h2>
-<p>Usuarios, publicaciones, comentarios, reacciones, seguidores, moderación y recomendaciones. Permite comparar joins, documentos, grafos, feeds y búsqueda.</p>
-<h2 id="5-memoria-para-agentes-de-ia">5. Memoria para agentes de IA</h2>
-<p>Fuentes, fragmentos, permisos, embeddings, sesiones, herramientas y trazas. Requiere procedencia, aislamiento por usuario, borrado coherente y evaluación de recuperación.</p>
-<h2 id="contrato-común">Contrato común</h2>
-<p>Cada implementación debe declarar:</p>
+<p>Personas, cursos, instrumentos de evaluación, aplicaciones, respuestas, puntajes e informes.</p>
 <ul>
-<li>invariantes;</li>
-<li>patrones de acceso;</li>
-<li>clasificación de datos;</li>
-<li>escala inicial y crecimiento;</li>
-<li>consistencia y disponibilidad;</li>
-<li>RPO/RTO;</li>
-<li>estrategia de migración;</li>
-<li>métricas y costo;</li>
-<li>alternativa más simple.</li>
+<li><strong>Invariante que no puede romperse:</strong> un puntaje siempre procede de respuestas registradas y
+  de una versión concreta del instrumento; recalcular con otra versión sin decirlo invalida el
+  informe.</li>
+<li><strong>Patrón de acceso dominante:</strong> escritura moderada durante la aplicación, lectura intensa al
+  generar informes por grupo.</li>
+<li><strong>Dato sensible:</strong> respuestas individuales, a menudo de menores. Los agregados por grupos
+  pequeños reidentifican con facilidad.</li>
+<li><strong>Dificultad real:</strong> operar sin conexión durante la aplicación y reconciliar después, sin
+  duplicar ni perder respuestas.</li>
+<li><strong>Dónde se trabaja:</strong> es el dominio del <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md">laboratorio 01</a>
+  y del <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/reference-data/school/DOMAIN.md">conjunto de datos de referencia</a>.</li>
 </ul>
+<h2 id="2-comercio-electrónico">2. Comercio electrónico</h2>
+<p>Catálogo, inventario, precios, carritos, pedidos, pagos y envíos.</p>
+<ul>
+<li><strong>Invariante que no puede romperse:</strong> no se vende más inventario del que existe; un pago
+  confirmado tiene siempre un pedido, y solo uno.</li>
+<li><strong>Patrón de acceso dominante:</strong> lectura masiva del catálogo, escrituras concentradas y
+  concurrentes sobre pocas filas calientes.</li>
+<li><strong>Dato sensible:</strong> direcciones y medios de pago. El número de tarjeta no se guarda: se
+  tokeniza.</li>
+<li><strong>Dificultad real:</strong> la reserva concurrente del último artículo, y los reintentos del cliente
+  de pago, que exigen idempotencia de extremo a extremo.</li>
+<li><strong>Dónde se trabaja:</strong> el <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md">laboratorio 03</a> reproduce
+  exactamente su fallo característico.</li>
+</ul>
+<h2 id="3-libro-contable-y-pagos">3. Libro contable y pagos</h2>
+<p>Cuentas, asientos de doble entrada, transferencias, conciliación y auditoría.</p>
+<ul>
+<li><strong>Invariante que no puede romperse:</strong> la suma de los asientos de cada transacción es cero, y
+  el saldo es una <strong>proyección</strong> del libro, nunca un número que se edita.</li>
+<li><strong>Patrón de acceso dominante:</strong> escritura estrictamente ordenada e inmutable; lectura por
+  rangos de tiempo y por cuenta.</li>
+<li><strong>Dato sensible:</strong> todo. Además, el histórico no se corrige: se compensa con un asiento nuevo.</li>
+<li><strong>Dificultad real:</strong> un reintento no puede crear valor. La idempotencia aquí no es una buena
+  práctica: es la diferencia entre un sistema contable y un fraude accidental.</li>
+<li><strong>Dónde se trabaja:</strong> <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/README.md">transacciones</a>
+  y <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md">recuperación</a>, donde el instante al que restauras decide
+  qué operaciones existieron.</li>
+</ul>
+<h2 id="4-red-social">4. Red social</h2>
+<p>Usuarios, publicaciones, comentarios, reacciones, seguidores, moderación y recomendaciones.</p>
+<ul>
+<li><strong>Invariante que no puede romperse:</strong> lo que un usuario bloquea no le llega; lo que se borra
+  desaparece también de las copias derivadas —feeds, cachés, índices de búsqueda—.</li>
+<li><strong>Patrón de acceso dominante:</strong> lectura muy superior a la escritura, con una distribución
+  brutalmente desigual: unas pocas cuentas concentran la carga.</li>
+<li><strong>Dato sensible:</strong> relaciones sociales y contenido privado; el grafo de seguidores es un dato
+  personal por sí mismo.</li>
+<li><strong>Dificultad real:</strong> el feed. Calcularlo al leer no escala; calcularlo al escribir multiplica
+  el trabajo de las cuentas con millones de seguidores. La respuesta real es híbrida.</li>
+<li><strong>Dónde se trabaja:</strong> <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md">grafos</a>,
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md">claves calientes</a> y
+  <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md">réplica</a>.</li>
+</ul>
+<h2 id="5-memoria-para-agentes-de-inteligencia-artificial">5. Memoria para agentes de inteligencia artificial</h2>
+<p>Fuentes, fragmentos, permisos, embeddings, sesiones, herramientas y trazas.</p>
+<ul>
+<li><strong>Invariante que no puede romperse:</strong> un usuario nunca recupera un fragmento que no tiene
+  permiso de leer, y si el documento original desaparece, sus vectores desaparecen con él.</li>
+<li><strong>Patrón de acceso dominante:</strong> búsqueda por similitud con filtros de permiso, y escritura por
+  lotes al reindexar.</li>
+<li><strong>Dato sensible:</strong> todo lo que la organización haya indexado sin mirar, que suele ser más de
+  lo que cree.</li>
+<li><strong>Dificultad real:</strong> la procedencia. Cuando el sistema responde, hay que poder decir de qué
+  documento salió cada afirmación y con qué versión del índice.</li>
+<li><strong>Dónde se trabaja:</strong> <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-vectores-recuperacion-y-rag/README.md">vectores y RAG</a>
+  y el <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md">laboratorio 06</a>.</li>
+</ul>
+<hr />
+<h2 id="el-contrato-común">El contrato común</h2>
+<p>Elijas el que elijas, la entrega tiene que declarar estas nueve cosas. Son las mismas que te
+preguntará cualquiera que revise una arquitectura de datos:</p>
+<ol>
+<li><strong>Invariantes</strong> — qué tiene que ser siempre verdad, y qué prueba lo comprueba.</li>
+<li><strong>Patrones de acceso</strong> — las consultas reales, con su frecuencia relativa.</li>
+<li><strong>Clasificación de datos</strong> — qué es personal, qué es sensible y qué es público.</li>
+<li><strong>Escala inicial y crecimiento</strong> — volumen hoy y a tres años, con la fuente del número.</li>
+<li><strong>Consistencia y disponibilidad</strong> — qué garantía se ofrece y qué se sacrifica al fallar.</li>
+<li><strong>RPO y RTO</strong> — cuánto dato se puede perder y cuánto se tarda en volver, en números.</li>
+<li><strong>Estrategia de migración</strong> — cómo se llega hasta aquí y cómo se vuelve atrás.</li>
+<li><strong>Métricas y costo</strong> — qué se vigila y qué cuesta operarlo, personas incluidas.</li>
+<li><strong>Alternativa más simple</strong> — el diseño de un solo motor, y por qué no basta.</li>
+</ol>
+<p>El punto 9 es el que más proyectos suspende. Casi siempre <strong>sí</strong> basta, y descubrirlo a tiempo
+vale más que la arquitectura elegante que no hacía falta.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/projects/canonical-domains.md" rel="noopener"><code>projects/canonical-domains.md</code></a></p>
 </main>

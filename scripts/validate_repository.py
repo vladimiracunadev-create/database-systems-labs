@@ -43,7 +43,14 @@ ARCHIVOS_OBLIGATORIOS = [
     "labs/07-replication/run_replication_lab.py",
     "labs/08-recovery/run_recovery_lab.py",
     "reference-data/school/schema.sqlite.sql", "reference-data/school/seed.sqlite.sql",
+    "assessments/README.md",
     "assessments/rubric.md",
+    "assessments/diagnostic.md",
+    "assessments/evidencias.md",
+    "assessments/examen-por-rol.md",
+    "projects/README.md",
+    "projects/capstone.md",
+    "projects/portafolio.md",
     "rutas/README.md",
     "certificaciones/README.md",
     "certificaciones/_mapeo.json",
@@ -378,6 +385,81 @@ def validar_certificaciones(curriculo: dict, fuentes: dict) -> set[str]:
     return citadas
 
 
+def validar_evaluacion(curriculo: dict) -> None:
+    """Comprueba la rubrica y el examen por rol.
+
+    Una rubrica es una promesa de trato igual: si los pesos no suman, si a una
+    dimension le falta un nivel o si exige un minimo que su escala no tiene,
+    dos correctores no llegaran al mismo numero por mucho que lo intenten.
+    """
+    evaluacion = curriculo["evaluacion"]
+    escala = evaluacion["escala"]
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    ids_lab = {lab["id"] for lab in curriculo.get("laboratorios", [])}
+
+    if set(escala) != {1, 2, 3, 4}:
+        fallo(f"la escala de la rubrica deberia tener cuatro niveles, tiene {sorted(escala)}")
+
+    peso = 0
+    vistos: set[str] = set()
+    for dimension in evaluacion["dimensiones"]:
+        did = dimension["id"]
+        if did in vistos:
+            fallo(f"dimension duplicada en la rubrica: {did}")
+        vistos.add(did)
+        peso += dimension["peso"]
+
+        if set(dimension["niveles"]) != set(escala):
+            fallo(f"dimension {did}: no describe los cuatro niveles de la escala")
+        for nivel, texto in dimension["niveles"].items():
+            if not str(texto).strip():
+                fallo(f"dimension {did}: el nivel {nivel} no describe nada")
+        if dimension["minimo"] not in escala:
+            fallo(f"dimension {did}: minimo {dimension['minimo']} fuera de la escala")
+        if not dimension.get("evidencia"):
+            fallo(f"dimension {did}: no dice que evidencia hay que ver")
+        if not dimension.get("pregunta"):
+            fallo(f"dimension {did}: no dice que pregunta responde")
+        for cid in dimension.get("clases", []):
+            if cid not in ids_clase:
+                fallo(f"dimension {did}: la clase {cid} no existe")
+        for lid in dimension.get("laboratorios", []):
+            if lid not in ids_lab:
+                fallo(f"dimension {did}: el laboratorio {lid} no esta declarado")
+
+    if peso != 100:
+        fallo(f"los pesos de la rubrica suman {peso}, no 100")
+    if not 0 < evaluacion["aprobacion"] <= 100:
+        fallo(f"umbral de aprobacion fuera de rango: {evaluacion['aprobacion']}")
+    faltas = evaluacion.get("faltas_criticas", [])
+    if len(faltas) < 3:
+        fallo("la rubrica declara menos de tres faltas criticas")
+    for falta in faltas:
+        # Una frase con dos puntos sin comillas la lee YAML como diccionario y
+        # deja de ser texto sin que nadie lo note hasta que se publica.
+        if not isinstance(falta, str):
+            fallo(f"falta critica que no es texto (¿faltan comillas en el YAML?): {falta!r}")
+
+    # Los cinco componentes de la nota tambien tienen que sumar el total.
+    componentes = ["diagnostico", "evidencias_de_laboratorio", "retos_de_transferencia",
+                   "decisiones_de_arquitectura", "proyecto_final"]
+    total = sum(evaluacion[c] for c in componentes)
+    if total != 100:
+        fallo(f"los componentes de la nota suman {total}, no 100")
+
+    examen = evaluacion["examen"]
+    puntos = sum(b["puntos"] for b in examen["bloques"])
+    if puntos != 100:
+        fallo(f"los bloques del examen suman {puntos} puntos, no 100")
+    for bloque in examen["bloques"]:
+        if not bloque.get("formato", "").strip():
+            fallo(f"bloque {bloque['id']}: sin formato declarado")
+        if bloque.get("minimo") and bloque["minimo"] > bloque["puntos"]:
+            fallo(f"bloque {bloque['id']}: el minimo supera sus puntos")
+    if examen["aprobacion"] > puntos:
+        fallo("el examen exige mas puntos de los que reparte")
+
+
 def validar_fuentes(fuentes: dict) -> None:
     vistos: set[str] = set()
     for f in fuentes["sources"]:
@@ -516,6 +598,7 @@ def main() -> int:
     citadas_labs = validar_laboratorios(curriculo, fuentes)
     citadas_rutas = validar_rutas(curriculo, fuentes)
     citadas_certs = validar_certificaciones(curriculo, fuentes)
+    validar_evaluacion(curriculo)
     validar_curriculo(curriculo, fuentes, motores,
                       citadas_labs | citadas_rutas | citadas_certs)
     validar_clases(curriculo)
