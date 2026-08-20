@@ -8,6 +8,8 @@ Parte 09 — Distribución, réplica y consistencia · Avanzado ·
 
 **Conceptos centrales:** `linealizabilidad` · `consistencia causal` · `lectura monotona` · `convergencia`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -209,6 +211,95 @@ Casi todas las quejas de «datos que aparecen y desaparecen» se resuelven con l
 2. ¿Por qué la consistencia causal sobrevive a una partición y la secuencial no?
 3. Explica qué escrituras pierde un `LWW-Register` y en qué condiciones.
 4. Elige el modelo mínimo suficiente para tres operaciones tuyas y justifica cada elección.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Leer lo que uno acaba de escribir, y otras garantías que no son gratis
+
+«Consistencia eventual» no dice nada útil por sí sola: dice que **algún
+día** todas las réplicas coincidirán. Lo que decide si una aplicación
+funciona son las garantías intermedias, y las tres que más importan tienen
+nombre propio:
+
+- **Leer las propias escrituras**: quien acaba de guardar su perfil lo ve
+  actualizado. Sin esta garantía, el usuario guarda, recarga y ve lo de
+  antes: la queja de soporte más común de los sistemas replicados.
+- **Lecturas monótonas**: nadie ve el tiempo ir hacia atrás. Sin ella, dos
+  recargas seguidas pueden mostrar un comentario y luego no mostrarlo.
+- **Consistencia causal**: si una respuesta se escribió después de una
+  pregunta, nadie ve la respuesta antes que la pregunta.
+
+Ninguna se consigue sola: cada motor las ofrece —o no— con un mecanismo
+distinto, y casi siempre hay que pedirlas.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/causal-consistency-read-write-concerns/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html) |
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/hot-standby.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency-guarantees.html) |
+| Google Cloud Spanner | sí | conceptual | — | [doc oficial](https://cloud.google.com/spanner/docs/timestamp-bounds) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/commands/wait/) |
+| DuckDB | **no** | — | — | [doc oficial](https://duckdb.org/docs/stable/connect/concurrency) |
+
+### Los que resuelven el caso
+
+#### MongoDB
+
+- **Cómo se hace aquí:** Las tres están y se piden explícitamente. Las **sesiones causalmente consistentes** (`startSession({causalConsistency: true})`) garantizan leer las propias escrituras y lecturas monótonas incluso leyendo de secundarios, porque el controlador lleva la cuenta del tiempo de operación y el servidor espera a alcanzarlo.
+- **Por qué sí:** Es de las implementaciones más completas y mejor documentadas: la garantía es del **cliente**, no del servidor, que es donde el usuario la necesita.
+- **Por qué no:** Hay que abrir la sesión y usarla en todas las operaciones relacionadas: si una parte del código no la usa, la garantía desaparece justo ahí, sin error ni aviso.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/causal-consistency-read-write-concerns/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** No hay garantías de sesión: hay una fórmula. Si el número de réplicas leídas más las escritas supera el factor de replicación (**R + W > RF**), la lectura ve necesariamente la última escritura. Con `RF = 3`, `QUORUM` en ambas cumple la condición.
+- **Por qué sí:** La garantía es explícita, aritmética y comprobable: no depende de confiar en la implementación, sino de una desigualdad que se puede verificar en el código.
+- **Por qué no:** Es responsabilidad del programador en **cada** consulta. Y aun cumpliendo la fórmula, escrituras concurrentes se resuelven por «la última gana» según el reloj: no hay causalidad, hay marcas de tiempo.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html>
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Leyendo del primario, las tres garantías se cumplen por construcción. Al repartir lecturas entre réplicas hay que recuperarlas a mano: la aplicación lee la posición del WAL tras escribir y espera a que la réplica la haya alcanzado, o dirige al primario las lecturas posteriores a una escritura del mismo usuario.
+- **Por qué sí:** El mecanismo está expuesto —`pg_current_wal_lsn`, `pg_last_wal_replay_lsn`— así que la garantía se puede construir y medir, no solo esperar.
+- **Por qué no:** Nada de eso viene hecho. La forma habitual de repartir lecturas —un balanceador delante— rompe las tres garantías sin que ninguna capa avise, y el síntoma aparece en producción como «a veces no se guarda».
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/hot-standby.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** Con Group Replication existe `group_replication_consistency`, que permite exigir que una lectura espere a haber aplicado todas las transacciones anteriores del grupo (`BEFORE`), o que una escritura espere a que todos la hayan aplicado (`AFTER`).
+- **Por qué sí:** Es un ajuste por sesión con nombres claros para lo que se quiere: permite pedir «leer las propias escrituras» sin implementar nada.
+- **Por qué no:** Solo está en Group Replication, no en la réplica clásica —que es la que tiene la inmensa mayoría de las instalaciones— y cada nivel añade espera real a cada operación.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency-guarantees.html>
+
+#### Google Cloud Spanner
+
+- **Cómo se hace aquí:** Ofrece la garantía más fuerte que existe —consistencia externa, es decir, serializabilidad estricta— de modo que las tres garantías de sesión se cumplen sin pedir nada. También permite **lecturas de instantánea** acotadas por antigüedad, para leer más barato aceptando datos con retraso.
+- **Por qué sí:** No hay que razonar sobre anomalías de réplica: el sistema se comporta como si fuera un solo nodo, incluso entre continentes.
+- **Por qué no:** Se paga en latencia por escritura y en dependencia de un proveedor. Y las lecturas de instantánea, que son las baratas, vuelven a introducir el retraso: la garantía fuerte es la cara.
+- 📄 Documentación oficial: <https://cloud.google.com/spanner/docs/timestamp-bounds>
+
+#### Redis
+
+- **Cómo se hace aquí:** Leyendo del primario, un cliente ve siempre sus escrituras: el hilo único las ordena. Leyendo de réplicas, no hay garantía alguna, porque la réplica es asíncrona. `WAIT` permite bloquear hasta que N réplicas hayan recibido las escrituras anteriores.
+- **Por qué sí:** `WAIT` da un control explícito y medible sobre cuánta durabilidad y cuánta coherencia se exige, operación por operación.
+- **Por qué no:** `WAIT` garantiza recepción, no aplicación ni durabilidad en disco, y añade una espera de red en el camino caliente: usarlo en cada escritura anula la razón por la que se eligió Redis.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/commands/wait/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| DuckDB | No hay réplicas ni sesiones distribuidas: un proceso, un archivo. Las garantías de sesión no tienen sentido donde no hay más de una copia. | La pregunta equivalente en analítica es otra —cuánto retraso tiene el almacén respecto al sistema operacional— y se trata en la parte de integración y captura de cambios. | [doc](https://duckdb.org/docs/stable/connect/concurrency) |
 
 ---
 

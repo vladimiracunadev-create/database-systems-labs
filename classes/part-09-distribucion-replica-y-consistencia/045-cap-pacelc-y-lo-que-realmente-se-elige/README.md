@@ -8,6 +8,8 @@ Parte 09 — Distribución, réplica y consistencia · Avanzado ·
 
 **Conceptos centrales:** `partición de red` · `disponibilidad` · `latencia frente a consistencia`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -192,6 +194,93 @@ La pregunta útil en una revisión de arquitectura no es «¿somos CP o AP?», s
 2. ¿Por qué Spanner puede ser PC/EC y tener alta disponibilidad práctica?
 3. Da una operación de tu sistema que hoy es AP sin que nadie lo haya decidido.
 4. ¿Qué garantías transaccionales son inalcanzables manteniendo disponibilidad total?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué se elige de verdad cuando se dice «elegimos AP» o «elegimos CP»
+
+El teorema CAP dice algo muy concreto y muy limitado: **cuando la red se
+parte**, un sistema no puede ser a la vez consistente —en el sentido de
+linealizable— y disponible. Nada más. No dice que haya que elegir dos de
+tres, ni describe el comportamiento normal del sistema, que es el 99,9 % del
+tiempo.
+
+Por eso Abadi propuso PACELC, que completa la frase: **si hay partición (P),
+se elige entre disponibilidad (A) y consistencia (C); y si no (E, *else*), se
+elige entre latencia (L) y consistencia (C)**. La segunda mitad es la que
+manda casi siempre, y es la que las etiquetas «AP» y «CP» esconden.
+
+Aquí se compara qué elige cada motor en las dos mitades, y —lo más útil—
+**qué se puede ajustar por operación** en vez de por sistema.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/reference/read-concern/) |
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/warm-standby.html) |
+| Google Cloud Spanner | sí | conceptual | — | [doc oficial](https://cloud.google.com/spanner/docs/true-time-external-consistency) |
+| CockroachDB | sí | conceptual | — | [doc oficial](https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/replication/) |
+| SQLite | **no** | — | — | [doc oficial](https://sqlite.org/whentouse.html) |
+
+### Los que resuelven el caso
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** PA/EL en la clasificación de Abadi: ante partición prefiere disponibilidad, y sin partición prefiere latencia. Pero eso es el valor por omisión, no una propiedad fija: el nivel de consistencia se elige **por consulta**, y con `QUORUM` en lectura y escritura se obtiene consistencia fuerte a cambio de esperar a la mayoría.
+- **Por qué sí:** Poder decidir por operación es lo más honesto que ofrece esta lista: la escritura del pago con `QUORUM`, la del registro de actividad con `ONE`, en el mismo clúster y en la misma aplicación.
+- **Por qué no:** Esa decisión hay que tomarla en **cada** consulta, y equivocarse no da ningún error: da datos viejos. Y la fórmula «R + W > RF» hay que llevarla en la cabeza al escribir cada línea de código.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** PC/EC: ante partición, la minoría deja de aceptar escrituras —el primario se degrada— y sin partición prioriza consistencia con `readConcern` y `writeConcern`. También se ajusta por operación.
+- **Por qué sí:** El valor por omisión es el seguro y el arriesgado hay que pedirlo, que es el orden correcto: `w: "majority"` y `readConcern: "majority"` dan lecturas coherentes sin cambiar de motor.
+- **Por qué no:** Leer de secundarios para repartir carga rompe esa garantía sin avisar, y es lo primero que se hace cuando el primario va justo: la optimización más tentadora es justo la que cambia el modelo de consistencia.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/read-concern/>
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Con un solo nodo, la pregunta no se plantea: es CA en el sentido trivial de que no hay partición posible. Con réplica, el líder es consistente y las réplicas van por detrás; `synchronous_commit = remote_apply` da lecturas coherentes en la réplica a cambio de latencia en cada confirmación.
+- **Por qué sí:** Es el sistema más fácil de razonar: mientras se lea del primario, no hay modelo de consistencia que estudiar.
+- **Por qué no:** En cuanto se reparte la lectura entre réplicas, el sistema deja de ser trivial y nadie lo declara: la aplicación empieza a leer datos viejos sin que nada en el código lo indique. Es el «lo dirigimos a la réplica» que rompe el registro después de crearlo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/warm-standby.html>
+
+#### Google Cloud Spanner
+
+- **Cómo se hace aquí:** CP con disponibilidad muy alta en la práctica: consistencia externa —equivalente a linealizabilidad— mediante Paxos y **relojes con incertidumbre acotada** (TrueTime). En vez de fingir que los relojes están sincronizados, mide el error y espera a que la incertidumbre pase.
+- **Por qué sí:** Ofrece transacciones distribuidas con serializabilidad estricta a escala global, algo que se consideraba imposible antes de 2012, y con SQL estándar encima.
+- **Por qué no:** Ese «esperar a que la incertidumbre pase» es latencia real en cada confirmación, y depende de una infraestructura de relojes —GPS y relojes atómicos— que solo existe dentro de un proveedor. La disponibilidad es altísima; el teorema no se ha roto, se ha comprado.
+- 📄 Documentación oficial: <https://cloud.google.com/spanner/docs/true-time-external-consistency>
+
+#### CockroachDB
+
+- **Cómo se hace aquí:** CP también, con Raft por rango y serializabilidad como único nivel de aislamiento. Sin relojes atómicos: usa un intervalo de incertidumbre y reintenta las transacciones que caen dentro de él.
+- **Por qué sí:** Da la misma garantía fuerte sobre infraestructura corriente y con protocolo de PostgreSQL, así que buena parte de las herramientas ya existentes funcionan.
+- **Por qué no:** Los reintentos por incertidumbre son visibles para la aplicación: hay que escribir el ciclo de reintento sí o sí. Y con réplicas repartidas entre regiones, cada escritura paga la latencia de llegar a la mayoría.
+- 📄 Documentación oficial: <https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer>
+
+#### Redis
+
+- **Cómo se hace aquí:** Ni AP ni CP en sentido estricto: la réplica es asíncrona y la conmutación puede perder escrituras confirmadas. Su propia documentación lo dice y no promete consistencia fuerte.
+- **Por qué sí:** Para su trabajo —caché, colas, contadores, sesiones— esa elección es la correcta: la latencia es el requisito y perder el último segundo de una caché no cuesta nada.
+- **Por qué no:** El problema aparece cuando alguien empieza a guardar ahí lo que sí cuesta perder. Redis no engaña a nadie; la arquitectura que lo usa como fuente de verdad, sí.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/operate/oss_and_stack/management/replication/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| SQLite | Un solo proceso y un solo archivo: no hay red que se pueda partir, así que el teorema no dice nada sobre él. Incluirlo aquí sería usar el vocabulario sin el problema. | La pregunta análoga en un sistema de un solo nodo es otra —qué pasa si se corta la luz— y se estudia en la clase de registro anticipado y recuperación. | [doc](https://sqlite.org/whentouse.html) |
 
 ---
 

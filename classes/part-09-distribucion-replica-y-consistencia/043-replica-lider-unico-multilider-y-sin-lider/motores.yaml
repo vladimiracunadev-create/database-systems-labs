@@ -1,0 +1,136 @@
+---
+caso:
+  titulo: Quién puede aceptar una escritura, y qué pasa cuando ese nodo cae
+  modo: conceptual
+  contrato: |
+    Solo hay tres topologías de réplica y cada una responde distinto a la misma
+    pregunta: **¿quién puede aceptar una escritura?**
+
+    Con **líder único**, uno solo; los demás copian. Es simple y no hay
+    conflictos de escritura, pero el líder es un punto de fallo y su
+    conmutación es la operación más delicada del sistema. Con **multilíder**,
+    varios; hay conflictos y hay que resolverlos. **Sin líder**, cualquiera: el
+    cliente escribe en varias réplicas y lee de varias, y la coherencia se
+    arregla por quórum y reparación.
+
+    Esta comparación no tiene salida que verificar: lo que se compara es qué
+    ofrece cada motor y, sobre todo, **qué se pierde exactamente cuando el nodo
+    que manda deja de contestar**.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: postgresql
+    aplica: si
+    como: >-
+      Líder único con réplica física del WAL, síncrona o asíncrona según
+      `synchronous_commit` y `synchronous_standby_names`, más réplica lógica por
+      publicación y suscripción desde la versión 10. La conmutación **no** viene
+      incluida: la hace una herramienta externa (Patroni, repmgr).
+    porque_si: >-
+      La réplica es el mismo mecanismo que la durabilidad —el WAL—, así que no
+      añade una pieza conceptual nueva, y con réplica síncrona no se pierde
+      ninguna transacción confirmada.
+    porque_no: >-
+      Que la conmutación sea externa significa que **elegir y operar esa
+      herramienta es parte del diseño**, y que un fallo de configuración puede
+      producir dos primarios a la vez. Con réplica asíncrona, promover una
+      réplica pierde las transacciones que no llegaron.
+    doc: https://www.postgresql.org/docs/current/high-availability.html
+
+  - id: mysql
+    aplica: si
+    como: >-
+      Líder único clásico con registro binario y, desde 5.7, **Group
+      Replication**: un grupo con consenso basado en Paxos que permite modo de
+      un primario o de varios primarios.
+    porque_si: >-
+      Group Replication trae la conmutación automática dentro del producto, sin
+      herramienta externa, y detecta los conflictos entre primarios con
+      certificación.
+    porque_no: >-
+      El modo de varios primarios solo detecta conflictos al certificar y aborta
+      transacciones: sirve para carga repartida, no para escribir la misma fila
+      desde dos sitios. Y la réplica clásica es asíncrona por omisión, con
+      pérdida posible en la conmutación.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/group-replication.html
+
+  - id: mongodb
+    aplica: si
+    como: >-
+      Conjunto de réplicas con líder único elegido por votación entre los
+      miembros. La conmutación es automática y está en el producto; el cliente
+      la sigue gracias al controlador, que reconoce el nuevo primario.
+    porque_si: >-
+      Es de los pocos de esta lista donde la alta disponibilidad viene resuelta
+      de fábrica y sin piezas adicionales, y donde `writeConcern: "majority"`
+      permite exigir que la escritura sobreviva a una conmutación.
+    porque_no: >-
+      Con `w: 1` —el valor por omisión histórico— una escritura confirmada puede
+      **revertirse** al conmutar: el cliente recibió un éxito y el dato no
+      existe. Y las lecturas desde secundarios pueden devolver datos viejos
+      salvo que se pida `readConcern` adecuado.
+    doc: https://www.mongodb.com/docs/manual/replication/
+
+  - id: cassandra
+    aplica: si
+    como: >-
+      Sin líder. Cualquier nodo coordina, escribe en las `RF` réplicas y espera
+      tantas confirmaciones como pida el nivel de consistencia. La coherencia se
+      recupera con lecturas de reparación, entregas sugeridas y reparaciones
+      periódicas.
+    porque_si: >-
+      No hay conmutación que hacer porque no hay nadie a quien sustituir: la
+      caída de un nodo no interrumpe la escritura si el nivel elegido se puede
+      seguir cumpliendo. Es la topología con mayor disponibilidad de escritura.
+    porque_no: >-
+      Los conflictos se resuelven por «la última escritura gana» según la marca
+      de tiempo, lo que **pierde datos en silencio** cuando dos clientes
+      escriben lo mismo a la vez con relojes desajustados. Y las reparaciones
+      periódicas son trabajo de operación que, si se olvida, deja réplicas
+      divergentes.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html
+
+  - id: redis
+    aplica: si
+    como: >-
+      Líder único con réplicas asíncronas, y Sentinel o Cluster para la
+      conmutación automática. En Cluster, cada fragmento tiene su primario y sus
+      réplicas.
+    porque_si: >-
+      La réplica es barata y no frena al primario, que es justo lo que se quiere
+      de una caché: la latencia no puede depender de que otro nodo confirme.
+    porque_no: >-
+      Al ser asíncrona, una conmutación pierde las escrituras que no llegaron, y
+      su propia documentación lo dice sin rodeos. Redis no promete consistencia
+      fuerte, y usarlo como si la prometiera es el error de arquitectura más
+      común que se comete con él.
+    doc: https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+
+  - id: cockroachdb
+    aplica: si
+    como: >-
+      Ni líder único por base ni multilíder: **un grupo Raft por cada rango** de
+      datos. Cada rango tiene su propio líder, elegido por consenso, así que el
+      papel de líder está repartido por todo el clúster y por todos los datos.
+    porque_si: >-
+      Da conmutación automática por rango, sin herramienta externa, y sin perder
+      transacciones confirmadas: el consenso garantiza que lo confirmado está en
+      la mayoría antes de contestar.
+    porque_no: >-
+      Cada escritura cuesta una ronda de consenso: la latencia mínima es la de
+      llegar a la mayoría, y si las réplicas están en regiones distintas, esa
+      latencia es geográfica y no hay ajuste que la evite.
+    doc: https://www.cockroachlabs.com/docs/stable/architecture/replication-layer
+
+  - id: sqlite
+    aplica: no
+    porque_no: >-
+      No tiene réplica: es una biblioteca sobre un archivo. Copiar el archivo
+      mientras se escribe produce una copia corrupta, y no hay mecanismo de
+      difusión de cambios.
+    alternativa: >-
+      Proyectos construidos encima —Litestream para réplica continua del WAL a
+      almacenamiento de objetos, o rqlite y dqlite, que ponen Raft alrededor de
+      SQLite— resuelven casos concretos sin cambiar de motor.
+    doc: https://sqlite.org/backup.html

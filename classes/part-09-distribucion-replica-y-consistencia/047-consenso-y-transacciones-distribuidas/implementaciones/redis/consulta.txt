@@ -1,0 +1,18 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/commands/hset/
+# nota: Redis es un buen sitio para el ESTADO EN VUELO de la saga —que pasos van
+#       hechos, cuales faltan— con caducidad para detectar las que se quedaron a
+#       medias:
+#         EXPIRE saga:reserva-42 3600
+#       Lo que NO debe ser es el unico sitio donde vive ese estado: con
+#       appendfsync everysec se puede perder hasta un segundo, y una saga
+#       huerfana es dinero que nadie devuelve.
+
+# === preparacion ===
+FLUSHDB
+HSET saga:reserva-42 vuelo confirmado
+HSET saga:reserva-42 hotel fallido
+HSET saga:reserva-42 vuelo compensado
+
+# === consulta ===
+EVAL "local r={} for _,p in ipairs({'hotel','vuelo'}) do r[#r+1]=p..'|'..redis.call('HGET',KEYS[1],p) end return r" 1 saga:reserva-42

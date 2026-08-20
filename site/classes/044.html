@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>cassandra</code>, <code>mongodb</code>, <code>postgresql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>hash consistente</code> · <code>partición por rango</code> · <code>punto caliente</code> · <code>reequilibrio</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Repartir los datos entre nodos para escalar la escritura, evitando los dos fallos que hacen inútil el reparto: las particiones calientes y el rebalanceo que mueve todo.</p>
@@ -320,6 +321,363 @@ con salado de 16:
 <li>Da una clave caliente de tu dominio y dimensiona su salado con lectura y escritura.</li>
 <li>¿Cuándo preferirías índice secundario global sobre local, con cifras?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Ocho pedidos en una partición y uno en cada una de las otras dos</p>
+<p>Repartir datos entre nodos parece un problema de aritmética y es un problema
+de <strong>elegir la clave</strong>. El caso tiene diez pedidos de tres clientes, y uno
+de ellos concentra ocho: la distribución normal de cualquier negocio real.</p>
+<p>Si la clave de partición es el cliente, ese reparto <strong>es</strong> el reparto entre
+nodos: una partición con ocho y dos con uno. Añadir nodos no arregla nada,
+porque una clave no se puede partir; eso es una <strong>clave caliente</strong>. Si la
+clave fuera el identificador del pedido, el reparto sería casi perfecto… a
+cambio de que «todos los pedidos del cliente A» pase a ser una consulta a
+todos los nodos.</p>
+<p>No hay opción buena: hay una decisión, y esta consulta la hace visible antes
+de tomarla.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>particion</th>
+<th>pedidos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>A</code></td>
+<td><code>8</code></td>
+</tr>
+<tr>
+<td><code>B</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>C</code></td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 044</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_logical.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/sharding-shard-key/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/data/partitioning/partitioned_writes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/partitions/partitioned-tables-and-indexes">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_logical.html
+-- nota: implementacion declarada. Aqui el reparto NO es una consulta: es la
+--       clave primaria. `cliente` como clave de particion significa que los
+--       ocho pedidos de A viven en el mismo nodo, y que anadir nodos no reparte
+--       ese trabajo: una clave no se puede partir.
+--
+--       La correccion documentada es anadir un componente a la clave de
+--       particion —el mes, un cubo numerico— y aceptar que las consultas
+--       tendran que recorrerlos:
+--         PRIMARY KEY ((cliente, mes), id)
+--       Cambiarlo despues obliga a reescribir los datos.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS ventas
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS ventas.pedidos_por_cliente;
+
+CREATE TABLE ventas.pedidos_por_cliente (
+    cliente text,
+    id      int,
+    PRIMARY KEY (cliente, id)
+);
+
+INSERT INTO ventas.pedidos_por_cliente (cliente, id) VALUES ('A', 1);
+INSERT INTO ventas.pedidos_por_cliente (cliente, id) VALUES ('A', 2);
+INSERT INTO ventas.pedidos_por_cliente (cliente, id) VALUES ('B', 9);
+INSERT INTO ventas.pedidos_por_cliente (cliente, id) VALUES ('C', 10);
+
+-- === consulta ===
+-- El token es lo que decide el nodo. Esta consulta muestra el reparto real:
+SELECT cliente, token(cliente) AS token, COUNT(*) AS pedidos
+FROM ventas.pedidos_por_cliente
+GROUP BY cliente;
+
+-- Y la herramienta que delata las particiones grandes desde fuera:
+--   nodetool tablehistograms ventas.pedidos_por_cliente
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El reparto es explícito y está en la clave primaria: la clave de partición se convierte en un token y el token decide el nodo. Añadir nodos redistribuye tokens sin parar el servicio, con hashing consistente y nodos virtuales.</li>
+<li><strong>Por qué no:</strong> Una partición desequilibrada es un problema estructural: la documentación recomienda no pasar de 100 MB por partición, y una clave caliente lo supera sin remedio. La corrección —añadir un componente a la clave de partición, como el mes— obliga a reescribir los datos.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_logical.html">https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_logical.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/sharding-shard-key/
+// nota: en un cluster fragmentado, esta misma agregacion sobre la coleccion
+//       config.chunks dice cuantos trozos tiene cada fragmento. Y la trampa que
+//       no se ve aqui: una clave MONOTONA —una fecha, un contador— manda todas
+//       las escrituras al mismo fragmento, aunque el reparto de datos parezca
+//       equilibrado.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertMany([
+  { _id: 1, cliente: &quot;A&quot; }, { _id: 2, cliente: &quot;A&quot; }, { _id: 3, cliente: &quot;A&quot; },
+  { _id: 4, cliente: &quot;A&quot; }, { _id: 5, cliente: &quot;A&quot; }, { _id: 6, cliente: &quot;A&quot; },
+  { _id: 7, cliente: &quot;A&quot; }, { _id: 8, cliente: &quot;A&quot; }, { _id: 9, cliente: &quot;B&quot; },
+  { _id: 10, cliente: &quot;C&quot; },
+]);
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $group: { _id: &quot;$cliente&quot;, pedidos: { $sum: 1 } } },
+    { $sort: { pedidos: -1, _id: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.pedidos));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El fragmentado es transparente para la aplicación: el enrutador dirige la consulta al fragmento correcto y el balanceador mueve trozos entre fragmentos sin intervención. Y desde la versión 5.0 la clave de fragmentación se puede <strong>cambiar</strong> en caliente, algo que casi ningún motor permite.</li>
+<li><strong>Por qué no:</strong> Una clave monótona —una fecha, un contador— manda <strong>todas</strong> las escrituras al mismo fragmento; el fragmentado por hash lo evita pero elimina las consultas por rango. Es exactamente la misma disyuntiva del caso, con otros nombres.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/sharding-shard-key/">https://www.mongodb.com/docs/manual/core/sharding-shard-key/</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+-- nota: con particionado declarativo, el sesgo se puede ver directamente en el
+--       tamano de cada particion:
+--         SELECT relname, pg_size_pretty(pg_relation_size(oid))
+--         FROM pg_class WHERE relname LIKE 'pedidos_%';
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id      integer PRIMARY KEY,
+    cliente text NOT NULL
+);
+-- Diez pedidos, tres clientes, y uno de ellos concentra ocho. No es un caso
+-- artificial: es la distribucion normal de cualquier negocio real.
+INSERT INTO pedidos (id, cliente) VALUES
+    (1, 'A'), (2, 'A'), (3, 'A'), (4, 'A'), (5, 'A'),
+    (6, 'A'), (7, 'A'), (8, 'A'), (9, 'B'), (10, 'C');
+
+-- === consulta ===
+-- Si la clave de particion es el cliente, esto ES el reparto entre nodos: una
+-- particion con ocho pedidos y dos con uno. Anadir nodos no arregla nada,
+-- porque una clave no se puede partir. Si la clave fuera el id del pedido, el
+-- reparto seria 4/3/3 y el problema no existiria... a cambio de que «todos los
+-- pedidos del cliente A» pase a ser una consulta a TODOS los nodos.
+SELECT cliente AS particion, COUNT(*) AS pedidos
+FROM pedidos
+GROUP BY cliente
+ORDER BY pedidos DESC, cliente;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El particionado declarativo por lista, rango o hash reparte una tabla en varias <strong>dentro del mismo servidor</strong>, lo que ya da la mayor parte del beneficio: poda de particiones al consultar y borrado instantáneo por <code>DROP</code>. Y esta misma consulta es la forma de comprobar el equilibrio antes de decidir.</li>
+<li><strong>Por qué no:</strong> No reparte entre máquinas: para eso hacen falta extensiones (Citus) o otro producto. Y el particionado tiene su propio precio —más planificación, más archivos, y claves foráneas que no pueden apuntar a una tabla particionada sin cuidado.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">https://www.postgresql.org/docs/current/ddl-partitioning.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: esta consulta no reparte nada: MIDE. Es la que hay que ejecutar sobre
+--       los datos reales antes de elegir clave de particion, y la que casi
+--       nunca se ejecuta hasta que un nodo va al 100 % y los demas al 5 %.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id      INTEGER PRIMARY KEY,
+    cliente TEXT NOT NULL
+);
+-- Diez pedidos, tres clientes, y uno de ellos concentra ocho. No es un caso
+-- artificial: es la distribucion normal de cualquier negocio real.
+INSERT INTO pedidos (id, cliente) VALUES
+    (1, 'A'), (2, 'A'), (3, 'A'), (4, 'A'), (5, 'A'),
+    (6, 'A'), (7, 'A'), (8, 'A'), (9, 'B'), (10, 'C');
+
+-- === consulta ===
+-- Si la clave de particion es el cliente, esto ES el reparto entre nodos: una
+-- particion con ocho pedidos y dos con uno. Anadir nodos no arregla nada,
+-- porque una clave no se puede partir. Si la clave fuera el id del pedido, el
+-- reparto seria 4/3/3 y el problema no existiria... a cambio de que «todos los
+-- pedidos del cliente A» pase a ser una consulta a TODOS los nodos.
+SELECT cliente AS particion, COUNT(*) AS pedidos
+FROM pedidos
+GROUP BY cliente
+ORDER BY pedidos DESC, cliente;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para lo importante: <strong>medir el sesgo antes de repartir</strong>. La consulta del caso es la que hay que ejecutar sobre los datos reales antes de elegir clave de partición, y no hace falta ningún clúster para ejecutarla.</li>
+<li><strong>Por qué no:</strong> No hay particionado que aplicar después: aquí se toma la decisión, no se implementa.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/data/partitioning/partitioned_writes.html
+-- nota: el equivalente analitico del reparto es escribir Parquet particionado:
+--         COPY pedidos TO 'salida' (FORMAT PARQUET, PARTITION_BY (cliente));
+--       Y sufre el mismo sesgo: una carpeta con ocho archivos y dos con uno.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id      INTEGER PRIMARY KEY,
+    cliente VARCHAR NOT NULL
+);
+-- Diez pedidos, tres clientes, y uno de ellos concentra ocho. No es un caso
+-- artificial: es la distribucion normal de cualquier negocio real.
+INSERT INTO pedidos (id, cliente) VALUES
+    (1, 'A'), (2, 'A'), (3, 'A'), (4, 'A'), (5, 'A'),
+    (6, 'A'), (7, 'A'), (8, 'A'), (9, 'B'), (10, 'C');
+
+-- === consulta ===
+-- Si la clave de particion es el cliente, esto ES el reparto entre nodos: una
+-- particion con ocho pedidos y dos con uno. Anadir nodos no arregla nada,
+-- porque una clave no se puede partir. Si la clave fuera el id del pedido, el
+-- reparto seria 4/3/3 y el problema no existiria... a cambio de que «todos los
+-- pedidos del cliente A» pase a ser una consulta a TODOS los nodos.
+SELECT cliente AS particion, COUNT(*) AS pedidos
+FROM pedidos
+GROUP BY cliente
+ORDER BY pedidos DESC, cliente;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La misma medición sobre volúmenes grandes, y además puede escribir a Parquet <strong>particionado por columna</strong> (<code>PARTITION_BY</code>), que es el reparto físico del mundo analítico y sufre exactamente el mismo problema de sesgo.</li>
+<li><strong>Por qué no:</strong> Ese particionado es de archivos en disco, no de nodos: no hay redistribución ni rebalanceo, solo carpetas.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/data/partitioning/partitioned_writes.html">https://duckdb.org/docs/stable/data/partitioning/partitioned_writes.html</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-distribucion-replica-y-consistencia/044-particionado-rebalanceo-y-claves-calientes/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/
+# nota: en Redis Cluster el espacio de claves se parte en 16384 RANURAS fijas y
+#       cada nodo posee un conjunto de ranuras. Mover datos es mover ranuras.
+#         CLUSTER KEYSLOT pedido:1     -&gt; a que ranura va esta clave
+#       Y la trampa: una operacion sobre varias claves exige que todas caigan en
+#       la misma ranura, lo que obliga a etiquetas de hash como
+#       {cliente-A}:pedido:1 ... que concentran a proposito y reintroducen la
+#       clave caliente que se queria evitar.
+
+# === preparacion ===
+FLUSHDB
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto B 1
+HINCRBY reparto C 1
+
+# === consulta ===
+EVAL &quot;local t=redis.call('HGETALL','reparto') local m={} for i=1,#t,2 do m[#m+1]={t[i],tonumber(t[i+1])} end table.sort(m,function(a,b) if a[2]~=b[2] then return a[2]&gt;b[2] end return a[1]&lt;b[1] end) local r={} for _,v in ipairs(m) do r[#r+1]=v[1]..'|'..v[2] end return r&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Redis Cluster reparte el espacio de claves en 16 384 ranuras fijas y asigna ranuras a nodos: mover datos es mover ranuras, sin volver a calcular nada. <code>CLUSTER KEYSLOT</code> permite ver a qué ranura va cada clave antes de escribirla.</li>
+<li><strong>Por qué no:</strong> Una operación que toque varias claves solo funciona si todas caen en la misma ranura, lo que obliga a usar etiquetas de hash (<code>{cliente-A}:pedido:1</code>) y a concentrar a propósito… reintroduciendo la clave caliente que se quería evitar.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>El reparto es interno y no se controla: solo se elige la clave de partición. Una clave caliente se manifiesta como estrangulamiento (<code>ThrottlingException</code>) sin que haya nada que ajustar en el servicio.</td>
+<td>Repartir la clave a mano añadiéndole un sufijo aleatorio (<code>CLIENTE#A#3</code>) y consultar todos los sufijos al leer: la solución documentada por el propio proveedor, y una buena muestra de lo que cuesta una clave caliente.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html">doc</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>Tiene particionado de tablas dentro de una instancia, pero no un modelo de reparto entre nodos comparable al del resto de la lista: el escalado horizontal se resuelve por otras vías.</td>
+<td>Particionado por rango dentro de la instancia para el mantenimiento, y reparto entre bases por criterios de negocio en la capa de aplicación.</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/partitions/partitioned-tables-and-indexes">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

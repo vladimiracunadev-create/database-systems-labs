@@ -61,6 +61,7 @@
 4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>cassandra</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md"><code>labs/07-replication</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>replicación sincrónica</code> · <code>retraso de réplica</code> · <code>quórum</code> · <code>lectura de tu propia escritura</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Replicar datos entendiendo qué se gana (disponibilidad, lectura escalada, cercanía geográfica) y qué se paga (retraso, conflictos, pérdida potencial en la conmutación).</p>
@@ -339,6 +340,149 @@ con el 10 % desviado al líder por consistencia: ~21 600 útiles
 <li>Con N = 5, enumera las combinaciones <code>R</code>/<code>W</code> que solapan y su tolerancia a fallos.</li>
 <li>Da una operación de tu sistema que justifique replicación síncrona y otra que no.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Quién puede aceptar una escritura, y qué pasa cuando ese nodo cae</p>
+<p>Solo hay tres topologías de réplica y cada una responde distinto a la misma
+pregunta: <strong>¿quién puede aceptar una escritura?</strong></p>
+<p>Con <strong>líder único</strong>, uno solo; los demás copian. Es simple y no hay
+conflictos de escritura, pero el líder es un punto de fallo y su
+conmutación es la operación más delicada del sistema. Con <strong>multilíder</strong>,
+varios; hay conflictos y hay que resolverlos. <strong>Sin líder</strong>, cualquiera: el
+cliente escribe en varias réplicas y lee de varias, y la coherencia se
+arregla por quórum y reparación.</p>
+<p>Esta comparación no tiene salida que verificar: lo que se compara es qué
+ofrece cada motor y, sobre todo, <strong>qué se pierde exactamente cuando el nodo
+que manda deja de contestar</strong>.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/high-availability.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/replication/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">doc oficial</a></td>
+</tr>
+<tr>
+<td>CockroachDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://sqlite.org/backup.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único con réplica física del WAL, síncrona o asíncrona según <code>synchronous_commit</code> y <code>synchronous_standby_names</code>, más réplica lógica por publicación y suscripción desde la versión 10. La conmutación <strong>no</strong> viene incluida: la hace una herramienta externa (Patroni, repmgr).</li>
+<li><strong>Por qué sí:</strong> La réplica es el mismo mecanismo que la durabilidad —el WAL—, así que no añade una pieza conceptual nueva, y con réplica síncrona no se pierde ninguna transacción confirmada.</li>
+<li><strong>Por qué no:</strong> Que la conmutación sea externa significa que <strong>elegir y operar esa herramienta es parte del diseño</strong>, y que un fallo de configuración puede producir dos primarios a la vez. Con réplica asíncrona, promover una réplica pierde las transacciones que no llegaron.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/high-availability.html">https://www.postgresql.org/docs/current/high-availability.html</a></li>
+</ul>
+<h4 id="mysql">MySQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único clásico con registro binario y, desde 5.7, <strong>Group Replication</strong>: un grupo con consenso basado en Paxos que permite modo de un primario o de varios primarios.</li>
+<li><strong>Por qué sí:</strong> Group Replication trae la conmutación automática dentro del producto, sin herramienta externa, y detecta los conflictos entre primarios con certificación.</li>
+<li><strong>Por qué no:</strong> El modo de varios primarios solo detecta conflictos al certificar y aborta transacciones: sirve para carga repartida, no para escribir la misma fila desde dos sitios. Y la réplica clásica es asíncrona por omisión, con pérdida posible en la conmutación.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication.html</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Conjunto de réplicas con líder único elegido por votación entre los miembros. La conmutación es automática y está en el producto; el cliente la sigue gracias al controlador, que reconoce el nuevo primario.</li>
+<li><strong>Por qué sí:</strong> Es de los pocos de esta lista donde la alta disponibilidad viene resuelta de fábrica y sin piezas adicionales, y donde <code>writeConcern: "majority"</code> permite exigir que la escritura sobreviva a una conmutación.</li>
+<li><strong>Por qué no:</strong> Con <code>w: 1</code> —el valor por omisión histórico— una escritura confirmada puede <strong>revertirse</strong> al conmutar: el cliente recibió un éxito y el dato no existe. Y las lecturas desde secundarios pueden devolver datos viejos salvo que se pida <code>readConcern</code> adecuado.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/replication/">https://www.mongodb.com/docs/manual/replication/</a></li>
+</ul>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Sin líder. Cualquier nodo coordina, escribe en las <code>RF</code> réplicas y espera tantas confirmaciones como pida el nivel de consistencia. La coherencia se recupera con lecturas de reparación, entregas sugeridas y reparaciones periódicas.</li>
+<li><strong>Por qué sí:</strong> No hay conmutación que hacer porque no hay nadie a quien sustituir: la caída de un nodo no interrumpe la escritura si el nivel elegido se puede seguir cumpliendo. Es la topología con mayor disponibilidad de escritura.</li>
+<li><strong>Por qué no:</strong> Los conflictos se resuelven por «la última escritura gana» según la marca de tiempo, lo que <strong>pierde datos en silencio</strong> cuando dos clientes escriben lo mismo a la vez con relojes desajustados. Y las reparaciones periódicas son trabajo de operación que, si se olvida, deja réplicas divergentes.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único con réplicas asíncronas, y Sentinel o Cluster para la conmutación automática. En Cluster, cada fragmento tiene su primario y sus réplicas.</li>
+<li><strong>Por qué sí:</strong> La réplica es barata y no frena al primario, que es justo lo que se quiere de una caché: la latencia no puede depender de que otro nodo confirme.</li>
+<li><strong>Por qué no:</strong> Al ser asíncrona, una conmutación pierde las escrituras que no llegaron, y su propia documentación lo dice sin rodeos. Redis no promete consistencia fuerte, y usarlo como si la prometiera es el error de arquitectura más común que se comete con él.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+</ul>
+<h4 id="cockroachdb">CockroachDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Ni líder único por base ni multilíder: <strong>un grupo Raft por cada rango</strong> de datos. Cada rango tiene su propio líder, elegido por consenso, así que el papel de líder está repartido por todo el clúster y por todos los datos.</li>
+<li><strong>Por qué sí:</strong> Da conmutación automática por rango, sin herramienta externa, y sin perder transacciones confirmadas: el consenso garantiza que lo confirmado está en la mayoría antes de contestar.</li>
+<li><strong>Por qué no:</strong> Cada escritura cuesta una ronda de consenso: la latencia mínima es la de llegar a la mayoría, y si las réplicas están en regiones distintas, esa latencia es geográfica y no hay ajuste que la evite.</li>
+<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">https://www.cockroachlabs.com/docs/stable/architecture/replication-layer</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>No tiene réplica: es una biblioteca sobre un archivo. Copiar el archivo mientras se escribe produce una copia corrupta, y no hay mecanismo de difusión de cambios.</td>
+<td>Proyectos construidos encima —Litestream para réplica continua del WAL a almacenamiento de objetos, o rqlite y dqlite, que ponen Raft alrededor de SQLite— resuelven casos concretos sin cambiar de motor.</td>
+<td><a href="https://sqlite.org/backup.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
