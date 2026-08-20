@@ -8,6 +8,8 @@ Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
 
 **Conceptos centrales:** `clave candidata` · `clave primaria` · `clave sustituta` · `identidad estable`
 
+**En este caso se comparan 6 motores**: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -169,6 +171,240 @@ Un cambio de clave primaria en un sistema con integraciones no es una migración
 2. ¿Por qué el ancho de la clave primaria afecta al tamaño de índices que no la incluyen explícitamente?
 3. Explica el problema de localidad de UUID v4 con una traza de inserciones sobre un B-Tree.
 4. En `enrollments` se eligió clave natural compuesta. Da un requisito futuro que obligaría a añadir una sustituta.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cambiar el correo de un estudiante sin romper lo que apunta a él
+
+El correo parece una buena clave: es único y ya identifica a la persona.
+Hasta que alguien lo cambia. Con clave sustituta, cambiar el correo es
+actualizar **una** fila y ninguna referencia se entera; con clave natural,
+hay que propagar el cambio a toda tabla que lo hubiera copiado.
+
+El caso hace justo eso: Ada cambia de `ada@example.org` a `ada@nuevo.org` y,
+después del cambio, la consulta devuelve por estudiante su correo actual y
+cuántas inscripciones conserva. Si la identidad estaba bien modelada, Ada
+sigue teniendo sus dos inscripciones.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| correo | inscripciones |
+|---|---|
+| `ada@nuevo.org` | `2` |
+| `grace@example.org` | `0` |
+| `linus@example.org` | `1` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 007`: 4 de
+las 4 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_createtable.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/statements/create_sequence.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-identity-columns.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/document/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/using-commands/keyspace/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: INTEGER PRIMARY KEY es un alias del rowid interno, asi que la clave
+--       sustituta no ocupa una columna adicional.
+
+-- === preparacion ===
+-- La identidad es el id: estable, sin significado y nunca visible para el
+-- usuario. El correo es un ATRIBUTO unico, no la identidad.
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso         TEXT NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, correo) VALUES
+    (1, 'ada@example.org'), (2, 'linus@example.org'), (3, 'grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso) VALUES
+    (1, 'DB-101'), (1, 'SE-201'), (2, 'DB-101');
+
+-- El cambio que rompe los modelos con clave natural: una fila, ninguna
+-- referencia tocada. Con el correo como clave foranea, habria que propagarlo a
+-- inscripciones y a toda tabla que lo hubiera copiado.
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE id = 1;
+
+-- === consulta ===
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
+```
+
+- **Por qué sí:** `INTEGER PRIMARY KEY` es un alias del `rowid` interno, así que la clave sustituta no cuesta ni una columna extra de almacenamiento: la identidad estable sale gratis.
+- **Por qué no:** Ese mismo alias hace que el valor pueda reutilizarse si se borran filas y se usa `AUTOINCREMENT` mal entendido; una clave sustituta reutilizada es peor que una natural inestable.
+- 📄 Documentación oficial: <https://sqlite.org/lang_createtable.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_sequence.html
+-- nota: util para el argumento numerico de la discusion: contar cuantas filas
+--       habria que tocar si el correo fuera la clave foranea.
+
+-- === preparacion ===
+-- La identidad es el id: estable, sin significado y nunca visible para el
+-- usuario. El correo es un ATRIBUTO unico, no la identidad.
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL,
+    curso         VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, correo) VALUES
+    (1, 'ada@example.org'), (2, 'linus@example.org'), (3, 'grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso) VALUES
+    (1, 'DB-101'), (1, 'SE-201'), (2, 'DB-101');
+
+-- El cambio que rompe los modelos con clave natural: una fila, ninguna
+-- referencia tocada. Con el correo como clave foranea, habria que propagarlo a
+-- inscripciones y a toda tabla que lo hubiera copiado.
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE id = 1;
+
+-- === consulta ===
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
+```
+
+- **Por qué sí:** Permite comprobar el efecto del cambio sobre un volcado completo: contar cuántas filas habría que tocar con clave natural es el argumento numérico que cierra la discusión.
+- **Por qué no:** No genera identificadores por sí solo con la comodidad de una secuencia de un motor transaccional, así que la identidad hay que traerla ya asignada.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/statements/create_sequence.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-identity-columns.html
+-- nota: las dos claves conviven, y las dos hacen falta: IDENTITY da la
+--       identidad estable a la que apuntan las referencias, y UNIQUE sobre el
+--       correo impide dos personas con el mismo correo.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    correo text NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso         text NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (correo) VALUES
+    ('ada@example.org'), ('linus@example.org'), ('grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso)
+SELECT id, 'DB-101' FROM estudiantes WHERE correo = 'ada@example.org'
+UNION ALL
+SELECT id, 'SE-201' FROM estudiantes WHERE correo = 'ada@example.org'
+UNION ALL
+SELECT id, 'DB-101' FROM estudiantes WHERE correo = 'linus@example.org';
+
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE correo = 'ada@example.org';
+
+-- === consulta ===
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
+```
+
+- **Por qué sí:** `GENERATED ALWAYS AS IDENTITY` es la forma normalizada de la clave sustituta y, junto a un `UNIQUE` sobre el correo, permite tener las dos cosas: identidad estable para las referencias y unicidad de negocio para el usuario.
+- **Por qué no:** La clave sustituta no exime de declarar la clave natural: sin el `UNIQUE` sobre el correo, el sistema acepta dos personas con el mismo correo y nadie lo nota hasta que alguien intenta recuperar su contraseña.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-identity-columns.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/document/
+// nota: el _id es inmutable. Si se hubiera usado el correo como _id, este
+//       cambio no seria un update: seria borrar el documento y crear otro.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.inscripciones.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, correo: "ada@example.org" },
+  { _id: 2, correo: "linus@example.org" },
+  { _id: 3, correo: "grace@example.org" },
+]);
+db.estudiantes.createIndex({ correo: 1 }, { unique: true });
+db.inscripciones.insertMany([
+  { estudiante_id: 1, curso: "DB-101" },
+  { estudiante_id: 1, curso: "SE-201" },
+  { estudiante_id: 2, curso: "DB-101" },
+]);
+
+// Una sola escritura, y ninguna inscripcion se entera.
+db.estudiantes.updateOne({ _id: 1 }, { $set: { correo: "ada@nuevo.org" } });
+
+// === consulta ===
+db.estudiantes
+  .aggregate([
+    { $lookup: { from: "inscripciones", localField: "_id",
+                 foreignField: "estudiante_id", as: "i" } },
+    { $project: { _id: 0, correo: 1, inscripciones: { $size: "$i" } } },
+    { $sort: { correo: 1 } },
+  ])
+  .forEach((d) => print(d.correo + "|" + d.inscripciones));
+```
+
+- **Por qué sí:** El `_id` es obligatorio y por omisión es un `ObjectId` generado en el cliente: la identidad sustituta existe siempre, incluso cuando nadie la diseñó, y se puede generar sin ir al servidor.
+- **Por qué no:** Como es opaco y de 12 bytes, aparece en cada documento y en cada índice; y si se cede a la tentación de usar el correo como `_id`, cambiarlo obliga a borrar y reinsertar el documento, porque el `_id` es inmutable.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/document/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | La clave primaria decide en qué nodo vive la fila, así que **no se puede actualizar**: cambiar el correo cuando el correo es la clave de partición significa insertar la fila nueva y borrar la vieja, con todo lo que cuelgue de ella. | Usar un identificador estable (UUID) como clave de partición y mantener una tabla `estudiante_por_correo` como índice de búsqueda, aceptando el trabajo de mantener las dos. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html) |
+| Redis | La clave de Redis es literalmente la ruta de acceso: si el correo forma parte del nombre de la clave, cambiarlo obliga a renombrar y a corregir todas las referencias, que es la versión más cruda del problema de la clave natural. | Nombrar las claves por identificador (`estudiante:42`) y mantener un índice aparte (`correo:ada@nuevo.org -> 42`), que es exactamente la distinción entre identidad y atributo que enseña esta clase. | [doc](https://redis.io/docs/latest/develop/using-commands/keyspace/) |
 
 ---
 

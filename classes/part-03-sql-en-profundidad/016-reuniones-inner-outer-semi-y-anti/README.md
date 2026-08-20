@@ -8,6 +8,8 @@ Parte 03 — SQL en profundidad · Intermedio ·
 
 **Conceptos centrales:** `reunión interna` · `reunión externa` · `semirreunion` · `antirreunion` · `multiplicación de filas`
 
+**En este caso se comparan 12 motores**: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -204,6 +206,458 @@ Un informe con totales inflados es más peligroso que uno que falla: nadie lo re
 2. Explica por qué `EXISTS` no necesita `DISTINCT`.
 3. Da una consulta tuya donde el doble conteo pasaría desapercibido, e indica cómo lo detectarías.
 4. ¿Por qué un bucle anidado sobre dos tablas grandes es una señal de alarma en un plan?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cada estudiante con el curso en que está inscrito, sin perder a los que no tienen ninguno
+
+Con tres estudiantes (Ada, Linus, Grace), dos cursos (DB-101, SE-201) y tres
+inscripciones (Ada en ambos, Linus en DB-101, Grace en ninguno), devolver una
+fila por pareja estudiante-curso, ordenada por nombre y luego por código.
+Los estudiantes sin ninguna inscripción aparecen con el literal `sin-curso`:
+un centinela explícito en vez de un nulo, porque cada cliente de línea de
+órdenes imprime el nulo de una forma distinta y lo que aquí se compara entre
+motores es el resultado, no el formato.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| nombre | codigo |
+|---|---|
+| `Ada` | `DB-101` |
+| `Ada` | `SE-201` |
+| `Grace` | `sin-curso` |
+| `Linus` | `DB-101` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 016`: 6 de
+las 9 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_select.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/current/sql/query_syntax/from.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/queries-table-expressions.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/join.html) |
+| Microsoft SQL Server | sí | declarado | [código](implementaciones/sql-server/consulta.sql) | [doc oficial](https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql) |
+| Oracle Database | sí | declarado | [código](implementaciones/oracle-database/consulta.sql) | [doc oficial](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/) |
+| Neo4j | sí | servicio | [código](implementaciones/neo4j/consulta.cypher) | [doc oficial](https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/) |
+| Apache Cassandra | sí | declarado | [código](implementaciones/cassandra/consulta.cql) | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/) |
+| Amazon DynamoDB | **no** | — | — | [doc oficial](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html) |
+| OpenSearch | **no** | — | — | [doc oficial](https://docs.opensearch.org/latest/field-types/supported-field-types/join/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: el LEFT JOIN es la forma portable; RIGHT y FULL solo existen desde 3.39.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo TEXT NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** Es el motor relacional que ya está instalado: viene con Python, no pide servidor y ejecuta el `LEFT JOIN` estándar. Para aprender la operación sin que la infraestructura estorbe, no hay nada más corto.
+- **Por qué no:** El planificador es deliberadamente simple: hasta la versión 3.39 no tenía `RIGHT JOIN` ni `FULL JOIN`, y solo dispone de bucle anidado —no hay reunión hash ni por fusión—, así que las lecciones de rendimiento de una reunión grande no se transfieren desde aquí.
+- 📄 Documentación oficial: <https://sqlite.org/lang_select.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/current/sql/query_syntax/from.html
+-- nota: misma consulta estandar; lo que cambia es el motor que la ejecuta
+--       (columnar y vectorizado), no el SQL.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo VARCHAR NOT NULL
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL,
+    curso_id      INTEGER NOT NULL
+);
+
+INSERT INTO estudiantes VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** Misma sintaxis estándar, pero ejecutada por un motor columnar vectorizado: la misma reunión sobre millones de filas termina en un portátil. Es el motor donde comprobar que el resultado no cambia y el tiempo sí.
+- **Por qué no:** Está pensado para analítica de un proceso a la vez: no hay control de concurrencia entre escritores ni servicio al que se conecten cien aplicaciones, así que no sustituye al motor transaccional del que salen los datos.
+- 📄 Documentación oficial: <https://duckdb.org/docs/current/sql/query_syntax/from.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/queries-table-expressions.html
+-- nota: EXPLAIN (ANALYZE, BUFFERS) sobre esta misma consulta dice cual de los
+--       tres algoritmos de reunion eligio el planificador.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE cursos (
+    id     integer PRIMARY KEY,
+    codigo text NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso_id      integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** Es la referencia práctica del SQL de reuniones: tiene los tres algoritmos físicos (bucle anidado, hash y fusión), `FULL OUTER JOIN`, `LATERAL` y un `EXPLAIN (ANALYZE, BUFFERS)` que dice cuál eligió y por qué. Lo que se aprende aquí se lee después en cualquier motor.
+- **Por qué no:** Cada conexión es un proceso del sistema operativo: sin un agrupador delante (PgBouncer), unas pocas centenas de conexiones ociosas cuestan más memoria que la propia consulta. La reunión no es el problema; el modelo de conexiones sí.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/queries-table-expressions.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/join.html
+-- nota: desde 8.0.18 MySQL tiene reunion hash; antes, un LEFT JOIN sin indice
+--       degradaba a bucle anidado sobre la tabla completa.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE cursos (
+    id     INT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+CREATE TABLE inscripciones (
+    estudiante_id INT NOT NULL,
+    curso_id      INT NOT NULL,
+    PRIMARY KEY (estudiante_id, curso_id),
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
+    FOREIGN KEY (curso_id) REFERENCES cursos(id)
+) ENGINE=InnoDB;
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** Es el motor relacional más desplegado en aplicaciones web y resuelve la misma consulta con el mismo estándar; desde 8.0.18 tiene reunión hash, de modo que el `LEFT JOIN` sin índice ya no degrada a bucle anidado.
+- **Por qué no:** No tiene `FULL OUTER JOIN` —hay que emularlo con `UNION`— y su optimizador históricamente materializa subconsultas que PostgreSQL aplana, así que las consultas con reuniones anidadas hay que medirlas, no suponerlas.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/join.html>
+
+#### Microsoft SQL Server · [`implementaciones/sql-server/consulta.sql`](implementaciones/sql-server/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql
+-- nota: implementacion declarada. El repositorio no la ejecuta en CI porque no
+--       distribuye la imagen con licencia; se revisa a mano contra la
+--       documentacion citada.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.inscripciones;
+DROP TABLE IF EXISTS dbo.cursos;
+DROP TABLE IF EXISTS dbo.estudiantes;
+
+CREATE TABLE dbo.estudiantes (
+    id     INT PRIMARY KEY,
+    nombre NVARCHAR(50) NOT NULL
+);
+CREATE TABLE dbo.cursos (
+    id     INT PRIMARY KEY,
+    codigo NVARCHAR(20) NOT NULL UNIQUE
+);
+CREATE TABLE dbo.inscripciones (
+    estudiante_id INT NOT NULL REFERENCES dbo.estudiantes(id),
+    curso_id      INT NOT NULL REFERENCES dbo.cursos(id),
+    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO dbo.estudiantes (id, nombre) VALUES (1, N'Ada'), (2, N'Linus'), (3, N'Grace');
+INSERT INTO dbo.cursos (id, codigo) VALUES (10, N'DB-101'), (20, N'SE-201');
+INSERT INTO dbo.inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, N'sin-curso') AS codigo
+FROM dbo.estudiantes e
+LEFT JOIN dbo.inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN dbo.cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** El optimizador basado en costos y las sugerencias explícitas de reunión (`OPTION (HASH JOIN)`) lo hacen el mejor sitio para ver el efecto de cada algoritmo físico, y el plan gráfico de SSMS enseña la reunión mejor que cualquier diagrama.
+- **Por qué no:** Licencia por núcleo y una edición gratuita (Express) limitada a 10 GB por base y a un socket: la decisión de usarlo casi nunca la toma la consulta, la toma el contrato.
+- 📄 Documentación oficial: <https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql>
+
+#### Oracle Database · [`implementaciones/oracle-database/consulta.sql`](implementaciones/oracle-database/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html
+-- nota: implementacion declarada. Se escribe con la sintaxis estandar de
+--       reunion, no con el operador heredado (+), que Oracle sigue aceptando
+--       pero que no se puede combinar con ANSI JOIN en la misma consulta.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     NUMBER PRIMARY KEY,
+    nombre VARCHAR2(50) NOT NULL
+);
+CREATE TABLE cursos (
+    id     NUMBER PRIMARY KEY,
+    codigo VARCHAR2(20) NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id NUMBER NOT NULL REFERENCES estudiantes(id),
+    curso_id      NUMBER NOT NULL REFERENCES cursos(id),
+    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada');
+INSERT INTO estudiantes (id, nombre) VALUES (2, 'Linus');
+INSERT INTO estudiantes (id, nombre) VALUES (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101');
+INSERT INTO cursos (id, codigo) VALUES (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10);
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 20);
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (2, 10);
+COMMIT;
+
+-- === consulta ===
+SELECT e.nombre,
+       NVL(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+```
+
+- **Por qué sí:** Es donde viven los sistemas transaccionales grandes y antiguos, y su optimizador tiene el catálogo de transformaciones más amplio (`STAR TRANSFORMATION`, reescritura de vistas materializadas) sobre reuniones de muchas tablas.
+- **Por qué no:** Sintaxis heredada `(+)` conviviendo con la estándar, cadena vacía tratada como nulo —lo que rompe el centinela `COALESCE` de otros motores— y un costo de licencia que solo un sistema muy grande justifica.
+- 📄 Documentación oficial: <https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/
+// nota: $unwind con preserveNullAndEmptyArrays es lo que convierte el $lookup
+//       en una reunion EXTERNA; sin esa opcion, Grace desaparece del resultado.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: "Ada" },
+  { _id: 2, nombre: "Linus" },
+  { _id: 3, nombre: "Grace" },
+]);
+db.cursos.insertMany([
+  { _id: 10, codigo: "DB-101" },
+  { _id: 20, codigo: "SE-201" },
+]);
+db.inscripciones.insertMany([
+  { estudiante_id: 1, curso_id: 10 },
+  { estudiante_id: 1, curso_id: 20 },
+  { estudiante_id: 2, curso_id: 10 },
+]);
+
+// === consulta ===
+db.estudiantes
+  .aggregate([
+    { $lookup: { from: "inscripciones", localField: "_id",
+                 foreignField: "estudiante_id", as: "inscripcion" } },
+    { $unwind: { path: "$inscripcion", preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: "cursos", localField: "inscripcion.curso_id",
+                 foreignField: "_id", as: "curso" } },
+    { $unwind: { path: "$curso", preserveNullAndEmptyArrays: true } },
+    { $project: { _id: 0, nombre: 1,
+                  codigo: { $ifNull: ["$curso.codigo", "sin-curso"] } } },
+    { $sort: { nombre: 1, codigo: 1 } },
+  ])
+  .forEach((d) => print(d.nombre + "|" + d.codigo));
+```
+
+- **Por qué sí:** Desde la versión 3.2 `$lookup` hace la reunión izquierda dentro del motor, así que un modelo documental normalizado no obliga a reunir en la aplicación. Con `preserveNullAndEmptyArrays` el `$unwind` conserva a quien no tiene pareja: es literalmente un `LEFT JOIN`.
+- **Por qué no:** `$lookup` no usa índices del lado interno con la misma libertad que un motor relacional y no hay reunión hash ni por fusión entre colecciones: cuando el patrón de acceso pide reunir todo el rato, el modelo está mal y lo que tocaba era incrustar el curso en el documento del estudiante.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/>
+
+#### Neo4j · [`implementaciones/neo4j/consulta.cypher`](implementaciones/neo4j/consulta.cypher)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```cypher
+// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/
+// nota: implementacion declarada. OPTIONAL MATCH es la reunion externa: si el
+//       patron no encuentra pareja, las variables del patron quedan en null y
+//       la fila del estudiante sobrevive.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (g:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (a)-[:INSCRITO_EN]->(db),
+       (a)-[:INSCRITO_EN]->(se),
+       (l)-[:INSCRITO_EN]->(db);
+
+// === consulta ===
+MATCH (e:Estudiante)
+OPTIONAL MATCH (e)-[:INSCRITO_EN]->(c:Curso)
+RETURN e.nombre AS nombre, coalesce(c.codigo, 'sin-curso') AS codigo
+ORDER BY nombre, codigo;
+```
+
+- **Por qué sí:** La reunión externa se llama `OPTIONAL MATCH` y no hay tabla intermedia que declarar: la inscripción es una arista. Cuando el recorrido tiene varios saltos —estudiante, curso, prerrequisito, profesor— el costo no crece con el tamaño del grafo, sino con el del vecindario recorrido.
+- **Por qué no:** Ese mismo modelo penaliza lo tabular: contar y agregar sobre todos los nodos de una etiqueta es más caro que en una tabla, y mantener un grafo solo para reunir dos entidades que ya son tablas añade un sistema entero sin resolver nada.
+- 📄 Documentación oficial: <https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/>
+
+#### Apache Cassandra · [`implementaciones/cassandra/consulta.cql`](implementaciones/cassandra/consulta.cql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada, y deliberadamente distinta. CQL no tiene
+--       JOIN: la reunion se paga en la escritura y se guarda ya resuelta la
+--       tabla que la consulta necesita. El precio esta en el comentario final.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.cursos_por_estudiante;
+
+-- La tabla es la consulta: una particion por estudiante, los codigos ordenados
+-- dentro de ella. No modela entidades, modela una pregunta.
+CREATE TABLE escuela.cursos_por_estudiante (
+    nombre text,
+    codigo text,
+    PRIMARY KEY (nombre, codigo)
+) WITH CLUSTERING ORDER BY (codigo ASC);
+
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'DB-101');
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'SE-201');
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Linus', 'DB-101');
+-- Grace no tiene inscripciones: el centinela tambien se escribe a mano, porque
+-- aqui no hay reunion externa que lo genere.
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Grace', 'sin-curso');
+
+-- === consulta ===
+-- El ORDER BY solo ordena DENTRO de una particion. Al recorrer varias, el orden
+-- lo fija el token de la clave, no el nombre: por eso este SELECT lleva el
+-- ordenamiento final del lado del cliente en cualquier uso serio.
+SELECT nombre, codigo FROM escuela.cursos_por_estudiante;
+```
+
+- **Por qué sí:** CQL no tiene `JOIN`, y aun así el caso se resuelve: se paga la reunión en la escritura y se guarda ya resuelta la tabla que la consulta necesita. Es la lección de modelado más importante de las columnas anchas —se modela desde la consulta, no desde las entidades— y da lecturas de una sola partición a latencia predecible.
+- **Por qué no:** Cada consulta nueva es una tabla nueva que hay que llenar y mantener coherente sin transacciones entre tablas; y el orden total del resultado no está garantizado al recorrer varias particiones, porque el orden entre particiones lo fija el token, no el `ORDER BY`.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | Redis no tiene reuniones ni un lenguaje de consulta sobre relaciones: es un servidor de estructuras de datos donde el acceso es por clave. Reunir exigiría traer las claves de los estudiantes, luego las de sus inscripciones y luego las de los cursos —tres viajes por estudiante— y hacer la reunión en la aplicación, que es exactamente lo que un motor relacional evita. | Guardar el resultado ya reunido como valor de una clave (`estudiante:1:cursos`) y recalcularlo cuando cambie el origen: Redis como caché de la reunión que hace otro motor, no como sustituto. | [doc](https://redis.io/docs/latest/develop/data-types/) |
+| Amazon DynamoDB | El modelo de DynamoDB parte de que no hay reuniones en tiempo de consulta: solo se puede acceder por clave de partición y ordenación. Una reunión de tres entidades se traduce en varias `Query` o en un `Scan`, y el `Scan` lee y cobra la tabla entera. | Diseño de tabla única: estudiante e inscripciones comparten clave de partición (`ESTUDIANTE#1`) y se distinguen por la de ordenación (`PERFIL`, `CURSO#DB-101`), de modo que una sola `Query` devuelve lo que aquí es una reunión. | [doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html) |
+| OpenSearch | Es un índice invertido para buscar y puntuar documentos, no para relacionar entidades. El campo `join` existe, pero obliga a que padre e hijo vivan en el mismo fragmento y penaliza cada consulta; la propia documentación recomienda desnormalizar antes que usarlo. | Indexar el documento ya desnormalizado (estudiante con la lista de sus cursos dentro) y reindexar cuando cambie, aceptando que el índice va por detrás del origen. | [doc](https://docs.opensearch.org/latest/field-types/supported-field-types/join/) |
 
 ---
 

@@ -1,0 +1,114 @@
+---
+caso:
+  titulo: Los dos mejores de DB-101 con al menos 60
+  contrato: |
+    Un `SELECT` toma cinco decisiones y conviene no mezclarlas: de dónde salen
+    las filas, cuáles sobreviven al filtro, qué columnas se ven, en qué orden se
+    leen y cuántas se devuelven.
+
+    El caso pide los dos mejores resultados de DB-101 con nota igual o superior
+    a 60, con su nota, de mayor a menor. La trampa que esta clase entrena está en
+    la última decisión: **`LIMIT` sin `ORDER BY` devuelve dos filas
+    cualesquiera**, y como suelen ser las «correctas» en pruebas pequeñas, el
+    error sobrevive hasta producción.
+  columnas: [estudiante, nota]
+  esperado:
+    - [Ada, "90"]
+    - [Grace, "72"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Implementa `WHERE`, `ORDER BY` y `LIMIT` con la sintaxis del estándar de
+      facto, la misma de PostgreSQL y MySQL.
+    porque_no: >-
+      `LIMIT` sin `ORDER BY` devuelve aquí un orden estable en la práctica, que
+      es la peor forma de aprender: el mismo código en otro motor devuelve otra
+      cosa y nadie entiende por qué.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Añade atajos que ahorran errores reales —`SELECT * EXCLUDE (columna)`,
+      `GROUP BY ALL`— y su ejecución en paralelo hace evidente que sin `ORDER BY`
+      no hay orden.
+    porque_no: >-
+      Esos atajos no son estándar: la consulta cómoda que se escribe aquí no se
+      puede pegar en el motor transaccional de al lado.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/select.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Con un índice sobre `(curso, nota DESC)` este `LIMIT 2` no ordena nada:
+      lee las dos primeras entradas del índice y para. Es el ejemplo canónico de
+      que el orden pedido y el orden almacenado pueden ser el mismo.
+    porque_no: >-
+      La paginación con `OFFSET` grande obliga a leer y descartar todas las filas
+      anteriores: la página 1000 cuesta mil veces la primera, y hay que
+      sustituirla por paginación por clave.
+    doc: https://www.postgresql.org/docs/current/queries-limit.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Misma sintaxis y misma optimización de `ORDER BY ... LIMIT` cuando el
+      índice cubre el orden.
+    porque_no: >-
+      Cuando no lo cubre, aplica un ordenamiento en memoria limitado por
+      `sort_buffer_size` y puede caer a archivos temporales en disco sin avisar:
+      la misma consulta pasa de milisegundos a segundos por un cambio de datos.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `find().sort().limit()` es la traducción directa, y con un índice
+      compuesto el motor aplica el mismo atajo: recorre el índice y se detiene.
+    porque_no: >-
+      Sin índice que cubra el `sort`, la ordenación en memoria está limitada a
+      32 MB y la consulta **falla** en vez de ir lenta. Es un fallo mejor que un
+      cuelgue, pero sorprende en producción.
+    doc: https://www.mongodb.com/docs/manual/reference/method/cursor.sort/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Un conjunto ordenado mantiene el orden **en la escritura**: pedir los dos
+      mejores es leer dos elementos del extremo, sin ordenar nada. Para un
+      marcador que se consulta miles de veces por segundo, no hay estructura más
+      barata.
+    porque_no: >-
+      Solo ordena por una puntuación numérica y el filtro por curso obliga a
+      tener un conjunto por curso: cada criterio de orden nuevo es una
+      estructura nueva que hay que mantener al escribir.
+    doc: https://redis.io/docs/latest/develop/data-types/sorted-sets/
+
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      Si la tabla se modela con el curso como partición y la nota como columna
+      de agrupamiento descendente, el orden está en el disco y `LIMIT 2` lee dos
+      celdas contiguas: la consulta más barata posible.
+    porque_no: >-
+      Ese orden es el único disponible: pedir «los dos mejores por estudiante»
+      exige otra tabla. Y el filtro `nota >= 60` solo funciona sobre la columna
+      de agrupamiento; sobre cualquier otra hace falta `ALLOW FILTERING`, que es
+      la forma que tiene Cassandra de decir «esto va a escanear».
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

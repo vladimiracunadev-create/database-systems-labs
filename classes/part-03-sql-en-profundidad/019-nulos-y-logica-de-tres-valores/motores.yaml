@@ -1,0 +1,111 @@
+---
+caso:
+  titulo: Quién no está inscrito en nada, cuando hay un nulo de por medio
+  contrato: |
+    En SQL una comparación no devuelve verdadero o falso: devuelve verdadero,
+    falso o **desconocido**. Y `NULL` no es un valor, es la ausencia de valor:
+    `NULL = NULL` no es cierto, y `NULL <> 'Ada'` tampoco es cierto.
+
+    El caso pide los estudiantes sin ninguna inscripción. En la tabla de
+    inscripciones hay una fila con el estudiante en nulo —dato sucio, de los que
+    hay en cualquier sistema real—, y esa única fila basta para que la forma
+    escrita con `NOT IN` devuelva **cero filas** en vez de una. No lanza un
+    error: devuelve un informe vacío. La forma con `NOT EXISTS` devuelve lo
+    correcto: Grace.
+  columnas: [nombre]
+  esperado:
+    - [Grace]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Implementa la lógica de tres valores del estándar, así que el fallo del
+      `NOT IN` se reproduce aquí igual que en cualquier motor grande: es el sitio
+      más barato para verlo con los propios ojos.
+    porque_no: >-
+      Permite nulos en columnas de clave primaria salvo en tablas `STRICT` o con
+      `NOT NULL` explícito, una desviación del estándar que multiplica las
+      ocasiones de encontrarse un nulo donde no debía haberlo.
+    doc: https://sqlite.org/nulls.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Sigue el estándar y añade `IS DISTINCT FROM`, que compara tratando el nulo
+      como un valor más: es la herramienta correcta para detectar cambios entre
+      dos versiones de una fila sin que los nulos estropeen la comparación.
+    porque_no: >-
+      En analítica los nulos llegan por millones desde ficheros mal formados, y
+      las funciones de agregación los ignoran en silencio: `AVG` sobre una
+      columna medio vacía devuelve un número perfectamente creíble y equivocado.
+    doc: https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Su documentación es explícita sobre la trampa del `NOT IN` con
+      subconsultas que pueden devolver nulos, y ofrece las herramientas para
+      evitarla: `NOT EXISTS`, `IS DISTINCT FROM` y restricciones `NOT NULL`.
+    porque_no: >-
+      El índice B-Tree por omisión sí indexa los nulos, pero `UNIQUE` los deja
+      pasar todos: una columna única y anulable admite mil filas con nulo, que
+      casi nunca es lo que se quería.
+    doc: https://www.postgresql.org/docs/current/functions-subquery.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Tiene la misma semántica de tres valores y añade el operador `<=>`, que
+      compara con nulos de forma segura sin salirse a una subconsulta.
+    porque_no: >-
+      Sin modo estricto, insertar `NULL` en una columna `NOT NULL` no fallaba:
+      guardaba el valor por omisión y emitía un aviso. Hay tablas heredadas
+      llenas de cadenas vacías y ceros que en realidad significan «no se sabe».
+    doc: https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Resuelve la pregunta sin subconsultas, con `$lookup` y comprobando que el
+      arreglo resultante esté vacío: la ausencia se mide por tamaño, no por
+      comparación con un nulo.
+    porque_no: >-
+      Aquí hay **dos** formas de ausencia —el campo con valor `null` y el campo
+      que no existe— y `{campo: null}` encuentra las dos. Es una trampa peor que
+      la de SQL, porque no hay error ni resultado vacío: hay resultados de más.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/query/type/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Escribir un nulo no guarda un nulo: crea una **lápida** (`tombstone`), un
+      marcador de borrado que ocupa espacio, viaja a las réplicas y hay que
+      recorrer en cada lectura. Miles de lápidas en una partición hacen que la
+      lectura falle por tiempo de espera.
+    alternativa: >-
+      No escribir la columna en absoluto cuando no hay valor: en Cassandra una
+      columna ausente y una columna nula no son lo mismo, y la ausente es gratis.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No existe el nulo: una clave está o no está, y un campo de hash existe o no
+      existe. La lógica es de dos valores, lo que evita la trampa a cambio de no
+      poder distinguir «no se sabe» de «no aplica».
+    alternativa: >-
+      Codificar explícitamente el desconocido con un valor centinela acordado, y
+      documentarlo: si el centinela no está escrito en algún sitio, dentro de un
+      año nadie sabrá si `""` significaba vacío o desconocido.
+    doc: https://redis.io/docs/latest/commands/hget/

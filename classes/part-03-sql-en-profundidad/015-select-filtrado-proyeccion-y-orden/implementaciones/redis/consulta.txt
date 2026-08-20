@@ -1,0 +1,17 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sorted-sets/
+# nota: el orden se paga en la ESCRITURA. ZADD mantiene el conjunto ordenado
+#       por puntuacion, asi que «los dos mejores» es leer dos elementos del
+#       extremo: O(log N) para llegar y O(1) por elemento. El precio es que el
+#       filtro por curso obliga a un conjunto por curso.
+
+# === preparacion ===
+FLUSHDB
+ZADD notas:DB-101 90 Ada
+ZADD notas:DB-101 58 Linus
+ZADD notas:DB-101 72 Grace
+ZADD notas:SE-201 66 Ada
+ZADD notas:SE-201 78 Grace
+
+# === consulta ===
+EVAL "local t=redis.call('ZREVRANGEBYSCORE','notas:DB-101','+inf','60','WITHSCORES','LIMIT',0,2) local r={} for i=1,#t,2 do r[#r+1]=t[i]..'|'..t[i+1] end return r" 0

@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>analizador</code> · <code>planificador</code> · <code>ejecutor</code> · <code>gestor de almacenamiento</code> · <code>buffer pool</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Abrir la caja negra. Saber qué le ocurre a una consulta desde que sale del cliente hasta que vuelve con filas permite razonar sobre rendimiento, bloqueos y fallos en lugar de adivinar.</p>
@@ -209,6 +210,157 @@ Plan B  Búsqueda por índice: descender el B-Tree de la clave primaria
 <li>Tu servidor pasa de 50 a 500 conexiones y el rendimiento cae. Da dos causas plausibles ligadas al modelo de proceso.</li>
 <li>¿Qué componente falla si, tras un corte de energía, aparecen filas de una transacción que nunca se confirmó?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Qué hay entre la consulta y el disco, motor por motor</p>
+<p>Una consulta atraviesa siempre las mismas capas —protocolo, analizador,
+planificador, ejecutor, gestor de almacenamiento y caché de páginas—, pero
+cada motor las reparte de forma distinta entre procesos, hilos y archivos.
+Aquí no hay una salida que comparar: lo que se compara es <strong>dónde vive cada
+capa</strong> en cada motor, porque de ese reparto salen sus límites de operación.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-arch.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/arch.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/internals/overview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://clickhouse.com/docs/en/development/architecture">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Un proceso supervisor (<code>postmaster</code>) acepta la conexión y lanza <strong>un proceso del sistema operativo por sesión</strong>. Ese proceso analiza, planifica y ejecuta; las páginas se comparten en memoria (<code>shared_buffers</code>) y los cambios se escriben antes al registro anticipado (WAL) y después a los archivos de datos, con procesos auxiliares para el vaciado y el autovacío.</li>
+<li><strong>Por qué sí:</strong> El aislamiento entre procesos hace que la caída de una sesión no arrastre al servidor, y permite extensiones cargadas por sesión sin recompilar nada.</li>
+<li><strong>Por qué no:</strong> Un proceso por conexión cuesta memoria y cambio de contexto: por encima de unos cientos de conexiones hace falta un agrupador (PgBouncer) delante, y eso es una pieza más que operar.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-arch.html">https://www.postgresql.org/docs/current/tutorial-arch.html</a></li>
+</ul>
+<h4 id="mysql">MySQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Un servidor multihilo con <strong>un hilo por conexión</strong> y, debajo, un motor de almacenamiento intercambiable: InnoDB aporta el buffer pool, el registro de rehacer y el control de concurrencia. La capa SQL y la capa de almacenamiento están separadas por una interfaz.</li>
+<li><strong>Por qué sí:</strong> Los hilos pesan menos que los procesos y el arranque de conexión es más barato; la separación por motores permitió que InnoDB sustituyera a MyISAM sin reescribir el SQL.</li>
+<li><strong>Por qué no:</strong> Esa misma separación deja al optimizador con menos información sobre el almacenamiento, y explica varias de sus decisiones de plan peores que las de PostgreSQL en consultas anidadas.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html</a></li>
+</ul>
+<h4 id="sqlite">SQLite</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> No hay servidor: la biblioteca se enlaza dentro del proceso de la aplicación y <strong>la base de datos es un archivo</strong>. El analizador genera un programa para una máquina virtual de bytecode (VDBE) que el propio proceso ejecuta; el bloqueo lo da el sistema de archivos y el registro es el archivo WAL de al lado.</li>
+<li><strong>Por qué sí:</strong> Cero administración, cero red, cero latencia de conexión: es el motor más desplegado del mundo justamente por lo que no tiene.</li>
+<li><strong>Por qué no:</strong> Sin servidor no hay control de acceso por usuario, ni conexiones remotas, ni escrituras concurrentes de varios procesos más allá de lo que el bloqueo de archivo permite.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/arch.html">https://sqlite.org/arch.html</a></li>
+</ul>
+<h4 id="duckdb">DuckDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> También embebido y sin servidor, pero el ejecutor es <strong>vectorizado y columnar</strong>: procesa lotes de miles de valores de una columna por operación, en vez de una fila cada vez, y paraleliza por trozos del archivo.</li>
+<li><strong>Por qué sí:</strong> Ese ejecutor es la razón de que consultas analíticas sobre millones de filas terminen en un portátil sin clúster.</li>
+<li><strong>Por qué no:</strong> El mismo diseño hace caras las escrituras fila a fila y no ofrece concurrencia entre escritores: no es el sitio donde vive la verdad del negocio.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/internals/overview.html">https://duckdb.org/docs/stable/internals/overview.html</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Servidor multihilo cuyo almacenamiento es WiredTiger: control de concurrencia por documento con múltiples versiones, caché propia fuera del montón del proceso y un registro de diario para durabilidad. El planificador prueba varios planes en paralelo y <strong>guarda en caché el que gana</strong>.</li>
+<li><strong>Por qué sí:</strong> La caché de planes con reevaluación automática ahorra estadísticas manuales, y la concurrencia por documento evita bloqueos de colección enteros.</li>
+<li><strong>Por qué no:</strong> Los planes en caché pueden envejecer mal cuando la distribución de datos cambia, y diagnosticar eso exige leer <code>explain</code> con detalle, no adivinar.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Un <strong>único hilo</strong> ejecuta las órdenes una tras otra sobre estructuras de datos en memoria; la red se atiende con multiplexación de eventos y la persistencia es opcional (instantáneas RDB o registro AOF) y la hace un proceso hijo.</li>
+<li><strong>Por qué sí:</strong> Un solo hilo elimina los bloqueos: cada orden es atómica sin que nadie escriba una sola línea de sincronización, y la latencia es de microsegundos.</li>
+<li><strong>Por qué no:</strong> Una orden lenta (<code>KEYS *</code>, un script Lua largo) bloquea a todos los demás clientes, y la memoria es el límite duro del tamaño del conjunto de datos.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">https://redis.io/docs/latest/develop/reference/protocol-spec/</a></li>
+</ul>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> <strong>No hay nodo maestro</strong>: cualquier nodo actúa de coordinador, calcula el token de la clave, reenvía a las réplicas y espera tantas respuestas como pida el nivel de consistencia. Debajo, cada nodo escribe en memoria (memtable) y en el registro de compromiso, y vuelca a archivos inmutables (SSTables) que después se compactan.</li>
+<li><strong>Por qué sí:</strong> Esa arquitectura da escritura lineal y disponibilidad ante caídas de nodos: no hay una pieza cuya caída detenga el sistema.</li>
+<li><strong>Por qué no:</strong> El precio es que la lectura puede tener que consultar varias SSTables y varias réplicas, y que la compactación consume entrada y salida de forma sostenida.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse</td>
+<td>Su arquitectura no es una variante de las anteriores sino otra cosa: <code>MergeTree</code> ordena y comprime por partes, la ejecución es vectorizada y masivamente paralela, y las actualizaciones fila a fila son operaciones pesadas y asíncronas. Compararlo aquí como si fuera un motor transaccional induce a error.</td>
+<td>Se estudia donde le corresponde, en la parte de analítica columnar, junto a DuckDB, con su propio caso y su propia medición.</td>
+<td><a href="https://clickhouse.com/docs/en/development/architecture">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

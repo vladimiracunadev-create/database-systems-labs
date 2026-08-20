@@ -8,6 +8,8 @@ Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
 
 **Conceptos centrales:** `analizador` · `planificador` · `ejecutor` · `gestor de almacenamiento` · `buffer pool`
 
+**En este caso se comparan 8 motores**: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -133,6 +135,93 @@ Ejecuta la misma consulta dos veces sobre el dominio del repositorio y documenta
 2. Explica con números por qué un barrido secuencial puede ganarle a una búsqueda por índice.
 3. Tu servidor pasa de 50 a 500 conexiones y el rendimiento cae. Da dos causas plausibles ligadas al modelo de proceso.
 4. ¿Qué componente falla si, tras un corte de energía, aparecen filas de una transacción que nunca se confirmó?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué hay entre la consulta y el disco, motor por motor
+
+Una consulta atraviesa siempre las mismas capas —protocolo, analizador,
+planificador, ejecutor, gestor de almacenamiento y caché de páginas—, pero
+cada motor las reparte de forma distinta entre procesos, hilos y archivos.
+Aquí no hay una salida que comparar: lo que se compara es **dónde vive cada
+capa** en cada motor, porque de ese reparto salen sus límites de operación.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/tutorial-arch.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/arch.html) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/internals/overview.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/wiredtiger/) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html) |
+| ClickHouse | **no** | — | — | [doc oficial](https://clickhouse.com/docs/en/development/architecture) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Un proceso supervisor (`postmaster`) acepta la conexión y lanza **un proceso del sistema operativo por sesión**. Ese proceso analiza, planifica y ejecuta; las páginas se comparten en memoria (`shared_buffers`) y los cambios se escriben antes al registro anticipado (WAL) y después a los archivos de datos, con procesos auxiliares para el vaciado y el autovacío.
+- **Por qué sí:** El aislamiento entre procesos hace que la caída de una sesión no arrastre al servidor, y permite extensiones cargadas por sesión sin recompilar nada.
+- **Por qué no:** Un proceso por conexión cuesta memoria y cambio de contexto: por encima de unos cientos de conexiones hace falta un agrupador (PgBouncer) delante, y eso es una pieza más que operar.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/tutorial-arch.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** Un servidor multihilo con **un hilo por conexión** y, debajo, un motor de almacenamiento intercambiable: InnoDB aporta el buffer pool, el registro de rehacer y el control de concurrencia. La capa SQL y la capa de almacenamiento están separadas por una interfaz.
+- **Por qué sí:** Los hilos pesan menos que los procesos y el arranque de conexión es más barato; la separación por motores permitió que InnoDB sustituyera a MyISAM sin reescribir el SQL.
+- **Por qué no:** Esa misma separación deja al optimizador con menos información sobre el almacenamiento, y explica varias de sus decisiones de plan peores que las de PostgreSQL en consultas anidadas.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** No hay servidor: la biblioteca se enlaza dentro del proceso de la aplicación y **la base de datos es un archivo**. El analizador genera un programa para una máquina virtual de bytecode (VDBE) que el propio proceso ejecuta; el bloqueo lo da el sistema de archivos y el registro es el archivo WAL de al lado.
+- **Por qué sí:** Cero administración, cero red, cero latencia de conexión: es el motor más desplegado del mundo justamente por lo que no tiene.
+- **Por qué no:** Sin servidor no hay control de acceso por usuario, ni conexiones remotas, ni escrituras concurrentes de varios procesos más allá de lo que el bloqueo de archivo permite.
+- 📄 Documentación oficial: <https://sqlite.org/arch.html>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** También embebido y sin servidor, pero el ejecutor es **vectorizado y columnar**: procesa lotes de miles de valores de una columna por operación, en vez de una fila cada vez, y paraleliza por trozos del archivo.
+- **Por qué sí:** Ese ejecutor es la razón de que consultas analíticas sobre millones de filas terminen en un portátil sin clúster.
+- **Por qué no:** El mismo diseño hace caras las escrituras fila a fila y no ofrece concurrencia entre escritores: no es el sitio donde vive la verdad del negocio.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/internals/overview.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** Servidor multihilo cuyo almacenamiento es WiredTiger: control de concurrencia por documento con múltiples versiones, caché propia fuera del montón del proceso y un registro de diario para durabilidad. El planificador prueba varios planes en paralelo y **guarda en caché el que gana**.
+- **Por qué sí:** La caché de planes con reevaluación automática ahorra estadísticas manuales, y la concurrencia por documento evita bloqueos de colección enteros.
+- **Por qué no:** Los planes en caché pueden envejecer mal cuando la distribución de datos cambia, y diagnosticar eso exige leer `explain` con detalle, no adivinar.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/wiredtiger/>
+
+#### Redis
+
+- **Cómo se hace aquí:** Un **único hilo** ejecuta las órdenes una tras otra sobre estructuras de datos en memoria; la red se atiende con multiplexación de eventos y la persistencia es opcional (instantáneas RDB o registro AOF) y la hace un proceso hijo.
+- **Por qué sí:** Un solo hilo elimina los bloqueos: cada orden es atómica sin que nadie escriba una sola línea de sincronización, y la latencia es de microsegundos.
+- **Por qué no:** Una orden lenta (`KEYS *`, un script Lua largo) bloquea a todos los demás clientes, y la memoria es el límite duro del tamaño del conjunto de datos.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/develop/reference/protocol-spec/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** **No hay nodo maestro**: cualquier nodo actúa de coordinador, calcula el token de la clave, reenvía a las réplicas y espera tantas respuestas como pida el nivel de consistencia. Debajo, cada nodo escribe en memoria (memtable) y en el registro de compromiso, y vuelca a archivos inmutables (SSTables) que después se compactan.
+- **Por qué sí:** Esa arquitectura da escritura lineal y disponibilidad ante caídas de nodos: no hay una pieza cuya caída detenga el sistema.
+- **Por qué no:** El precio es que la lectura puede tener que consultar varias SSTables y varias réplicas, y que la compactación consume entrada y salida de forma sostenida.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| ClickHouse | Su arquitectura no es una variante de las anteriores sino otra cosa: `MergeTree` ordena y comprime por partes, la ejecución es vectorizada y masivamente paralela, y las actualizaciones fila a fila son operaciones pesadas y asíncronas. Compararlo aquí como si fuera un motor transaccional induce a error. | Se estudia donde le corresponde, en la parte de analítica columnar, junto a DuckDB, con su propio caso y su propia medición. | [doc](https://clickhouse.com/docs/en/development/architecture) |
 
 ---
 

@@ -224,8 +224,15 @@ def render_markdown(texto: str) -> str:
     return html
 
 
-def reescribir_enlaces(texto: str) -> str:
+def reescribir_enlaces(texto: str, ruta_clase: str = "") -> str:
     """Convierte los enlaces relativos de un README de clase en enlaces del sitio."""
+    # Archivos de la propia carpeta de la clase: `motores.yaml` y las
+    # implementaciones por motor. El sitio no los publica —son codigo fuente—,
+    # asi que el enlace va al archivo en GitHub, que es donde se leen mejor.
+    if ruta_clase:
+        texto = re.sub(
+            r"\((motores\.yaml|implementaciones/[A-Za-z0-9_\-./]+)\)",
+            lambda m: f"({REPO}/blob/main/{ruta_clase}/{m.group(1)})", texto)
     # clase -> clase (el nav superior e inferior de cada README)
     texto = re.sub(r"\((?:\.\./)+(?:classes/)?part-\d{2}-[^/)]+/(\d{3})-[^/)]+/README\.md\)",
                    r"(\1.html)", texto)
@@ -349,7 +356,9 @@ def construir() -> dict[Path, str | bytes]:
     preguntas_por_clase: list[tuple[dict, dict, list[str]]] = []
     for i, (parte, clase) in enumerate(plano):
         carpeta = CLASSES / f"part-{parte['id']}-{parte['slug']}" / f"{clase['id']}-{clase['slug']}"
-        md = reescribir_enlaces((carpeta / "README.md").read_text(encoding="utf-8"))
+        md = reescribir_enlaces(
+            (carpeta / "README.md").read_text(encoding="utf-8"),
+            carpeta.relative_to(ROOT).as_posix())
         leccion = (carpeta / "lesson.md").read_text(encoding="utf-8")
         preguntas_por_clase.append((parte, clase, preguntas_de_leccion(leccion)))
 

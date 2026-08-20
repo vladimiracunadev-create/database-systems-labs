@@ -1,0 +1,96 @@
+---
+caso:
+  titulo: Qué le pasa a lo que cuelga de una fila cuando esa fila se borra
+  contrato: |
+    Una clave foránea no solo prohíbe apuntar a lo que no existe: también
+    decide qué ocurre cuando lo apuntado desaparece. Y esa decisión —`CASCADE`,
+    `RESTRICT`, `SET NULL`— es de diseño, no de implementación: dice si el hijo
+    tiene sentido sin el padre.
+
+    El caso lo pone a prueba. Las inscripciones cuelgan del curso con `ON DELETE
+    CASCADE` (una inscripción a un curso que ya no existe no significa nada),
+    pero las evaluaciones lo hacen con `ON DELETE RESTRICT` (son evidencia
+    académica y no pueden evaporarse). Se borra SE-201, que solo tiene
+    inscripciones: desaparece con ellas. Se intenta borrar DB-101, que tiene
+    evaluaciones: el motor lo impide. La consulta devuelve los cursos que
+    quedan con sus inscripciones.
+  columnas: [curso, inscripciones]
+  esperado:
+    - [DB-101, "2"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Implementa las acciones referenciales del estándar, incluidas `CASCADE` y
+      `RESTRICT`, con la misma sintaxis que los motores grandes.
+    porque_no: >-
+      Las comprueba **solo si** `PRAGMA foreign_keys = ON` está activo en esa
+      conexión, y por compatibilidad viene desactivado. Miles de bases SQLite en
+      producción tienen claves foráneas declaradas que nunca se han comprobado.
+    doc: https://sqlite.org/foreignkeys.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Tiene todas las acciones del estándar y distingue `RESTRICT` de `NO
+      ACTION`: la primera comprueba de inmediato, la segunda al final de la
+      transacción si es diferible. Esa diferencia es la que permite reordenar
+      datos dentro de una transacción sin desactivar nada.
+    porque_no: >-
+      Un `DELETE` en cascada sobre una jerarquía profunda puede tocar millones
+      de filas en una sola transacción sin que nadie lo haya pedido
+      explícitamente: la cascada es cómoda y silenciosa a la vez.
+    doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      InnoDB comprueba las claves foráneas siempre, sin activar nada, y admite
+      `CASCADE`, `RESTRICT` y `SET NULL`.
+    porque_no: >-
+      Las cascadas de InnoDB **no disparan** los disparadores de las tablas
+      hijas: un contador mantenido por disparador se queda desfasado justo
+      cuando una cascada borra sus filas. Y `NO ACTION` se trata como
+      `RESTRICT`: no hay comprobación diferida.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html
+
+  - id: duckdb
+    aplica: no
+    porque_no: >-
+      Admite declarar claves foráneas, pero no las acciones referenciales de
+      borrado: no hay `ON DELETE CASCADE` ni `RESTRICT` que aplicar. Su papel es
+      analizar datos que otro sistema ya validó.
+    alternativa: >-
+      Borrar padre e hijos con dos sentencias dentro de la misma transacción, o
+      —lo habitual en analítica— reconstruir la tabla completa desde el origen.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_table.html
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      No hay claves foráneas ni acciones referenciales entre colecciones: si se
+      borra el curso, las inscripciones que lo referencian quedan apuntando al
+      vacío y ninguna consulta avisa.
+    alternativa: >-
+      Incrustar lo que no tiene sentido sin el padre —las inscripciones dentro
+      del curso— para que borrar el documento las borre con él, y usar
+      referencias solo para lo que sí sobrevive por su cuenta.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay integridad referencial de ningún tipo: ninguna escritura consulta
+      otra tabla, porque hacerlo obligaría a coordinar nodos en cada operación y
+      eso es justo lo que su diseño evita.
+    alternativa: >-
+      Borrar en la aplicación todas las tablas afectadas, aceptando que un fallo
+      a mitad deja filas huérfanas, y prever un trabajo de reparación periódico.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

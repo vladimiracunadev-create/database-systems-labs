@@ -26,6 +26,10 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import motores_lib as ml  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 CLASSES = ROOT / "classes"
 
@@ -77,9 +81,122 @@ def cita(fuente: dict) -> str:
     return f"- {referencia}.  \n  {fuente['note']}"
 
 
+SELLO = {
+    "nucleo": "✅ **verificado** — se ejecuta en CI sin servicios",
+    "servicio": "✅ **verificado** — se ejecuta contra el motor real levantado con "
+                "`docker compose`",
+    "declarado": "⚪ **declarado** — se revisa a mano contra la documentación citada; "
+                 "la máquina no lo ejecuta",
+}
+
+
+def bloque_motores(comparacion: ml.Comparacion, catalogo: dict[str, dict]) -> str:
+    """La sección comparada: el mismo caso resuelto —o no— en cada motor.
+
+    Es la sección que distingue a este programa de un curso de SQL. No basta
+    con enseñar el concepto: hay que mostrarlo funcionando en varios motores y
+    decir, con la misma seriedad, en cuáles no se hace y qué se hace entonces.
+    """
+    caso = comparacion.caso
+    nombre = lambda mid: catalogo.get(mid, {}).get("name", mid)  # noqa: E731
+    etiqueta = {"nucleo": "núcleo", "servicio": "servicio", "declarado": "declarado"}
+
+    if caso.conceptual:
+        etiqueta = dict.fromkeys(etiqueta, "conceptual")
+
+    resumen = "\n".join(
+        f"| {nombre(m.id)} | {'sí' if m.aplica else '**no**'} "
+        f"| {etiqueta[m.ejecucion] if m.aplica else '—'} "
+        f"| {'[código](' + m.archivo + ')' if m.archivo else '—'} "
+        f"| [doc oficial]({m.doc}) |"
+        for m in comparacion.motores
+    )
+
+    bloques = []
+    for motor in comparacion.aplicables:
+        titulo = (f"#### {nombre(motor.id)} · [`{motor.archivo}`]({motor.archivo})"
+                  if motor.archivo else f"#### {nombre(motor.id)}")
+        cuerpo = [titulo, ""]
+        if motor.archivo:
+            codigo = comparacion.codigo(motor).strip()
+            lenguaje = ml.LENGUAJE_BLOQUE.get(Path(motor.archivo).suffix, "text")
+            cuerpo += [SELLO[motor.ejecucion], "", f"```{lenguaje}", codigo, "```", ""]
+        if motor.como:
+            cuerpo += [f"- **Cómo se hace aquí:** {motor.como}"]
+        cuerpo += [
+            f"- **Por qué sí:** {motor.porque_si}",
+            f"- **Por qué no:** {motor.porque_no}",
+            f"- 📄 Documentación oficial: <{motor.doc}>",
+            "",
+        ]
+        bloques.append("\n".join(cuerpo))
+
+    descartados = comparacion.descartados
+    tabla_descartados = ""
+    if descartados:
+        cuerpo_descartados = "\n".join(
+            f"| {nombre(m.id)} | {m.porque_no} | {m.alternativa or '—'} | [doc]({m.doc}) |"
+            for m in descartados
+        )
+        tabla_descartados = (
+            "\n### Los que no resuelven este caso — y qué se hace en su lugar\n\n"
+            "Descartar un motor con un argumento es tan formativo como usarlo. "
+            "Ninguna de estas filas dice que el motor sea peor: dice que este "
+            "problema no es el suyo.\n\n"
+            "| Motor | Por qué no | Qué se hace en su lugar | Fuente |\n"
+            "|---|---|---|---|\n"
+            f"{cuerpo_descartados}\n"
+        )
+
+    verificadas = sum(1 for m in comparacion.ejecutables)
+    if caso.conceptual:
+        contrato = f"""{caso.contrato}
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación."""
+    else:
+        cabecera_tabla = " | ".join(caso.columnas) if caso.columnas else "resultado"
+        separador = "|".join("---" for _ in (caso.columnas or ["x"]))
+        filas = "\n".join("| " + " | ".join(f"`{v}`" for v in fila) + " |"
+                          for fila in caso.esperado)
+        contrato = f"""{caso.contrato}
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| {cabecera_tabla} |
+|{separador}|
+{filas}
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase {comparacion.clase}`: {verificadas} de
+las {len(comparacion.aplicables)} implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado."""
+
+    return f"""## 🌐 El mismo problema en cada motor
+
+**Caso:** {caso.titulo}
+
+{contrato}
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+{resumen}
+
+### Los que resuelven el caso
+
+{chr(10).join(bloques)}{tabla_descartados}
+---
+
+"""
+
+
 def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
            anterior: tuple[dict, dict] | None, siguiente: tuple[dict, dict] | None,
-           laboratorios: dict[str, dict]) -> str:
+           laboratorios: dict[str, dict], comparacion: ml.Comparacion | None,
+           catalogo: dict[str, dict]) -> str:
     ruta_parte = f"part-{parte['id']}-{parte['slug']}"
     lab = laboratorios.get(clase["lab"], {})
     comando_lab = lab.get("comando") or (
@@ -102,6 +219,16 @@ def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
     )
 
     conceptos = " · ".join(f"`{c}`" for c in clase["concepts"])
+    motores_render = bloque_motores(comparacion, catalogo) if comparacion else ""
+    if comparacion:
+        ejecutadas = len(comparacion.ejecutables)
+        resumen_motores = (
+            f"\n\n**En este caso se comparan {len(comparacion.motores)} motores**: "
+            f"{len(comparacion.aplicables)} lo resuelven "
+            f"({ejecutadas} con el resultado comprobado por máquina) y "
+            f"{len(comparacion.descartados)} no, con el motivo escrito.")
+    else:
+        resumen_motores = ""
     motores = ", ".join(f"`{m}`" for m in clase["engines"])
     bibliografia = "\n".join(cita(fuentes[i]) for i in clase["sources"])
 
@@ -113,7 +240,7 @@ Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
 {clase['hours']} horas estimadas · motores {motores} · laboratorio
 [`{clase['lab']}`](../../../{clase['lab']}/README.md) · {len(clase['sources'])} fuentes.
 
-**Conceptos centrales:** {conceptos}
+**Conceptos centrales:** {conceptos}{resumen_motores}
 
 ---
 
@@ -121,7 +248,7 @@ Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
 
 ---
 
-## Laboratorio
+{motores_render}## Laboratorio
 
 ```bash
 python scripts/validate_repository.py
@@ -222,8 +349,10 @@ def main() -> int:
     curriculo, fuentes = cargar()
     plano = indice_plano(curriculo)
     laboratorios = {lab["ruta"]: lab for lab in curriculo["laboratorios"]}
+    catalogo = ml.cargar_catalogo()
     pendientes: list[str] = []
     faltan_lecciones: list[str] = []
+    mal_declaradas: list[str] = []
     salidas: dict[Path, str] = {}
 
     for posicion, (parte, clase) in enumerate(plano):
@@ -232,17 +361,28 @@ def main() -> int:
         if not leccion.exists():
             faltan_lecciones.append(str(leccion.relative_to(ROOT)))
             continue
+        ruta_motores = destino / "motores.yaml"
+        comparacion = ml.cargar(ruta_motores, catalogo) if ruta_motores.exists() else None
+        if comparacion and comparacion.errores:
+            mal_declaradas.extend(comparacion.errores)
+            continue
         salidas[destino / "README.md"] = render(
             parte, clase, leccion.read_text(encoding="utf-8"), fuentes,
             plano[posicion - 1] if posicion > 0 else None,
             plano[posicion + 1] if posicion + 1 < len(plano) else None,
-            laboratorios,
+            laboratorios, comparacion, catalogo,
         )
 
     for parte in curriculo["parts"]:
         ruta = CLASSES / f"part-{parte['id']}-{parte['slug']}" / "README.md"
         salidas[ruta] = indice_parte(parte, curriculo)
     salidas[CLASSES / "README.md"] = indice_general(curriculo)
+
+    if mal_declaradas:
+        print("Comparaciones de motores mal declaradas:", file=sys.stderr)
+        for error in mal_declaradas:
+            print(f"  {error}", file=sys.stderr)
+        return 1
 
     if faltan_lecciones:
         print("Faltan lecciones:", file=sys.stderr)

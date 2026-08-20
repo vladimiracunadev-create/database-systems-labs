@@ -1,0 +1,22 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/commands/incr/
+# nota: dos representaciones del mismo hecho: un contador INCR y un conjunto
+#       con los miembros. La consulta final es un script Lua porque, en Redis,
+#       la unica forma de leer varias claves de forma atomica y devolver un
+#       resultado compuesto es ejecutarlo en el servidor.
+
+# === preparacion ===
+FLUSHDB
+SADD curso:DB-101:miembros Ada
+INCR curso:DB-101:contador
+SADD curso:DB-101:miembros Linus
+INCR curso:DB-101:contador
+SADD curso:SE-201:miembros Grace
+INCR curso:SE-201:contador
+SADD curso:SE-201:miembros Bob
+INCR curso:SE-201:contador
+SREM curso:SE-201:miembros Bob
+DECR curso:SE-201:contador
+
+# === consulta ===
+EVAL "local r={} for _,c in ipairs({'DB-101','SE-201'}) do r[#r+1]=c..'|'..redis.call('GET','curso:'..c..':contador')..'|'..redis.call('SCARD','curso:'..c..':miembros') end return r" 0

@@ -8,6 +8,8 @@ Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
 
 **Conceptos centrales:** `persistencia` · `concurrencia` · `integridad` · `recuperación` · `independencia de datos`
 
+**En este caso se comparan 9 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -135,6 +137,268 @@ Toma un sistema que hayas escrito y que guarde estado en archivos. Documenta, co
 2. Un compañero afirma: «migramos a PostgreSQL, así que los datos ya son consistentes». ¿Qué le falta declarar para que esa frase sea cierta?
 3. Da un caso real de tu trabajo donde usar un SGBD sería una mala decisión, y justifica con los criterios del diagrama.
 4. ¿Qué componente descrito por Hellerstein et al. desaparece si renuncias a la durabilidad, y qué garantía pierdes con él?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Que el sistema impida por sí solo dos estudiantes con el mismo correo
+
+Se intentan registrar tres estudiantes, y el tercero repite el correo del
+primero. El programa **no** comprueba nada: la comprobación tiene que
+hacerla el sistema de datos. Al terminar, la consulta devuelve los correos
+registrados, ordenados alfabéticamente, uno por línea.
+
+Es la pregunta más elemental que se le puede hacer a un almacén de datos:
+¿puede garantizar una regla, o solo guardar lo que le den? Un archivo de
+texto y una hoja de cálculo aceptan el duplicado sin protestar; por eso no
+son bases de datos.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| correo |
+|---|
+| `ada@example.org` |
+| `linus@example.org` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 001`: 6 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_createtable.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/constraints.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-constraints.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/index-unique/) |
+| Redis | sí | servicio | [código](implementaciones/redis/consulta.txt) | [doc oficial](https://redis.io/docs/latest/develop/data-types/sets/) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/create-index.html) |
+| Neo4j | sí | declarado | [código](implementaciones/neo4j/consulta.cypher) | [doc oficial](https://neo4j.com/docs/cypher-manual/current/constraints/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+| Amazon DynamoDB | **no** | — | — | [doc oficial](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: INSERT OR IGNORE deja que el motor rechace el duplicado sin abortar el
+--       guion. Sin OR IGNORE, la tercera insercion lanza un error: esa es
+--       exactamente la garantia que se esta demostrando.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+-- El programa no comprueba nada: lo intenta igual. El motor lo rechaza.
+INSERT OR IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+```
+
+- **Por qué sí:** `UNIQUE` es parte de la definición de la tabla, así que la regla vive con los datos y no en el programa que los escribe. SQLite lo comprueba aunque quien inserte sea otro proceso, otro lenguaje o la consola.
+- **Por qué no:** Al ser un archivo local sin servidor, la regla protege el archivo, no un sistema: dos máquinas con dos copias del archivo pueden tener cada una su «Ada» sin que nadie lo note.
+- 📄 Documentación oficial: <https://sqlite.org/lang_createtable.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE; la forma equivalente es
+--       ON CONFLICT DO NOTHING, que es tambien la del estandar reciente.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes VALUES (3, 'ada@example.org') ON CONFLICT DO NOTHING;
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+```
+
+- **Por qué sí:** Acepta la misma restricción con la misma sintaxis, lo que permite comprobar que la regla no es de SQLite sino del modelo relacional.
+- **Por qué no:** DuckDB está pensado para analizar datos que ya existen, no para ser la autoridad que los admite: comprobar unicidad en cada inserción es precisamente el trabajo que su diseño columnar no optimiza.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/constraints.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: la restriccion se implementa con un indice unico. Consultar
+--       pg_indexes despues de crear la tabla lo hace visible.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    correo text NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (3, 'ada@example.org')
+    ON CONFLICT (correo) DO NOTHING;
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+```
+
+- **Por qué sí:** La restricción se apoya en un índice único y la comprueba el servidor dentro de la transacción: da igual cuántas aplicaciones escriban a la vez o en qué lenguaje estén, la segunda que intente el duplicado recibe un error.
+- **Por qué no:** Esa garantía cuesta una escritura de índice por fila y un servidor que administrar, actualizar y respaldar. Para un archivo de configuración de diez líneas es maquinaria de sobra.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-constraints.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-unique/
+// nota: con ordered:false, insertMany intenta TODOS los documentos y solo
+//       falla el que viola el indice; el try/catch recoge ese error concreto.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.estudiantes.createIndex({ correo: 1 }, { unique: true });
+
+try {
+  db.estudiantes.insertMany(
+    [
+      { _id: 1, correo: "ada@example.org" },
+      { _id: 2, correo: "linus@example.org" },
+      { _id: 3, correo: "ada@example.org" },
+    ],
+    { ordered: false },
+  );
+} catch (e) {
+  // Error 11000 = clave duplicada. Es el resultado esperado, no un fallo.
+  if (!String(e).includes("11000")) throw e;
+}
+
+// === consulta ===
+db.estudiantes
+  .find({}, { _id: 0, correo: 1 })
+  .sort({ correo: 1 })
+  .forEach((d) => print(d.correo));
+```
+
+- **Por qué sí:** Un índice único da la misma garantía sin esquema previo: se puede empezar a guardar documentos y añadir la regla después, cuando el dominio ya se entiende.
+- **Por qué no:** La restricción solo existe si alguien crea el índice —no hay nada en el documento que la exija— y en una colección fragmentada la unicidad solo se puede garantizar sobre la clave de fragmentación.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/index-unique/>
+
+#### Redis · [`implementaciones/redis/consulta.txt`](implementaciones/redis/consulta.txt)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```text
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: un conjunto no admite repetidos por definicion. SADD devuelve 1 si
+#       anadio el elemento y 0 si ya estaba: la tercera orden devuelve 0.
+
+# === preparacion ===
+FLUSHDB
+SADD correos ada@example.org
+SADD correos linus@example.org
+SADD correos ada@example.org
+
+# === consulta ===
+SORT correos ALPHA
+```
+
+- **Por qué sí:** Un conjunto es, por definición, una colección sin repeticiones: `SADD` devuelve 0 cuando el elemento ya estaba y no hay nada que comprobar. Con un solo hilo atendiendo las órdenes, dos clientes simultáneos no pueden colarse a la vez.
+- **Por qué no:** Garantiza que no hay dos correos iguales, y nada más: no hay tipos, ni relación con el resto del estudiante, ni durabilidad garantizada salvo que se configure. La regla se cumple; el modelo de datos no existe.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/develop/data-types/sets/>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+-- nota: la columna se declara con intercalacion binaria para que la unicidad
+--       distinga mayusculas de minusculas; con la intercalacion por omision,
+--       'Ada@example.org' contaria como duplicado.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    correo VARCHAR(200) COLLATE utf8mb4_bin NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+```
+
+- **Por qué sí:** Mismo mecanismo que PostgreSQL y el motor relacional más común en alojamientos compartidos: `UNIQUE` sobre una columna es la forma normal de declarar una identidad de negocio.
+- **Por qué no:** La comparación de cadenas depende de la intercalación: con la predeterminada `utf8mb4_0900_ai_ci`, `Ada@example.org` y `ada@example.org` son el mismo valor, lo que a veces se quiere y a veces sorprende.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/create-index.html>
+
+#### Neo4j · [`implementaciones/neo4j/consulta.cypher`](implementaciones/neo4j/consulta.cypher)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```cypher
+// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/constraints/
+// nota: implementacion declarada. La restriccion de unicidad se declara sobre
+//       una propiedad de nodo; MERGE busca antes de crear, asi que el tercer
+//       estudiante no llega a duplicarse.
+
+// === preparacion ===
+MATCH (n:Estudiante) DETACH DELETE n;
+CREATE CONSTRAINT correo_unico IF NOT EXISTS
+  FOR (e:Estudiante) REQUIRE e.correo IS UNIQUE;
+MERGE (:Estudiante {correo: 'ada@example.org'});
+MERGE (:Estudiante {correo: 'linus@example.org'});
+MERGE (:Estudiante {correo: 'ada@example.org'});
+
+// === consulta ===
+MATCH (e:Estudiante) RETURN e.correo AS correo ORDER BY correo;
+```
+
+- **Por qué sí:** Las restricciones de unicidad existen sobre propiedades de nodo y se comprueban en el servidor, igual que en un motor relacional.
+- **Por qué no:** Elegir un grafo por una regla de unicidad es elegir un sistema entero por su detalle menos característico; el grafo se justifica por los recorridos, no por las restricciones.
+- 📄 Documentación oficial: <https://neo4j.com/docs/cypher-manual/current/constraints/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | Un `INSERT` en Cassandra es en realidad un «escribe esto», no un «añade si no existe»: si la clave ya está, sobrescribe en silencio. Comprobar primero exige una transacción ligera (`IF NOT EXISTS`), que necesita acuerdo entre réplicas y cuesta varias veces más que una escritura normal. | Hacer del correo la clave de partición y usar `INSERT ... IF NOT EXISTS` solo en el registro, aceptando su costo, o dejar que la unicidad la garantice el servicio de identidad que está delante. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+| Amazon DynamoDB | No existen restricciones de unicidad sobre atributos que no sean la clave primaria; `PutItem` sobrescribe el elemento salvo que se le añada una condición explícita. | Usar el correo como clave de partición y escribir con `ConditionExpression: attribute_not_exists(pk)`, que falla si el elemento ya existe. La regla pasa a estar en cada llamada, no en el esquema. | [doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html) |
 
 ---
 

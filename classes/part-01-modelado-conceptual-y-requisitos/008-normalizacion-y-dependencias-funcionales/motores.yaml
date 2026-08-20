@@ -1,0 +1,111 @@
+---
+caso:
+  titulo: Corregir el nombre de un profesor con una sola escritura
+  contrato: |
+    La prueba práctica de que un esquema está normalizado no es recitar formas
+    normales: es que **cada hecho está escrito una sola vez**, así que
+    corregirlo cuesta una escritura y no puede quedar a medias.
+
+    El caso parte del esquema descompuesto —profesores, cursos, inscripciones—
+    y corrige el nombre del profesor de DB-101 con un solo `UPDATE`. La consulta
+    devuelve, por curso, el nombre del profesor y cuántas inscripciones tiene.
+    En la tabla sin descomponer, ese nombre estaría repetido en cada
+    inscripción y bastaría olvidar una fila para que el mismo profesor tuviera
+    dos nombres distintos: la anomalía de actualización.
+  columnas: [curso, profesor, inscripciones]
+  esperado:
+    - [DB-101, Ada Lovelace, "2"]
+    - [SE-201, Grace Hopper, "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      La descomposición y la reunión que la deshace son operaciones del modelo
+      relacional puro: aquí se ven sin ruido de infraestructura.
+    porque_no: >-
+      No tiene forma de declarar una dependencia funcional distinta de una clave,
+      así que la normalización queda documentada en la cabeza de quien diseñó y
+      no en el esquema.
+    doc: https://sqlite.org/lang_update.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es la herramienta ideal para el paso previo: descubrir las dependencias
+      funcionales que hay **de verdad** en un volcado, contando cuántos valores
+      distintos toma una columna por cada valor de otra.
+    porque_no: >-
+      En analítica la normalización se revierte a propósito: el esquema en
+      estrella repite el nombre del profesor en cada fila de hechos porque
+      ahorrarse la reunión vale más que ahorrarse el espacio.
+    doc: https://duckdb.org/docs/stable/sql/statements/update.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Las claves foráneas hacen cumplir la descomposición: no se puede insertar
+      un curso cuyo profesor no exista, que es la mitad de lo que la
+      normalización promete.
+    porque_no: >-
+      Cada nivel de normalización añade una reunión a las consultas de lectura;
+      en un panel que se abre mil veces por minuto, esas reuniones son el costo
+      que después justifica desnormalizar a propósito.
+    doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Mismo esquema y mismas garantías con InnoDB; es además el motor donde más
+      se encuentran tablas heredadas sin normalizar, así que es donde más se
+      practica la descomposición sobre datos reales.
+    porque_no: >-
+      Su modo `ONLY_FULL_GROUP_BY` no siempre estuvo activo: hay código antiguo
+      que agrupa mal y sigue devolviendo un resultado, lo que esconde justo los
+      errores que la normalización previene.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Admite el modelo normalizado con referencias entre colecciones, y es la
+      forma correcta cuando el dato referenciado cambia y lo comparten muchos
+      documentos, como el nombre de un profesor.
+    porque_no: >-
+      Va contra la corriente del modelo documental: al no haber claves foráneas,
+      nada impide que un curso apunte a un profesor borrado, y la reunión hay
+      que pedirla explícitamente con `$lookup` en cada consulta.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Su guía de modelado recomienda lo contrario: duplicar el nombre del
+      profesor en cada fila que lo necesite, porque no hay reuniones y una
+      lectura debe resolverse en una sola partición.
+    alternativa: >-
+      Aceptar la duplicación y asumir el costo de actualizarla: cambiar el
+      nombre del profesor pasa a ser un trabajo por lotes sobre todas las filas
+      que lo copiaron, no un `UPDATE`.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay reuniones ni referencias que el servidor entienda: normalizar
+      significaría hacer dos o tres viajes por lectura y reunir en el cliente.
+    alternativa: >-
+      Guardar el nombre del profesor en una clave propia y referenciarla desde
+      la aplicación, aceptando que la coherencia entre claves la mantiene el
+      código.
+    doc: https://redis.io/docs/latest/develop/data-types/hashes/

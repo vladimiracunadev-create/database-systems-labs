@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>persistencia</code> · <code>concurrencia</code> · <code>integridad</code> · <code>recuperación</code> · <code>independencia de datos</code></p>
+<p><strong>En este caso se comparan 9 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Establecer qué problemas concretos resuelve un sistema gestor de bases de datos (SGBD) y, sobre todo, cuáles <strong>no</strong> resuelve. Sin esa demarcación, cualquier archivo con datos se llama «base de datos» y cualquier fallo de diseño se atribuye al motor.</p>
@@ -228,6 +229,330 @@ t5  Cajero B escribe            -&gt; 500
 <li>Da un caso real de tu trabajo donde usar un SGBD sería una mala decisión, y justifica con los criterios del diagrama.</li>
 <li>¿Qué componente descrito por Hellerstein et al. desaparece si renuncias a la durabilidad, y qué garantía pierdes con él?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Que el sistema impida por sí solo dos estudiantes con el mismo correo</p>
+<p>Se intentan registrar tres estudiantes, y el tercero repite el correo del
+primero. El programa <strong>no</strong> comprueba nada: la comprobación tiene que
+hacerla el sistema de datos. Al terminar, la consulta devuelve los correos
+registrados, ordenados alfabéticamente, uno por línea.</p>
+<p>Es la pregunta más elemental que se le puede hacer a un almacén de datos:
+¿puede garantizar una regla, o solo guardar lo que le den? Un archivo de
+texto y una hoja de cálculo aceptan el duplicado sin protestar; por eso no
+son bases de datos.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>correo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ada@example.org</code></td>
+</tr>
+<tr>
+<td><code>linus@example.org</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 001</code>: 6 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-unique/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Neo4j</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/constraints/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: INSERT OR IGNORE deja que el motor rechace el duplicado sin abortar el
+--       guion. Sin OR IGNORE, la tercera insercion lanza un error: esa es
+--       exactamente la garantia que se esta demostrando.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+-- El programa no comprueba nada: lo intenta igual. El motor lo rechaza.
+INSERT OR IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>UNIQUE</code> es parte de la definición de la tabla, así que la regla vive con los datos y no en el programa que los escribe. SQLite lo comprueba aunque quien inserte sea otro proceso, otro lenguaje o la consola.</li>
+<li><strong>Por qué no:</strong> Al ser un archivo local sin servidor, la regla protege el archivo, no un sistema: dos máquinas con dos copias del archivo pueden tener cada una su «Ada» sin que nadie lo note.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE; la forma equivalente es
+--       ON CONFLICT DO NOTHING, que es tambien la del estandar reciente.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes VALUES (3, 'ada@example.org') ON CONFLICT DO NOTHING;
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Acepta la misma restricción con la misma sintaxis, lo que permite comprobar que la regla no es de SQLite sino del modelo relacional.</li>
+<li><strong>Por qué no:</strong> DuckDB está pensado para analizar datos que ya existen, no para ser la autoridad que los admite: comprobar unicidad en cada inserción es precisamente el trabajo que su diseño columnar no optimiza.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: la restriccion se implementa con un indice unico. Consultar
+--       pg_indexes despues de crear la tabla lo hace visible.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    correo text NOT NULL UNIQUE
+);
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (3, 'ada@example.org')
+    ON CONFLICT (correo) DO NOTHING;
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La restricción se apoya en un índice único y la comprueba el servidor dentro de la transacción: da igual cuántas aplicaciones escriban a la vez o en qué lenguaje estén, la segunda que intente el duplicado recibe un error.</li>
+<li><strong>Por qué no:</strong> Esa garantía cuesta una escritura de índice por fila y un servidor que administrar, actualizar y respaldar. Para un archivo de configuración de diez líneas es maquinaria de sobra.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-unique/
+// nota: con ordered:false, insertMany intenta TODOS los documentos y solo
+//       falla el que viola el indice; el try/catch recoge ese error concreto.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.estudiantes.createIndex({ correo: 1 }, { unique: true });
+
+try {
+  db.estudiantes.insertMany(
+    [
+      { _id: 1, correo: &quot;ada@example.org&quot; },
+      { _id: 2, correo: &quot;linus@example.org&quot; },
+      { _id: 3, correo: &quot;ada@example.org&quot; },
+    ],
+    { ordered: false },
+  );
+} catch (e) {
+  // Error 11000 = clave duplicada. Es el resultado esperado, no un fallo.
+  if (!String(e).includes(&quot;11000&quot;)) throw e;
+}
+
+// === consulta ===
+db.estudiantes
+  .find({}, { _id: 0, correo: 1 })
+  .sort({ correo: 1 })
+  .forEach((d) =&gt; print(d.correo));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un índice único da la misma garantía sin esquema previo: se puede empezar a guardar documentos y añadir la regla después, cuando el dominio ya se entiende.</li>
+<li><strong>Por qué no:</strong> La restricción solo existe si alguien crea el índice —no hay nada en el documento que la exija— y en una colección fragmentada la unicidad solo se puede garantizar sobre la clave de fragmentación.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-unique/">https://www.mongodb.com/docs/manual/core/index-unique/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: un conjunto no admite repetidos por definicion. SADD devuelve 1 si
+#       anadio el elemento y 0 si ya estaba: la tercera orden devuelve 0.
+
+# === preparacion ===
+FLUSHDB
+SADD correos ada@example.org
+SADD correos linus@example.org
+SADD correos ada@example.org
+
+# === consulta ===
+SORT correos ALPHA
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un conjunto es, por definición, una colección sin repeticiones: <code>SADD</code> devuelve 0 cuando el elemento ya estaba y no hay nada que comprobar. Con un solo hilo atendiendo las órdenes, dos clientes simultáneos no pueden colarse a la vez.</li>
+<li><strong>Por qué no:</strong> Garantiza que no hay dos correos iguales, y nada más: no hay tipos, ni relación con el resto del estudiante, ni durabilidad garantizada salvo que se configure. La regla se cumple; el modelo de datos no existe.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+-- nota: la columna se declara con intercalacion binaria para que la unicidad
+--       distinga mayusculas de minusculas; con la intercalacion por omision,
+--       'Ada@example.org' contaria como duplicado.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    correo VARCHAR(200) COLLATE utf8mb4_bin NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Mismo mecanismo que PostgreSQL y el motor relacional más común en alojamientos compartidos: <code>UNIQUE</code> sobre una columna es la forma normal de declarar una identidad de negocio.</li>
+<li><strong>Por qué no:</strong> La comparación de cadenas depende de la intercalación: con la predeterminada <code>utf8mb4_0900_ai_ci</code>, <code>Ada@example.org</code> y <code>ada@example.org</code> son el mismo valor, lo que a veces se quiere y a veces sorprende.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">https://dev.mysql.com/doc/refman/8.4/en/create-index.html</a></li>
+</ul>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/constraints/
+// nota: implementacion declarada. La restriccion de unicidad se declara sobre
+//       una propiedad de nodo; MERGE busca antes de crear, asi que el tercer
+//       estudiante no llega a duplicarse.
+
+// === preparacion ===
+MATCH (n:Estudiante) DETACH DELETE n;
+CREATE CONSTRAINT correo_unico IF NOT EXISTS
+  FOR (e:Estudiante) REQUIRE e.correo IS UNIQUE;
+MERGE (:Estudiante {correo: 'ada@example.org'});
+MERGE (:Estudiante {correo: 'linus@example.org'});
+MERGE (:Estudiante {correo: 'ada@example.org'});
+
+// === consulta ===
+MATCH (e:Estudiante) RETURN e.correo AS correo ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las restricciones de unicidad existen sobre propiedades de nodo y se comprueban en el servidor, igual que en un motor relacional.</li>
+<li><strong>Por qué no:</strong> Elegir un grafo por una regla de unicidad es elegir un sistema entero por su detalle menos característico; el grafo se justifica por los recorridos, no por las restricciones.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/constraints/">https://neo4j.com/docs/cypher-manual/current/constraints/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>Un <code>INSERT</code> en Cassandra es en realidad un «escribe esto», no un «añade si no existe»: si la clave ya está, sobrescribe en silencio. Comprobar primero exige una transacción ligera (<code>IF NOT EXISTS</code>), que necesita acuerdo entre réplicas y cuesta varias veces más que una escritura normal.</td>
+<td>Hacer del correo la clave de partición y usar <code>INSERT ... IF NOT EXISTS</code> solo en el registro, aceptando su costo, o dejar que la unicidad la garantice el servicio de identidad que está delante.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>No existen restricciones de unicidad sobre atributos que no sean la clave primaria; <code>PutItem</code> sobrescribe el elemento salvo que se le añada una condición explícita.</td>
+<td>Usar el correo como clave de partición y escribir con <code>ConditionExpression: attribute_not_exists(pk)</code>, que falla si el elemento ya existe. La regla pasa a estar en cada llamada, no en el esquema.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

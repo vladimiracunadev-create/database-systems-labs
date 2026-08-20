@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>predicado</code> · <code>orden de evaluación</code> · <code>colación</code> · <code>determinismo de orden</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir <code>SELECT</code> sabiendo exactamente qué devuelve. La mayoría de los errores de consulta no son de sintaxis: son de semántica, y aparecen cuando los datos cambian.</p>
@@ -247,6 +248,361 @@ keyset          →  20 filas producidas, siempre
 <li>¿Por qué la paginación por clave necesita un índice sobre exactamente las columnas del <code>ORDER BY</code>?</li>
 <li>Tu aplicación funciona en MySQL y falla en PostgreSQL al buscar correos. Diagnostica y propón la corrección definitiva.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Los dos mejores de DB-101 con al menos 60</p>
+<p>Un <code>SELECT</code> toma cinco decisiones y conviene no mezclarlas: de dónde salen
+las filas, cuáles sobreviven al filtro, qué columnas se ven, en qué orden se
+leen y cuántas se devuelven.</p>
+<p>El caso pide los dos mejores resultados de DB-101 con nota igual o superior
+a 60, con su nota, de mayor a menor. La trampa que esta clase entrena está en
+la última decisión: <strong><code>LIMIT</code> sin <code>ORDER BY</code> devuelve dos filas
+cualesquiera</strong>, y como suelen ser las «correctas» en pruebas pequeñas, el
+error sobrevive hasta producción.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 015</code>: 6 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/queries-limit.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
+--   FROM      de donde salen las filas
+--   WHERE     cuales sobreviven      (seleccion)
+--   SELECT    que columnas se ven    (proyeccion)
+--   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
+--   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Implementa <code>WHERE</code>, <code>ORDER BY</code> y <code>LIMIT</code> con la sintaxis del estándar de facto, la misma de PostgreSQL y MySQL.</li>
+<li><strong>Por qué no:</strong> <code>LIMIT</code> sin <code>ORDER BY</code> devuelve aquí un orden estable en la práctica, que es la peor forma de aprender: el mismo código en otro motor devuelve otra cosa y nadie entiende por qué.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/select.html
+-- nota: quitar el ORDER BY aqui devuelve dos filas distintas entre ejecuciones,
+--       porque el motor lee en paralelo por trozos. Es la demostracion mas
+--       clara de que LIMIT sin ORDER BY no significa nada.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
+--   FROM      de donde salen las filas
+--   WHERE     cuales sobreviven      (seleccion)
+--   SELECT    que columnas se ven    (proyeccion)
+--   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
+--   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Añade atajos que ahorran errores reales —<code>SELECT * EXCLUDE (columna)</code>, <code>GROUP BY ALL</code>— y su ejecución en paralelo hace evidente que sin <code>ORDER BY</code> no hay orden.</li>
+<li><strong>Por qué no:</strong> Esos atajos no son estándar: la consulta cómoda que se escribe aquí no se puede pegar en el motor transaccional de al lado.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">https://duckdb.org/docs/stable/sql/query_syntax/select.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/queries-limit.html
+-- nota: con el indice de abajo, EXPLAIN muestra «Index Scan» sin nodo «Sort»:
+--       el motor lee las dos primeras entradas y para. El orden pedido y el
+--       orden almacenado son el mismo.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+CREATE INDEX notas_por_curso_y_nota ON notas (curso, nota DESC);
+
+-- === consulta ===
+-- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
+--   FROM      de donde salen las filas
+--   WHERE     cuales sobreviven      (seleccion)
+--   SELECT    que columnas se ven    (proyeccion)
+--   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
+--   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con un índice sobre <code>(curso, nota DESC)</code> este <code>LIMIT 2</code> no ordena nada: lee las dos primeras entradas del índice y para. Es el ejemplo canónico de que el orden pedido y el orden almacenado pueden ser el mismo.</li>
+<li><strong>Por qué no:</strong> La paginación con <code>OFFSET</code> grande obliga a leer y descartar todas las filas anteriores: la página 1000 cuesta mil veces la primera, y hay que sustituirla por paginación por clave.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-limit.html">https://www.postgresql.org/docs/current/queries-limit.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
+--   FROM      de donde salen las filas
+--   WHERE     cuales sobreviven      (seleccion)
+--   SELECT    que columnas se ven    (proyeccion)
+--   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
+--   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Misma sintaxis y misma optimización de <code>ORDER BY ... LIMIT</code> cuando el índice cubre el orden.</li>
+<li><strong>Por qué no:</strong> Cuando no lo cubre, aplica un ordenamiento en memoria limitado por <code>sort_buffer_size</code> y puede caer a archivos temporales en disco sin avisar: la misma consulta pasa de milisegundos a segundos por un cambio de datos.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/method/cursor.sort/
+// nota: el indice compuesto { curso: 1, nota: -1 } cubre el filtro Y el orden,
+//       asi que el motor recorre el indice y se detiene en el segundo. Sin el,
+//       la ordenacion en memoria esta limitada a 32 MB y la consulta falla.
+
+// === preparacion ===
+db.notas.drop();
+db.notas.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot;, nota: 78 },
+]);
+db.notas.createIndex({ curso: 1, nota: -1 });
+
+// === consulta ===
+db.notas
+  .find({ curso: &quot;DB-101&quot;, nota: { $gte: 60 } }, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ nota: -1 })
+  .limit(2)
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>find().sort().limit()</code> es la traducción directa, y con un índice compuesto el motor aplica el mismo atajo: recorre el índice y se detiene.</li>
+<li><strong>Por qué no:</strong> Sin índice que cubra el <code>sort</code>, la ordenación en memoria está limitada a 32 MB y la consulta <strong>falla</strong> en vez de ir lenta. Es un fallo mejor que un cuelgue, pero sorprende en producción.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">https://www.mongodb.com/docs/manual/reference/method/cursor.sort/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sorted-sets/
+# nota: el orden se paga en la ESCRITURA. ZADD mantiene el conjunto ordenado
+#       por puntuacion, asi que «los dos mejores» es leer dos elementos del
+#       extremo: O(log N) para llegar y O(1) por elemento. El precio es que el
+#       filtro por curso obliga a un conjunto por curso.
+
+# === preparacion ===
+FLUSHDB
+ZADD notas:DB-101 90 Ada
+ZADD notas:DB-101 58 Linus
+ZADD notas:DB-101 72 Grace
+ZADD notas:SE-201 66 Ada
+ZADD notas:SE-201 78 Grace
+
+# === consulta ===
+EVAL &quot;local t=redis.call('ZREVRANGEBYSCORE','notas:DB-101','+inf','60','WITHSCORES','LIMIT',0,2) local r={} for i=1,#t,2 do r[#r+1]=t[i]..'|'..t[i+1] end return r&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un conjunto ordenado mantiene el orden <strong>en la escritura</strong>: pedir los dos mejores es leer dos elementos del extremo, sin ordenar nada. Para un marcador que se consulta miles de veces por segundo, no hay estructura más barata.</li>
+<li><strong>Por qué no:</strong> Solo ordena por una puntuación numérica y el filtro por curso obliga a tener un conjunto por curso: cada criterio de orden nuevo es una estructura nueva que hay que mantener al escribir.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada. Aqui el ORDER BY no ordena: DESCRIBE el orden
+--       que ya tienen las filas en el disco dentro de la particion. Por eso
+--       LIMIT 2 lee dos celdas contiguas y nada mas.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.notas_por_curso;
+
+CREATE TABLE escuela.notas_por_curso (
+    curso      text,
+    nota       int,
+    estudiante text,
+    PRIMARY KEY (curso, nota, estudiante)
+) WITH CLUSTERING ORDER BY (nota DESC, estudiante ASC);
+
+INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 90, 'Ada');
+INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 58, 'Linus');
+INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 72, 'Grace');
+INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('SE-201', 66, 'Ada');
+INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('SE-201', 78, 'Grace');
+
+-- === consulta ===
+-- El filtro por `nota` es legal porque `nota` es columna de agrupamiento. Si
+-- se filtrara por `estudiante`, haria falta ALLOW FILTERING: la forma que tiene
+-- Cassandra de avisar de que va a escanear la particion entera.
+SELECT estudiante, nota
+FROM escuela.notas_por_curso
+WHERE curso = 'DB-101' AND nota &gt;= 60
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Si la tabla se modela con el curso como partición y la nota como columna de agrupamiento descendente, el orden está en el disco y <code>LIMIT 2</code> lee dos celdas contiguas: la consulta más barata posible.</li>
+<li><strong>Por qué no:</strong> Ese orden es el único disponible: pedir «los dos mejores por estudiante» exige otra tabla. Y el filtro <code>nota &gt;= 60</code> solo funciona sobre la columna de agrupamiento; sobre cualquier otra hace falta <code>ALLOW FILTERING</code>, que es la forma que tiene Cassandra de decir «esto va a escanear».</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+</ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

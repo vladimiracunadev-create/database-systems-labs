@@ -1,33 +1,51 @@
 name: database-systems-labs
 
+# Los motores que el repositorio ejecuta de verdad.
+#
+# `scripts/verificar_equivalencia.py --con-servicios` habla con cada uno a
+# traves de su propio cliente oficial dentro del contenedor (`docker compose
+# exec`), asi que la comparacion entre motores no depende de ningun driver
+# intermedio ni de que los puertos esten publicados.
+#
+# Los puertos se publican de todas formas para poder conectarse con un cliente
+# grafico, y son configurables porque en una maquina de trabajo es normal tener
+# ya un PostgreSQL o un MySQL escuchando en el puerto de siempre:
+#
+#     PGPORT=5433 MYSQL_PORT=3307 docker compose --profile relational up -d
+#
+# Las contrasenas son locales, de laboratorio y estan a la vista a proposito:
+# este stack no debe exponerse fuera de 127.0.0.1 ni usarse con datos reales.
+
 services:
   postgres:
     image: postgres:18-alpine
-    profiles: ["relational"]
+    profiles: ["relational", "todo"]
     environment:
       POSTGRES_DB: learning
       POSTGRES_USER: learner
       POSTGRES_PASSWORD: local_postgres_only
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${PGPORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U learner -d learning"]
       interval: 5s
       timeout: 3s
       retries: 20
+    # PostgreSQL 18 coloca los datos en un subdirectorio con la version dentro:
+    # el punto de montaje es /var/lib/postgresql, no /var/lib/postgresql/data.
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   mysql:
     image: mysql:8.4
-    profiles: ["relational"]
+    profiles: ["relational", "todo"]
     environment:
       MYSQL_DATABASE: learning
       MYSQL_USER: learner
       MYSQL_PASSWORD: local_mysql_only
       MYSQL_ROOT_PASSWORD: local_root_only
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
@@ -38,26 +56,54 @@ services:
 
   mongodb:
     image: mongo:8.0
-    profiles: ["document"]
+    profiles: ["document", "todo"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: learner
       MONGO_INITDB_ROOT_PASSWORD: local_mongo_only
     ports:
-      - "127.0.0.1:27017:27017"
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     volumes:
       - mongo_data:/data/db
 
   redis:
     image: redis:8-alpine
-    profiles: ["cache"]
+    profiles: ["cache", "todo"]
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "local_redis_only"]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "local_redis_only", "--no-auth-warning", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
       - redis_data:/data
+
+  neo4j:
+    image: neo4j:5-community
+    profiles: ["graph", "todo"]
+    environment:
+      NEO4J_AUTH: neo4j/local_neo4j_only
+      NEO4J_server_memory_heap_max__size: 512M
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p local_neo4j_only 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    volumes:
+      - neo4j_data:/data
 
 volumes:
   postgres_data:
   mysql_data:
   mongo_data:
   redis_data:
+  neo4j_data:

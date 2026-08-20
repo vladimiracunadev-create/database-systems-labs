@@ -1,11 +1,15 @@
 name: CI
 
-# Lo que decide si `main` esta en verde. Cinco trabajos independientes, para
-# que un fallo de lint no oculte un fallo de contenido y al reves.
+# Lo que decide si `main` esta en verde. Seis trabajos independientes, para que
+# un fallo de lint no oculte un fallo de contenido y al reves.
 #
-# El trabajo `artefactos` es el que evita la incoherencia clasica de este tipo
-# de repositorio: que el sitio publicado y las clases del repositorio digan
-# cosas distintas porque alguien edito una y no regenero la otra.
+# El trabajo `artefactos` evita la incoherencia clasica de este tipo de
+# repositorio: que el sitio publicado y las clases digan cosas distintas porque
+# alguien edito una y no regenero la otra.
+#
+# El trabajo `equivalencia` es el que sostiene la afirmacion central del
+# programa: el mismo problema, resuelto en varios motores, da la misma
+# respuesta. No se afirma; se ejecuta contra los motores reales.
 
 on:
   push:
@@ -60,6 +64,14 @@ jobs:
           print(f"| Citas totales | {citas} |")
           print(f"| Fuentes por clase (media) | {citas / len(clases):.1f} |")
           print(f"| Motores en catálogo | {len(m['systems'])} |")
+          import sys as _s; _s.path.insert(0, "scripts")
+          import motores_lib as ml
+          comparaciones = ml.todas()
+          impl = sum(len(x.aplicables) for x in comparaciones)
+          ejec = sum(len(x.ejecutables) for x in comparaciones)
+          print(f"| Clases con comparación de motores | {len(comparaciones)} |")
+          print(f"| Implementaciones por motor | {impl} |")
+          print(f"| De ellas, ejecutadas por la máquina | {ejec} |")
           PY
 
   artefactos:
@@ -105,6 +117,45 @@ jobs:
           [ "$INDEXADAS" -eq "$ESPERADAS" ] || { echo "::error::el índice de búsqueda no cubre todas las clases"; exit 1; }
           echo "- Páginas de clase: **$CLASES**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Clases indexadas en el buscador: **$INDEXADAS**" >> "$GITHUB_STEP_SUMMARY"
+
+  equivalencia:
+    name: Equivalencia entre motores
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --quiet -r requirements.txt
+
+      # Primero lo que corre en cualquier maquina y sin nada levantado. Si esto
+      # falla, no hace falta esperar a que arranquen cinco contenedores.
+      - name: Motores de nucleo (SQLite y DuckDB)
+        run: python scripts/verificar_equivalencia.py --verbose
+
+      # `--wait` se apoya en los healthcheck del compose: no sigue hasta que los
+      # cinco motores contestan de verdad.
+      - name: Levantar PostgreSQL, MySQL, MongoDB, Redis y Neo4j
+        run: docker compose --profile todo up -d --wait
+
+      - name: Ejecutar cada implementacion contra su motor real
+        run: python scripts/verificar_equivalencia.py --con-servicios --verbose
+
+      - name: Resumen de la equivalencia
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "### 🌐 El mismo problema en cada motor"
+            echo
+            python scripts/verificar_equivalencia.py --con-servicios | tail -1
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apagar los motores
+        if: always()
+        run: docker compose --profile todo down --volumes
 
   markdown:
     name: Markdown lint

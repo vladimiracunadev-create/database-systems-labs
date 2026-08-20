@@ -1,0 +1,101 @@
+---
+caso:
+  titulo: Cambiar el correo de un estudiante sin romper lo que apunta a él
+  contrato: |
+    El correo parece una buena clave: es único y ya identifica a la persona.
+    Hasta que alguien lo cambia. Con clave sustituta, cambiar el correo es
+    actualizar **una** fila y ninguna referencia se entera; con clave natural,
+    hay que propagar el cambio a toda tabla que lo hubiera copiado.
+
+    El caso hace justo eso: Ada cambia de `ada@example.org` a `ada@nuevo.org` y,
+    después del cambio, la consulta devuelve por estudiante su correo actual y
+    cuántas inscripciones conserva. Si la identidad estaba bien modelada, Ada
+    sigue teniendo sus dos inscripciones.
+  columnas: [correo, inscripciones]
+  esperado:
+    - [ada@nuevo.org, "2"]
+    - [grace@example.org, "0"]
+    - [linus@example.org, "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `INTEGER PRIMARY KEY` es un alias del `rowid` interno, así que la clave
+      sustituta no cuesta ni una columna extra de almacenamiento: la identidad
+      estable sale gratis.
+    porque_no: >-
+      Ese mismo alias hace que el valor pueda reutilizarse si se borran filas y
+      se usa `AUTOINCREMENT` mal entendido; una clave sustituta reutilizada es
+      peor que una natural inestable.
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Permite comprobar el efecto del cambio sobre un volcado completo: contar
+      cuántas filas habría que tocar con clave natural es el argumento numérico
+      que cierra la discusión.
+    porque_no: >-
+      No genera identificadores por sí solo con la comodidad de una secuencia de
+      un motor transaccional, así que la identidad hay que traerla ya asignada.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_sequence.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `GENERATED ALWAYS AS IDENTITY` es la forma normalizada de la clave
+      sustituta y, junto a un `UNIQUE` sobre el correo, permite tener las dos
+      cosas: identidad estable para las referencias y unicidad de negocio para
+      el usuario.
+    porque_no: >-
+      La clave sustituta no exime de declarar la clave natural: sin el `UNIQUE`
+      sobre el correo, el sistema acepta dos personas con el mismo correo y
+      nadie lo nota hasta que alguien intenta recuperar su contraseña.
+    doc: https://www.postgresql.org/docs/current/ddl-identity-columns.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El `_id` es obligatorio y por omisión es un `ObjectId` generado en el
+      cliente: la identidad sustituta existe siempre, incluso cuando nadie la
+      diseñó, y se puede generar sin ir al servidor.
+    porque_no: >-
+      Como es opaco y de 12 bytes, aparece en cada documento y en cada índice; y
+      si se cede a la tentación de usar el correo como `_id`, cambiarlo obliga a
+      borrar y reinsertar el documento, porque el `_id` es inmutable.
+    doc: https://www.mongodb.com/docs/manual/core/document/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      La clave primaria decide en qué nodo vive la fila, así que **no se puede
+      actualizar**: cambiar el correo cuando el correo es la clave de partición
+      significa insertar la fila nueva y borrar la vieja, con todo lo que
+      cuelgue de ella.
+    alternativa: >-
+      Usar un identificador estable (UUID) como clave de partición y mantener
+      una tabla `estudiante_por_correo` como índice de búsqueda, aceptando el
+      trabajo de mantener las dos.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      La clave de Redis es literalmente la ruta de acceso: si el correo forma
+      parte del nombre de la clave, cambiarlo obliga a renombrar y a corregir
+      todas las referencias, que es la versión más cruda del problema de la
+      clave natural.
+    alternativa: >-
+      Nombrar las claves por identificador (`estudiante:42`) y mantener un
+      índice aparte (`correo:ada@nuevo.org -> 42`), que es exactamente la
+      distinción entre identidad y atributo que enseña esta clase.
+    doc: https://redis.io/docs/latest/develop/using-commands/keyspace/

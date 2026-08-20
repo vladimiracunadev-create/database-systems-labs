@@ -8,6 +8,8 @@ Parte 03 — SQL en profundidad · Fundamentos ·
 
 **Conceptos centrales:** `tipo de dato` · `restricción` · `valor por defecto` · `DDL transaccional`
 
+**En este caso se comparan 8 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -188,6 +190,267 @@ Los proyectos de «limpieza de datos» existen porque en su día el esquema acep
 2. ¿Qué diferencia práctica hay entre `TIMESTAMP` y `TIMESTAMPTZ` durante un cambio de horario?
 3. Escribe la unicidad condicional de tu dominio en dos motores distintos.
 4. Tu migración falla a mitad en MySQL. Describe el estado del esquema y cómo lo recuperas.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Un esquema que rechaza por su cuenta los datos que no cumplen el contrato
+
+El DDL no describe los datos: los **restringe**. Un esquema es un contrato
+ejecutable, y la forma de comprobar que existe es intentar romperlo.
+
+El caso intenta guardar cuatro notas. Dos son válidas. Una trae nota 130
+—fuera del rango declarado— y otra trae el nombre del estudiante vacío. El
+programa no comprueba nada; las dos inválidas tienen que rebotar contra el
+esquema. La consulta devuelve lo que quedó guardado, ordenado por
+estudiante: exactamente las dos válidas.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| estudiante | nota |
+|---|---|
+| `Ada` | `90` |
+| `Linus` | `58` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 014`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/stricttables.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/constraints.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-constraints.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/schema-validation/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/) |
+| OpenSearch | **no** | — | — | [doc oficial](https://docs.opensearch.org/latest/field-types/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/stricttables.html
+-- nota: la clausula STRICT es lo que hace que el tipo se comprueba de verdad.
+--       Sin ella, la afinidad de tipos deja pasar una cadena en una columna
+--       INTEGER si no puede convertirla.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL CHECK (length(estudiante) > 0),
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+) STRICT;
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+-- Las dos siguientes rebotan contra el contrato. OR IGNORE deja verlo sin
+-- abortar el guion; sin OR IGNORE, cada una lanza un error.
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+```
+
+- **Por qué sí:** Tiene `CHECK`, `NOT NULL`, `UNIQUE` y claves foráneas, y `INSERT OR IGNORE` permite ver el rechazo sin abortar el guion: el contrato actúa a la vista.
+- **Por qué no:** Su tipado es dinámico por afinidad: en una columna `INTEGER` cabe la cadena `'alto'` si el motor no la puede convertir. Desde 3.37 existen las tablas `STRICT`, pero no son las de por omisión, así que casi ninguna base SQLite existente comprueba tipos.
+- 📄 Documentación oficial: <https://sqlite.org/stricttables.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE para violaciones de CHECK: la fila
+--       invalida aborta la sentencia. Por eso los dos intentos prohibidos van
+--       comentados; descomentar cualquiera de los dos hace fallar el guion, que
+--       es precisamente la prueba de que el contrato existe.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL CHECK (length(estudiante) > 0),
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas VALUES ('Linus', 'DB-101', 58);
+-- INSERT INTO notas VALUES ('Grace', 'DB-101', 130);  -- Constraint Error: CHECK
+-- INSERT INTO notas VALUES ('',      'DB-101', 70);   -- Constraint Error: CHECK
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+```
+
+- **Por qué sí:** El tipado sí es estricto: una nota `'alto'` en una columna entera falla al insertar, sin conversiones silenciosas. Es el motor donde el contrato de tipos se cumple sin pedirlo.
+- **Por qué no:** No tiene `INSERT OR IGNORE` para violaciones de `CHECK`: la fila inválida aborta la sentencia entera. Para cargar datos sucios hay que filtrarlos antes, que es justo lo que un almacén analítico espera que hayas hecho ya.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/constraints.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: el dominio da NOMBRE a la restriccion y la hace reutilizable: cualquier
+--       columna declarada `nota_valida` hereda el rango, y cambiarlo en un solo
+--       sitio lo cambia en todas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+DROP DOMAIN IF EXISTS nota_valida;
+
+CREATE DOMAIN nota_valida AS integer CHECK (VALUE BETWEEN 0 AND 100);
+
+CREATE TABLE notas (
+    estudiante text NOT NULL CHECK (length(estudiante) > 0),
+    curso      text NOT NULL,
+    nota       nota_valida NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+
+-- Los dos intentos prohibidos se ejecutan de verdad, capturando el error: la
+-- prueba de que el contrato actua queda en el guion, no en un comentario.
+DO $$
+DECLARE rechazadas integer := 0;
+BEGIN
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    IF rechazadas <> 2 THEN
+        RAISE EXCEPTION 'el esquema acepto datos que su contrato prohibe';
+    END IF;
+END;
+$$;
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+```
+
+- **Por qué sí:** Es el que más lejos lleva la idea de contrato: además de `CHECK` tiene dominios (`CREATE DOMAIN`) para dar nombre a una restricción y reutilizarla, tipos enumerados y restricciones de exclusión. La regla se declara una vez y vale para toda tabla que use el tipo.
+- **Por qué no:** Añadir un `CHECK` a una tabla grande la bloquea mientras valida las filas existentes, salvo que se declare `NOT VALID` y se valide después: el contrato se endurece con una ventana de mantenimiento, no con un despliegue.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-constraints.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html
+-- nota: antes de 8.0.16, MySQL analizaba los CHECK y los ignoraba en silencio.
+--       Comprobar la version del servidor es parte de leer el esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL CHECK (CHAR_LENGTH(estudiante) > 0),
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+```
+
+- **Por qué sí:** Desde 8.0.16 los `CHECK` se comprueban de verdad, y `INSERT IGNORE` convierte el rechazo en aviso, lo que permite cargar por lotes sin perder el lote entero.
+- **Por qué no:** Antes de 8.0.16 el `CHECK` se analizaba y se **ignoraba en silencio**: hay esquemas heredados llenos de restricciones que nunca comprobaron nada. Y sin el modo estricto, un `INSERT` con un valor imposible se convertía en un aviso y guardaba un cero.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/schema-validation/
+// nota: validationAction "error" es lo que convierte el esquema en contrato.
+//       Con "warn" el documento invalido se guarda igual y solo queda una
+//       linea en el registro que nadie lee.
+
+// === preparacion ===
+db.notas.drop();
+db.createCollection("notas", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["estudiante", "curso", "nota"],
+      properties: {
+        estudiante: { bsonType: "string", minLength: 1 },
+        curso: { bsonType: "string" },
+        nota: { bsonType: "int", minimum: 0, maximum: 100 },
+      },
+    },
+  },
+  validationAction: "error",
+  validationLevel: "strict",
+});
+
+db.notas.insertOne({ estudiante: "Ada", curso: "DB-101", nota: NumberInt(90) });
+db.notas.insertOne({ estudiante: "Linus", curso: "DB-101", nota: NumberInt(58) });
+
+let rechazadas = 0;
+for (const malo of [
+  { estudiante: "Grace", curso: "DB-101", nota: NumberInt(130) },
+  { estudiante: "", curso: "DB-101", nota: NumberInt(70) },
+]) {
+  try {
+    db.notas.insertOne(malo);
+  } catch (e) {
+    rechazadas += 1;
+  }
+}
+if (rechazadas !== 2) throw new Error("el validador acepto lo que prohibe");
+
+// === consulta ===
+db.notas
+  .find({}, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ estudiante: 1 })
+  .forEach((d) => print(d.estudiante + "|" + d.nota));
+```
+
+- **Por qué sí:** `$jsonSchema` con `validationAction: "error"` da un contrato equivalente —tipos, rangos, campos obligatorios— sin renunciar a que el documento evolucione: se puede empezar sin esquema y endurecerlo cuando el dominio se entiende.
+- **Por qué no:** Es opcional y se aplica solo a las escrituras posteriores: con `validationLevel: "moderate"` los documentos que ya estaban mal siguen estando mal, y nada en el documento delata que hay un contrato detrás.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/schema-validation/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | CQL declara tipos, pero no tiene `CHECK` ni restricciones de dominio: no hay forma de decir «la nota está entre 0 y 100». Cualquier comprobación de ese tipo exigiría leer o validar en el servidor, y su modelo de escritura no lee nada. | Validar en la capa de servicio que está delante del clúster, y aceptar que el contrato vive en el código, no en el almacén: si alguien escribe con `cqlsh`, no hay red de seguridad. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html) |
+| Redis | No hay esquema en absoluto: toda clave admite cualquier valor. La única «restricción» es el tipo de la estructura —no se puede hacer `INCR` sobre una lista—, y eso no es un contrato de dominio. | Validar antes de escribir en el cliente, o usar RedisJSON con un esquema comprobado en la aplicación; en cualquier caso, la regla la sostiene el código. | [doc](https://redis.io/docs/latest/develop/data-types/) |
+| OpenSearch | Un `mapping` fija tipos, pero su comportamiento por omisión es el contrario al de un contrato: el mapeo dinámico **crea** el campo que aparezca. Y un campo mal tipado no se puede cambiar sin reindexar. | `dynamic: strict` en el mapeo, que rechaza los documentos con campos no declarados; sigue sin haber rangos ni condiciones sobre los valores. | [doc](https://docs.opensearch.org/latest/field-types/) |
 
 ---
 

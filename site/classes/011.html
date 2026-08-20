@@ -61,6 +61,7 @@
 4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>selección</code> · <code>proyección</code> · <code>producto cartesiano</code> · <code>reunión natural</code> · <code>división</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Dominar los operadores del álgebra relacional para poder razonar sobre una consulta <strong>antes</strong> de ejecutarla: cuántas filas puede producir, qué la hace cara y por qué el optimizador puede reordenarla sin cambiar el resultado.</p>
@@ -282,6 +283,298 @@ HAVING COUNT(DISTINCT e.course_id) = (SELECT COUNT(*) FROM courses WHERE obligat
 <li>Da una consulta donde omitir <code>DISTINCT</code> produzca un total inflado en un informe, con números.</li>
 <li>Explica por qué la formulación de división con <code>HAVING COUNT</code> exige unicidad de <code>(student_id, course_id)</code>.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Selección, reunión y proyección compuestas en una sola expresión</p>
+<p>El álgebra relacional es cerrada: cada operador toma relaciones y devuelve
+una relación, así que se pueden encadenar. El caso encadena tres —selección
+por curso y nota, reunión con los estudiantes, proyección de dos columnas— y
+devuelve quién aprobó DB-101 con 60 o más, con su nota, ordenado por nombre.</p>
+<p>Lo que hay que ver no es el resultado, sino que <strong>el orden en que el motor
+aplique los operadores no puede cambiarlo</strong>. Que la selección se pueda
+empujar antes de la reunión es una equivalencia algebraica, y de ahí sale la
+optimización de consultas: reescribir la expresión por otra equivalente y
+más barata.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>nombre</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 011</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/optoverview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/guides/meta/explain.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/using-explain.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Neo4j</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/optoverview.html
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         TEXT NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> SQL es la implementación práctica del álgebra y aquí se lee sin ruido: una cláusula por operador.</li>
+<li><strong>Por qué no:</strong> Su optimizador aplica pocas reescrituras, así que no sirve para ver el efecto de las equivalencias algebraicas: el plan se parece demasiado a lo que se escribió.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/optoverview.html">https://sqlite.org/optoverview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/guides/meta/explain.html
+-- nota: anteponer EXPLAIN a esta consulta muestra el arbol de operadores con
+--       el filtro ya empujado a la hoja: la equivalencia algebraica aplicada.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         VARCHAR NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su <code>EXPLAIN</code> muestra el árbol de operadores casi como se dibuja en el álgebra, con los filtros ya empujados hacia las hojas: es la mejor forma de ver la reescritura sin instalar nada.</li>
+<li><strong>Por qué no:</strong> Ese mismo optimizador reordena tanto que el plan deja de parecerse a la consulta escrita, lo que confunde a quien está aprendiendo a leerlos.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/guides/meta/explain.html">https://duckdb.org/docs/stable/guides/meta/explain.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/using-explain.html
+-- nota: EXPLAIN (ANALYZE) sobre esta consulta nombra los operadores y permite
+--       comprobar que la seleccion se aplico antes de la reunion.
+
+DROP TABLE IF EXISTS notas, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id integer NOT NULL,
+    curso         text NOT NULL,
+    nota          integer NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde la teoría se vuelve visible: <code>EXPLAIN</code> nombra los operadores (<code>Seq Scan</code>, <code>Hash Join</code>, <code>Filter</code>) y permite comprobar que la selección se aplicó antes de la reunión aunque estuviera escrita después.</li>
+<li><strong>Por qué no:</strong> El optimizador decide con estadísticas; si están viejas, elige una expresión equivalente pero mucho más cara, y la culpa parecerá de la consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/using-explain.html">https://www.postgresql.org/docs/current/using-explain.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/
+// nota: la tuberia ES la expresion algebraica escrita en orden. El $match va
+//       PRIMERO a proposito: es el empuje del filtro hecho a mano.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.notas.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot; },
+  { _id: 2, nombre: &quot;Linus&quot; },
+  { _id: 3, nombre: &quot;Grace&quot; },
+]);
+db.notas.insertMany([
+  { estudiante_id: 1, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante_id: 2, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante_id: 3, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante_id: 1, curso: &quot;SE-201&quot;, nota: 66 },
+  { estudiante_id: 3, curso: &quot;SE-201&quot;, nota: 78 },
+]);
+
+// === consulta ===
+db.notas
+  .aggregate([
+    { $match: { curso: &quot;DB-101&quot;, nota: { $gte: 60 } } },
+    { $lookup: { from: &quot;estudiantes&quot;, localField: &quot;estudiante_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
+    { $unwind: &quot;$e&quot; },
+    { $project: { _id: 0, nombre: &quot;$e.nombre&quot;, nota: 1 } },
+    { $sort: { nombre: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una tubería de agregación <strong>es</strong> una expresión algebraica escrita en orden: <code>$match</code> es la selección, <code>$lookup</code> la reunión, <code>$project</code> la proyección. Y el propio motor reordena etapas cuando puede, igual que un optimizador relacional.</li>
+<li><strong>Por qué no:</strong> Al escribirse el orden a mano, un <code>$match</code> puesto después de un <code>$lookup</code> puede procesar millones de documentos de más: aquí el usuario carga con parte del trabajo del optimizador.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/</a></li>
+</ul>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/clauses/where/
+// nota: el mismo algebra con otra forma: el patron es la reunion, el WHERE la
+//       seleccion y el RETURN la proyeccion.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (g:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (a)-[:CURSO {nota: 90}]-&gt;(db),
+       (l)-[:CURSO {nota: 58}]-&gt;(db),
+       (g)-[:CURSO {nota: 72}]-&gt;(db),
+       (a)-[:CURSO {nota: 66}]-&gt;(se),
+       (g)-[:CURSO {nota: 78}]-&gt;(se);
+
+// === consulta ===
+MATCH (e:Estudiante)-[r:CURSO]-&gt;(c:Curso)
+WHERE c.codigo = 'DB-101' AND r.nota &gt;= 60
+RETURN e.nombre AS nombre, r.nota AS nota
+ORDER BY nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Cypher tiene los mismos operadores con otra forma: el patrón es la reunión, el <code>WHERE</code> la selección y el <code>RETURN</code> la proyección. Ver el mismo álgebra en dos lenguajes es lo que demuestra que el álgebra no es de SQL.</li>
+<li><strong>Por qué no:</strong> El producto cartesiano —que en álgebra es un operador más— aquí es un error de diseño: si el patrón no conecta dos partes, Neo4j avisa de un producto cartesiano porque casi nunca es lo que se quería.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">https://neo4j.com/docs/cypher-manual/current/clauses/where/</a></li>
+</ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

@@ -1,0 +1,112 @@
+---
+caso:
+  titulo: Contar dos hijos del mismo padre sin que se multipliquen entre sí
+  contrato: |
+    Por cada curso hay que devolver cuántos inscritos tiene y cuántas
+    evaluaciones. Son dos recuentos sobre dos tablas distintas que cuelgan del
+    mismo padre, y ahí está el error de agregación más caro que existe: reunir
+    las dos y contar. Para DB-101, con 2 inscritos y 3 evaluaciones, esa reunión
+    produce 6 filas intermedias y los dos recuentos salen 6.
+
+    Lo grave no es el número: es que **el informe se genera igual**. Nadie revisa
+    un total que parece plausible. La forma correcta agrega antes de reunir, para
+    que cada lado aporte una sola fila por curso.
+  columnas: [curso, inscritos, evaluaciones]
+  esperado:
+    - [DB-101, "2", "3"]
+    - [SE-201, "1", "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Permite ver el doble conteo y su corrección en el mismo archivo, sin
+      infraestructura: basta cambiar la consulta por la ingenua para que los dos
+      números salten a 6.
+    porque_no: >-
+      Tolera `GROUP BY` con columnas no agregadas y devuelve un valor cualquiera
+      del grupo, sin avisar. Es el motor donde una agregación mal escrita más
+      fácilmente pasa por buena.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      La agregación es su terreno: cuenta y agrupa sobre millones de filas en
+      memoria, y `GROUP BY ALL` evita el error de olvidar una columna en la
+      lista.
+    porque_no: >-
+      Esa velocidad esconde el problema: la versión con doble reunión y
+      `DISTINCT` también termina rápido aquí, así que el costo del error no se
+      nota hasta que la misma consulta se lleva al motor transaccional.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/groupby.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Rechaza el `GROUP BY` ambiguo con un error, tiene agregados con `FILTER`
+      —que evita varias subconsultas— y `EXPLAIN (ANALYZE)` muestra las filas
+      intermedias reales, que es como se demuestra el doble conteo con números.
+    porque_no: >-
+      La agregación previa por subconsulta puede materializarse: en tablas
+      grandes conviene comprobar si una función de ventana o un `LATERAL` con
+      límite resulta más barato, en vez de asumirlo.
+    doc: https://www.postgresql.org/docs/current/tutorial-agg.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Con `ONLY_FULL_GROUP_BY` activo por omisión desde 5.7, las agregaciones
+      ambiguas ya no cuelan, y el motor resuelve la agregación previa con
+      tablas derivadas materializadas.
+    porque_no: >-
+      Esa materialización crea tablas temporales sin índices: cuando las
+      subconsultas devuelven muchas filas, la reunión posterior se vuelve un
+      escaneo completo de la temporal.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El problema del doble conteo no aparece si cada `$lookup` se cuenta por
+      separado con `$size`: no hay producto cartesiano porque cada búsqueda deja
+      su propio arreglo.
+    porque_no: >-
+      Cada `$lookup` es una consulta más por documento del lado externo; con
+      muchos cursos, lo que en SQL era una reunión se convierte en miles de
+      búsquedas y la latencia crece de forma lineal.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+
+  - id: clickhouse
+    aplica: no
+    porque_no: >-
+      Resolvería el caso sin esfuerzo, pero compararlo aquí induce a error: su
+      forma idiomática no es agregar dos hijos normalizados, sino guardar los
+      hechos ya aplanados y usar estados de agregación
+      (`AggregatingMergeTree`) que se combinan al fusionar partes.
+    alternativa: >-
+      Se estudia en la parte de analítica columnar, con su propio caso y su
+      propia medición, en vez de forzarlo a imitar un esquema transaccional.
+    doc: https://clickhouse.com/docs/en/sql-reference/aggregate-functions
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay `GROUP BY`: agregar exigiría traer todos los miembros al cliente y
+      contarlos allí, con lo que el recuento deja de ser una propiedad del
+      almacén.
+    alternativa: >-
+      Mantener un contador por curso y por tipo de hijo, actualizado en cada
+      escritura, con el riesgo de deriva que se estudió en la clase de
+      desnormalización deliberada.
+    doc: https://redis.io/docs/latest/commands/hincrby/

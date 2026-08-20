@@ -1,0 +1,113 @@
+---
+caso:
+  titulo: Cambiar la forma física de los datos sin tocar la consulta de la aplicación
+  contrato: |
+    La aplicación consulta siempre lo mismo: `SELECT ... FROM panel_inscripciones`.
+    Debajo, la tabla cambia de forma —el estado deja de ser un texto repetido en
+    cada fila y pasa a ser un código con su tabla de referencia—, y la vista
+    absorbe el cambio. La consulta de la aplicación no se toca y devuelve
+    exactamente las mismas filas antes y después.
+
+    Eso es la independencia lógica de datos: la vista es la frontera entre el
+    esquema externo que la aplicación ve y el esquema conceptual que el
+    administrador puede reorganizar.
+  columnas: [estudiante, estado]
+  esperado:
+    - [Ada, activa]
+    - [Grace, retirada]
+    - [Linus, completada]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Las vistas son parte del estándar y SQLite las tiene desde siempre: sirven
+      para enseñar el mecanismo sin ninguna infraestructura.
+    porque_no: >-
+      Sus vistas son de solo lectura salvo que se añadan disparadores `INSTEAD
+      OF`, así que la frontera protege la lectura y no la escritura.
+    doc: https://sqlite.org/lang_createview.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Misma semántica de vista, y además permite que la vista apunte a un
+      archivo Parquet o CSV: la independencia deja de ser entre tablas y pasa a
+      ser entre formatos de almacenamiento.
+    porque_no: >-
+      Sin catálogo compartido ni permisos por usuario, la vista organiza el
+      trabajo de quien la escribe, pero no es una frontera de seguridad frente a
+      nadie.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_view.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      La vista es también una frontera de permisos: se puede conceder `SELECT`
+      sobre la vista y negarlo sobre las tablas de debajo, de modo que la
+      independencia lógica y el control de acceso se apoyan en el mismo objeto.
+      Con `CREATE OR REPLACE VIEW` el cambio es atómico.
+    porque_no: >-
+      Una vista no es un índice: si la consulta de debajo es cara, la vista la
+      hace cómoda pero no rápida, y quien la usa deja de ver ese costo. Para eso
+      están las vistas materializadas, que ya no son transparentes porque hay
+      que refrescarlas.
+    doc: https://www.postgresql.org/docs/current/sql-createview.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Ofrece el mismo mecanismo y, con el algoritmo `MERGE`, la vista se funde
+      con la consulta que la usa y no cuesta nada frente a escribirla a mano.
+    porque_no: >-
+      Cuando la vista tiene agregación o `UNION`, MySQL cae al algoritmo
+      `TEMPTABLE`: materializa el resultado en una tabla temporal y pierde los
+      índices de debajo. La misma vista puede ser gratis o carísima según lo que
+      contenga.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/views.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Una vista de MongoDB es una tubería de agregación con nombre: da la misma
+      frontera entre lo que la aplicación consulta y cómo están guardados los
+      documentos, y permite reorganizar el modelo documental sin cambiar el
+      cliente.
+    porque_no: >-
+      Son de solo lectura y no admiten índices propios: cada consulta a la vista
+      ejecuta la tubería entera, así que la frontera se paga en cada lectura.
+    doc: https://www.mongodb.com/docs/manual/core/views/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay vistas que reescriban una consulta. Existen vistas materializadas,
+      pero mantienen una copia real de los datos y su propia documentación
+      advierte de que se consideran experimentales por los problemas de
+      coherencia entre la tabla base y la vista.
+    alternativa: >-
+      Escribir a mano la tabla que la consulta necesita y mantenerla desde la
+      aplicación, aceptando que el cambio de forma física obliga a migrar datos,
+      no solo a redefinir un objeto.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No existe una capa lógica sobre los datos: la clave **es** la forma
+      física. Cambiar cómo se guarda algo cambia la clave, y todo cliente que la
+      conocía deja de encontrarla.
+    alternativa: >-
+      Poner una capa de servicio delante que traduzca nombres estables a claves
+      concretas: la independencia se implementa en el código, no en el almacén.
+    doc: https://redis.io/docs/latest/develop/using-commands/keyspace/

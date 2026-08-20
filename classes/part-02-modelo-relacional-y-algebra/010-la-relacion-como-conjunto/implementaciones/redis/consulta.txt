@@ -1,0 +1,15 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: el conjunto no es una operacion sobre los datos, es el tipo de dato.
+#       El precio: el par estudiante-curso hay que serializarlo en una cadena.
+
+# === preparacion ===
+FLUSHDB
+SADD accesos Linus|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|SE-201
+SADD accesos Linus|DB-101
+
+# === consulta ===
+SORT accesos ALPHA

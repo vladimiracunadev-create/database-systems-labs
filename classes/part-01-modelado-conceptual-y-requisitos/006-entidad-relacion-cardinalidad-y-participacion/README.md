@@ -8,6 +8,8 @@ Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
 
 **Conceptos centrales:** `entidad débil` · `cardinalidad` · `participación total` · `atributo de relación`
 
+**En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -178,6 +180,275 @@ Sobre el dominio del repositorio:
 2. Da una relación ternaria genuina de tu experiencia y demuestra que no se descompone en tres binarias.
 3. ¿Qué diferencia práctica hay entre `ON DELETE CASCADE` y `ON DELETE RESTRICT` en la tabla `teaching`?
 4. Un modelo declara participación total en ambos lados de una relación 1:1. ¿Cómo se inserta la primera fila?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Una relación de muchos a muchos y las dos cardinalidades que hay que poder contar
+
+Estudiantes y cursos se relacionan de muchos a muchos: un estudiante toma
+varios cursos y un curso tiene varios estudiantes. Ada toma dos cursos,
+Linus uno, Grace ninguno; DB-101 tiene dos estudiantes, SE-201 uno y AR-301
+ninguno.
+
+La consulta devuelve, para cada curso ordenado por código, cuántos
+estudiantes tiene. Que AR-301 aparezca con 0 es la mitad del ejercicio: la
+**participación parcial** —un curso puede existir sin estudiantes— solo se
+ve si el modelo conserva a los que no participan.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso | estudiantes |
+|---|---|
+| `AR-301` | `0` |
+| `DB-101` | `2` |
+| `SE-201` | `1` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 006`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/foreignkeys.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/statements/create_table.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-constraints.html) |
+| Neo4j | sí | servicio | [código](implementaciones/neo4j/consulta.cypher) | [doc oficial](https://neo4j.com/docs/cypher-manual/current/patterns/) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/data-modeling/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/foreignkeys.html
+-- nota: SQLite solo comprueba las claves foraneas si PRAGMA foreign_keys esta
+--       activo; el verificador lo activa, y en una aplicacion real hay que
+--       hacerlo en cada conexion.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo TEXT NOT NULL
+);
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** La tabla intermedia con clave primaria compuesta es la traducción directa del diagrama entidad-relación: una fila por par, ni más ni menos, y la cardinalidad máxima queda impuesta por la clave.
+- **Por qué no:** El diagrama distingue participación total de parcial; la tabla no. Que un curso deba tener al menos un estudiante no se puede declarar y hay que comprobarlo aparte.
+- 📄 Documentación oficial: <https://sqlite.org/foreignkeys.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_table.html
+-- nota: la misma consulta sirve para auditar datos existentes: si algun curso
+--       aparece con mas estudiantes que inscripciones unicas, la clave
+--       compuesta no estaba y hay duplicados.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo VARCHAR NOT NULL
+);
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL,
+    curso_id      INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Sirve para lo que esta clase realmente entrena: contar cardinalidades sobre datos ya existentes para descubrir cuál era el modelo de verdad, en vez del que estaba en el documento.
+- **Por qué no:** Sus claves foráneas no impiden borrar la fila referenciada con la misma firmeza que un motor transaccional: es un almacén para analizar, no para sostener la integridad de un sistema en producción.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/statements/create_table.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: para una participacion TOTAL («todo curso tiene al menos un
+--       estudiante») la clave foranea no basta: se declara DEFERRABLE
+--       INITIALLY DEFERRED y se comprueba al cerrar la transaccion.
+
+DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE cursos (
+    id     integer PRIMARY KEY,
+    codigo text NOT NULL
+);
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
+CREATE TABLE inscripciones (
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso_id      integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Impone las dos claves foráneas y la clave compuesta, y permite además diferir la comprobación al final de la transacción (`DEFERRABLE INITIALLY DEFERRED`), que es como se modela una participación total sin bloquearse al insertar la primera fila.
+- **Por qué no:** Cada clave foránea añade una comprobación por inserción y un bloqueo sobre la fila referenciada: en tablas de relación muy escritas, ese costo es real y hay que medirlo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-constraints.html>
+
+#### Neo4j · [`implementaciones/neo4j/consulta.cypher`](implementaciones/neo4j/consulta.cypher)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```cypher
+// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/patterns/
+// nota: no hay tabla intermedia. La relacion de muchos a muchos es la arista
+//       misma, y el diagrama entidad-relacion se parece tanto al modelo fisico
+//       que el paso de uno a otro deja de ser una traduccion.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (:Curso {codigo: 'AR-301'}),
+       (a)-[:INSCRITO_EN]->(db),
+       (a)-[:INSCRITO_EN]->(se),
+       (l)-[:INSCRITO_EN]->(db);
+
+// === consulta ===
+MATCH (c:Curso)
+OPTIONAL MATCH (e:Estudiante)-[:INSCRITO_EN]->(c)
+RETURN c.codigo AS curso, count(e) AS estudiantes
+ORDER BY curso;
+```
+
+- **Por qué sí:** La relación de muchos a muchos no necesita tabla intermedia: es una arista. El diagrama entidad-relación y el modelo físico se parecen tanto que el paso de uno a otro deja de ser una traducción.
+- **Por qué no:** Contar por etiqueta obliga a recorrer todos los nodos de esa etiqueta, que es exactamente lo que una tabla con índice hace mejor: el grafo gana en recorridos, no en recuentos globales.
+- 📄 Documentación oficial: <https://neo4j.com/docs/cypher-manual/current/patterns/>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/
+// nota: aqui la relacion vive como un arreglo de referencias dentro del curso.
+//       Es el modelo natural cuando la pregunta frecuente es «quienes estan en
+//       este curso»; la pregunta inversa exige un indice multiclave.
+
+// === preparacion ===
+db.cursos.drop();
+db.estudiantes.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: "Ada" },
+  { _id: 2, nombre: "Linus" },
+  { _id: 3, nombre: "Grace" },
+]);
+db.cursos.insertMany([
+  { _id: 10, codigo: "DB-101", inscritos: [1, 2] },
+  { _id: 20, codigo: "SE-201", inscritos: [1] },
+  // Participacion parcial: el curso existe con el arreglo vacio.
+  { _id: 30, codigo: "AR-301", inscritos: [] },
+]);
+
+// === consulta ===
+db.cursos
+  .aggregate([
+    { $project: { _id: 0, curso: "$codigo", estudiantes: { $size: "$inscritos" } } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) => print(d.curso + "|" + d.estudiantes));
+```
+
+- **Por qué sí:** Permite modelar la relación como un arreglo de referencias dentro del curso, que es el modelo natural cuando la pregunta frecuente es «quiénes están en este curso».
+- **Por qué no:** El arreglo tiene el límite de 16 MB del documento y hace cara la pregunta inversa —«en qué cursos está este estudiante»— salvo que se añada un índice multiclave y se acepte mantener las dos direcciones.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/data-modeling/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | Una relación de muchos a muchos consultable en las dos direcciones no cabe en una sola tabla: haría falta una tabla por dirección de consulta y escribir en las dos, sin transacción que las mantenga de acuerdo. | `estudiantes_por_curso` y `cursos_por_estudiante` como dos tablas independientes, escritas ambas en cada inscripción, asumiendo la posibilidad de que una quede desincronizada tras un fallo. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html) |
 
 ---
 

@@ -1,0 +1,13 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: un conjunto no admite repetidos por definicion. SADD devuelve 1 si
+#       anadio el elemento y 0 si ya estaba: la tercera orden devuelve 0.
+
+# === preparacion ===
+FLUSHDB
+SADD correos ada@example.org
+SADD correos linus@example.org
+SADD correos ada@example.org
+
+# === consulta ===
+SORT correos ALPHA

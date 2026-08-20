@@ -1,0 +1,88 @@
+---
+caso:
+  titulo: Convertir una bolsa de registros en una relación
+  contrato: |
+    En el modelo relacional una relación es un **conjunto**: no tiene filas
+    repetidas y no tiene orden. Lo que las tablas guardan de verdad son bolsas
+    (`multisets`): admiten repetidos y llegan en el orden que sea.
+
+    El caso parte de un registro de accesos con repeticiones —Ada entró dos
+    veces a DB-101, Linus dos veces también— y devuelve el conjunto de pares
+    distintos, ordenado. El `DISTINCT` es lo que convierte la bolsa en conjunto;
+    el `ORDER BY` es una decisión de presentación, y por eso hay que escribirlo
+    siempre: sin él, ningún motor está obligado a devolver nada en un orden
+    concreto.
+  columnas: [estudiante, curso]
+  esperado:
+    - [Ada, DB-101]
+    - [Ada, SE-201]
+    - [Linus, DB-101]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Muestra la diferencia entre bolsa y conjunto en tres líneas, y permite
+      comprobar a mano que sin `ORDER BY` el orden depende del plan que el motor
+      elija, no de cómo se insertaron las filas.
+    porque_no: >-
+      Al ser un archivo pequeño y con planes simples, el orden «casual» suele
+      coincidir con el de inserción: es justo el motor donde más fácil resulta
+      creerse que el orden está garantizado cuando no lo está.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Al ejecutar en paralelo por trozos, el orden sin `ORDER BY` cambia de
+      verdad entre ejecuciones: es el motor que mejor demuestra que una relación
+      no tiene orden.
+    porque_no: >-
+      `DISTINCT` sobre columnas de alta cardinalidad obliga a una tabla hash
+      completa en memoria; barato en el ejemplo, caro en un conjunto real.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Además de `DISTINCT` tiene `DISTINCT ON`, que resuelve «una fila por
+      grupo» sin ventana ni subconsulta, y su documentación explica que sin
+      `ORDER BY` el orden es indeterminado por diseño.
+    porque_no: >-
+      `DISTINCT ON` es una extensión propia: usarla ata la consulta a
+      PostgreSQL, y el equivalente portable —una función de ventana— hay que
+      escribirlo desde cero al migrar.
+    doc: https://www.postgresql.org/docs/current/sql-select.html
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Aquí el conjunto no es una operación sobre los datos: es el tipo de dato.
+      `SADD` no admite repetidos y no promete orden, que es literalmente la
+      definición de relación de esta clase.
+    porque_no: >-
+      Un conjunto de Redis guarda cadenas sueltas, no tuplas con atributos: para
+      representar el par estudiante-curso hay que serializarlo en una sola
+      cadena y perder la estructura.
+    doc: https://redis.io/docs/latest/develop/data-types/sets/
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `$group` por la pareja de campos elimina los repetidos igual que un
+      `DISTINCT`, y la etapa `$sort` deja explícito que el orden se pide, no se
+      hereda.
+    porque_no: >-
+      Sin índice que cubra el `$sort`, la ordenación se hace en memoria con un
+      límite de 100 MB por etapa, y la consulta falla en vez de ir lenta.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/

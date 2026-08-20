@@ -58,6 +58,46 @@ un libro sin ISBN, una lección a la que le falta una sección, un enlace
 relativo muerto— y exige que lo detecte. Ver pasar a un validador sobre un
 repositorio sano no demuestra que sirva.
 
+## El mismo problema, en cada motor
+
+La segunda regla, la que cambia la forma de estudiar: **una clase no explica un
+concepto, lo pone a competir**.
+
+Cada clase declara un caso con su salida esperada en
+[`motores.yaml`](classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/motores.yaml),
+lo resuelve en varios motores dentro de `implementaciones/`, y por cada motor
+escribe dos cosas que pesan lo mismo:
+
+- **Por qué sí** conviene resolverlo ahí.
+- **Por qué no** — porque ningún motor sale gratis, y un motor que solo tiene
+  ventajas no se ha entendido: se ha copiado del folleto del fabricante.
+
+Y también aparecen los motores que **no** resuelven el caso, con el motivo y con
+lo que se hace en su lugar. Descartar Redis para una reunión con un argumento
+enseña más que usarlo bien: es la mitad del criterio de arquitectura.
+
+Que las respuestas coincidan no es una promesa del texto. Lo ejecuta una
+máquina:
+
+```bash
+python scripts/verificar_equivalencia.py                  # SQLite y DuckDB, sin nada instalado
+docker compose --profile todo up -d --wait
+python scripts/verificar_equivalencia.py --con-servicios  # PostgreSQL, MySQL, MongoDB, Redis, Neo4j
+```
+
+Tres niveles de prueba, y la clase dice siempre cuál es cuál:
+
+| Nivel | Motores | Qué significa |
+|---|---|---|
+| **Núcleo** | SQLite, DuckDB | Se ejecuta en cualquier máquina y en todos los trabajos de CI, sin levantar nada |
+| **Servicio** | PostgreSQL, MySQL, MongoDB, Redis, Neo4j | Se ejecuta contra el motor real levantado con `docker compose`, usando su propio cliente oficial |
+| **Declarado** | SQL Server, Oracle, Cassandra, ClickHouse… | El código se muestra y se revisa contra la documentación citada; la máquina **no** lo ejecuta, y así se dice |
+
+Además, cada afirmación sobre un motor lleva al lado el enlace a **su página de
+documentación oficial**, y el validador comprueba que ese enlace cuelga del
+dominio que el catálogo registra para ese motor: una opinión sobre PostgreSQL
+tiene que apoyarse en `postgresql.org`, no en un blog.
+
 ## Modelo pedagógico
 
 Cada clase sigue la misma estructura, y la validación comprueba que están todas
@@ -285,13 +325,19 @@ evidencia acumulada es un [portafolio verificable](projects/portafolio.md).
 
 ## Alcance de la cobertura de motores
 
-Tres capas, declaradas para no prometer de más:
+Lo que el repositorio promete de cada motor, sin adornos:
 
-- **Núcleo ejecutable:** motores con laboratorios completos.
-- **Fichas comparativas:** tecnologías relevantes con su documentación oficial.
-- **Catálogo extensible:** registro que permite incorporar motores nuevos.
+- **Núcleo ejecutable** (SQLite, DuckDB): se ejecuta en cada `push`, sin
+  servicios, en cualquier máquina.
+- **Servicio verificado** (PostgreSQL, MySQL, MongoDB, Redis, Neo4j): se ejecuta
+  contra el contenedor real con el cliente oficial del propio motor.
+- **Declarado** (SQL Server, Oracle, Cassandra, ClickHouse, DynamoDB,
+  OpenSearch, Qdrant y el resto del catálogo): el código y las fichas se
+  escriben contra la documentación oficial y se revisan a mano. La máquina no
+  los ejecuta, y ninguna clase dice lo contrario.
 
-Aparecer en el catálogo no equivale a dominar la tecnología.
+Aparecer en el catálogo no equivale a dominar la tecnología, y ejecutarse en CI
+no equivale a haberlo operado en producción.
 
 ## Uso con inteligencia artificial
 

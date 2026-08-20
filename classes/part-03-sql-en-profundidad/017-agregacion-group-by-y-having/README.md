@@ -8,6 +8,8 @@ Parte 03 — SQL en profundidad · Intermedio ·
 
 **Conceptos centrales:** `agrupación` · `agregado` · `HAVING` · `doble conteo` · `dependencia funcional en GROUP BY`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -189,6 +191,330 @@ Dos informes del mismo negocio que no cuadran suelen diferir en el denominador o
 2. ¿Por qué `COUNT(*)` es incorrecto tras un `LEFT JOIN` cuando quieres contar hijos?
 3. Explica cuándo agrupar solo por la clave primaria es válido y por qué.
 4. Da dos porcentajes correctos y distintos para la misma pregunta de negocio, y di cómo elegirías.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Contar dos hijos del mismo padre sin que se multipliquen entre sí
+
+Por cada curso hay que devolver cuántos inscritos tiene y cuántas
+evaluaciones. Son dos recuentos sobre dos tablas distintas que cuelgan del
+mismo padre, y ahí está el error de agregación más caro que existe: reunir
+las dos y contar. Para DB-101, con 2 inscritos y 3 evaluaciones, esa reunión
+produce 6 filas intermedias y los dos recuentos salen 6.
+
+Lo grave no es el número: es que **el informe se genera igual**. Nadie revisa
+un total que parece plausible. La forma correcta agrega antes de reunir, para
+que cada lado aporte una sola fila por curso.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso | inscritos | evaluaciones |
+|---|---|---|
+| `DB-101` | `2` | `3` |
+| `SE-201` | `1` | `1` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 017`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_select.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/groupby.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/tutorial-agg.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/) |
+| ClickHouse | **no** | — | — | [doc oficial](https://clickhouse.com/docs/en/sql-reference/aggregate-functions) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/hincrby/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INTEGER PRIMARY KEY,
+    curso  TEXT NOT NULL,
+    titulo TEXT NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Permite ver el doble conteo y su corrección en el mismo archivo, sin infraestructura: basta cambiar la consulta por la ingenua para que los dos números salten a 6.
+- **Por qué no:** Tolera `GROUP BY` con columnas no agregadas y devuelve un valor cualquiera del grupo, sin avisar. Es el motor donde una agregación mal escrita más fácilmente pasa por buena.
+- 📄 Documentación oficial: <https://sqlite.org/lang_select.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/groupby.html
+-- nota: DuckDB acepta GROUP BY ALL, que evita el error de olvidar una columna
+--       en la lista. Aqui se escribe la forma portable a proposito.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INTEGER PRIMARY KEY,
+    curso  VARCHAR NOT NULL,
+    titulo VARCHAR NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** La agregación es su terreno: cuenta y agrupa sobre millones de filas en memoria, y `GROUP BY ALL` evita el error de olvidar una columna en la lista.
+- **Por qué no:** Esa velocidad esconde el problema: la versión con doble reunión y `DISTINCT` también termina rápido aquí, así que el costo del error no se nota hasta que la misma consulta se lleva al motor transaccional.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/groupby.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-agg.html
+-- nota: EXPLAIN (ANALYZE) sobre la version ingenua muestra «rows=6» en el nodo
+--       de la reunion para DB-101: el doble conteo deja de ser un argumento y
+--       pasa a ser un numero.
+
+DROP TABLE IF EXISTS evaluaciones, inscripciones, cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     integer PRIMARY KEY,
+    curso  text NOT NULL,
+    titulo text NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Rechaza el `GROUP BY` ambiguo con un error, tiene agregados con `FILTER` —que evita varias subconsultas— y `EXPLAIN (ANALYZE)` muestra las filas intermedias reales, que es como se demuestra el doble conteo con números.
+- **Por qué no:** La agregación previa por subconsulta puede materializarse: en tablas grandes conviene comprobar si una función de ventana o un `LATERAL` con límite resulta más barato, en vez de asumirlo.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/tutorial-agg.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html
+
+DROP TABLE IF EXISTS evaluaciones;
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INT PRIMARY KEY,
+    curso  VARCHAR(50) NOT NULL,
+    titulo VARCHAR(50) NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Con `ONLY_FULL_GROUP_BY` activo por omisión desde 5.7, las agregaciones ambiguas ya no cuelan, y el motor resuelve la agregación previa con tablas derivadas materializadas.
+- **Por qué no:** Esa materialización crea tablas temporales sin índices: cuando las subconsultas devuelven muchas filas, la reunión posterior se vuelve un escaneo completo de la temporal.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: aqui el doble conteo NO puede ocurrir: cada $lookup deja su propio
+//       arreglo y $size cuenta cada uno por separado. El precio es que son dos
+//       busquedas por curso, no una reunion.
+
+// === preparacion ===
+db.cursos.drop();
+db.inscripciones.drop();
+db.evaluaciones.drop();
+
+db.cursos.insertMany([{ _id: "DB-101" }, { _id: "SE-201" }]);
+db.inscripciones.insertMany([
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Linus", curso: "DB-101" },
+  { estudiante: "Grace", curso: "SE-201" },
+]);
+db.evaluaciones.insertMany([
+  { curso: "DB-101", titulo: "Control 1" },
+  { curso: "DB-101", titulo: "Control 2" },
+  { curso: "DB-101", titulo: "Examen" },
+  { curso: "SE-201", titulo: "Examen" },
+]);
+
+// === consulta ===
+db.cursos
+  .aggregate([
+    { $lookup: { from: "inscripciones", localField: "_id",
+                 foreignField: "curso", as: "i" } },
+    { $lookup: { from: "evaluaciones", localField: "_id",
+                 foreignField: "curso", as: "e" } },
+    { $project: { _id: 0, curso: "$_id",
+                  inscritos: { $size: "$i" }, evaluaciones: { $size: "$e" } } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) => print(d.curso + "|" + d.inscritos + "|" + d.evaluaciones));
+```
+
+- **Por qué sí:** El problema del doble conteo no aparece si cada `$lookup` se cuenta por separado con `$size`: no hay producto cartesiano porque cada búsqueda deja su propio arreglo.
+- **Por qué no:** Cada `$lookup` es una consulta más por documento del lado externo; con muchos cursos, lo que en SQL era una reunión se convierte en miles de búsquedas y la latencia crece de forma lineal.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| ClickHouse | Resolvería el caso sin esfuerzo, pero compararlo aquí induce a error: su forma idiomática no es agregar dos hijos normalizados, sino guardar los hechos ya aplanados y usar estados de agregación (`AggregatingMergeTree`) que se combinan al fusionar partes. | Se estudia en la parte de analítica columnar, con su propio caso y su propia medición, en vez de forzarlo a imitar un esquema transaccional. | [doc](https://clickhouse.com/docs/en/sql-reference/aggregate-functions) |
+| Redis | No hay `GROUP BY`: agregar exigiría traer todos los miembros al cliente y contarlos allí, con lo que el recuento deja de ser una propiedad del almacén. | Mantener un contador por curso y por tipo de hijo, actualizado en cada escritura, con el riesgo de deriva que se estudió en la clase de desnormalización deliberada. | [doc](https://redis.io/docs/latest/commands/hincrby/) |
 
 ---
 

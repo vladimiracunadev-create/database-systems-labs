@@ -1,0 +1,102 @@
+---
+caso:
+  titulo: Una relación de muchos a muchos y las dos cardinalidades que hay que poder contar
+  contrato: |
+    Estudiantes y cursos se relacionan de muchos a muchos: un estudiante toma
+    varios cursos y un curso tiene varios estudiantes. Ada toma dos cursos,
+    Linus uno, Grace ninguno; DB-101 tiene dos estudiantes, SE-201 uno y AR-301
+    ninguno.
+
+    La consulta devuelve, para cada curso ordenado por código, cuántos
+    estudiantes tiene. Que AR-301 aparezca con 0 es la mitad del ejercicio: la
+    **participación parcial** —un curso puede existir sin estudiantes— solo se
+    ve si el modelo conserva a los que no participan.
+  columnas: [curso, estudiantes]
+  esperado:
+    - [AR-301, "0"]
+    - [DB-101, "2"]
+    - [SE-201, "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      La tabla intermedia con clave primaria compuesta es la traducción directa
+      del diagrama entidad-relación: una fila por par, ni más ni menos, y la
+      cardinalidad máxima queda impuesta por la clave.
+    porque_no: >-
+      El diagrama distingue participación total de parcial; la tabla no. Que un
+      curso deba tener al menos un estudiante no se puede declarar y hay que
+      comprobarlo aparte.
+    doc: https://sqlite.org/foreignkeys.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Sirve para lo que esta clase realmente entrena: contar cardinalidades
+      sobre datos ya existentes para descubrir cuál era el modelo de verdad, en
+      vez del que estaba en el documento.
+    porque_no: >-
+      Sus claves foráneas no impiden borrar la fila referenciada con la misma
+      firmeza que un motor transaccional: es un almacén para analizar, no para
+      sostener la integridad de un sistema en producción.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_table.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Impone las dos claves foráneas y la clave compuesta, y permite además
+      diferir la comprobación al final de la transacción
+      (`DEFERRABLE INITIALLY DEFERRED`), que es como se modela una participación
+      total sin bloquearse al insertar la primera fila.
+    porque_no: >-
+      Cada clave foránea añade una comprobación por inserción y un bloqueo sobre
+      la fila referenciada: en tablas de relación muy escritas, ese costo es
+      real y hay que medirlo.
+    doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: neo4j
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/neo4j/consulta.cypher
+    porque_si: >-
+      La relación de muchos a muchos no necesita tabla intermedia: es una
+      arista. El diagrama entidad-relación y el modelo físico se parecen tanto
+      que el paso de uno a otro deja de ser una traducción.
+    porque_no: >-
+      Contar por etiqueta obliga a recorrer todos los nodos de esa etiqueta, que
+      es exactamente lo que una tabla con índice hace mejor: el grafo gana en
+      recorridos, no en recuentos globales.
+    doc: https://neo4j.com/docs/cypher-manual/current/patterns/
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Permite modelar la relación como un arreglo de referencias dentro del
+      curso, que es el modelo natural cuando la pregunta frecuente es «quiénes
+      están en este curso».
+    porque_no: >-
+      El arreglo tiene el límite de 16 MB del documento y hace cara la pregunta
+      inversa —«en qué cursos está este estudiante»— salvo que se añada un
+      índice multiclave y se acepte mantener las dos direcciones.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Una relación de muchos a muchos consultable en las dos direcciones no
+      cabe en una sola tabla: haría falta una tabla por dirección de consulta y
+      escribir en las dos, sin transacción que las mantenga de acuerdo.
+    alternativa: >-
+      `estudiantes_por_curso` y `cursos_por_estudiante` como dos tablas
+      independientes, escritas ambas en cada inscripción, asumiendo la
+      posibilidad de que una quede desincronizada tras un fallo.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html

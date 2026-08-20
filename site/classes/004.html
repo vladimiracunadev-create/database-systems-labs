@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>sqlite</code>, <code>postgresql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>reproducibilidad</code> · <code>semilla</code> · <code>contenedor</code> · <code>invariante</code> · <code>evidencia</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Montar un entorno donde toda afirmación sobre datos pueda comprobarse por otra persona. En bases de datos, «a mí me funciona» es una afirmación especialmente débil: el resultado depende de la versión, la configuración, los datos previos y el estado del caché.</p>
@@ -231,6 +232,274 @@ No demuestra: nada sobre concurrencia ni sobre volumen; el conjunto cabe en una 
 <li>Escribe una invariante del dominio que no pueda expresarse como clave foránea, y la consulta que la comprueba.</li>
 <li>¿Qué afirmación <em>no</em> puede sostenerse con el laboratorio base, por bien que se ejecute?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> La misma semilla, la misma cifra, en cualquier motor</p>
+<p>Una medición sin semilla ni protocolo no es evidencia: es una anécdota. El
+caso carga un conjunto de datos fijo —seis inscripciones con su nota— y
+devuelve dos cifras que resumen el estado del conjunto: cuántas filas hay y
+cuánto suman las notas.</p>
+<p>La prueba no es que el número sea interesante, sino que <strong>es el mismo en
+seis motores distintos y en dos ejecuciones seguidas</strong>. Cuando esas dos
+cifras coinciden, comparar tiempos entre motores empieza a significar algo;
+mientras no coincidan, no se está midiendo lo mismo.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>filas</th>
+<th>suma_notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>6</code></td>
+<td><code>402</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 004</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/inmemorydb.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/datatype-numeric.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/inmemorydb.html
+-- nota: el verificador abre la base en memoria, asi que cada ejecucion parte
+--       del mismo estado exacto. Esa es la condicion de una medicion repetible.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inscripcion INTEGER PRIMARY KEY,
+    estudiante  TEXT NOT NULL,
+    nota        INTEGER NOT NULL
+);
+
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
+
+-- === consulta ===
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una base de datos en memoria se crea y se destruye con el proceso: cada ejecución parte exactamente del mismo estado, que es la condición de toda medición repetible.</li>
+<li><strong>Por qué no:</strong> Precisamente por partir siempre de cero, no reproduce lo que más afecta a un sistema real: cachés calientes, archivos fragmentados y estadísticas envejecidas.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/inmemorydb.html">https://sqlite.org/inmemorydb.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/data_types/numeric.html
+-- nota: la nota se guarda como entero a proposito. Con coma flotante, dos
+--       motores pueden dar 402 y 401.99999999999994 para la misma suma, y la
+--       comparacion entre ellos dejaria de significar nada.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inscripcion INTEGER PRIMARY KEY,
+    estudiante  VARCHAR NOT NULL,
+    nota        INTEGER NOT NULL
+);
+
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
+
+-- === consulta ===
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Además de la misma reproducibilidad en memoria, tiene tipos exactos: la nota se guarda como entero a propósito, porque una suma en coma flotante puede devolver 402 en un motor y 401.99999999999994 en otro y arruinar la comparación.</li>
+<li><strong>Por qué no:</strong> Su velocidad puede ocultar el problema que se quería medir: una consulta que aquí tarda milisegundos puede tardar segundos en el motor transaccional del que salieron los datos.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">https://duckdb.org/docs/stable/sql/data_types/numeric.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/datatype-numeric.html
+-- nota: acompanar la cifra con EXPLAIN (ANALYZE, BUFFERS) convierte el
+--       resultado en evidencia: dice tambien cuanto trabajo costo obtenerlo.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inscripcion integer PRIMARY KEY,
+    estudiante  text NOT NULL,
+    nota        integer NOT NULL
+);
+
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
+
+-- === consulta ===
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con tipos exactos (<code>integer</code>, <code>numeric</code>) la suma es reproducible dígito a dígito, y <code>EXPLAIN (ANALYZE, BUFFERS)</code> permite acompañar la cifra con el trabajo que costó obtenerla: número y costo en la misma evidencia.</li>
+<li><strong>Por qué no:</strong> El estado del servidor forma parte del resultado: sin <code>VACUUM ANALYZE</code> y sin declarar si la caché estaba caliente, dos mediciones del mismo día no son comparables.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/datatype-numeric.html">https://www.postgresql.org/docs/current/datatype-numeric.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html
+-- nota: al declarar la evidencia hay que declarar tambien la version del
+--       servidor y los parametros que importan; la configuracion por omision
+--       varia mucho entre imagenes y distribuciones.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inscripcion INT PRIMARY KEY,
+    estudiante  VARCHAR(50) NOT NULL,
+    nota        INT NOT NULL
+);
+
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
+
+-- === consulta ===
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El conjunto de datos se carga con las mismas órdenes en cualquier instalación, así que la evidencia se puede repetir en la máquina de otra persona sin negociar nada.</li>
+<li><strong>Por qué no:</strong> La configuración por omisión varía mucho entre distribuciones e imágenes (tamaño del buffer pool, modo estricto, intercalación), así que la versión no basta: hay que declarar también los parámetros que importan.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: $group sin _id agrega sobre toda la coleccion. Los enteros de mongosh
+//       son de doble precision salvo que se use NumberInt o NumberDecimal: por
+//       eso las notas se escriben como enteros exactos y no como decimales.
+
+// === preparacion ===
+db.notas.drop();
+db.notas.insertMany([
+  { _id: 1, estudiante: &quot;Ada&quot;, nota: NumberInt(90) },
+  { _id: 2, estudiante: &quot;Ada&quot;, nota: NumberInt(58) },
+  { _id: 3, estudiante: &quot;Linus&quot;, nota: NumberInt(78) },
+  { _id: 4, estudiante: &quot;Linus&quot;, nota: NumberInt(66) },
+  { _id: 5, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
+  { _id: 6, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
+]);
+
+// === consulta ===
+db.notas
+  .aggregate([
+    { $group: { _id: null, filas: { $sum: 1 }, suma_notas: { $sum: &quot;$nota&quot; } } },
+  ])
+  .forEach((d) =&gt; print(d.filas + &quot;|&quot; + d.suma_notas));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Permite comprobar que el conjunto de datos es el mismo aunque el modelo no lo sea: seis documentos y la misma suma, con la tubería de agregación haciendo el papel del <code>GROUP BY</code>.</li>
+<li><strong>Por qué no:</strong> Los números son de coma flotante salvo que se use <code>NumberDecimal</code> explícitamente, y esa diferencia aparece justo cuando se compara con un motor relacional y las sumas no cuadran en el último decimal.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>No hay agregación sobre un conjunto de registros: habría que traerse los seis valores al cliente y sumarlos allí, con lo que la cifra ya no la calcula el almacén y deja de ser evidencia sobre él.</td>
+<td>Mantener el contador y la suma como claves que se actualizan en cada escritura (<code>INCRBYFLOAT</code>), asumiendo que son un resumen mantenido a mano y no un cálculo sobre los datos.</td>
+<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

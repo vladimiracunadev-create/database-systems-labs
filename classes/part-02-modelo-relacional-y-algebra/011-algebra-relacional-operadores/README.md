@@ -8,6 +8,8 @@ Parte 02 — Modelo relacional y álgebra · Fundamentos ·
 
 **Conceptos centrales:** `selección` · `proyección` · `producto cartesiano` · `reunión natural` · `división`
 
+**En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -182,6 +184,268 @@ Estimar cardinalidades a mano es la habilidad que distingue leer un plan de mira
 2. ¿Por qué la intersección no es un operador primitivo?
 3. Da una consulta donde omitir `DISTINCT` produzca un total inflado en un informe, con números.
 4. Explica por qué la formulación de división con `HAVING COUNT` exige unicidad de `(student_id, course_id)`.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Selección, reunión y proyección compuestas en una sola expresión
+
+El álgebra relacional es cerrada: cada operador toma relaciones y devuelve
+una relación, así que se pueden encadenar. El caso encadena tres —selección
+por curso y nota, reunión con los estudiantes, proyección de dos columnas— y
+devuelve quién aprobó DB-101 con 60 o más, con su nota, ordenado por nombre.
+
+Lo que hay que ver no es el resultado, sino que **el orden en que el motor
+aplique los operadores no puede cambiarlo**. Que la selección se pueda
+empujar antes de la reunión es una equivalencia algebraica, y de ahí sale la
+optimización de consultas: reescribir la expresión por otra equivalente y
+más barata.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| nombre | nota |
+|---|---|
+| `Ada` | `90` |
+| `Grace` | `72` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 011`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/optoverview.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/guides/meta/explain.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/using-explain.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/) |
+| Neo4j | sí | servicio | [código](implementaciones/neo4j/consulta.cypher) | [doc oficial](https://neo4j.com/docs/cypher-manual/current/clauses/where/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/optoverview.html
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         TEXT NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota >= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota >= 60
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** SQL es la implementación práctica del álgebra y aquí se lee sin ruido: una cláusula por operador.
+- **Por qué no:** Su optimizador aplica pocas reescrituras, así que no sirve para ver el efecto de las equivalencias algebraicas: el plan se parece demasiado a lo que se escribió.
+- 📄 Documentación oficial: <https://sqlite.org/optoverview.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/guides/meta/explain.html
+-- nota: anteponer EXPLAIN a esta consulta muestra el arbol de operadores con
+--       el filtro ya empujado a la hoja: la equivalencia algebraica aplicada.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         VARCHAR NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota >= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota >= 60
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Su `EXPLAIN` muestra el árbol de operadores casi como se dibuja en el álgebra, con los filtros ya empujados hacia las hojas: es la mejor forma de ver la reescritura sin instalar nada.
+- **Por qué no:** Ese mismo optimizador reordena tanto que el plan deja de parecerse a la consulta escrita, lo que confunde a quien está aprendiendo a leerlos.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/guides/meta/explain.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/using-explain.html
+-- nota: EXPLAIN (ANALYZE) sobre esta consulta nombra los operadores y permite
+--       comprobar que la seleccion se aplico antes de la reunion.
+
+DROP TABLE IF EXISTS notas, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id integer NOT NULL,
+    curso         text NOT NULL,
+    nota          integer NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota >= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota >= 60
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Es donde la teoría se vuelve visible: `EXPLAIN` nombra los operadores (`Seq Scan`, `Hash Join`, `Filter`) y permite comprobar que la selección se aplicó antes de la reunión aunque estuviera escrita después.
+- **Por qué no:** El optimizador decide con estadísticas; si están viejas, elige una expresión equivalente pero mucho más cara, y la culpa parecerá de la consulta.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/using-explain.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/
+// nota: la tuberia ES la expresion algebraica escrita en orden. El $match va
+//       PRIMERO a proposito: es el empuje del filtro hecho a mano.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.notas.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: "Ada" },
+  { _id: 2, nombre: "Linus" },
+  { _id: 3, nombre: "Grace" },
+]);
+db.notas.insertMany([
+  { estudiante_id: 1, curso: "DB-101", nota: 90 },
+  { estudiante_id: 2, curso: "DB-101", nota: 58 },
+  { estudiante_id: 3, curso: "DB-101", nota: 72 },
+  { estudiante_id: 1, curso: "SE-201", nota: 66 },
+  { estudiante_id: 3, curso: "SE-201", nota: 78 },
+]);
+
+// === consulta ===
+db.notas
+  .aggregate([
+    { $match: { curso: "DB-101", nota: { $gte: 60 } } },
+    { $lookup: { from: "estudiantes", localField: "estudiante_id",
+                 foreignField: "_id", as: "e" } },
+    { $unwind: "$e" },
+    { $project: { _id: 0, nombre: "$e.nombre", nota: 1 } },
+    { $sort: { nombre: 1 } },
+  ])
+  .forEach((d) => print(d.nombre + "|" + d.nota));
+```
+
+- **Por qué sí:** Una tubería de agregación **es** una expresión algebraica escrita en orden: `$match` es la selección, `$lookup` la reunión, `$project` la proyección. Y el propio motor reordena etapas cuando puede, igual que un optimizador relacional.
+- **Por qué no:** Al escribirse el orden a mano, un `$match` puesto después de un `$lookup` puede procesar millones de documentos de más: aquí el usuario carga con parte del trabajo del optimizador.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/>
+
+#### Neo4j · [`implementaciones/neo4j/consulta.cypher`](implementaciones/neo4j/consulta.cypher)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```cypher
+// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/clauses/where/
+// nota: el mismo algebra con otra forma: el patron es la reunion, el WHERE la
+//       seleccion y el RETURN la proyeccion.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (g:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (a)-[:CURSO {nota: 90}]->(db),
+       (l)-[:CURSO {nota: 58}]->(db),
+       (g)-[:CURSO {nota: 72}]->(db),
+       (a)-[:CURSO {nota: 66}]->(se),
+       (g)-[:CURSO {nota: 78}]->(se);
+
+// === consulta ===
+MATCH (e:Estudiante)-[r:CURSO]->(c:Curso)
+WHERE c.codigo = 'DB-101' AND r.nota >= 60
+RETURN e.nombre AS nombre, r.nota AS nota
+ORDER BY nombre;
+```
+
+- **Por qué sí:** Cypher tiene los mismos operadores con otra forma: el patrón es la reunión, el `WHERE` la selección y el `RETURN` la proyección. Ver el mismo álgebra en dos lenguajes es lo que demuestra que el álgebra no es de SQL.
+- **Por qué no:** El producto cartesiano —que en álgebra es un operador más— aquí es un error de diseño: si el patrón no conecta dos partes, Neo4j avisa de un producto cartesiano porque casi nunca es lo que se quería.
+- 📄 Documentación oficial: <https://neo4j.com/docs/cypher-manual/current/clauses/where/>
 
 ---
 

@@ -1,0 +1,115 @@
+---
+caso:
+  titulo: >-
+    «Un cliente tiene una dirección»: convertir una frase ambigua en una regla
+    que el sistema comprueba
+  contrato: |
+    El requisito llegó escrito así: «un cliente tiene una dirección». La frase
+    admite tres modelos distintos —exactamente una, como mucho una, o varias con
+    una principal— y solo el tercero sobrevive al primer cliente que se muda sin
+    perder el historial.
+
+    El caso implementa el tercero: un cliente puede tener varias direcciones,
+    **como mucho una marcada como principal**, y esa regla la impone el sistema,
+    no el formulario. Ada tiene dos direcciones (una principal), Linus una
+    principal y Grace ninguna. La consulta devuelve, por cliente ordenado
+    alfabéticamente, cuántas direcciones principales tiene: solo puede salir 0 o
+    1, y que salga 2 sería la prueba de que la regla no existe.
+  columnas: [cliente, principales]
+  esperado:
+    - [Ada, "1"]
+    - [Grace, "0"]
+    - [Linus, "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene índices únicos parciales (`CREATE UNIQUE INDEX ... WHERE`), que es
+      exactamente la herramienta para «como mucho una principal por cliente»:
+      la unicidad se aplica solo a las filas que cumplen la condición.
+    porque_no: >-
+      No comprueba tipos: nada impide guardar `'sí'` en la columna que marca la
+      dirección principal, así que la regla protege la cardinalidad pero no el
+      dominio del valor.
+    doc: https://sqlite.org/partialindex.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es donde el índice único parcial es idiomático y está documentado como la
+      forma canónica de expresar «como mucho uno»; además ofrece
+      `EXCLUDE` para reglas de solapamiento que ningún índice único cubre.
+    porque_no: >-
+      La regla se vuelve invisible en el diagrama de entidades: quien lea solo
+      las tablas verá una columna booleana y no sabrá que hay una restricción
+      detrás, salvo que lea los índices.
+    doc: https://www.postgresql.org/docs/current/indexes-partial.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Aunque no tiene índices parciales, la misma regla se consigue con una
+      columna generada que vale el identificador del cliente cuando la dirección
+      es principal y `NULL` en el resto: como los nulos no colisionan en un
+      índice único, la restricción queda igual de firme.
+    porque_no: >-
+      El rodeo hay que explicarlo en cada revisión de código: la columna
+      generada existe solo para sostener la regla y nadie la consulta jamás.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Tiene índices únicos parciales con `partialFilterExpression`, que expresan
+      la misma regla; y como las direcciones caben dentro del documento del
+      cliente, la alternativa de incrustarlas hace la regla casi trivial.
+    porque_no: >-
+      Con las direcciones incrustadas, ningún índice impide que el arreglo
+      contenga dos elementos marcados como principales: esa variante exige un
+      esquema de validación (`$jsonSchema`) o comprobarlo en la aplicación.
+    doc: https://www.mongodb.com/docs/manual/core/index-partial/
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Responde la pregunta del caso con el mismo SQL, y sirve para auditar un
+      volcado de datos existente: contar cuántos clientes violan la regla es lo
+      primero que hay que saber antes de imponerla.
+    porque_no: >-
+      No tiene índices únicos parciales, así que aquí la regla se **comprueba**
+      pero no se **impone**: sirve para auditar, no para custodiar.
+    doc: https://duckdb.org/docs/stable/sql/indexes.html
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay restricciones de unicidad fuera de la clave primaria ni índices
+      parciales; una regla como «como mucho una principal» exigiría leer antes
+      de escribir, y leer antes de escribir es justo lo que su modelo evita.
+    alternativa: >-
+      Hacer que la dirección principal sea una columna del propio cliente
+      (`direccion_principal`) en vez de una fila marcada: si solo puede haber
+      una, no hace falta ninguna regla para impedir dos.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay forma de expresar una restricción sobre un conjunto de registros
+      relacionados: cada clave se valida sola.
+    alternativa: >-
+      Guardar la dirección principal en una clave distinta
+      (`cliente:1:principal`), con lo que la regla se cumple por construcción
+      —solo hay un sitio donde ponerla— a cambio de duplicar el dato.
+    doc: https://redis.io/docs/latest/develop/data-types/hashes/

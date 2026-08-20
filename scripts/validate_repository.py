@@ -28,6 +28,10 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import motores_lib as ml  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 
 ARCHIVOS_OBLIGATORIOS = [
@@ -55,6 +59,7 @@ ARCHIVOS_OBLIGATORIOS = [
     "certificaciones/README.md",
     "certificaciones/_mapeo.json",
     "scripts/build_classes.py", "scripts/generate_site.py",
+    "scripts/motores_lib.py", "scripts/verificar_equivalencia.py",
     "site/index.html",
 ]
 
@@ -580,6 +585,30 @@ def validar_codificacion() -> None:
                 break
 
 
+def validar_comparaciones(curriculo: dict) -> int:
+    """Comprueba el eje comparado: un caso por clase, resuelto en varios motores.
+
+    Lo que se hace cumplir aqui es el contrato del repositorio a partir de la
+    version 3: si una clase declara una comparacion, esa comparacion tiene que
+    estar completa. Cada motor con su `por que si` y su `por que no`, cada
+    afirmacion con su pagina oficial, y cada implementacion declarada existiendo
+    de verdad en el disco.
+
+    Devuelve cuantas clases traen comparacion, para el informe final.
+    """
+    comparaciones = ml.todas(ROOT)
+    for comparacion in comparaciones:
+        for error in comparacion.errores:
+            fallo(f"comparacion de motores: {error}")
+
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    for comparacion in comparaciones:
+        if comparacion.clase not in ids_clase:
+            fallo(f"comparacion de motores: la clase {comparacion.clase} no esta "
+                  f"en curriculum.yaml")
+    return len(comparaciones)
+
+
 # --------------------------------------------------------------------------- #
 
 def main() -> int:
@@ -602,6 +631,7 @@ def main() -> int:
     validar_curriculo(curriculo, fuentes, motores,
                       citadas_labs | citadas_rutas | citadas_certs)
     validar_clases(curriculo)
+    comparadas = validar_comparaciones(curriculo)
     validar_datos_referencia()
     validar_enlaces_relativos()
     validar_codificacion()
@@ -612,9 +642,11 @@ def main() -> int:
 
     total = sum(len(p["classes"]) for p in curriculo["parts"])
     horas = sum(c["hours"] for p in curriculo["parts"] for c in p["classes"])
+    implementaciones = sum(len(c.aplicables) for c in ml.todas(ROOT))
     print(f"REPOSITORY_OK  {len(curriculo['parts'])} partes · {total} clases · "
           f"{horas} horas · {len(fuentes['sources'])} fuentes · "
-          f"{len(motores['systems'])} motores")
+          f"{len(motores['systems'])} motores · {comparadas} clases comparadas "
+          f"con {implementaciones} implementaciones")
     return 0
 
 

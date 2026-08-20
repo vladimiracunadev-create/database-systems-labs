@@ -8,6 +8,8 @@ Parte 03 — SQL en profundidad · Intermedio ·
 
 **Conceptos centrales:** `UNKNOWN` · `IS DISTINCT FROM` · `NOT IN con nulos` · `agregados y nulos`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -203,6 +205,284 @@ Los descuadres entre informes suelen resolverse en la misma línea: uno de los d
 2. ¿Por qué `GROUP BY` agrupa los nulos y `=` no los iguala?
 3. Da un caso donde un índice `UNIQUE` con varios nulos sea el comportamiento deseado.
 4. Convierte una columna con nulo «no aplicable» a un diseño sin nulos y compara las dos consultas equivalentes.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Quién no está inscrito en nada, cuando hay un nulo de por medio
+
+En SQL una comparación no devuelve verdadero o falso: devuelve verdadero,
+falso o **desconocido**. Y `NULL` no es un valor, es la ausencia de valor:
+`NULL = NULL` no es cierto, y `NULL <> 'Ada'` tampoco es cierto.
+
+El caso pide los estudiantes sin ninguna inscripción. En la tabla de
+inscripciones hay una fila con el estudiante en nulo —dato sucio, de los que
+hay en cualquier sistema real—, y esa única fila basta para que la forma
+escrita con `NOT IN` devuelva **cero filas** en vez de una. No lanza un
+error: devuelve un informe vacío. La forma con `NOT EXISTS` devuelve lo
+correcto: Grace.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| nombre |
+|---|
+| `Grace` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 019`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/nulls.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-subquery.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/query/type/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/hget/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/nulls.html
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT,          -- admite nulo: el dato sucio del mundo real
+    curso      TEXT NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Implementa la lógica de tres valores del estándar, así que el fallo del `NOT IN` se reproduce aquí igual que en cualquier motor grande: es el sitio más barato para verlo con los propios ojos.
+- **Por qué no:** Permite nulos en columnas de clave primaria salvo en tablas `STRICT` o con `NOT NULL` explícito, una desviación del estándar que multiplica las ocasiones de encontrarse un nulo donde no debía haberlo.
+- 📄 Documentación oficial: <https://sqlite.org/nulls.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html
+-- nota: IS DISTINCT FROM compara tratando el nulo como un valor mas. La forma
+--         WHERE i.estudiante IS NOT DISTINCT FROM e.nombre
+--       es la que hay que usar al comparar filas que pueden traer nulos.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR,          -- admite nulo: el dato sucio del mundo real
+    curso      VARCHAR NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Sigue el estándar y añade `IS DISTINCT FROM`, que compara tratando el nulo como un valor más: es la herramienta correcta para detectar cambios entre dos versiones de una fila sin que los nulos estropeen la comparación.
+- **Por qué no:** En analítica los nulos llegan por millones desde ficheros mal formados, y las funciones de agregación los ignoran en silencio: `AVG` sobre una columna medio vacía devuelve un número perfectamente creíble y equivocado.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-subquery.html
+-- nota: la documentacion avisa expresamente de que NOT IN sobre una subconsulta
+--       con nulos no hace lo que parece. No es un fallo del motor: es la logica
+--       de tres valores del estandar aplicada al pie de la letra.
+
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         integer PRIMARY KEY,
+    estudiante text,          -- admite nulo: el dato sucio del mundo real
+    curso      text NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Su documentación es explícita sobre la trampa del `NOT IN` con subconsultas que pueden devolver nulos, y ofrece las herramientas para evitarla: `NOT EXISTS`, `IS DISTINCT FROM` y restricciones `NOT NULL`.
+- **Por qué no:** El índice B-Tree por omisión sí indexa los nulos, pero `UNIQUE` los deja pasar todos: una columna única y anulable admite mil filas con nulo, que casi nunca es lo que se quería.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-subquery.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html
+-- nota: el operador <=> compara con nulos de forma segura: NULL <=> NULL es
+--       verdadero. No es estandar, pero evita salir a una subconsulta.
+
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INT PRIMARY KEY,
+    estudiante VARCHAR(50),          -- admite nulo: el dato sucio del mundo real
+    curso      VARCHAR(50) NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Tiene la misma semántica de tres valores y añade el operador `<=>`, que compara con nulos de forma segura sin salirse a una subconsulta.
+- **Por qué no:** Sin modo estricto, insertar `NULL` en una columna `NOT NULL` no fallaba: guardaba el valor por omisión y emitía un aviso. Hay tablas heredadas llenas de cadenas vacías y ceros que en realidad significan «no se sabe».
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/query/type/
+// nota: la trampa aqui es otra. { estudiante: null } encuentra TANTO los
+//       documentos con el campo en null COMO los que no tienen el campo. Para
+//       distinguirlos hay que usar { estudiante: { $type: "null" } } frente a
+//       { estudiante: { $exists: false } }.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.inscripciones.drop();
+
+db.estudiantes.insertMany([
+  { nombre: "Ada" },
+  { nombre: "Linus" },
+  { nombre: "Grace" },
+]);
+db.inscripciones.insertMany([
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Linus", curso: "DB-101" },
+  { estudiante: null, curso: "SE-201" },
+]);
+
+// === consulta ===
+db.estudiantes
+  .aggregate([
+    { $lookup: { from: "inscripciones", localField: "nombre",
+                 foreignField: "estudiante", as: "i" } },
+    { $match: { i: { $size: 0 } } },
+    { $project: { _id: 0, nombre: 1 } },
+    { $sort: { nombre: 1 } },
+  ])
+  .forEach((d) => print(d.nombre));
+```
+
+- **Por qué sí:** Resuelve la pregunta sin subconsultas, con `$lookup` y comprobando que el arreglo resultante esté vacío: la ausencia se mide por tamaño, no por comparación con un nulo.
+- **Por qué no:** Aquí hay **dos** formas de ausencia —el campo con valor `null` y el campo que no existe— y `{campo: null}` encuentra las dos. Es una trampa peor que la de SQL, porque no hay error ni resultado vacío: hay resultados de más.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/query/type/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | Escribir un nulo no guarda un nulo: crea una **lápida** (`tombstone`), un marcador de borrado que ocupa espacio, viaja a las réplicas y hay que recorrer en cada lectura. Miles de lápidas en una partición hacen que la lectura falle por tiempo de espera. | No escribir la columna en absoluto cuando no hay valor: en Cassandra una columna ausente y una columna nula no son lo mismo, y la ausente es gratis. | [doc](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/) |
+| Redis | No existe el nulo: una clave está o no está, y un campo de hash existe o no existe. La lógica es de dos valores, lo que evita la trampa a cambio de no poder distinguir «no se sabe» de «no aplica». | Codificar explícitamente el desconocido con un valor centinela acordado, y documentarlo: si el centinela no está escrito en algún sitio, dentro de un año nadie sabrá si `""` significaba vacío o desconocido. | [doc](https://redis.io/docs/latest/commands/hget/) |
 
 ---
 

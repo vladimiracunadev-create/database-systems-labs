@@ -8,6 +8,8 @@ Parte 01 — Modelado conceptual y requisitos · Intermedio ·
 
 **Conceptos centrales:** `dependencia funcional` · `anomalía de actualización` · `BCFN` · `descomposición sin pérdida`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -184,6 +186,326 @@ Los datos sucios que aparecen en los informes casi siempre son anomalías de act
 2. Demuestra con un ejemplo pequeño que una descomposición con intersección no clave inventa filas.
 3. ¿Qué anomalía concreta elimina 3FN que 2FN no elimina?
 4. Presenta un caso donde te quedarías en 3FN pudiendo llegar a BCFN, y di quién vigila entonces la dependencia perdida.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Corregir el nombre de un profesor con una sola escritura
+
+La prueba práctica de que un esquema está normalizado no es recitar formas
+normales: es que **cada hecho está escrito una sola vez**, así que
+corregirlo cuesta una escritura y no puede quedar a medias.
+
+El caso parte del esquema descompuesto —profesores, cursos, inscripciones—
+y corrige el nombre del profesor de DB-101 con un solo `UPDATE`. La consulta
+devuelve, por curso, el nombre del profesor y cuántas inscripciones tiene.
+En la tabla sin descomponer, ese nombre estaría repetido en cada
+inscripción y bastaría olvidar una fila para que el mismo profesor tuviera
+dos nombres distintos: la anomalía de actualización.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso | profesor | inscripciones |
+|---|---|---|
+| `DB-101` | `Ada Lovelace` | `2` |
+| `SE-201` | `Grace Hopper` | `1` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 008`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_update.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/statements/update.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-constraints.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/hashes/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_update.html
+-- nota: la prueba de la normalizacion esta en el UPDATE, no en el SELECT: una
+--       sola escritura corrige el hecho en todas partes.
+
+-- === preparacion ===
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE cursos (
+    id          INTEGER PRIMARY KEY,
+    codigo      TEXT NOT NULL,
+    profesor_id INTEGER NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso_id   INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+
+-- === consulta ===
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** La descomposición y la reunión que la deshace son operaciones del modelo relacional puro: aquí se ven sin ruido de infraestructura.
+- **Por qué no:** No tiene forma de declarar una dependencia funcional distinta de una clave, así que la normalización queda documentada en la cabeza de quien diseñó y no en el esquema.
+- 📄 Documentación oficial: <https://sqlite.org/lang_update.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/update.html
+-- nota: para DESCUBRIR dependencias funcionales en datos existentes:
+--       SELECT curso, COUNT(DISTINCT profesor) FROM plano GROUP BY curso
+--       HAVING COUNT(DISTINCT profesor) > 1;  -- si devuelve filas, la
+--       dependencia esta rota y hay anomalias ya presentes.
+
+-- === preparacion ===
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE cursos (
+    id          INTEGER PRIMARY KEY,
+    codigo      VARCHAR NOT NULL,
+    profesor_id INTEGER NOT NULL
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso_id   INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+
+-- === consulta ===
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Es la herramienta ideal para el paso previo: descubrir las dependencias funcionales que hay **de verdad** en un volcado, contando cuántos valores distintos toma una columna por cada valor de otra.
+- **Por qué no:** En analítica la normalización se revierte a propósito: el esquema en estrella repite el nombre del profesor en cada fila de hechos porque ahorrarse la reunión vale más que ahorrarse el espacio.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/statements/update.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: las claves foraneas hacen cumplir la descomposicion; sin ellas, la
+--       normalizacion es solo una promesa del diagrama.
+
+DROP TABLE IF EXISTS inscripciones, cursos, profesores;
+
+-- === preparacion ===
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE cursos (
+    id          integer PRIMARY KEY,
+    codigo      text NOT NULL,
+    profesor_id integer NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso_id   integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+
+-- === consulta ===
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Las claves foráneas hacen cumplir la descomposición: no se puede insertar un curso cuyo profesor no exista, que es la mitad de lo que la normalización promete.
+- **Por qué no:** Cada nivel de normalización añade una reunión a las consultas de lectura; en un panel que se abre mil veces por minuto, esas reuniones son el costo que después justifica desnormalizar a propósito.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-constraints.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html
+-- nota: con ONLY_FULL_GROUP_BY activo (por omision desde 5.7) esta consulta es
+--       legal porque cada columna no agregada esta en el GROUP BY. Sin ese
+--       modo, MySQL aceptaba consultas ambiguas y devolvia cualquier fila.
+
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+DROP TABLE IF EXISTS profesores;
+
+-- === preparacion ===
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+);
+CREATE TABLE cursos (
+    id          INT PRIMARY KEY,
+    codigo      VARCHAR(50) NOT NULL,
+    profesor_id INT NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso_id   INT NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+
+-- === consulta ===
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
+```
+
+- **Por qué sí:** Mismo esquema y mismas garantías con InnoDB; es además el motor donde más se encuentran tablas heredadas sin normalizar, así que es donde más se practica la descomposición sobre datos reales.
+- **Por qué no:** Su modo `ONLY_FULL_GROUP_BY` no siempre estuvo activo: hay código antiguo que agrupa mal y sigue devolviendo un resultado, lo que esconde justo los errores que la normalización previene.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+// nota: modelo normalizado A PROPOSITO. Es lo correcto cuando el dato
+//       referenciado cambia y lo comparten muchos documentos; si el nombre del
+//       profesor estuviera incrustado en cada inscripcion, este updateOne
+//       tendria que ser un updateMany sobre miles de documentos.
+
+// === preparacion ===
+db.profesores.drop();
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.profesores.insertMany([
+  { _id: 1, nombre: "A. Lovelace" },
+  { _id: 2, nombre: "Grace Hopper" },
+]);
+db.cursos.insertMany([
+  { _id: 10, codigo: "DB-101", profesor_id: 1 },
+  { _id: 20, codigo: "SE-201", profesor_id: 2 },
+]);
+db.inscripciones.insertMany([
+  { estudiante: "Ada", curso_id: 10 },
+  { estudiante: "Linus", curso_id: 10 },
+  { estudiante: "Grace", curso_id: 20 },
+]);
+
+db.profesores.updateOne({ _id: 1 }, { $set: { nombre: "Ada Lovelace" } });
+
+// === consulta ===
+db.cursos
+  .aggregate([
+    { $lookup: { from: "profesores", localField: "profesor_id",
+                 foreignField: "_id", as: "p" } },
+    { $unwind: "$p" },
+    { $lookup: { from: "inscripciones", localField: "_id",
+                 foreignField: "curso_id", as: "i" } },
+    { $project: { _id: 0, curso: "$codigo", profesor: "$p.nombre",
+                  inscripciones: { $size: "$i" } } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) => print(d.curso + "|" + d.profesor + "|" + d.inscripciones));
+```
+
+- **Por qué sí:** Admite el modelo normalizado con referencias entre colecciones, y es la forma correcta cuando el dato referenciado cambia y lo comparten muchos documentos, como el nombre de un profesor.
+- **Por qué no:** Va contra la corriente del modelo documental: al no haber claves foráneas, nada impide que un curso apunte a un profesor borrado, y la reunión hay que pedirla explícitamente con `$lookup` en cada consulta.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | Su guía de modelado recomienda lo contrario: duplicar el nombre del profesor en cada fila que lo necesite, porque no hay reuniones y una lectura debe resolverse en una sola partición. | Aceptar la duplicación y asumir el costo de actualizarla: cambiar el nombre del profesor pasa a ser un trabajo por lotes sobre todas las filas que lo copiaron, no un `UPDATE`. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html) |
+| Redis | No hay reuniones ni referencias que el servidor entienda: normalizar significaría hacer dos o tres viajes por lectura y reunir en el cliente. | Guardar el nombre del profesor en una clave propia y referenciarla desde la aplicación, aceptando que la coherencia entre claves la mantiene el código. | [doc](https://redis.io/docs/latest/develop/data-types/hashes/) |
 
 ---
 

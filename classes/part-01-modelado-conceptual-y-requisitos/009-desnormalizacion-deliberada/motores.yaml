@@ -1,0 +1,117 @@
+---
+caso:
+  titulo: Un contador guardado que nunca puede mentir
+  contrato: |
+    Desnormalizar es guardar un dato que ya se podía calcular, a cambio de no
+    calcularlo en cada lectura. La pregunta que decide si es deliberado o
+    accidental es siempre la misma: **¿quién mantiene el dato duplicado al
+    día?** Si la respuesta es «el que se acuerde», la desnormalización es una
+    avería futura.
+
+    El caso guarda en cada curso un contador de inscripciones, mantenido
+    automáticamente, e inscribe y da de baja a estudiantes. Al final, la
+    consulta devuelve el contador guardado **y** el recuento calculado sobre la
+    tabla de inscripciones. Los dos números tienen que ser iguales: esa igualdad
+    es la prueba, y en producción es la comprobación que debe correr
+    periódicamente.
+  columnas: [curso, contador, calculado]
+  esperado:
+    - [DB-101, "2", "2"]
+    - [SE-201, "1", "1"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene disparadores `AFTER INSERT` y `AFTER DELETE`, que es la forma de que
+      el contador lo mantenga el motor y no el programa: ningún camino de
+      escritura puede olvidarse de actualizarlo.
+    porque_no: >-
+      Un disparador se ejecuta en cada escritura y es invisible en el código de
+      la aplicación: cuando el contador se desvía, nadie mira ahí primero.
+    doc: https://sqlite.org/lang_createtrigger.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Ofrece las dos vías y con la transacción como red: un disparador que
+      mantiene el contador dentro de la misma transacción que la inscripción, o
+      una vista materializada con `REFRESH ... CONCURRENTLY` cuando se acepta
+      que el dato vaya con retraso.
+    porque_no: >-
+      El contador convierte cada inscripción en una escritura sobre la **misma**
+      fila del curso: en un curso muy demandado, esa fila se vuelve el cuello de
+      botella y las transacciones esperan unas por otras.
+    doc: https://www.postgresql.org/docs/current/sql-createtrigger.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Los disparadores de InnoDB se ejecutan dentro de la misma transacción, así
+      que el contador y la inscripción se confirman o se deshacen juntos.
+    porque_no: >-
+      Los disparadores de MySQL no se pueden encadenar libremente y su
+      depuración es incómoda; además siguen sin ejecutarse en operaciones
+      masivas hechas con `LOAD DATA` en algunas configuraciones.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/triggers.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `$inc` es una actualización atómica sobre un solo documento, y el patrón
+      de contador incrustado en el documento padre es una recomendación
+      explícita de su guía de modelado.
+    porque_no: >-
+      La atomicidad es por documento: la inscripción y el incremento del
+      contador viven en documentos distintos, así que mantenerlos de acuerdo
+      exige una transacción de varios documentos, con su costo, o aceptar la
+      deriva.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/update/inc/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Es el caso para el que Redis parece hecho: `INCR` es atómico, cuesta
+      microsegundos y no toca disco. Un contador de alta frecuencia delante del
+      motor transaccional descarga precisamente la fila que se volvería cuello
+      de botella.
+    porque_no: >-
+      El contador vive en otro sistema que la verdad: si Redis se reinicia sin
+      persistencia, o si la inscripción se deshace y el `INCR` no, los dos
+      números dejan de cuadrar y nadie se entera hasta la comprobación.
+    doc: https://redis.io/docs/latest/commands/incr/
+
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      Tiene un tipo de columna dedicado, `counter`, precisamente porque en su
+      modelo no se puede leer para escribir: el contador se incrementa sin
+      conocer su valor previo.
+    porque_no: >-
+      Las columnas contador no son idempotentes ante reintentos: si el cliente
+      reintenta tras un tiempo de espera agotado, el incremento puede aplicarse
+      dos veces, y una tabla con contadores no admite otras columnas normales.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html
+
+  - id: duckdb
+    aplica: no
+    porque_no: >-
+      No tiene disparadores ni vistas materializadas con refresco: no hay
+      mecanismo que mantenga el dato duplicado al día, que es exactamente lo que
+      esta clase exige.
+    alternativa: >-
+      Recalcular la tabla agregada completa en cada carga. En analítica esa es
+      la respuesta normal: no se mantiene el contador, se reconstruye.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_view.html

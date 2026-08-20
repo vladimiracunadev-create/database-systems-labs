@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>tipo de dato</code> · <code>restricción</code> · <code>valor por defecto</code> · <code>DDL transaccional</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir el esquema como un contrato ejecutable: cada línea de DDL es una promesa que el motor hace cumplir. Un esquema laxo traslada esa responsabilidad a cada programa cliente, presente y futuro.</p>
@@ -296,6 +297,337 @@ VALUES (1, 999, -500, 'ayer', 'pagadoo');
 <li>Escribe la unicidad condicional de tu dominio en dos motores distintos.</li>
 <li>Tu migración falla a mitad en MySQL. Describe el estado del esquema y cómo lo recuperas.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un esquema que rechaza por su cuenta los datos que no cumplen el contrato</p>
+<p>El DDL no describe los datos: los <strong>restringe</strong>. Un esquema es un contrato
+ejecutable, y la forma de comprobar que existe es intentar romperlo.</p>
+<p>El caso intenta guardar cuatro notas. Dos son válidas. Una trae nota 130
+—fuera del rango declarado— y otra trae el nombre del estudiante vacío. El
+programa no comprueba nada; las dos inválidas tienen que rebotar contra el
+esquema. La consulta devuelve lo que quedó guardado, ordenado por
+estudiante: exactamente las dos válidas.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>58</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 014</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/stricttables.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/schema-validation/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/stricttables.html
+-- nota: la clausula STRICT es lo que hace que el tipo se comprueba de verdad.
+--       Sin ella, la afinidad de tipos deja pasar una cadena en una columna
+--       INTEGER si no puede convertirla.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+) STRICT;
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+-- Las dos siguientes rebotan contra el contrato. OR IGNORE deja verlo sin
+-- abortar el guion; sin OR IGNORE, cada una lanza un error.
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene <code>CHECK</code>, <code>NOT NULL</code>, <code>UNIQUE</code> y claves foráneas, y <code>INSERT OR IGNORE</code> permite ver el rechazo sin abortar el guion: el contrato actúa a la vista.</li>
+<li><strong>Por qué no:</strong> Su tipado es dinámico por afinidad: en una columna <code>INTEGER</code> cabe la cadena <code>'alto'</code> si el motor no la puede convertir. Desde 3.37 existen las tablas <code>STRICT</code>, pero no son las de por omisión, así que casi ninguna base SQLite existente comprueba tipos.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/stricttables.html">https://sqlite.org/stricttables.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE para violaciones de CHECK: la fila
+--       invalida aborta la sentencia. Por eso los dos intentos prohibidos van
+--       comentados; descomentar cualquiera de los dos hace fallar el guion, que
+--       es precisamente la prueba de que el contrato existe.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas VALUES ('Linus', 'DB-101', 58);
+-- INSERT INTO notas VALUES ('Grace', 'DB-101', 130);  -- Constraint Error: CHECK
+-- INSERT INTO notas VALUES ('',      'DB-101', 70);   -- Constraint Error: CHECK
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El tipado sí es estricto: una nota <code>'alto'</code> en una columna entera falla al insertar, sin conversiones silenciosas. Es el motor donde el contrato de tipos se cumple sin pedirlo.</li>
+<li><strong>Por qué no:</strong> No tiene <code>INSERT OR IGNORE</code> para violaciones de <code>CHECK</code>: la fila inválida aborta la sentencia entera. Para cargar datos sucios hay que filtrarlos antes, que es justo lo que un almacén analítico espera que hayas hecho ya.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: el dominio da NOMBRE a la restriccion y la hace reutilizable: cualquier
+--       columna declarada `nota_valida` hereda el rango, y cambiarlo en un solo
+--       sitio lo cambia en todas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+DROP DOMAIN IF EXISTS nota_valida;
+
+CREATE DOMAIN nota_valida AS integer CHECK (VALUE BETWEEN 0 AND 100);
+
+CREATE TABLE notas (
+    estudiante text NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      text NOT NULL,
+    nota       nota_valida NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+
+-- Los dos intentos prohibidos se ejecutan de verdad, capturando el error: la
+-- prueba de que el contrato actua queda en el guion, no en un comentario.
+DO $$
+DECLARE rechazadas integer := 0;
+BEGIN
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    IF rechazadas &lt;&gt; 2 THEN
+        RAISE EXCEPTION 'el esquema acepto datos que su contrato prohibe';
+    END IF;
+END;
+$$;
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es el que más lejos lleva la idea de contrato: además de <code>CHECK</code> tiene dominios (<code>CREATE DOMAIN</code>) para dar nombre a una restricción y reutilizarla, tipos enumerados y restricciones de exclusión. La regla se declara una vez y vale para toda tabla que use el tipo.</li>
+<li><strong>Por qué no:</strong> Añadir un <code>CHECK</code> a una tabla grande la bloquea mientras valida las filas existentes, salvo que se declare <code>NOT VALID</code> y se valide después: el contrato se endurece con una ventana de mantenimiento, no con un despliegue.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html
+-- nota: antes de 8.0.16, MySQL analizaba los CHECK y los ignoraba en silencio.
+--       Comprobar la version del servidor es parte de leer el esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL CHECK (CHAR_LENGTH(estudiante) &gt; 0),
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Desde 8.0.16 los <code>CHECK</code> se comprueban de verdad, y <code>INSERT IGNORE</code> convierte el rechazo en aviso, lo que permite cargar por lotes sin perder el lote entero.</li>
+<li><strong>Por qué no:</strong> Antes de 8.0.16 el <code>CHECK</code> se analizaba y se <strong>ignoraba en silencio</strong>: hay esquemas heredados llenos de restricciones que nunca comprobaron nada. Y sin el modo estricto, un <code>INSERT</code> con un valor imposible se convertía en un aviso y guardaba un cero.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/schema-validation/
+// nota: validationAction &quot;error&quot; es lo que convierte el esquema en contrato.
+//       Con &quot;warn&quot; el documento invalido se guarda igual y solo queda una
+//       linea en el registro que nadie lee.
+
+// === preparacion ===
+db.notas.drop();
+db.createCollection(&quot;notas&quot;, {
+  validator: {
+    $jsonSchema: {
+      bsonType: &quot;object&quot;,
+      required: [&quot;estudiante&quot;, &quot;curso&quot;, &quot;nota&quot;],
+      properties: {
+        estudiante: { bsonType: &quot;string&quot;, minLength: 1 },
+        curso: { bsonType: &quot;string&quot; },
+        nota: { bsonType: &quot;int&quot;, minimum: 0, maximum: 100 },
+      },
+    },
+  },
+  validationAction: &quot;error&quot;,
+  validationLevel: &quot;strict&quot;,
+});
+
+db.notas.insertOne({ estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(90) });
+db.notas.insertOne({ estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(58) });
+
+let rechazadas = 0;
+for (const malo of [
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(130) },
+  { estudiante: &quot;&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(70) },
+]) {
+  try {
+    db.notas.insertOne(malo);
+  } catch (e) {
+    rechazadas += 1;
+  }
+}
+if (rechazadas !== 2) throw new Error(&quot;el validador acepto lo que prohibe&quot;);
+
+// === consulta ===
+db.notas
+  .find({}, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>$jsonSchema</code> con <code>validationAction: "error"</code> da un contrato equivalente —tipos, rangos, campos obligatorios— sin renunciar a que el documento evolucione: se puede empezar sin esquema y endurecerlo cuando el dominio se entiende.</li>
+<li><strong>Por qué no:</strong> Es opcional y se aplica solo a las escrituras posteriores: con <code>validationLevel: "moderate"</code> los documentos que ya estaban mal siguen estando mal, y nada en el documento delata que hay un contrato detrás.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/schema-validation/">https://www.mongodb.com/docs/manual/core/schema-validation/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>CQL declara tipos, pero no tiene <code>CHECK</code> ni restricciones de dominio: no hay forma de decir «la nota está entre 0 y 100». Cualquier comprobación de ese tipo exigiría leer o validar en el servidor, y su modelo de escritura no lee nada.</td>
+<td>Validar en la capa de servicio que está delante del clúster, y aceptar que el contrato vive en el código, no en el almacén: si alguien escribe con <code>cqlsh</code>, no hay red de seguridad.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay esquema en absoluto: toda clave admite cualquier valor. La única «restricción» es el tipo de la estructura —no se puede hacer <code>INCR</code> sobre una lista—, y eso no es un contrato de dominio.</td>
+<td>Validar antes de escribir en el cliente, o usar RedisJSON con un esquema comprobado en la aplicación; en cualquier caso, la regla la sostiene el código.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>Un <code>mapping</code> fija tipos, pero su comportamiento por omisión es el contrario al de un contrato: el mapeo dinámico <strong>crea</strong> el campo que aparezca. Y un campo mal tipado no se puede cambiar sin reindexar.</td>
+<td><code>dynamic: strict</code> en el mapeo, que rechaza los documentos con campos no declarados; sigue sin haber rangos ni condiciones sobre los valores.</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

@@ -1,0 +1,97 @@
+---
+caso:
+  titulo: El mejor de cada curso, con su nota, sin perder ninguna columna
+  contrato: |
+    «El máximo por grupo» es fácil; «la fila del máximo por grupo» es la
+    pregunta que rompe a `GROUP BY`. Al agrupar, las filas del grupo se
+    colapsan y con ellas desaparece el nombre del estudiante que sacó esa nota.
+
+    La función de ventana calcula por grupo **sin** colapsar: numera las filas
+    dentro de cada curso por nota descendente y deja intacta cada fila. Después
+    basta quedarse con la primera. El caso devuelve, por curso ordenado, quién
+    obtuvo la nota más alta y cuál fue.
+  columnas: [curso, estudiante, nota]
+  esperado:
+    - [DB-101, Ada, "90"]
+    - [SE-201, Grace, "78"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene funciones de ventana y CTE desde la versión 3.25 (2018), con la
+      sintaxis del estándar: lo que se escribe aquí se lleva tal cual a
+      PostgreSQL.
+    porque_no: >-
+      No tiene `CTE` materializadas ni control sobre cómo se evalúan, así que en
+      consultas grandes puede recalcular la misma subexpresión varias veces sin
+      que haya forma de impedirlo.
+    doc: https://sqlite.org/windowfunctions.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Las ventanas están implementadas de forma vectorizada y admite además
+      `QUALIFY`, que filtra por el resultado de la ventana sin necesidad de la
+      CTE envolvente: la consulta se reduce a la mitad.
+    porque_no: >-
+      `QUALIFY` no es estándar: es cómodo aquí y hay que reescribirlo al migrar
+      a cualquier otro motor salvo Snowflake y Teradata.
+    doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Tiene el catálogo completo de ventanas y, además, `DISTINCT ON`, que
+      resuelve exactamente esta pregunta en una línea y suele ser más barato que
+      la ventana.
+    porque_no: >-
+      Una ventana obliga a ordenar dentro de cada partición: sin un índice que
+      ya provea ese orden, la consulta ordena todas las filas antes de descartar
+      casi todas.
+    doc: https://www.postgresql.org/docs/current/tutorial-window.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Desde 8.0 tiene CTE y funciones de ventana con la sintaxis estándar, lo
+      que retiró de circulación los trucos con variables de sesión que se usaban
+      antes y que dependían del orden de evaluación.
+    porque_no: >-
+      En 5.7 y anteriores no existen, y todavía hay mucha base en producción con
+      esas versiones: la consulta portable de esta clase no se puede usar allí.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/window-functions.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Desde la versión 5.0 tiene `$setWindowFields` con `$rank` y `$denseRank`:
+      la misma idea de ventana, con particiones y orden, dentro de la tubería de
+      agregación.
+    porque_no: >-
+      La etapa bloquea el flujo y ordena en memoria por partición; con
+      particiones grandes hay que permitir el uso de disco explícitamente
+      (`allowDiskUse`) o la consulta falla.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay funciones de ventana ni CTE. `GROUP BY` existe, pero solo dentro de
+      una partición y con agregados básicos: «la fila del máximo por grupo» no se
+      puede expresar.
+    alternativa: >-
+      Modelar la tabla con la nota como columna de agrupamiento descendente y
+      pedir `LIMIT 1` por partición: el ranking se resuelve por el orden físico,
+      y solo para el criterio con el que se modeló.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

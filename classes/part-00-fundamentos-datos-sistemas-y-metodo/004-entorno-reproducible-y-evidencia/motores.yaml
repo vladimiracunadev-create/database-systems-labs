@@ -1,0 +1,100 @@
+---
+caso:
+  titulo: La misma semilla, la misma cifra, en cualquier motor
+  contrato: |
+    Una medición sin semilla ni protocolo no es evidencia: es una anécdota. El
+    caso carga un conjunto de datos fijo —seis inscripciones con su nota— y
+    devuelve dos cifras que resumen el estado del conjunto: cuántas filas hay y
+    cuánto suman las notas.
+
+    La prueba no es que el número sea interesante, sino que **es el mismo en
+    seis motores distintos y en dos ejecuciones seguidas**. Cuando esas dos
+    cifras coinciden, comparar tiempos entre motores empieza a significar algo;
+    mientras no coincidan, no se está midiendo lo mismo.
+  columnas: [filas, suma_notas]
+  esperado:
+    - ["6", "402"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Una base de datos en memoria se crea y se destruye con el proceso: cada
+      ejecución parte exactamente del mismo estado, que es la condición de toda
+      medición repetible.
+    porque_no: >-
+      Precisamente por partir siempre de cero, no reproduce lo que más afecta a
+      un sistema real: cachés calientes, archivos fragmentados y estadísticas
+      envejecidas.
+    doc: https://sqlite.org/inmemorydb.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Además de la misma reproducibilidad en memoria, tiene tipos exactos: la
+      nota se guarda como entero a propósito, porque una suma en coma flotante
+      puede devolver 402 en un motor y 401.99999999999994 en otro y arruinar la
+      comparación.
+    porque_no: >-
+      Su velocidad puede ocultar el problema que se quería medir: una consulta
+      que aquí tarda milisegundos puede tardar segundos en el motor
+      transaccional del que salieron los datos.
+    doc: https://duckdb.org/docs/stable/sql/data_types/numeric.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Con tipos exactos (`integer`, `numeric`) la suma es reproducible dígito a
+      dígito, y `EXPLAIN (ANALYZE, BUFFERS)` permite acompañar la cifra con el
+      trabajo que costó obtenerla: número y costo en la misma evidencia.
+    porque_no: >-
+      El estado del servidor forma parte del resultado: sin `VACUUM ANALYZE` y
+      sin declarar si la caché estaba caliente, dos mediciones del mismo día no
+      son comparables.
+    doc: https://www.postgresql.org/docs/current/datatype-numeric.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      El conjunto de datos se carga con las mismas órdenes en cualquier
+      instalación, así que la evidencia se puede repetir en la máquina de otra
+      persona sin negociar nada.
+    porque_no: >-
+      La configuración por omisión varía mucho entre distribuciones e imágenes
+      (tamaño del buffer pool, modo estricto, intercalación), así que la versión
+      no basta: hay que declarar también los parámetros que importan.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Permite comprobar que el conjunto de datos es el mismo aunque el modelo no
+      lo sea: seis documentos y la misma suma, con la tubería de agregación
+      haciendo el papel del `GROUP BY`.
+    porque_no: >-
+      Los números son de coma flotante salvo que se use `NumberDecimal`
+      explícitamente, y esa diferencia aparece justo cuando se compara con un
+      motor relacional y las sumas no cuadran en el último decimal.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay agregación sobre un conjunto de registros: habría que traerse los
+      seis valores al cliente y sumarlos allí, con lo que la cifra ya no la
+      calcula el almacén y deja de ser evidencia sobre él.
+    alternativa: >-
+      Mantener el contador y la suma como claves que se actualizan en cada
+      escritura (`INCRBYFLOAT`), asumiendo que son un resumen mantenido a mano y
+      no un cálculo sobre los datos.
+    doc: https://redis.io/docs/latest/commands/incrbyfloat/

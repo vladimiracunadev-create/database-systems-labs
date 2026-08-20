@@ -1,0 +1,88 @@
+---
+caso:
+  titulo: Selección, reunión y proyección compuestas en una sola expresión
+  contrato: |
+    El álgebra relacional es cerrada: cada operador toma relaciones y devuelve
+    una relación, así que se pueden encadenar. El caso encadena tres —selección
+    por curso y nota, reunión con los estudiantes, proyección de dos columnas— y
+    devuelve quién aprobó DB-101 con 60 o más, con su nota, ordenado por nombre.
+
+    Lo que hay que ver no es el resultado, sino que **el orden en que el motor
+    aplique los operadores no puede cambiarlo**. Que la selección se pueda
+    empujar antes de la reunión es una equivalencia algebraica, y de ahí sale la
+    optimización de consultas: reescribir la expresión por otra equivalente y
+    más barata.
+  columnas: [nombre, nota]
+  esperado:
+    - [Ada, "90"]
+    - [Grace, "72"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      SQL es la implementación práctica del álgebra y aquí se lee sin ruido: una
+      cláusula por operador.
+    porque_no: >-
+      Su optimizador aplica pocas reescrituras, así que no sirve para ver el
+      efecto de las equivalencias algebraicas: el plan se parece demasiado a lo
+      que se escribió.
+    doc: https://sqlite.org/optoverview.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Su `EXPLAIN` muestra el árbol de operadores casi como se dibuja en el
+      álgebra, con los filtros ya empujados hacia las hojas: es la mejor forma
+      de ver la reescritura sin instalar nada.
+    porque_no: >-
+      Ese mismo optimizador reordena tanto que el plan deja de parecerse a la
+      consulta escrita, lo que confunde a quien está aprendiendo a leerlos.
+    doc: https://duckdb.org/docs/stable/guides/meta/explain.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es donde la teoría se vuelve visible: `EXPLAIN` nombra los operadores
+      (`Seq Scan`, `Hash Join`, `Filter`) y permite comprobar que la selección
+      se aplicó antes de la reunión aunque estuviera escrita después.
+    porque_no: >-
+      El optimizador decide con estadísticas; si están viejas, elige una
+      expresión equivalente pero mucho más cara, y la culpa parecerá de la
+      consulta.
+    doc: https://www.postgresql.org/docs/current/using-explain.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Una tubería de agregación **es** una expresión algebraica escrita en
+      orden: `$match` es la selección, `$lookup` la reunión, `$project` la
+      proyección. Y el propio motor reordena etapas cuando puede, igual que un
+      optimizador relacional.
+    porque_no: >-
+      Al escribirse el orden a mano, un `$match` puesto después de un `$lookup`
+      puede procesar millones de documentos de más: aquí el usuario carga con
+      parte del trabajo del optimizador.
+    doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/
+
+  - id: neo4j
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/neo4j/consulta.cypher
+    porque_si: >-
+      Cypher tiene los mismos operadores con otra forma: el patrón es la
+      reunión, el `WHERE` la selección y el `RETURN` la proyección. Ver el mismo
+      álgebra en dos lenguajes es lo que demuestra que el álgebra no es de SQL.
+    porque_no: >-
+      El producto cartesiano —que en álgebra es un operador más— aquí es un
+      error de diseño: si el patrón no conecta dos partes, Neo4j avisa de un
+      producto cartesiano porque casi nunca es lo que se quería.
+    doc: https://neo4j.com/docs/cypher-manual/current/clauses/where/

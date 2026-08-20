@@ -8,6 +8,8 @@ Parte 02 — Modelo relacional y álgebra · Fundamentos ·
 
 **Conceptos centrales:** `relación` · `tupla` · `dominio` · `acceso por valor` · `cierre`
 
+**En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -145,6 +147,220 @@ Los tres apartamientos de SQL respecto del modelo son la causa de una familia en
 2. ¿Por qué `COUNT(*)` y `COUNT(DISTINCT ...)` difieren, y qué dice eso del modelo subyacente?
 3. Explica el acceso por valor y por qué prohíbe exponer identificadores de fila físicos.
 4. La propiedad de cierre habilita las CTE. Da una consulta tuya que sería imposible sin ella.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Convertir una bolsa de registros en una relación
+
+En el modelo relacional una relación es un **conjunto**: no tiene filas
+repetidas y no tiene orden. Lo que las tablas guardan de verdad son bolsas
+(`multisets`): admiten repetidos y llegan en el orden que sea.
+
+El caso parte de un registro de accesos con repeticiones —Ada entró dos
+veces a DB-101, Linus dos veces también— y devuelve el conjunto de pares
+distintos, ordenado. El `DISTINCT` es lo que convierte la bolsa en conjunto;
+el `ORDER BY` es una decisión de presentación, y por eso hay que escribirlo
+siempre: sin él, ningún motor está obligado a devolver nada en un orden
+concreto.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| estudiante | curso |
+|---|---|
+| `Ada` | `DB-101` |
+| `Ada` | `SE-201` |
+| `Linus` | `DB-101` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 010`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_select.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/orderby.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/sql-select.html) |
+| Redis | sí | servicio | [código](implementaciones/redis/consulta.txt) | [doc oficial](https://redis.io/docs/latest/develop/data-types/sets/) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: quitar el ORDER BY no rompe la consulta, y ese es el peligro: devuelve
+--       un orden que parece estable hasta que un indice nuevo cambia el plan.
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+```
+
+- **Por qué sí:** Muestra la diferencia entre bolsa y conjunto en tres líneas, y permite comprobar a mano que sin `ORDER BY` el orden depende del plan que el motor elija, no de cómo se insertaron las filas.
+- **Por qué no:** Al ser un archivo pequeño y con planes simples, el orden «casual» suele coincidir con el de inserción: es justo el motor donde más fácil resulta creerse que el orden está garantizado cuando no lo está.
+- 📄 Documentación oficial: <https://sqlite.org/lang_select.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+-- nota: al ejecutar en paralelo por trozos, sin ORDER BY el orden cambia entre
+--       ejecuciones de verdad. Es el motor que mejor demuestra que una relacion
+--       no tiene orden.
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+```
+
+- **Por qué sí:** Al ejecutar en paralelo por trozos, el orden sin `ORDER BY` cambia de verdad entre ejecuciones: es el motor que mejor demuestra que una relación no tiene orden.
+- **Por qué no:** `DISTINCT` sobre columnas de alta cardinalidad obliga a una tabla hash completa en memoria; barato en el ejemplo, caro en un conjunto real.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/orderby.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-select.html
+-- nota: la documentacion lo dice sin rodeos: sin ORDER BY el orden de las filas
+--       es indeterminado. No es un descuido del motor; es el modelo.
+
+DROP TABLE IF EXISTS accesos;
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         integer PRIMARY KEY,
+    estudiante text NOT NULL,
+    curso      text NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+```
+
+- **Por qué sí:** Además de `DISTINCT` tiene `DISTINCT ON`, que resuelve «una fila por grupo» sin ventana ni subconsulta, y su documentación explica que sin `ORDER BY` el orden es indeterminado por diseño.
+- **Por qué no:** `DISTINCT ON` es una extensión propia: usarla ata la consulta a PostgreSQL, y el equivalente portable —una función de ventana— hay que escribirlo desde cero al migrar.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/sql-select.html>
+
+#### Redis · [`implementaciones/redis/consulta.txt`](implementaciones/redis/consulta.txt)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```text
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: el conjunto no es una operacion sobre los datos, es el tipo de dato.
+#       El precio: el par estudiante-curso hay que serializarlo en una cadena.
+
+# === preparacion ===
+FLUSHDB
+SADD accesos Linus|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|SE-201
+SADD accesos Linus|DB-101
+
+# === consulta ===
+SORT accesos ALPHA
+```
+
+- **Por qué sí:** Aquí el conjunto no es una operación sobre los datos: es el tipo de dato. `SADD` no admite repetidos y no promete orden, que es literalmente la definición de relación de esta clase.
+- **Por qué no:** Un conjunto de Redis guarda cadenas sueltas, no tuplas con atributos: para representar el par estudiante-curso hay que serializarlo en una sola cadena y perder la estructura.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/develop/data-types/sets/>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: $group por la pareja de campos hace de DISTINCT. El $sort explicito
+//       deja claro que el orden se pide; no se hereda del orden de insercion.
+
+// === preparacion ===
+db.accesos.drop();
+db.accesos.insertMany([
+  { estudiante: "Linus", curso: "DB-101" },
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Ada", curso: "SE-201" },
+  { estudiante: "Linus", curso: "DB-101" },
+]);
+
+// === consulta ===
+db.accesos
+  .aggregate([
+    { $group: { _id: { estudiante: "$estudiante", curso: "$curso" } } },
+    { $sort: { "_id.estudiante": 1, "_id.curso": 1 } },
+  ])
+  .forEach((d) => print(d._id.estudiante + "|" + d._id.curso));
+```
+
+- **Por qué sí:** `$group` por la pareja de campos elimina los repetidos igual que un `DISTINCT`, y la etapa `$sort` deja explícito que el orden se pide, no se hereda.
+- **Por qué no:** Sin índice que cubra el `$sort`, la ordenación se hace en memoria con un límite de 100 MB por etapa, y la consulta falla en vez de ir lenta.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/>
 
 ---
 

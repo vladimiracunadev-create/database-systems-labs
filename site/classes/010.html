@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>relación</code> · <code>tupla</code> · <code>dominio</code> · <code>acceso por valor</code> · <code>cierre</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Precisar qué es una relación en el sentido de Codd y en qué se aparta SQL de esa definición. Muchos comportamientos «raros» de SQL —duplicados, orden, nulos— se explican exactamente por ahí.</p>
@@ -217,6 +218,253 @@ INSERT INTO students (id, nombre) VALUES (5, 'Ana');  -- acceso por nombre
 <li>Explica el acceso por valor y por qué prohíbe exponer identificadores de fila físicos.</li>
 <li>La propiedad de cierre habilita las CTE. Da una consulta tuya que sería imposible sin ella.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Convertir una bolsa de registros en una relación</p>
+<p>En el modelo relacional una relación es un <strong>conjunto</strong>: no tiene filas
+repetidas y no tiene orden. Lo que las tablas guardan de verdad son bolsas
+(<code>multisets</code>): admiten repetidos y llegan en el orden que sea.</p>
+<p>El caso parte de un registro de accesos con repeticiones —Ada entró dos
+veces a DB-101, Linus dos veces también— y devuelve el conjunto de pares
+distintos, ordenado. El <code>DISTINCT</code> es lo que convierte la bolsa en conjunto;
+el <code>ORDER BY</code> es una decisión de presentación, y por eso hay que escribirlo
+siempre: sin él, ningún motor está obligado a devolver nada en un orden
+concreto.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>curso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>DB-101</code></td>
+</tr>
+<tr>
+<td><code>Ada</code></td>
+<td><code>SE-201</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>DB-101</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 010</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: quitar el ORDER BY no rompe la consulta, y ese es el peligro: devuelve
+--       un orden que parece estable hasta que un indice nuevo cambia el plan.
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Muestra la diferencia entre bolsa y conjunto en tres líneas, y permite comprobar a mano que sin <code>ORDER BY</code> el orden depende del plan que el motor elija, no de cómo se insertaron las filas.</li>
+<li><strong>Por qué no:</strong> Al ser un archivo pequeño y con planes simples, el orden «casual» suele coincidir con el de inserción: es justo el motor donde más fácil resulta creerse que el orden está garantizado cuando no lo está.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+-- nota: al ejecutar en paralelo por trozos, sin ORDER BY el orden cambia entre
+--       ejecuciones de verdad. Es el motor que mejor demuestra que una relacion
+--       no tiene orden.
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Al ejecutar en paralelo por trozos, el orden sin <code>ORDER BY</code> cambia de verdad entre ejecuciones: es el motor que mejor demuestra que una relación no tiene orden.</li>
+<li><strong>Por qué no:</strong> <code>DISTINCT</code> sobre columnas de alta cardinalidad obliga a una tabla hash completa en memoria; barato en el ejemplo, caro en un conjunto real.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">https://duckdb.org/docs/stable/sql/query_syntax/orderby.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-select.html
+-- nota: la documentacion lo dice sin rodeos: sin ORDER BY el orden de las filas
+--       es indeterminado. No es un descuido del motor; es el modelo.
+
+DROP TABLE IF EXISTS accesos;
+
+-- === preparacion ===
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         integer PRIMARY KEY,
+    estudiante text NOT NULL,
+    curso      text NOT NULL
+);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
+
+-- === consulta ===
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Además de <code>DISTINCT</code> tiene <code>DISTINCT ON</code>, que resuelve «una fila por grupo» sin ventana ni subconsulta, y su documentación explica que sin <code>ORDER BY</code> el orden es indeterminado por diseño.</li>
+<li><strong>Por qué no:</strong> <code>DISTINCT ON</code> es una extensión propia: usarla ata la consulta a PostgreSQL, y el equivalente portable —una función de ventana— hay que escribirlo desde cero al migrar.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-select.html">https://www.postgresql.org/docs/current/sql-select.html</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: el conjunto no es una operacion sobre los datos, es el tipo de dato.
+#       El precio: el par estudiante-curso hay que serializarlo en una cadena.
+
+# === preparacion ===
+FLUSHDB
+SADD accesos Linus|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|SE-201
+SADD accesos Linus|DB-101
+
+# === consulta ===
+SORT accesos ALPHA
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí el conjunto no es una operación sobre los datos: es el tipo de dato. <code>SADD</code> no admite repetidos y no promete orden, que es literalmente la definición de relación de esta clase.</li>
+<li><strong>Por qué no:</strong> Un conjunto de Redis guarda cadenas sueltas, no tuplas con atributos: para representar el par estudiante-curso hay que serializarlo en una sola cadena y perder la estructura.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/010-la-relacion-como-conjunto/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: $group por la pareja de campos hace de DISTINCT. El $sort explicito
+//       deja claro que el orden se pide; no se hereda del orden de insercion.
+
+// === preparacion ===
+db.accesos.drop();
+db.accesos.insertMany([
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+]);
+
+// === consulta ===
+db.accesos
+  .aggregate([
+    { $group: { _id: { estudiante: &quot;$estudiante&quot;, curso: &quot;$curso&quot; } } },
+    { $sort: { &quot;_id.estudiante&quot;: 1, &quot;_id.curso&quot;: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id.estudiante + &quot;|&quot; + d._id.curso));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>$group</code> por la pareja de campos elimina los repetidos igual que un <code>DISTINCT</code>, y la etapa <code>$sort</code> deja explícito que el orden se pide, no se hereda.</li>
+<li><strong>Por qué no:</strong> Sin índice que cubra el <code>$sort</code>, la ordenación se hace en memoria con un límite de 100 MB por etapa, y la consulta falla en vez de ir lenta.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
+</ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

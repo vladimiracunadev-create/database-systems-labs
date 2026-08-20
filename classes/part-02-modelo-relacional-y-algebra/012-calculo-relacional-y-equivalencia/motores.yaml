@@ -1,0 +1,89 @@
+---
+caso:
+  titulo: >-
+    Los estudiantes inscritos en todos los cursos: el cuantificador universal
+  contrato: |
+    El cálculo relacional describe **qué** se quiere, con cuantificadores; el
+    álgebra describe **cómo** obtenerlo, con operadores. Codd demostró que los
+    dos tienen el mismo poder expresivo, y esta clase lo comprueba con la
+    pregunta que peor se traduce: «¿quién está inscrito en todos los cursos?».
+
+    No hay operador `PARA TODO` en SQL. La traducción es doble negación —«no
+    existe un curso para el que no exista su inscripción»— y con los datos del
+    caso (Ada en los dos cursos, Linus en uno, Grace en ninguno) solo Ada
+    sobrevive. Que Grace **no** salga es la parte que atrapa a casi todo el
+    mundo: sin inscripciones, «todos sus cursos cumplen» sería cierto por
+    vacuidad si la pregunta estuviera mal escrita.
+  columnas: [nombre]
+  esperado:
+    - [Ada]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Soporta subconsultas correlacionadas anidadas, que es todo lo que la
+      doble negación necesita: la traducción del cálculo cabe entera en SQL
+      estándar.
+    porque_no: >-
+      Sin índice sobre `inscripciones`, la subconsulta interna se reevalúa por
+      cada par estudiante-curso; con datos reales, ese plan es cuadrático.
+    doc: https://sqlite.org/lang_expr.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Su optimizador convierte las subconsultas correlacionadas en reuniones
+      (descorrelación): es el motor donde mejor se ve que la forma del cálculo y
+      la del álgebra terminan siendo el mismo plan.
+    porque_no: >-
+      Esa reescritura automática oculta el costo real de la forma escrita: lo
+      que aquí es gratis, en otro motor puede ser el bucle anidado que tumba el
+      informe.
+    doc: https://duckdb.org/docs/stable/sql/expressions/subqueries.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Además de la doble negación admite la forma con agregación —contar cursos
+      distintos por estudiante y compararlo con el total—, y `EXPLAIN` permite
+      medir cuál de las dos es más barata con los datos reales.
+    porque_no: >-
+      Las dos formas dejan de ser equivalentes en cuanto hay nulos o el conjunto
+      divisor está vacío: la equivalencia es del modelo relacional, no de
+      cualquier consulta que se le parezca.
+    doc: https://www.postgresql.org/docs/current/functions-subquery.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Desde 8.0 su optimizador también transforma buena parte de las
+      subconsultas en semirreuniones, y la forma con doble `NOT EXISTS` es
+      portable tal cual.
+    porque_no: >-
+      Históricamente materializaba las subconsultas correlacionadas y volvía
+      lentísima esta forma; en bases heredadas con versiones antiguas hay que
+      escribir la variante con agregación.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      La variante con agregación se traduce bien: agrupar por estudiante,
+      recoger sus cursos en un conjunto y comparar su tamaño con el número total
+      de cursos.
+    porque_no: >-
+      No hay cuantificadores ni subconsultas correlacionadas: la doble negación
+      no se puede escribir, así que la equivalencia con el cálculo se pierde y
+      hay que reformular la pregunta a mano cada vez.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/

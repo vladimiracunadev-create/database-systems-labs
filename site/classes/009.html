@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>redundancia controlada</code> · <code>costo de escritura</code> · <code>agregado</code> · <code>patrón de lectura</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Introducir redundancia a propósito, con evidencia de que hacía falta y con un mecanismo declarado que la mantenga coherente. Desnormalizar sin ambas cosas no es una optimización: es una anomalía planificada.</p>
@@ -270,6 +271,415 @@ GROUP BY c.id, c.nombre;
 <li>Describe un punto caliente que crearía una columna derivada en tu dominio y cómo lo repartirías.</li>
 <li>Un proceso de carga masiva escribe con <code>COPY</code> y salta los disparadores. ¿Cómo lo detectas y cómo lo reparas?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un contador guardado que nunca puede mentir</p>
+<p>Desnormalizar es guardar un dato que ya se podía calcular, a cambio de no
+calcularlo en cada lectura. La pregunta que decide si es deliberado o
+accidental es siempre la misma: <strong>¿quién mantiene el dato duplicado al
+día?</strong> Si la respuesta es «el que se acuerde», la desnormalización es una
+avería futura.</p>
+<p>El caso guarda en cada curso un contador de inscripciones, mantenido
+automáticamente, e inscribe y da de baja a estudiantes. Al final, la
+consulta devuelve el contador guardado <strong>y</strong> el recuento calculado sobre la
+tabla de inscripciones. Los dos números tienen que ser iguales: esa igualdad
+es la prueba, y en producción es la comprobación que debe correr
+periódicamente.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>curso</th>
+<th>contador</th>
+<th>calculado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DB-101</code></td>
+<td><code>2</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>SE-201</code></td>
+<td><code>1</code></td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 009</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtrigger.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-createtrigger.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/triggers.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/update/inc/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/commands/incr/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtrigger.html
+-- nota: el contador lo mantiene el motor, no el programa. Ningun camino de
+--       escritura —ni la consola, ni otro servicio, ni una migracion— puede
+--       olvidarse de actualizarlo.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    id        INTEGER PRIMARY KEY,
+    codigo    TEXT NOT NULL,
+    inscritos INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso_id   INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+CREATE TRIGGER inscripciones_mas AFTER INSERT ON inscripciones
+BEGIN
+    UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
+END;
+
+CREATE TRIGGER inscripciones_menos AFTER DELETE ON inscripciones
+BEGIN
+    UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
+END;
+
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
+-- Una baja: si el disparador de borrado no existiera, el contador se quedaria
+-- en 2 y nadie lo notaria hasta que alguien contara a mano.
+DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
+
+-- === consulta ===
+-- La comprobacion que en produccion debe correr periodicamente: el dato
+-- guardado frente al dato calculado. El dia que dejen de coincidir, la
+-- desnormalizacion dejo de ser deliberada.
+SELECT c.codigo AS curso,
+       c.inscritos AS contador,
+       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
+FROM cursos c
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene disparadores <code>AFTER INSERT</code> y <code>AFTER DELETE</code>, que es la forma de que el contador lo mantenga el motor y no el programa: ningún camino de escritura puede olvidarse de actualizarlo.</li>
+<li><strong>Por qué no:</strong> Un disparador se ejecuta en cada escritura y es invisible en el código de la aplicación: cuando el contador se desvía, nadie mira ahí primero.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtrigger.html">https://sqlite.org/lang_createtrigger.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-createtrigger.html
+-- nota: el disparador corre DENTRO de la transaccion de la inscripcion: si la
+--       transaccion se deshace, el contador vuelve solo. Esa es la diferencia
+--       con mantenerlo desde otro sistema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, cursos;
+
+CREATE TABLE cursos (
+    id        integer PRIMARY KEY,
+    codigo    text NOT NULL,
+    inscritos integer NOT NULL DEFAULT 0
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso_id   integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+CREATE OR REPLACE FUNCTION ajustar_contador() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
+    ELSE
+        UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER inscripciones_contador
+AFTER INSERT OR DELETE ON inscripciones
+FOR EACH ROW EXECUTE FUNCTION ajustar_contador();
+
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
+DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
+
+-- === consulta ===
+-- La comprobacion que en produccion debe correr periodicamente: el dato
+-- guardado frente al dato calculado. El dia que dejen de coincidir, la
+-- desnormalizacion dejo de ser deliberada.
+SELECT c.codigo AS curso,
+       c.inscritos AS contador,
+       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
+FROM cursos c
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Ofrece las dos vías y con la transacción como red: un disparador que mantiene el contador dentro de la misma transacción que la inscripción, o una vista materializada con <code>REFRESH ... CONCURRENTLY</code> cuando se acepta que el dato vaya con retraso.</li>
+<li><strong>Por qué no:</strong> El contador convierte cada inscripción en una escritura sobre la <strong>misma</strong> fila del curso: en un curso muy demandado, esa fila se vuelve el cuello de botella y las transacciones esperan unas por otras.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createtrigger.html">https://www.postgresql.org/docs/current/sql-createtrigger.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/triggers.html
+-- nota: los disparadores de InnoDB se ejecutan en la misma transaccion, asi
+--       que contador e inscripcion se confirman o se deshacen juntos.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+
+CREATE TABLE cursos (
+    id        INT PRIMARY KEY,
+    codigo    VARCHAR(20) NOT NULL,
+    inscritos INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso_id   INT NOT NULL,
+    PRIMARY KEY (estudiante, curso_id),
+    FOREIGN KEY (curso_id) REFERENCES cursos(id)
+) ENGINE=InnoDB;
+
+CREATE TRIGGER inscripciones_mas AFTER INSERT ON inscripciones
+FOR EACH ROW UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
+
+CREATE TRIGGER inscripciones_menos AFTER DELETE ON inscripciones
+FOR EACH ROW UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
+
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
+DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
+
+-- === consulta ===
+-- La comprobacion que en produccion debe correr periodicamente: el dato
+-- guardado frente al dato calculado. El dia que dejen de coincidir, la
+-- desnormalizacion dejo de ser deliberada.
+SELECT c.codigo AS curso,
+       c.inscritos AS contador,
+       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
+FROM cursos c
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Los disparadores de InnoDB se ejecutan dentro de la misma transacción, así que el contador y la inscripción se confirman o se deshacen juntos.</li>
+<li><strong>Por qué no:</strong> Los disparadores de MySQL no se pueden encadenar libremente y su depuración es incómoda; además siguen sin ejecutarse en operaciones masivas hechas con <code>LOAD DATA</code> en algunas configuraciones.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/triggers.html">https://dev.mysql.com/doc/refman/8.4/en/triggers.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/inc/
+// nota: $inc es atomico sobre UN documento. La inscripcion y el contador viven
+//       en documentos distintos, asi que mantenerlos de acuerdo ante un fallo
+//       exige una transaccion de varios documentos; aqui se escribe la version
+//       simple y se declara el riesgo, que es la unica forma honesta.
+
+// === preparacion ===
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.cursos.insertMany([
+  { _id: 10, codigo: &quot;DB-101&quot;, inscritos: 0 },
+  { _id: 20, codigo: &quot;SE-201&quot;, inscritos: 0 },
+]);
+
+function inscribir(estudiante, cursoId) {
+  db.inscripciones.insertOne({ estudiante: estudiante, curso_id: cursoId });
+  db.cursos.updateOne({ _id: cursoId }, { $inc: { inscritos: 1 } });
+}
+function darDeBaja(estudiante, cursoId) {
+  db.inscripciones.deleteOne({ estudiante: estudiante, curso_id: cursoId });
+  db.cursos.updateOne({ _id: cursoId }, { $inc: { inscritos: -1 } });
+}
+
+inscribir(&quot;Ada&quot;, 10);
+inscribir(&quot;Linus&quot;, 10);
+inscribir(&quot;Grace&quot;, 20);
+inscribir(&quot;Bob&quot;, 20);
+darDeBaja(&quot;Bob&quot;, 20);
+
+// === consulta ===
+db.cursos
+  .aggregate([
+    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
+                 foreignField: &quot;curso_id&quot;, as: &quot;i&quot; } },
+    { $project: { _id: 0, curso: &quot;$codigo&quot;, contador: &quot;$inscritos&quot;,
+                  calculado: { $size: &quot;$i&quot; } } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.contador + &quot;|&quot; + d.calculado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>$inc</code> es una actualización atómica sobre un solo documento, y el patrón de contador incrustado en el documento padre es una recomendación explícita de su guía de modelado.</li>
+<li><strong>Por qué no:</strong> La atomicidad es por documento: la inscripción y el incremento del contador viven en documentos distintos, así que mantenerlos de acuerdo exige una transacción de varios documentos, con su costo, o aceptar la deriva.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/update/inc/">https://www.mongodb.com/docs/manual/reference/operator/update/inc/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/commands/incr/
+# nota: dos representaciones del mismo hecho: un contador INCR y un conjunto
+#       con los miembros. La consulta final es un script Lua porque, en Redis,
+#       la unica forma de leer varias claves de forma atomica y devolver un
+#       resultado compuesto es ejecutarlo en el servidor.
+
+# === preparacion ===
+FLUSHDB
+SADD curso:DB-101:miembros Ada
+INCR curso:DB-101:contador
+SADD curso:DB-101:miembros Linus
+INCR curso:DB-101:contador
+SADD curso:SE-201:miembros Grace
+INCR curso:SE-201:contador
+SADD curso:SE-201:miembros Bob
+INCR curso:SE-201:contador
+SREM curso:SE-201:miembros Bob
+DECR curso:SE-201:contador
+
+# === consulta ===
+EVAL &quot;local r={} for _,c in ipairs({'DB-101','SE-201'}) do r[#r+1]=c..'|'..redis.call('GET','curso:'..c..':contador')..'|'..redis.call('SCARD','curso:'..c..':miembros') end return r&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es el caso para el que Redis parece hecho: <code>INCR</code> es atómico, cuesta microsegundos y no toca disco. Un contador de alta frecuencia delante del motor transaccional descarga precisamente la fila que se volvería cuello de botella.</li>
+<li><strong>Por qué no:</strong> El contador vive en otro sistema que la verdad: si Redis se reinicia sin persistencia, o si la inscripción se deshace y el <code>INCR</code> no, los dos números dejan de cuadrar y nadie se entera hasta la comprobación.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/incr/">https://redis.io/docs/latest/commands/incr/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html
+-- nota: implementacion declarada. Cassandra tiene un tipo de columna dedicado,
+--       `counter`, porque en su modelo no se puede leer para escribir: el
+--       contador se incrementa sin conocer su valor previo. El precio esta al
+--       final del archivo y no es menor.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+-- Una tabla de contadores no admite columnas normales: solo la clave y los
+-- contadores. Por eso el codigo del curso ES la clave.
+CREATE TABLE IF NOT EXISTS escuela.contador_inscritos (
+    curso     text PRIMARY KEY,
+    inscritos counter
+);
+
+-- Y la lista de miembros va en su propia tabla, sin transaccion que la
+-- mantenga de acuerdo con el contador.
+CREATE TABLE IF NOT EXISTS escuela.inscripciones (
+    curso      text,
+    estudiante text,
+    PRIMARY KEY (curso, estudiante)
+);
+
+UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'DB-101';
+INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('DB-101', 'Ada');
+UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'DB-101';
+INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('DB-101', 'Linus');
+UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'SE-201';
+INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('SE-201', 'Grace');
+
+-- === consulta ===
+-- No hay reunion: son dos preguntas separadas, y compararlas es trabajo del
+-- cliente. Ademas, si el cliente reintenta un UPDATE de contador tras un tiempo
+-- de espera agotado, el incremento puede aplicarse dos veces: los contadores de
+-- Cassandra NO son idempotentes.
+SELECT curso, inscritos FROM escuela.contador_inscritos;
+SELECT curso, COUNT(*) FROM escuela.inscripciones GROUP BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene un tipo de columna dedicado, <code>counter</code>, precisamente porque en su modelo no se puede leer para escribir: el contador se incrementa sin conocer su valor previo.</li>
+<li><strong>Por qué no:</strong> Las columnas contador no son idempotentes ante reintentos: si el cliente reintenta tras un tiempo de espera agotado, el incremento puede aplicarse dos veces, y una tabla con contadores no admite otras columnas normales.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>No tiene disparadores ni vistas materializadas con refresco: no hay mecanismo que mantenga el dato duplicado al día, que es exactamente lo que esta clase exige.</td>
+<td>Recalcular la tabla agregada completa en cada carga. En analítica esa es la respuesta normal: no se mantiene el contador, se reconstruye.</td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

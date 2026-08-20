@@ -1,0 +1,141 @@
+---
+caso:
+  titulo: Que el sistema impida por sí solo dos estudiantes con el mismo correo
+  contrato: |
+    Se intentan registrar tres estudiantes, y el tercero repite el correo del
+    primero. El programa **no** comprueba nada: la comprobación tiene que
+    hacerla el sistema de datos. Al terminar, la consulta devuelve los correos
+    registrados, ordenados alfabéticamente, uno por línea.
+
+    Es la pregunta más elemental que se le puede hacer a un almacén de datos:
+    ¿puede garantizar una regla, o solo guardar lo que le den? Un archivo de
+    texto y una hoja de cálculo aceptan el duplicado sin protestar; por eso no
+    son bases de datos.
+  columnas: [correo]
+  esperado:
+    - [ada@example.org]
+    - [linus@example.org]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `UNIQUE` es parte de la definición de la tabla, así que la regla vive con
+      los datos y no en el programa que los escribe. SQLite lo comprueba aunque
+      quien inserte sea otro proceso, otro lenguaje o la consola.
+    porque_no: >-
+      Al ser un archivo local sin servidor, la regla protege el archivo, no un
+      sistema: dos máquinas con dos copias del archivo pueden tener cada una su
+      «Ada» sin que nadie lo note.
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Acepta la misma restricción con la misma sintaxis, lo que permite
+      comprobar que la regla no es de SQLite sino del modelo relacional.
+    porque_no: >-
+      DuckDB está pensado para analizar datos que ya existen, no para ser la
+      autoridad que los admite: comprobar unicidad en cada inserción es
+      precisamente el trabajo que su diseño columnar no optimiza.
+    doc: https://duckdb.org/docs/stable/sql/constraints.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      La restricción se apoya en un índice único y la comprueba el servidor
+      dentro de la transacción: da igual cuántas aplicaciones escriban a la vez
+      o en qué lenguaje estén, la segunda que intente el duplicado recibe un
+      error.
+    porque_no: >-
+      Esa garantía cuesta una escritura de índice por fila y un servidor que
+      administrar, actualizar y respaldar. Para un archivo de configuración de
+      diez líneas es maquinaria de sobra.
+    doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Un índice único da la misma garantía sin esquema previo: se puede empezar
+      a guardar documentos y añadir la regla después, cuando el dominio ya se
+      entiende.
+    porque_no: >-
+      La restricción solo existe si alguien crea el índice —no hay nada en el
+      documento que la exija— y en una colección fragmentada la unicidad solo se
+      puede garantizar sobre la clave de fragmentación.
+    doc: https://www.mongodb.com/docs/manual/core/index-unique/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Un conjunto es, por definición, una colección sin repeticiones: `SADD`
+      devuelve 0 cuando el elemento ya estaba y no hay nada que comprobar. Con
+      un solo hilo atendiendo las órdenes, dos clientes simultáneos no pueden
+      colarse a la vez.
+    porque_no: >-
+      Garantiza que no hay dos correos iguales, y nada más: no hay tipos, ni
+      relación con el resto del estudiante, ni durabilidad garantizada salvo que
+      se configure. La regla se cumple; el modelo de datos no existe.
+    doc: https://redis.io/docs/latest/develop/data-types/sets/
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Mismo mecanismo que PostgreSQL y el motor relacional más común en
+      alojamientos compartidos: `UNIQUE` sobre una columna es la forma normal de
+      declarar una identidad de negocio.
+    porque_no: >-
+      La comparación de cadenas depende de la intercalación: con la
+      predeterminada `utf8mb4_0900_ai_ci`, `Ada@example.org` y `ada@example.org`
+      son el mismo valor, lo que a veces se quiere y a veces sorprende.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+
+  - id: neo4j
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/neo4j/consulta.cypher
+    porque_si: >-
+      Las restricciones de unicidad existen sobre propiedades de nodo y se
+      comprueban en el servidor, igual que en un motor relacional.
+    porque_no: >-
+      Elegir un grafo por una regla de unicidad es elegir un sistema entero por
+      su detalle menos característico; el grafo se justifica por los recorridos,
+      no por las restricciones.
+    doc: https://neo4j.com/docs/cypher-manual/current/constraints/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Un `INSERT` en Cassandra es en realidad un «escribe esto», no un «añade si
+      no existe»: si la clave ya está, sobrescribe en silencio. Comprobar
+      primero exige una transacción ligera (`IF NOT EXISTS`), que necesita
+      acuerdo entre réplicas y cuesta varias veces más que una escritura normal.
+    alternativa: >-
+      Hacer del correo la clave de partición y usar `INSERT ... IF NOT EXISTS`
+      solo en el registro, aceptando su costo, o dejar que la unicidad la
+      garantice el servicio de identidad que está delante.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+
+  - id: dynamodb
+    aplica: no
+    porque_no: >-
+      No existen restricciones de unicidad sobre atributos que no sean la clave
+      primaria; `PutItem` sobrescribe el elemento salvo que se le añada una
+      condición explícita.
+    alternativa: >-
+      Usar el correo como clave de partición y escribir con
+      `ConditionExpression: attribute_not_exists(pk)`, que falla si el elemento
+      ya existe. La regla pasa a estar en cada llamada, no en el esquema.
+    doc: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html

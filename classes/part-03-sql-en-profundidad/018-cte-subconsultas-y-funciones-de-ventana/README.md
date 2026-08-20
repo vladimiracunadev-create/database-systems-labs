@@ -8,6 +8,8 @@ Parte 03 — SQL en profundidad · Intermedio ·
 
 **Conceptos centrales:** `CTE` · `recursión` · `subconsulta correlacionada` · `partición de ventana` · `marco`
 
+**En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -214,6 +216,285 @@ Bajar 5 millones de filas a la aplicación para calcular un acumulado consume an
 2. Da un conjunto de datos donde `ROWS` y `RANGE` produzcan acumulados distintos.
 3. Explica por qué la subconsulta correlacionada puede devolver dos filas donde la ventana devuelve una.
 4. Escribe la cota de una CTE recursiva sobre tu jerarquía y justifica el valor elegido.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** El mejor de cada curso, con su nota, sin perder ninguna columna
+
+«El máximo por grupo» es fácil; «la fila del máximo por grupo» es la
+pregunta que rompe a `GROUP BY`. Al agrupar, las filas del grupo se
+colapsan y con ellas desaparece el nombre del estudiante que sacó esa nota.
+
+La función de ventana calcula por grupo **sin** colapsar: numera las filas
+dentro de cada curso por nota descendente y deja intacta cada fila. Después
+basta quedarse con la primera. El caso devuelve, por curso ordenado, quién
+obtuvo la nota más alta y cuál fue.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| curso | estudiante | nota |
+|---|---|---|
+| `DB-101` | `Ada` | `90` |
+| `SE-201` | `Grace` | `78` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 018`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/windowfunctions.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/functions/window_functions.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/tutorial-window.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/window-functions.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/windowfunctions.html
+-- nota: ROW_NUMBER, RANK y DENSE_RANK no son lo mismo con empates: ROW_NUMBER
+--       elige uno arbitrario salvo que el ORDER BY desempate, y por eso aqui
+--       lleva `, estudiante` al final.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+```
+
+- **Por qué sí:** Tiene funciones de ventana y CTE desde la versión 3.25 (2018), con la sintaxis del estándar: lo que se escribe aquí se lleva tal cual a PostgreSQL.
+- **Por qué no:** No tiene `CTE` materializadas ni control sobre cómo se evalúan, así que en consultas grandes puede recalcular la misma subexpresión varias veces sin que haya forma de impedirlo.
+- 📄 Documentación oficial: <https://sqlite.org/windowfunctions.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
+-- nota: la forma corta de DuckDB seria
+--         SELECT curso, estudiante, nota FROM notas
+--         QUALIFY ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC) = 1
+--       Aqui se escribe la portable, que es la que sirve en los demas motores.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+```
+
+- **Por qué sí:** Las ventanas están implementadas de forma vectorizada y admite además `QUALIFY`, que filtra por el resultado de la ventana sin necesidad de la CTE envolvente: la consulta se reduce a la mitad.
+- **Por qué no:** `QUALIFY` no es estándar: es cómodo aquí y hay que reescribirlo al migrar a cualquier otro motor salvo Snowflake y Teradata.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/functions/window_functions.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-window.html
+-- nota: la forma propia de PostgreSQL es
+--         SELECT DISTINCT ON (curso) curso, estudiante, nota
+--         FROM notas ORDER BY curso, nota DESC, estudiante;
+--       que suele ser mas barata. Ata la consulta a PostgreSQL, y eso hay que
+--       decidirlo, no descubrirlo al migrar.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+```
+
+- **Por qué sí:** Tiene el catálogo completo de ventanas y, además, `DISTINCT ON`, que resuelve exactamente esta pregunta en una línea y suele ser más barato que la ventana.
+- **Por qué no:** Una ventana obliga a ordenar dentro de cada partición: sin un índice que ya provea ese orden, la consulta ordena todas las filas antes de descartar casi todas.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/tutorial-window.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/window-functions.html
+-- nota: esta consulta NO funciona en MySQL 5.7: alli habia que emularla con
+--       variables de sesion, cuyo resultado dependia del orden de evaluacion y
+--       dejo de estar garantizado en 8.0.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+```
+
+- **Por qué sí:** Desde 8.0 tiene CTE y funciones de ventana con la sintaxis estándar, lo que retiró de circulación los trucos con variables de sesión que se usaban antes y que dependían del orden de evaluación.
+- **Por qué no:** En 5.7 y anteriores no existen, y todavía hay mucha base en producción con esas versiones: la consulta portable de esta clase no se puede usar allí.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/window-functions.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/
+// nota: $setWindowFields es la ventana: partitionBy es el PARTITION BY y
+//       sortBy es el ORDER BY de dentro de la ventana. Y aqui aparece un
+//       limite que SQL no tiene: $documentNumber, $rank y $denseRank exigen un
+//       sortBy de UNA sola clave, asi que no se puede desempatar por un
+//       segundo criterio como hace el ROW_NUMBER de la version SQL.
+
+// === preparacion ===
+db.notas.drop();
+db.notas.insertMany([
+  { estudiante: "Ada", curso: "DB-101", nota: 90 },
+  { estudiante: "Linus", curso: "DB-101", nota: 58 },
+  { estudiante: "Grace", curso: "DB-101", nota: 72 },
+  { estudiante: "Ada", curso: "SE-201", nota: 66 },
+  { estudiante: "Grace", curso: "SE-201", nota: 78 },
+]);
+
+// === consulta ===
+db.notas
+  .aggregate([
+    { $setWindowFields: {
+        partitionBy: "$curso",
+        sortBy: { nota: -1 },
+        output: { puesto: { $documentNumber: {} } } } },
+    { $match: { puesto: 1 } },
+    { $project: { _id: 0, curso: 1, estudiante: 1, nota: 1 } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) => print(d.curso + "|" + d.estudiante + "|" + d.nota));
+```
+
+- **Por qué sí:** Desde la versión 5.0 tiene `$setWindowFields` con `$rank` y `$denseRank`: la misma idea de ventana, con particiones y orden, dentro de la tubería de agregación.
+- **Por qué no:** La etapa bloquea el flujo y ordena en memoria por partición; con particiones grandes hay que permitir el uso de disco explícitamente (`allowDiskUse`) o la consulta falla.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | No hay funciones de ventana ni CTE. `GROUP BY` existe, pero solo dentro de una partición y con agregados básicos: «la fila del máximo por grupo» no se puede expresar. | Modelar la tabla con la nota como columna de agrupamiento descendente y pedir `LIMIT 1` por partición: el ranking se resuelve por el orden físico, y solo para el criterio con el que se modeló. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
 
 ---
 

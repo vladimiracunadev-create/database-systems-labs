@@ -8,6 +8,8 @@ Parte 02 — Modelo relacional y álgebra · Intermedio ·
 
 **Conceptos centrales:** `cálculo de tuplas` · `seguridad de expresión` · `equivalencia` · `declaratividad`
 
+**En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -176,6 +178,284 @@ Cuando una consulta con `NOT IN` empieza a devolver menos filas tras una carga d
 2. Traduce `∀c ∈ obligatorios: inscrito(s, c)` a SQL y explica cada negación.
 3. Da un caso real donde `NOT IN` y `NOT EXISTS` devuelvan resultados distintos, con datos concretos.
 4. ¿Qué le añade SQL al álgebra relacional, y por qué esas adiciones no rompen la capacidad de optimizar?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Los estudiantes inscritos en todos los cursos: el cuantificador universal
+
+El cálculo relacional describe **qué** se quiere, con cuantificadores; el
+álgebra describe **cómo** obtenerlo, con operadores. Codd demostró que los
+dos tienen el mismo poder expresivo, y esta clase lo comprueba con la
+pregunta que peor se traduce: «¿quién está inscrito en todos los cursos?».
+
+No hay operador `PARA TODO` en SQL. La traducción es doble negación —«no
+existe un curso para el que no exista su inscripción»— y con los datos del
+caso (Ada en los dos cursos, Linus en uno, Grace en ninguno) solo Ada
+sobrevive. Que Grace **no** salga es la parte que atrapa a casi todo el
+mundo: sin inscripciones, «todos sus cursos cumplen» sería cierto por
+vacuidad si la pregunta estuviera mal escrita.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| nombre |
+|---|
+| `Ada` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 012`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_expr.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/expressions/subqueries.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-subquery.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo TEXT PRIMARY KEY
+);
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Soporta subconsultas correlacionadas anidadas, que es todo lo que la doble negación necesita: la traducción del cálculo cabe entera en SQL estándar.
+- **Por qué no:** Sin índice sobre `inscripciones`, la subconsulta interna se reevalúa por cada par estudiante-curso; con datos reales, ese plan es cuadrático.
+- 📄 Documentación oficial: <https://sqlite.org/lang_expr.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/expressions/subqueries.html
+-- nota: DuckDB descorrelaciona esta consulta y la convierte en reuniones. La
+--       forma del calculo y la del algebra terminan en el mismo plan: eso es
+--       la equivalencia de Codd, comprobada por el optimizador.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR PRIMARY KEY
+);
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Su optimizador convierte las subconsultas correlacionadas en reuniones (descorrelación): es el motor donde mejor se ve que la forma del cálculo y la del álgebra terminan siendo el mismo plan.
+- **Por qué no:** Esa reescritura automática oculta el costo real de la forma escrita: lo que aquí es gratis, en otro motor puede ser el bucle anidado que tumba el informe.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/expressions/subqueries.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-subquery.html
+-- nota: la forma equivalente con agregacion es
+--         SELECT estudiante FROM inscripciones GROUP BY estudiante
+--         HAVING COUNT(DISTINCT curso) = (SELECT COUNT(*) FROM cursos);
+--       Da lo mismo aqui, pero deja de dar lo mismo si hay nulos.
+
+DROP TABLE IF EXISTS inscripciones, estudiantes, cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo text PRIMARY KEY
+);
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Además de la doble negación admite la forma con agregación —contar cursos distintos por estudiante y compararlo con el total—, y `EXPLAIN` permite medir cuál de las dos es más barata con los datos reales.
+- **Por qué no:** Las dos formas dejan de ser equivalentes en cuanto hay nulos o el conjunto divisor está vacío: la equivalencia es del modelo relacional, no de cualquier consulta que se le parezca.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-subquery.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html
+
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+DROP TABLE IF EXISTS cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Desde 8.0 su optimizador también transforma buena parte de las subconsultas en semirreuniones, y la forma con doble `NOT EXISTS` es portable tal cual.
+- **Por qué no:** Históricamente materializaba las subconsultas correlacionadas y volvía lentísima esta forma; en bases heredadas con versiones antiguas hay que escribir la variante con agregación.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/
+// nota: sin cuantificadores, la unica via es la variante con agregacion:
+//       recoger los cursos de cada estudiante y comprobar que el conjunto de
+//       TODOS los cursos esta contenido en el suyo.
+
+// === preparacion ===
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.cursos.insertMany([{ _id: "DB-101" }, { _id: "SE-201" }]);
+db.inscripciones.insertMany([
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Ada", curso: "SE-201" },
+  { estudiante: "Linus", curso: "DB-101" },
+]);
+
+// === consulta ===
+const todos = db.cursos.find({}, { _id: 1 }).toArray().map((c) => c._id);
+db.inscripciones
+  .aggregate([
+    { $group: { _id: "$estudiante", suyos: { $addToSet: "$curso" } } },
+    { $match: { $expr: { $setIsSubset: [todos, "$suyos"] } } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) => print(d._id));
+```
+
+- **Por qué sí:** La variante con agregación se traduce bien: agrupar por estudiante, recoger sus cursos en un conjunto y comparar su tamaño con el número total de cursos.
+- **Por qué no:** No hay cuantificadores ni subconsultas correlacionadas: la doble negación no se puede escribir, así que la equivalencia con el cálculo se pierde y hay que reformular la pregunta a mano cada vez.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/>
 
 ---
 

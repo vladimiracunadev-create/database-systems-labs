@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>esquema conceptual</code> · <code>esquema físico</code> · <code>vista externa</code> · <code>independencia lógica</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender la idea que hizo posible la industria de las bases de datos: separar <strong>qué</strong> datos existen de <strong>cómo</strong> se almacenan. Sin independencia de datos, cada cambio de índice obligaría a reescribir la aplicación.</p>
@@ -232,6 +233,416 @@ FROM students s;
 <li>Una vista con <code>GROUP BY</code> no es actualizable. Explica por qué en términos de información perdida.</li>
 <li>¿Qué garantiza y qué no garantiza la independencia física cuando se cambia un índice B-Tree por uno hash?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Cambiar la forma física de los datos sin tocar la consulta de la aplicación</p>
+<p>La aplicación consulta siempre lo mismo: <code>SELECT ... FROM panel_inscripciones</code>.
+Debajo, la tabla cambia de forma —el estado deja de ser un texto repetido en
+cada fila y pasa a ser un código con su tabla de referencia—, y la vista
+absorbe el cambio. La consulta de la aplicación no se toca y devuelve
+exactamente las mismas filas antes y después.</p>
+<p>Eso es la independencia lógica de datos: la vista es la frontera entre el
+esquema externo que la aplicación ve y el esquema conceptual que el
+administrador puede reorganizar.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>activa</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>retirada</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>completada</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 003</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-createview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/views/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createview.html
+-- nota: la vista es el esquema externo; las dos tablas de debajo son el
+--       conceptual. Cambia el segundo sin tocar el primero.
+
+-- === preparacion ===
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
+    estudiante TEXT NOT NULL,
+    estado     TEXT NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
+
+CREATE TABLE inscripciones_v2 (
+    estudiante    TEXT NOT NULL,
+    estado_codigo INTEGER NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
+
+-- === consulta ===
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las vistas son parte del estándar y SQLite las tiene desde siempre: sirven para enseñar el mecanismo sin ninguna infraestructura.</li>
+<li><strong>Por qué no:</strong> Sus vistas son de solo lectura salvo que se añadan disparadores <code>INSTEAD OF</code>, así que la frontera protege la lectura y no la escritura.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createview.html">https://sqlite.org/lang_createview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_view.html
+-- nota: la misma frontera sirve para cambiar de tabla a archivo Parquet sin
+--       que la consulta de la aplicacion cambie.
+
+-- === preparacion ===
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
+    estudiante VARCHAR NOT NULL,
+    estado     VARCHAR NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
+
+CREATE TABLE inscripciones_v2 (
+    estudiante    VARCHAR NOT NULL,
+    estado_codigo INTEGER NOT NULL
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
+
+-- === consulta ===
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Misma semántica de vista, y además permite que la vista apunte a un archivo Parquet o CSV: la independencia deja de ser entre tablas y pasa a ser entre formatos de almacenamiento.</li>
+<li><strong>Por qué no:</strong> Sin catálogo compartido ni permisos por usuario, la vista organiza el trabajo de quien la escribe, pero no es una frontera de seguridad frente a nadie.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">https://duckdb.org/docs/stable/sql/statements/create_view.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-createview.html
+-- nota: en produccion el paso 4 se hace con CREATE OR REPLACE VIEW, que
+--       sustituye la definicion de forma atomica y sin dejar un instante en
+--       el que la vista no exista.
+
+DROP VIEW IF EXISTS panel_inscripciones;
+DROP TABLE IF EXISTS inscripciones_v1, inscripciones_v2, estados;
+
+-- === preparacion ===
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
+    estudiante text NOT NULL,
+    estado     text NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
+
+CREATE TABLE inscripciones_v2 (
+    estudiante    text NOT NULL,
+    estado_codigo integer NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
+
+-- === consulta ===
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La vista es también una frontera de permisos: se puede conceder <code>SELECT</code> sobre la vista y negarlo sobre las tablas de debajo, de modo que la independencia lógica y el control de acceso se apoyan en el mismo objeto. Con <code>CREATE OR REPLACE VIEW</code> el cambio es atómico.</li>
+<li><strong>Por qué no:</strong> Una vista no es un índice: si la consulta de debajo es cara, la vista la hace cómoda pero no rápida, y quien la usa deja de ver ese costo. Para eso están las vistas materializadas, que ya no son transparentes porque hay que refrescarlas.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createview.html">https://www.postgresql.org/docs/current/sql-createview.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/views.html
+-- nota: esta vista es una simple proyeccion con reunion, asi que MySQL usa el
+--       algoritmo MERGE y no materializa nada. Con agregacion o UNION caeria
+--       en TEMPTABLE y perderia los indices de debajo.
+
+DROP VIEW IF EXISTS panel_inscripciones;
+DROP TABLE IF EXISTS inscripciones_v1;
+DROP TABLE IF EXISTS inscripciones_v2;
+DROP TABLE IF EXISTS estados;
+
+-- === preparacion ===
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
+    estudiante VARCHAR(50) NOT NULL,
+    estado     VARCHAR(50) NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
+
+CREATE TABLE inscripciones_v2 (
+    estudiante    VARCHAR(50) NOT NULL,
+    estado_codigo INT NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
+
+-- === consulta ===
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Ofrece el mismo mecanismo y, con el algoritmo <code>MERGE</code>, la vista se funde con la consulta que la usa y no cuesta nada frente a escribirla a mano.</li>
+<li><strong>Por qué no:</strong> Cuando la vista tiene agregación o <code>UNION</code>, MySQL cae al algoritmo <code>TEMPTABLE</code>: materializa el resultado en una tabla temporal y pierde los índices de debajo. La misma vista puede ser gratis o carísima según lo que contenga.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">https://dev.mysql.com/doc/refman/8.4/en/views.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/views/
+// nota: una vista es una tuberia de agregacion con nombre. Aqui el cambio
+//       fisico es el mismo: el estado deja de ser una cadena repetida y pasa a
+//       ser un codigo con su coleccion de referencia.
+
+// === preparacion ===
+db.panel_inscripciones.drop();
+db.inscripciones_v1.drop();
+db.inscripciones_v2.drop();
+db.estados.drop();
+
+// 1. Esquema de partida.
+db.inscripciones_v1.insertMany([
+  { estudiante: &quot;Ada&quot;, estado: &quot;activa&quot; },
+  { estudiante: &quot;Linus&quot;, estado: &quot;completada&quot; },
+  { estudiante: &quot;Grace&quot;, estado: &quot;retirada&quot; },
+]);
+
+// 2. Esquema externo: lo unico que la aplicacion conoce.
+db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v1&quot;, [
+  { $project: { _id: 0, estudiante: 1, estado: 1 } },
+]);
+
+// 3. Reorganizacion fisica.
+db.estados.insertMany([
+  { _id: 1, nombre: &quot;activa&quot; },
+  { _id: 2, nombre: &quot;completada&quot; },
+  { _id: 3, nombre: &quot;retirada&quot; },
+]);
+db.inscripciones_v2.insertMany([
+  { estudiante: &quot;Ada&quot;, estado_codigo: 1 },
+  { estudiante: &quot;Linus&quot;, estado_codigo: 2 },
+  { estudiante: &quot;Grace&quot;, estado_codigo: 3 },
+]);
+
+// 4. La vista absorbe el cambio.
+db.panel_inscripciones.drop();
+db.inscripciones_v1.drop();
+db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v2&quot;, [
+  { $lookup: { from: &quot;estados&quot;, localField: &quot;estado_codigo&quot;,
+               foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
+  { $unwind: &quot;$e&quot; },
+  { $project: { _id: 0, estudiante: 1, estado: &quot;$e.nombre&quot; } },
+]);
+
+// === consulta ===
+// La misma consulta de siempre, contra el mismo nombre de siempre.
+db.panel_inscripciones
+  .find()
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.estado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una vista de MongoDB es una tubería de agregación con nombre: da la misma frontera entre lo que la aplicación consulta y cómo están guardados los documentos, y permite reorganizar el modelo documental sin cambiar el cliente.</li>
+<li><strong>Por qué no:</strong> Son de solo lectura y no admiten índices propios: cada consulta a la vista ejecuta la tubería entera, así que la frontera se paga en cada lectura.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/views/">https://www.mongodb.com/docs/manual/core/views/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay vistas que reescriban una consulta. Existen vistas materializadas, pero mantienen una copia real de los datos y su propia documentación advierte de que se consideran experimentales por los problemas de coherencia entre la tabla base y la vista.</td>
+<td>Escribir a mano la tabla que la consulta necesita y mantenerla desde la aplicación, aceptando que el cambio de forma física obliga a migrar datos, no solo a redefinir un objeto.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No existe una capa lógica sobre los datos: la clave <strong>es</strong> la forma física. Cambiar cómo se guarda algo cambia la clave, y todo cliente que la conocía deja de encontrarla.</td>
+<td>Poner una capa de servicio delante que traduzca nombres estables a claves concretas: la independencia se implementa en el código, no en el almacén.</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
