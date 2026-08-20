@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>kafka</code>, <code>clickhouse</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>tiempo de evento</code> · <code>marca de agua</code> · <code>ventana</code> · <code>entrega al menos una vez</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Procesar datos que no dejan de llegar. La dificultad no es el caudal: es que los eventos llegan tarde, desordenados y a veces dos veces, y hay que decidir cuándo se cierra un resultado.</p>
@@ -357,6 +358,334 @@ INSERT INTO eventos (...) VALUES (...) ON CONFLICT (evento_id) DO NOTHING;
 <li>Explica por qué la entrega exactamente una vez de extremo a extremo no es una propiedad de la red.</li>
 <li>Da un caso tuyo de «streaming» que en realidad se resuelva con SQL sobre una tabla con marca de tiempo.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un evento que ocurrió a las 10:50 y llegó a las 11:10, y en qué ventana tiene que contar</p>
+<p>En un flujo hay dos relojes y confundirlos falsea todos los informes. El
+<strong>tiempo de evento</strong> es cuándo ocurrió la cosa; el <strong>tiempo de proceso</strong> es
+cuándo llegó al sistema. Entre los dos hay una diferencia variable: una red
+lenta, un móvil sin cobertura, un reintento.</p>
+<p>El caso tiene cuatro eventos, y uno ocurrió a las 10:50 pero llegó a las
+11:10, veinte minutos tarde y con la ventana de las 10 aparentemente
+cerrada. Agrupando por tiempo de evento —lo correcto— la ventana de las 10
+tiene tres eventos. Agrupando por tiempo de llegada tendría dos, y el informe
+diría que a las 10 pasaron dos cosas cuando pasaron tres.</p>
+<p>En una tabla, esto es un <code>GROUP BY</code> y ya está. En un flujo, la pregunta se
+vuelve difícil: <strong>¿cuánto se espera antes de dar una ventana por cerrada?</strong>
+Ahí es donde aparecen las marcas de agua y los periodos de gracia.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>ventana</th>
+<th>eventos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>10:00</code></td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>11:00</code></td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 057</code>: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Kafka</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/kafka/consulta.txt">código</a></td>
+<td><a href="https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_datefunc.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-datetime.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>InfluxDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-kafka--implementacioneskafkaconsultatxt">Apache Kafka · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/kafka/consulta.txt"><code>implementaciones/kafka/consulta.txt</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-text"># motor: kafka
+# doc: https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html
+# nota: implementacion declarada. Es aqui donde el problema es DIFICIL, porque
+#       hay que decidir sin tener todavia todos los datos.
+#
+#       Tres conceptos y ningun sinonimo:
+#         TIEMPO DE EVENTO   la marca que trae el registro (timestamp del
+#                            productor o extraida del propio mensaje)
+#         MARCA DE AGUA      la afirmacion «ya no espero nada anterior a T»
+#         PERIODO DE GRACIA  cuanto se sigue admitiendo despues de esa marca
+#
+#       El evento tardio del caso —ocurrido a las 10:50, llegado a las 11:10—
+#       entra en la ventana de las 10 SI el periodo de gracia es mayor que 20
+#       minutos. Si es menor, se DESCARTA EN SILENCIO. Ese numero no se elige a
+#       ojo: sale del percentil 99 del retraso real, medido sobre el historico.
+
+# === preparacion ===
+# Topico con la marca de tiempo del propio mensaje como tiempo de evento:
+#   kafka-topics --create --topic eventos --partitions 3
+#   kafka-configs --alter --entity-type topics --entity-name eventos \
+#     --add-config message.timestamp.type=CreateTime
+
+# === consulta ===
+# Kafka Streams (Java). La ventana es por tiempo de evento y la gracia es
+# explicita: 30 minutos, mas que el retraso del evento tardio.
+#
+#   builder.stream(&quot;eventos&quot;)
+#          .groupByKey()
+#          .windowedBy(TimeWindows.ofSizeAndGrace(
+#                Duration.ofHours(1), Duration.ofMinutes(30)))
+#          .count()
+#          .toStream()
+#          .to(&quot;eventos-por-hora&quot;);
+#
+# Y para no perder los que lleguen aun mas tarde, se recogen aparte en vez de
+# descartarlos:
+#   .stream(&quot;eventos&quot;)
+#   .filter((k, v) -&gt; esTardio(v))
+#   .to(&quot;eventos-tardios&quot;);
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde el problema se plantea de verdad y donde existe el vocabulario para resolverlo: ventanas por tiempo de evento, <strong>marcas de agua</strong> para decidir cuándo cerrar, <strong>periodo de gracia</strong> para admitir tardíos y semántica de exactamente una vez con productor idempotente y transacciones.</li>
+<li><strong>Por qué no:</strong> Nada de eso es gratis: la semántica de exactamente una vez exige transacciones en el productor y consumidores que las respeten, el estado de las ventanas hay que guardarlo, y un evento que llegue <strong>después</strong> del periodo de gracia se descarta en silencio salvo que se recoja aparte.</li>
+<li>📄 Documentación oficial: <a href="https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html">https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html</a></li>
+</ul>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions
+-- nota: implementacion declarada. ClickHouse resuelve el problema por el camino
+--       contrario al de un procesador de flujos: no cierra ventanas, GUARDA
+--       TODO y agrega por tiempo de evento cuando alguien pregunta. El evento
+--       tardio simplemente se inserta y la proxima consulta ya lo incluye; no
+--       hace falta marca de agua porque no hay nada que cerrar.
+--
+--       Y el precio, que en contabilidad no se acepta: el resultado de un
+--       informe puede cambiar despues de publicado.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id             UInt32,
+    tiempo_evento  DateTime,
+    tiempo_llegada DateTime
+) ENGINE = MergeTree ORDER BY tiempo_evento;
+
+INSERT INTO eventos VALUES
+    (1, '2026-08-19 10:05:00', '2026-08-19 10:05:02'),
+    (2, '2026-08-19 10:30:00', '2026-08-19 10:30:01'),
+    (3, '2026-08-19 10:50:00', '2026-08-19 11:10:00'),
+    (4, '2026-08-19 11:20:00', '2026-08-19 11:20:03');
+
+-- === consulta ===
+SELECT formatDateTime(toStartOfHour(tiempo_evento), '%H:%M') AS ventana,
+       COUNT(*) AS eventos
+FROM eventos
+GROUP BY ventana
+ORDER BY ventana;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Resuelve el problema por otro camino: en vez de cerrar ventanas, <strong>guarda todo</strong> y agrega por tiempo de evento cuando se pregunta. Un evento tardío simplemente se inserta, y la próxima consulta ya lo incluye. No hace falta marca de agua porque no hay nada que cerrar.</li>
+<li><strong>Por qué no:</strong> Eso significa que el resultado de un informe puede cambiar después de publicado, lo que en contabilidad no se acepta; y las vistas materializadas que agregan al insertar <strong>no</strong> recolocan al tardío en su ventana correcta salvo que se diseñen para ello.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/timestamp.html
+-- nota: la consulta que de verdad hay que ejecutar aqui es la que decide el
+--       periodo de gracia del flujo, sobre el historico real:
+--         SELECT quantile_cont(
+--                  epoch(tiempo_llegada::TIMESTAMP) - epoch(tiempo_evento::TIMESTAMP),
+--                  0.99) AS retraso_p99
+--         FROM eventos;
+--       Sin ese numero, el periodo de gracia se elige a ojo.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id             INTEGER PRIMARY KEY,
+    tiempo_evento  VARCHAR NOT NULL,   -- cuando OCURRIO
+    tiempo_llegada VARCHAR NOT NULL    -- cuando LLEGO al sistema
+);
+INSERT INTO eventos (id, tiempo_evento, tiempo_llegada) VALUES
+    (1, '2026-08-19T10:05:00Z', '2026-08-19T10:05:02Z'),
+    (2, '2026-08-19T10:30:00Z', '2026-08-19T10:30:01Z'),
+    -- El evento tardio: ocurrio a las 10:50 y llego a las 11:10, veinte
+    -- minutos despues y con la ventana de las 10 ya «cerrada».
+    (3, '2026-08-19T10:50:00Z', '2026-08-19T11:10:00Z'),
+    (4, '2026-08-19T11:20:00Z', '2026-08-19T11:20:03Z');
+
+-- === consulta ===
+-- Agrupar por TIEMPO DE EVENTO: el tardio cuenta en la ventana de las 10, que
+-- es cuando ocurrio. Cambiar `tiempo_evento` por `tiempo_llegada` daria 2 y 2,
+-- y ese informe seria falso: diria que a las 10 pasaron dos cosas cuando
+-- pasaron tres.
+SELECT SUBSTR(tiempo_evento, 12, 2) || ':00' AS ventana,
+       COUNT(*) AS eventos
+FROM eventos
+GROUP BY ventana
+ORDER BY ventana;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es la herramienta para la pregunta que precede a todo diseño de flujo: <strong>cuánto tarda de verdad en llegar un evento</strong>. Con el histórico, el percentil 99 del retraso es lo que decide el periodo de gracia, y sin ese número se elige a ojo.</li>
+<li><strong>Por qué no:</strong> No procesa flujos: analiza lo que ya se guardó. Aquí no hay ventana que cerrar porque no hay tiempo real.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">https://duckdb.org/docs/stable/sql/functions/timestamp.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_datefunc.html
+-- nota: la version equivocada esta a una palabra de distancia: cambiar
+--       `tiempo_evento` por `tiempo_llegada` en el GROUP BY da 2 y 2. No hay
+--       error, no hay aviso: hay un informe falso.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id             INTEGER PRIMARY KEY,
+    tiempo_evento  TEXT NOT NULL,   -- cuando OCURRIO
+    tiempo_llegada TEXT NOT NULL    -- cuando LLEGO al sistema
+);
+INSERT INTO eventos (id, tiempo_evento, tiempo_llegada) VALUES
+    (1, '2026-08-19T10:05:00Z', '2026-08-19T10:05:02Z'),
+    (2, '2026-08-19T10:30:00Z', '2026-08-19T10:30:01Z'),
+    -- El evento tardio: ocurrio a las 10:50 y llego a las 11:10, veinte
+    -- minutos despues y con la ventana de las 10 ya «cerrada».
+    (3, '2026-08-19T10:50:00Z', '2026-08-19T11:10:00Z'),
+    (4, '2026-08-19T11:20:00Z', '2026-08-19T11:20:03Z');
+
+-- === consulta ===
+-- Agrupar por TIEMPO DE EVENTO: el tardio cuenta en la ventana de las 10, que
+-- es cuando ocurrio. Cambiar `tiempo_evento` por `tiempo_llegada` daria 2 y 2,
+-- y ese informe seria falso: diria que a las 10 pasaron dos cosas cuando
+-- pasaron tres.
+SELECT SUBSTR(tiempo_evento, 12, 2) || ':00' AS ventana,
+       COUNT(*) AS eventos
+FROM eventos
+GROUP BY ventana
+ORDER BY ventana;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Muestra el problema en su forma más desnuda: dos columnas de tiempo y un <code>GROUP BY</code> que puede usar la correcta o la equivocada. Elegir mal no da ningún error; da un informe falso.</li>
+<li><strong>Por qué no:</strong> Sobre una tabla completa la respuesta es fácil porque <strong>ya están todos los eventos</strong>. La dificultad del flujo —decidir sin tener todavía todos los datos— no se puede reproducir aquí.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_datefunc.html">https://sqlite.org/lang_datefunc.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-datetime.html
+-- nota: con tipos de fecha de verdad, la ventana se expresa con date_trunc y el
+--       retraso se puede medir como intervalo. Lo que no hay es estado de
+--       ventana ni marca de agua: aqui siempre estan todos los eventos, porque
+--       se consulta una tabla, no un flujo.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS eventos;
+
+CREATE TABLE eventos (
+    id             integer PRIMARY KEY,
+    tiempo_evento  timestamptz NOT NULL,
+    tiempo_llegada timestamptz NOT NULL
+);
+INSERT INTO eventos (id, tiempo_evento, tiempo_llegada) VALUES
+    (1, '2026-08-19 10:05:00+00', '2026-08-19 10:05:02+00'),
+    (2, '2026-08-19 10:30:00+00', '2026-08-19 10:30:01+00'),
+    (3, '2026-08-19 10:50:00+00', '2026-08-19 11:10:00+00'),
+    (4, '2026-08-19 11:20:00+00', '2026-08-19 11:20:03+00');
+
+-- === consulta ===
+SELECT to_char(date_trunc('hour', tiempo_evento AT TIME ZONE 'UTC'), 'HH24:MI') AS ventana,
+       COUNT(*) AS eventos
+FROM eventos
+GROUP BY 1
+ORDER BY 1;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>date_trunc</code> y ventanas resuelve el caso, y con <code>LISTEN</code>/<code>NOTIFY</code> o decodificación lógica puede alimentar un flujo. Para volúmenes moderados evita añadir una plataforma entera.</li>
+<li><strong>Por qué no:</strong> No es un procesador de flujos: no hay estado de ventana, ni marcas de agua, ni reintentos con garantías. Simular todo eso con tablas y trabajos periódicos funciona hasta que deja de funcionar, y entonces la migración es completa.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-datetime.html">https://www.postgresql.org/docs/current/functions-datetime.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>InfluxDB</td>
+<td>Su modelo asume que la marca de tiempo del punto <strong>es</strong> el tiempo de evento y que los datos llegan más o menos en orden: escribir puntos muy viejos es posible pero funciona contra su organización por bloques temporales y degrada la escritura.</td>
+<td>Corregir el retraso antes de escribir, o acumular los tardíos y reescribir el bloque afectado, aceptando el costo.</td>
+<td><a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/">doc</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>Las colecciones de series temporales están optimizadas para escritura cercana al presente: insertar datos muy antiguos es correcto pero ineficiente, porque obliga a tocar bloques ya cerrados.</td>
+<td>Tratar los tardíos como una carga aparte y reprocesar la ventana afectada, en vez de esperar que el motor los recoloque solo.</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

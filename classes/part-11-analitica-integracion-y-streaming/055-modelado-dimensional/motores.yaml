@@ -1,0 +1,118 @@
+---
+caso:
+  titulo: >-
+    Atribuir cada venta a la ciudad que el cliente tenía entonces, no a la que
+    tiene ahora
+  contrato: |
+    El modelado dimensional separa **hechos** —lo que pasó, medible y
+    numeroso— de **dimensiones** —el contexto por el que se filtra y se agrupa—.
+    Y la pregunta que decide si el modelo sirve es una sola: ¿qué pasa cuando una
+    dimensión cambia?
+
+    El cliente A vendió por 100 cuando vivía en Santiago y por 200 después de
+    mudarse a Valdivia. Con una dimensión de **tipo 1** —sobrescribir la
+    ciudad— las dos ventas aparecen en Valdivia, y el informe del primer
+    trimestre **cambia retroactivamente** cada vez que alguien se muda. Con una
+    de **tipo 2** —una fila por versión, con su periodo de validez y su clave
+    sustituta— cada venta queda atribuida a la ciudad de su momento, y el
+    histórico deja de moverse.
+  columnas: [ciudad, importe]
+  esperado:
+    - [Santiago, "100"]
+    - [Valdivia, "200"]
+
+motores:
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      El esquema en estrella es exactamente lo que su ejecutor hace mejor: una
+      tabla de hechos grande reunida con dimensiones pequeñas, que caben en
+      memoria y se resuelven con reunión hash sobre columnas comprimidas.
+    porque_no: >-
+      No tiene nada que ayude a **mantener** la dimensión: cerrar la versión
+      vigente y abrir la nueva hay que escribirlo, y sin restricciones que lo
+      impidan es fácil acabar con dos filas vigentes para el mismo cliente.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/from.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Puede **imponer** el invariante que hace correcto al tipo 2: un índice
+      único parcial sobre `(cliente) WHERE vigente` garantiza que nunca haya dos
+      versiones vigentes, y los tipos de rango con restricción de exclusión
+      impiden que dos periodos se solapen.
+    porque_no: >-
+      Esas garantías cuestan escrituras en cada cambio de dimensión, y el
+      esquema en estrella sobre un motor de filas paga la reunión con la tabla
+      de hechos en cada consulta: correcto, y no es donde va a ser rápido.
+    doc: https://www.postgresql.org/docs/current/rangetypes.html
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      Para hechos con miles de millones de filas no hay comparación, y sus
+      diccionarios permiten resolver la dimensión sin reunión, con una búsqueda
+      en memoria por clave.
+    porque_no: >-
+      Los diccionarios devuelven el valor **actual**, no el histórico: usarlos
+      con una dimensión de tipo 2 vuelve a producir el error que el tipo 2
+      existía para evitar. La historia hay que resolverla con reunión por rango
+      de fechas, que es justo lo que peor se le da.
+    doc: https://clickhouse.com/docs/en/sql-reference/dictionaries
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      El modelo dimensional es un modelo, no una tecnología: se puede estudiar
+      entero aquí, y el índice único parcial permite imponer también el
+      invariante de la versión vigente.
+    porque_no: >-
+      No es un almacén analítico: sirve para entender el modelo y para
+      prototipar la transformación, no para ejecutarla sobre volúmenes reales.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: snowflake
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/snowflake/consulta.sql
+    porque_si: >-
+      Tiene `MERGE` para mantener la dimensión de tipo 2 en una sola sentencia
+      —cerrar la versión vigente e insertar la nueva— y viaje en el tiempo, que
+      permite consultar la tabla tal como estaba hace días sin haber guardado
+      nada.
+    porque_no: >-
+      El viaje en el tiempo **no** sustituye a la dimensión de tipo 2: sirve para
+      recuperarse de un error, no para atribuir hechos históricos. Confundir las
+      dos cosas es un error de diseño frecuente y caro.
+    doc: https://docs.snowflake.com/en/sql-reference/sql/merge
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      El modelo dimensional necesita reunir una tabla de hechos grande con
+      dimensiones pequeñas, muchas veces y de muchas formas distintas; `$lookup`
+      hace eso peor que cualquier motor relacional, y el modelo documental
+      empuja a incrustar la dimensión, que es exactamente la desnormalización
+      de tipo 1 con sus anomalías.
+    alternativa: >-
+      Dejar MongoDB en el lado operativo y llevar los hechos a un almacén
+      columnar donde el esquema en estrella tenga sentido.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay reuniones ni consultas por rango de fechas sobre versiones: la
+      atribución histórica no se puede expresar.
+    alternativa: >-
+      Servir desde Redis el resultado **ya agregado** del informe, calculado en
+      el almacén analítico: es una caché del informe, no un modelo dimensional.
+    doc: https://redis.io/docs/latest/develop/data-types/hashes/

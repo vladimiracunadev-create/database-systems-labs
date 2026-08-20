@@ -8,6 +8,8 @@ Parte 11 — Analítica, integración y streaming · Intermedio ·
 
 **Conceptos centrales:** `tabla de hechos` · `dimensión` · `grano` · `dimensión de cambio lento`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -250,6 +252,329 @@ La causa más frecuente de «los informes no cuadran» no está en los datos: es
 2. ¿Por qué se guardan `aprobados` y `evaluados` en vez del porcentaje?
 3. Da un hecho semiaditivo de tu dominio y la agregación que sería incorrecta.
 4. Explica qué se rompe si la tabla de hechos guarda la clave natural.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Atribuir cada venta a la ciudad que el cliente tenía entonces, no a la que tiene ahora
+
+El modelado dimensional separa **hechos** —lo que pasó, medible y
+numeroso— de **dimensiones** —el contexto por el que se filtra y se agrupa—.
+Y la pregunta que decide si el modelo sirve es una sola: ¿qué pasa cuando una
+dimensión cambia?
+
+El cliente A vendió por 100 cuando vivía en Santiago y por 200 después de
+mudarse a Valdivia. Con una dimensión de **tipo 1** —sobrescribir la
+ciudad— las dos ventas aparecen en Valdivia, y el informe del primer
+trimestre **cambia retroactivamente** cada vez que alguien se muda. Con una
+de **tipo 2** —una fila por versión, con su periodo de validez y su clave
+sustituta— cada venta queda atribuida a la ciudad de su momento, y el
+histórico deja de moverse.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| ciudad | importe |
+|---|---|
+| `Santiago` | `100` |
+| `Valdivia` | `200` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 055`: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/from.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/rangetypes.html) |
+| ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/sql-reference/dictionaries) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_select.html) |
+| Snowflake | sí | declarado | [código](implementaciones/snowflake/consulta.sql) | [doc oficial](https://docs.snowflake.com/en/sql-reference/sql/merge) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/data-modeling/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/data-types/hashes/) |
+
+### Los que resuelven el caso
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/from.html
+-- nota: el esquema en estrella es lo que mejor se le da: hechos grandes
+--       reunidos con dimensiones pequenas que caben en memoria. Lo que NO tiene
+--       es forma de mantener la dimension: cerrar la version vigente y abrir la
+--       nueva hay que escribirlo, y nada impide dos vigentes a la vez.
+
+-- === preparacion ===
+-- La dimension con historia: una fila por VERSION del cliente, con su
+-- periodo de validez y una clave sustituta propia. La clave de negocio
+-- («A») se repite; la sustituta, no.
+CREATE TABLE dim_cliente (
+    sk       INTEGER PRIMARY KEY,
+    cliente  VARCHAR NOT NULL,
+    ciudad   VARCHAR NOT NULL,
+    desde    VARCHAR NOT NULL,
+    hasta    VARCHAR NOT NULL,
+    vigente  INTEGER NOT NULL
+);
+INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
+
+-- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
+CREATE TABLE hechos_venta (
+    id         INTEGER PRIMARY KEY,
+    cliente_sk INTEGER NOT NULL,
+    fecha      VARCHAR NOT NULL,
+    importe    INTEGER NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
+    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
+
+-- === consulta ===
+-- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
+-- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
+-- las dos ventas apareceran en Valdivia y el informe del primer trimestre
+-- CAMBIARIA retroactivamente cada vez que alguien se muda.
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+```
+
+- **Por qué sí:** El esquema en estrella es exactamente lo que su ejecutor hace mejor: una tabla de hechos grande reunida con dimensiones pequeñas, que caben en memoria y se resuelven con reunión hash sobre columnas comprimidas.
+- **Por qué no:** No tiene nada que ayude a **mantener** la dimensión: cerrar la versión vigente y abrir la nueva hay que escribirlo, y sin restricciones que lo impidan es fácil acabar con dos filas vigentes para el mismo cliente.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/from.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/rangetypes.html
+-- nota: aqui los dos invariantes del tipo 2 se pueden IMPONER:
+--         1) una sola version vigente  -> indice unico parcial
+--         2) periodos que no se solapan -> restriccion de exclusion con daterange
+--       Sin ellos, el tipo 2 es una convencion que alguien acabara rompiendo, y
+--       el sintoma sera un informe con ventas duplicadas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS hechos_venta, dim_cliente;
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE dim_cliente (
+    sk      integer PRIMARY KEY,
+    cliente text NOT NULL,
+    ciudad  text NOT NULL,
+    validez daterange NOT NULL,
+    vigente boolean NOT NULL,
+    EXCLUDE USING gist (cliente WITH =, validez WITH &&)
+);
+CREATE UNIQUE INDEX una_version_vigente ON dim_cliente (cliente) WHERE vigente;
+
+INSERT INTO dim_cliente (sk, cliente, ciudad, validez, vigente) VALUES
+    (1, 'A', 'Santiago', daterange('2026-01-01', '2026-07-01', '[)'), false),
+    (2, 'A', 'Valdivia', daterange('2026-07-01', 'infinity', '[)'), true);
+
+CREATE TABLE hechos_venta (
+    id         integer PRIMARY KEY,
+    cliente_sk integer NOT NULL REFERENCES dim_cliente(sk),
+    fecha      date NOT NULL,
+    importe    integer NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, DATE '2026-03-15', 100),
+    (2, 2, DATE '2026-08-15', 200);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+```
+
+- **Por qué sí:** Puede **imponer** el invariante que hace correcto al tipo 2: un índice único parcial sobre `(cliente) WHERE vigente` garantiza que nunca haya dos versiones vigentes, y los tipos de rango con restricción de exclusión impiden que dos periodos se solapen.
+- **Por qué no:** Esas garantías cuestan escrituras en cada cambio de dimensión, y el esquema en estrella sobre un motor de filas paga la reunión con la tabla de hechos en cada consulta: correcto, y no es donde va a ser rápido.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/rangetypes.html>
+
+#### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/sql-reference/dictionaries
+-- nota: implementacion declarada, y con una advertencia importante. Los
+--       DICCIONARIOS de ClickHouse resuelven la dimension sin reunion, con una
+--       busqueda en memoria por clave... y devuelven el valor ACTUAL. Usarlos
+--       con una dimension de tipo 2 reintroduce exactamente el error que el
+--       tipo 2 existia para evitar: las ventas viejas se atribuyen a la ciudad
+--       nueva.
+--       La atribucion historica exige la reunion por rango de fechas de abajo,
+--       que es justo lo que peor se le da a un motor columnar distribuido.
+
+-- === preparacion ===
+CREATE TABLE dim_cliente (
+    sk      UInt32,
+    cliente String,
+    ciudad  String,
+    desde   Date,
+    hasta   Date,
+    vigente UInt8
+) ENGINE = MergeTree ORDER BY (cliente, desde);
+
+CREATE TABLE hechos_venta (
+    id         UInt32,
+    cliente_sk UInt32,
+    fecha      Date,
+    importe    UInt32
+) ENGINE = MergeTree ORDER BY (fecha, id);
+
+INSERT INTO dim_cliente VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '2106-02-07', 1);
+INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta AS h
+INNER JOIN dim_cliente AS d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+```
+
+- **Por qué sí:** Para hechos con miles de millones de filas no hay comparación, y sus diccionarios permiten resolver la dimensión sin reunión, con una búsqueda en memoria por clave.
+- **Por qué no:** Los diccionarios devuelven el valor **actual**, no el histórico: usarlos con una dimensión de tipo 2 vuelve a producir el error que el tipo 2 existía para evitar. La historia hay que resolverla con reunión por rango de fechas, que es justo lo que peor se le da.
+- 📄 Documentación oficial: <https://clickhouse.com/docs/en/sql-reference/dictionaries>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: el invariante que hace correcto al tipo 2 —una sola version vigente por
+--       cliente— se puede IMPONER, no solo desear:
+--         CREATE UNIQUE INDEX una_vigente ON dim_cliente (cliente)
+--           WHERE vigente = 1;
+
+-- === preparacion ===
+-- La dimension con historia: una fila por VERSION del cliente, con su
+-- periodo de validez y una clave sustituta propia. La clave de negocio
+-- («A») se repite; la sustituta, no.
+CREATE TABLE dim_cliente (
+    sk       INTEGER PRIMARY KEY,
+    cliente  TEXT NOT NULL,
+    ciudad   TEXT NOT NULL,
+    desde    TEXT NOT NULL,
+    hasta    TEXT NOT NULL,
+    vigente  INTEGER NOT NULL
+);
+INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
+
+-- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
+CREATE TABLE hechos_venta (
+    id         INTEGER PRIMARY KEY,
+    cliente_sk INTEGER NOT NULL,
+    fecha      TEXT NOT NULL,
+    importe    INTEGER NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
+    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
+
+-- === consulta ===
+-- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
+-- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
+-- las dos ventas apareceran en Valdivia y el informe del primer trimestre
+-- CAMBIARIA retroactivamente cada vez que alguien se muda.
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+```
+
+- **Por qué sí:** El modelo dimensional es un modelo, no una tecnología: se puede estudiar entero aquí, y el índice único parcial permite imponer también el invariante de la versión vigente.
+- **Por qué no:** No es un almacén analítico: sirve para entender el modelo y para prototipar la transformación, no para ejecutarla sobre volúmenes reales.
+- 📄 Documentación oficial: <https://sqlite.org/lang_select.html>
+
+#### Snowflake · [`implementaciones/snowflake/consulta.sql`](implementaciones/snowflake/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: snowflake
+-- doc: https://docs.snowflake.com/en/sql-reference/sql/merge
+-- nota: implementacion declarada. MERGE mantiene la dimension de tipo 2 en una
+--       sola sentencia: cierra la version vigente e inserta la nueva.
+--       Y una confusion frecuente que conviene deshacer: el VIAJE EN EL TIEMPO
+--       de Snowflake permite consultar la tabla como estaba hace dias, pero NO
+--       sustituye a la dimension de tipo 2. Sirve para recuperarse de un error,
+--       no para atribuir hechos historicos: el viaje en el tiempo caduca, y la
+--       historia del negocio no.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE dim_cliente (
+    sk      NUMBER,
+    cliente STRING,
+    ciudad  STRING,
+    desde   DATE,
+    hasta   DATE,
+    vigente BOOLEAN
+);
+CREATE OR REPLACE TABLE hechos_venta (
+    id         NUMBER,
+    cliente_sk NUMBER,
+    fecha      DATE,
+    importe    NUMBER
+);
+
+INSERT INTO dim_cliente VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', FALSE),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', TRUE);
+INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
+
+-- El mantenimiento de la dimension, en una sentencia:
+--   MERGE INTO dim_cliente d
+--   USING nuevos_clientes n ON d.cliente = n.cliente AND d.vigente
+--   WHEN MATCHED AND d.ciudad <> n.ciudad
+--     THEN UPDATE SET d.vigente = FALSE, d.hasta = CURRENT_DATE()
+--   WHEN NOT MATCHED
+--     THEN INSERT (...) VALUES (...);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+```
+
+- **Por qué sí:** Tiene `MERGE` para mantener la dimensión de tipo 2 en una sola sentencia —cerrar la versión vigente e insertar la nueva— y viaje en el tiempo, que permite consultar la tabla tal como estaba hace días sin haber guardado nada.
+- **Por qué no:** El viaje en el tiempo **no** sustituye a la dimensión de tipo 2: sirve para recuperarse de un error, no para atribuir hechos históricos. Confundir las dos cosas es un error de diseño frecuente y caro.
+- 📄 Documentación oficial: <https://docs.snowflake.com/en/sql-reference/sql/merge>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | El modelo dimensional necesita reunir una tabla de hechos grande con dimensiones pequeñas, muchas veces y de muchas formas distintas; `$lookup` hace eso peor que cualquier motor relacional, y el modelo documental empuja a incrustar la dimensión, que es exactamente la desnormalización de tipo 1 con sus anomalías. | Dejar MongoDB en el lado operativo y llevar los hechos a un almacén columnar donde el esquema en estrella tenga sentido. | [doc](https://www.mongodb.com/docs/manual/data-modeling/) |
+| Redis | No hay reuniones ni consultas por rango de fechas sobre versiones: la atribución histórica no se puede expresar. | Servir desde Redis el resultado **ya agregado** del informe, calculado en el almacén analítico: es una caché del informe, no un modelo dimensional. | [doc](https://redis.io/docs/latest/develop/data-types/hashes/) |
 
 ---
 

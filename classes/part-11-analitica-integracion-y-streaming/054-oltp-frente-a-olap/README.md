@@ -8,6 +8,8 @@ Parte 11 — Analítica, integración y streaming · Intermedio ·
 
 **Conceptos centrales:** `carga transaccional` · `carga analítica` · `contención` · `formato de almacenamiento`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -188,6 +190,270 @@ La conversación productiva no es «¿necesitamos un almacén de datos?», sino 
 2. ¿Por qué una consulta analítica larga impide recuperar versiones muertas?
 3. ¿En qué caso la exportación a Parquet supera a una réplica de solo lectura?
 4. Da una situación donde no separar sea la decisión correcta, y defiéndela.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cuatro números que resumen doce meses, y la consulta contraria que ningún motor sirve igual de bien
+
+Las dos cargas piden cosas opuestas. La **transaccional** toca una fila con
+todas sus columnas, muchas veces por segundo, y necesita que la escritura sea
+inmediata y duradera. La **analítica** toca todas las filas de pocas
+columnas, unas cuantas veces al día, y necesita leer mucho y rápido.
+
+Un mismo almacenamiento no puede estar optimizado para las dos, y de ahí
+salen las dos consecuencias que organizan esta parte del programa: que
+existan dos sistemas, y que haga falta un proceso que copie del primero al
+segundo.
+
+El caso es la consulta analítica en su forma mínima: doce meses de ventas
+resumidos en cuatro trimestres. Todos los motores la responden; el «por qué
+no» de cada uno dice qué se rompe cuando se le pide además la otra.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| trimestre | importe |
+|---|---|
+| `T1` | `600` |
+| `T2` | `1500` |
+| `T3` | `2400` |
+| `T4` | `3300` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 054`: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/why_duckdb) |
+| ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/rules-materializedviews.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/whentouse.html) |
+| Google BigQuery | sí | declarado | [código](implementaciones/bigquery/consulta.sql) | [doc oficial](https://cloud.google.com/bigquery/docs/introduction) |
+| MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/core/aggregation-pipeline/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/hincrby/) |
+
+### Los que resuelven el caso
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/why_duckdb
+-- nota: el lado ANALITICO. Lee dos columnas y ninguna mas, vectorizadas. Y la
+--       misma consulta funciona sobre el fichero exportado por el sistema
+--       transaccional, sin cargarlo:
+--         SELECT ... FROM 'ventas.parquet' GROUP BY ...
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      INTEGER PRIMARY KEY,
+    mes     INTEGER NOT NULL,
+    importe INTEGER NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes <= 3 THEN 'T1'
+            WHEN mes <= 6 THEN 'T2'
+            WHEN mes <= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+```
+
+- **Por qué sí:** Es analítico puro y embebido: lee solo las columnas `mes` e `importe`, las procesa vectorizadas y no necesita servidor. Para el análisis local sobre una copia de los datos, no hay nada más directo.
+- **Por qué no:** Un solo escritor y sin concurrencia entre procesos: no puede ser el sistema donde se registran las ventas, solo donde se analizan.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/why_duckdb>
+
+#### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+-- nota: implementacion declarada. Aqui el informe trimestral no se calcula: se
+--       lee ya calculado, porque la vista materializada agrega AL INSERTAR.
+--       El precio: no es transaccional, y corregir una venta mal registrada no
+--       es un UPDATE sino una mutacion asincrona que reescribe partes.
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      UInt32,
+    mes     UInt8,
+    importe UInt32
+) ENGINE = MergeTree ORDER BY (mes, id);
+
+CREATE MATERIALIZED VIEW ventas_por_trimestre
+ENGINE = SummingMergeTree ORDER BY trimestre
+AS SELECT concat('T', toString(intDiv(mes - 1, 3) + 1)) AS trimestre,
+          SUM(importe) AS importe
+FROM ventas GROUP BY trimestre;
+
+INSERT INTO ventas VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300), (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900), (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+SELECT trimestre, SUM(importe) AS importe
+FROM ventas_por_trimestre
+GROUP BY trimestre
+ORDER BY trimestre;
+```
+
+- **Por qué sí:** La misma arquitectura columnar a escala distribuida, con vistas materializadas que agregan **al insertar**: el informe trimestral no se calcula, se lee ya calculado.
+- **Por qué no:** No es transaccional y las modificaciones fila a fila son mutaciones asíncronas: corregir una venta mal registrada no es un `UPDATE`, es una operación de mantenimiento.
+- 📄 Documentación oficial: <https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/rules-materializedviews.html
+-- nota: el punto intermedio, y el que muchas arquitecturas no necesitan
+--       abandonar. Con una vista materializada, el informe deja de recalcularse:
+--         CREATE MATERIALIZED VIEW ventas_por_trimestre AS SELECT ...;
+--         REFRESH MATERIALIZED VIEW CONCURRENTLY ventas_por_trimestre;
+--       A cambio de que el dato vaya con el retraso del ultimo refresco.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS ventas;
+
+CREATE TABLE ventas (
+    id      integer PRIMARY KEY,
+    mes     integer NOT NULL,
+    importe integer NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes <= 3 THEN 'T1'
+            WHEN mes <= 6 THEN 'T2'
+            WHEN mes <= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+```
+
+- **Por qué sí:** Es el punto donde muchas arquitecturas empiezan y donde muchas deberían quedarse: con agregación paralela y vistas materializadas resuelve la analítica de tamaño medio **sobre los datos operativos**, sin proceso de copia, sin retraso y sin un sistema más.
+- **Por qué no:** El informe compite por la misma caché y las mismas conexiones que las transacciones. Un análisis pesado a la hora punta degrada las ventas, y esa es exactamente la razón por la que se separan las dos cargas.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/rules-materializedviews.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/whentouse.html
+-- nota: el lado TRANSACCIONAL de la comparacion. La consulta contraria —la que
+--       este motor sirve mejor que ningun columnar— es esta:
+--         SELECT * FROM ventas WHERE id = 7;
+--       una fila, todas sus columnas, una sola pagina leida.
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      INTEGER PRIMARY KEY,
+    mes     INTEGER NOT NULL,
+    importe INTEGER NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes <= 3 THEN 'T1'
+            WHEN mes <= 6 THEN 'T2'
+            WHEN mes <= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+```
+
+- **Por qué sí:** Sirve para ver el contraste desde el lado transaccional: el mismo SQL, el mismo resultado, y un almacenamiento por filas que tiene que leer los doce registros completos para sumar una columna.
+- **Por qué no:** Con doce filas da igual; con doce millones, la diferencia es de órdenes de magnitud, y no hay índice que la arregle porque hay que leerlas todas.
+- 📄 Documentación oficial: <https://sqlite.org/whentouse.html>
+
+#### Google BigQuery · [`implementaciones/bigquery/consulta.sql`](implementaciones/bigquery/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: bigquery
+-- doc: https://cloud.google.com/bigquery/docs/introduction
+-- nota: implementacion declarada. No hay servidor, ni indices, ni ajuste: solo
+--       consultas y una factura. Se paga por BYTES LEIDOS, asi que esta
+--       consulta cuesta dos columnas; con SELECT * costaria la tabla entera y
+--       devolveria lo mismo.
+--         bq query --dry_run   dice cuantos bytes antes de cobrarlos.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE analitica.ventas AS
+SELECT n AS id, n AS mes, n * 100 AS importe
+FROM UNNEST(GENERATE_ARRAY(1, 12)) AS n;
+
+-- === consulta ===
+SELECT CONCAT('T', CAST(DIV(mes - 1, 3) + 1 AS STRING)) AS trimestre,
+       SUM(importe) AS importe
+FROM analitica.ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+```
+
+- **Por qué sí:** Elimina la operación por completo: no hay servidor, ni índices, ni ajuste; solo consultas y una factura. Para un informe trimestral sobre volúmenes grandes y esporádicos, es la opción con menos trabajo humano.
+- **Por qué no:** Es exclusivamente analítico: no admite escrituras fila a fila con latencia baja, y la inserción en flujo tiene su propio costo y sus propias reglas. Nunca es la otra mitad de la pareja.
+- 📄 Documentación oficial: <https://cloud.google.com/bigquery/docs/introduction>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| MongoDB | Puede resolver la consulta con `$group`, pero no aporta una fila distinta a esta comparación: su almacenamiento es orientado a documentos, así que agregar obliga a leer documentos completos, igual que SQLite lee filas completas. | Exportar a un almacén columnar para la analítica —o usar los servicios analíticos que su propio proveedor ofrece— y dejar la colección para lo transaccional, que es su terreno. | [doc](https://www.mongodb.com/docs/manual/core/aggregation-pipeline/) |
+| Redis | No hay agregación sobre un conjunto de registros: habría que traerse las doce ventas al cliente y sumarlas allí. Con doce da igual; con doce millones, no hay conversación. | Mantener los totales por trimestre como contadores actualizados en cada venta: el informe está siempre listo y solo responde la pregunta que se decidió de antemano. | [doc](https://redis.io/docs/latest/commands/hincrby/) |
 
 ---
 

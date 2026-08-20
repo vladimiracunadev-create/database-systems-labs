@@ -8,6 +8,8 @@ Parte 11 — Analítica, integración y streaming · Avanzado ·
 
 **Conceptos centrales:** `ETL` · `ELT` · `CDC` · `escritura dual` · `idempotencia de carga`
 
+**En este caso se comparan 8 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -245,6 +247,279 @@ Un canal de datos roto no da errores: da cifras ligeramente distintas que nadie 
 2. ¿Por qué los borrados son invisibles en ese enfoque y no en la captura desde el registro?
 3. ¿Qué ocurre si el consumidor de una ranura de replicación se detiene una semana?
 4. Da una transformación tuya que hoy sería imposible corregir retroactivamente, y cómo lo arreglarías.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cargar el mismo lote dos veces y que el destino no se entere
+
+Todo proceso de integración se reintenta: la red falla, el trabajo se cae a
+mitad, alguien lo relanza «por si acaso». Si cargar dos veces el mismo lote
+duplica las filas, el sistema es una bomba de relojería. Por eso la
+propiedad que define una carga bien hecha no es la velocidad: es la
+**idempotencia**.
+
+El caso carga tres clientes y **repite la carga entera** con el mismo lote.
+El destino tiene que quedar con tres filas y los mismos saldos, no con seis.
+La forma de conseguirlo es la misma en todas partes —escribir por clave, no
+añadir— y lo que cambia es cómo se llama en cada motor y qué pasa cuando la
+clave no basta.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| cliente | saldo |
+|---|---|
+| `C-1` | `10` |
+| `C-2` | `20` |
+| `C-3` | `30` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 056`: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/sql-insert.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_upsert.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/statements/insert) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/changeStreams/) |
+| ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/replacingmergetree) |
+| Apache Kafka | **no** | — | — | [doc oficial](https://kafka.apache.org/documentation/#semantics) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/sadd/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-insert.html
+-- nota: la captura de cambios de PostgreSQL sale del WAL por decodificacion
+--       logica, sin disparadores ni consultas periodicas:
+--         CREATE PUBLICATION integracion FOR TABLE destino;
+--         SELECT pg_create_logical_replication_slot('cdc', 'pgoutput');
+--       Y el aviso que cuesta un incidente: una RANURA que nadie consume
+--       retiene el WAL indefinidamente y llena el disco del primario. Vigilar
+--       pg_replication_slots forma parte de operar una integracion.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS destino;
+
+CREATE TABLE destino (
+    cliente text PRIMARY KEY,
+    saldo   integer NOT NULL
+);
+
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+-- === consulta ===
+SELECT cliente, saldo FROM destino ORDER BY cliente;
+```
+
+- **Por qué sí:** `INSERT ... ON CONFLICT DO UPDATE` resuelve la carga idempotente en una sentencia, y su **decodificación lógica** convierte al WAL en una fuente de captura de cambios: Debezium y compañía leen de ahí sin consultar la base ni añadir disparadores.
+- **Por qué no:** Esa captura obliga a gestionar las **ranuras de réplica**: una ranura que nadie consume retiene el WAL indefinidamente y llena el disco del primario. Es la avería clásica de una integración abandonada.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/sql-insert.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html
+-- nota: la trampa de esta clausula: se dispara con CUALQUIER clave unica, no
+--       solo con la que se tenia en mente. Si la tabla tuviera ademas
+--       UNIQUE(correo), una fila con cliente nuevo y correo repetido
+--       actualizaria la fila del correo, no insertaria: la carga «idempotente»
+--       machacaria un registro distinto del esperado, en silencio.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS destino;
+
+CREATE TABLE destino (
+    cliente VARCHAR(20) PRIMARY KEY,
+    saldo   INT NOT NULL
+) ENGINE=InnoDB;
+
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON DUPLICATE KEY UPDATE saldo = VALUES(saldo);
+
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON DUPLICATE KEY UPDATE saldo = VALUES(saldo);
+
+-- === consulta ===
+SELECT cliente, saldo FROM destino ORDER BY cliente;
+```
+
+- **Por qué sí:** `INSERT ... ON DUPLICATE KEY UPDATE` hace lo mismo, y el registro binario en formato de fila (`ROW`) es una fuente de captura de cambios madura y muy usada.
+- **Por qué no:** `ON DUPLICATE KEY UPDATE` se dispara con **cualquier** clave única, no solo con la que se esperaba: con dos restricciones únicas, la sentencia puede actualizar una fila distinta de la que se pretendía, en silencio.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_upsert.html
+-- nota: la carga se ejecuta DOS VECES a proposito, con el mismo lote. Si en vez
+--       de ON CONFLICT hubiera un INSERT normal, la segunda pasada fallaria por
+--       clave duplicada; con INSERT OR IGNORE no fallaria pero tampoco
+--       actualizaria los saldos cambiados. El upsert es lo unico que hace las
+--       dos cosas bien.
+
+-- === preparacion ===
+CREATE TABLE destino (
+    cliente TEXT PRIMARY KEY,
+    saldo   INTEGER NOT NULL
+);
+
+-- Primera pasada.
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+-- Segunda pasada: EL MISMO LOTE. Alguien relanzo el trabajo.
+INSERT INTO destino (cliente, saldo) VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+-- === consulta ===
+SELECT cliente, saldo FROM destino ORDER BY cliente;
+```
+
+- **Por qué sí:** Tiene la misma cláusula `ON CONFLICT DO UPDATE` con la sintaxis de PostgreSQL: la idempotencia se puede estudiar y probar sin infraestructura.
+- **Por qué no:** No hay captura de cambios: para saber qué cambió hay que compararlo todo, o llevar una columna de marca de tiempo y confiar en que nadie la olvide al escribir.
+- 📄 Documentación oficial: <https://sqlite.org/lang_upsert.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/insert
+-- nota: la T de ELT. En un proceso real, el origen no seria un VALUES sino un
+--       fichero leido directamente:
+--         INSERT INTO destino SELECT * FROM read_csv_auto('lote.csv')
+--         ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+-- === preparacion ===
+CREATE TABLE destino (
+    cliente VARCHAR PRIMARY KEY,
+    saldo   INTEGER NOT NULL
+);
+
+INSERT INTO destino VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+INSERT INTO destino VALUES ('C-1', 10), ('C-2', 20), ('C-3', 30)
+ON CONFLICT (cliente) DO UPDATE SET saldo = excluded.saldo;
+
+-- === consulta ===
+SELECT cliente, saldo FROM destino ORDER BY cliente;
+```
+
+- **Por qué sí:** Es la herramienta natural de la **T** de ELT: transforma leyendo directamente ficheros CSV o Parquet, y admite el mismo `ON CONFLICT`. Buena parte de los procesos que antes exigían un clúster caben aquí.
+- **Por qué no:** No es un destino operativo ni un orquestador: no hay reintentos, ni registro de ejecuciones, ni gestión de dependencias entre tareas. Es el motor de transformación, no el proceso.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/statements/insert>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/changeStreams/
+// nota: la captura de cambios aqui son los FLUJOS DE CAMBIOS, con reanudacion
+//       por testigo:
+//         const flujo = db.destino.watch([], { resumeAfter: testigo });
+//       Y su limite: el testigo caduca con el oplog. Si el consumidor esta
+//       parado mas tiempo del que cubre el oplog, no puede reanudar y hay que
+//       recargarlo todo. Dimensionar el oplog es parte del diseno.
+
+// === preparacion ===
+db.destino.drop();
+
+const lote = [
+  { cliente: "C-1", saldo: 10 },
+  { cliente: "C-2", saldo: 20 },
+  { cliente: "C-3", saldo: 30 },
+];
+
+function cargar(lote) {
+  for (const fila of lote) {
+    db.destino.updateOne(
+      { _id: fila.cliente },
+      { $set: { saldo: fila.saldo } },
+      { upsert: true },
+    );
+  }
+}
+
+cargar(lote);
+cargar(lote); // el mismo lote, otra vez
+
+// === consulta ===
+db.destino
+  .find()
+  .sort({ _id: 1 })
+  .forEach((d) => print(d._id + "|" + d.saldo));
+```
+
+- **Por qué sí:** `updateOne` con `upsert: true` es idempotente por definición, y los **flujos de cambios** (`watch`) dan captura de cambios con reanudación por testigo: se puede retomar exactamente donde se dejó tras una caída.
+- **Por qué no:** Ese testigo de reanudación caduca con el registro de operaciones: si el consumidor está parado más tiempo del que cubre el `oplog`, no puede reanudar y hay que **recargarlo todo**. Dimensionar el `oplog` es parte del diseño de la integración.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/changeStreams/>
+
+#### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/replacingmergetree
+-- nota: implementacion declarada. Aqui la idempotencia se consigue SIN UPDATE:
+--       se insertan siempre filas nuevas con una version, y la fusion se queda
+--       con la ultima. Encaja con un almacen que solo sabe anadir.
+--       El precio, que hay que tener presente: la deduplicacion ocurre CUANDO
+--       LA FUSION DECIDE, no al insertar. Hasta entonces conviven las dos
+--       versiones y una consulta puede contarlas las dos. De ahi el FINAL de
+--       abajo, que fuerza la vista deduplicada y es caro.
+
+-- === preparacion ===
+CREATE TABLE destino (
+    cliente String,
+    saldo   UInt32,
+    version UInt64
+) ENGINE = ReplacingMergeTree(version) ORDER BY cliente;
+
+INSERT INTO destino VALUES ('C-1', 10, 1), ('C-2', 20, 1), ('C-3', 30, 1);
+INSERT INTO destino VALUES ('C-1', 10, 1), ('C-2', 20, 1), ('C-3', 30, 1);
+
+-- === consulta ===
+SELECT cliente, saldo FROM destino FINAL ORDER BY cliente;
+```
+
+- **Por qué sí:** Su motor `ReplacingMergeTree` da idempotencia sin `UPDATE`: se insertan siempre filas nuevas con una versión, y la fusión se queda con la última. Encaja con un almacén que solo sabe añadir.
+- **Por qué no:** La deduplicación ocurre **cuando la fusión decide**, no al insertar: hasta entonces conviven las dos versiones y una consulta puede contarlas las dos. Hay que escribir `FINAL` —que es caro— o agregar de forma que los duplicados no importen.
+- 📄 Documentación oficial: <https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/replacingmergetree>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Kafka | No es un destino donde cargar ni un motor donde consultar: es el registro por el que viajan los cambios. La idempotencia de esta clase se resuelve en el consumidor, no en él. | El **patrón de bandeja de salida**: cada servicio escribe el cambio y el evento en la misma transacción local, y un conector de captura de cambios lee el registro del motor y lo publica. Así nunca hay un cambio sin evento ni un evento sin cambio, que es el fallo que hunde a las integraciones escritas a mano. | [doc](https://kafka.apache.org/documentation/#semantics) |
+| Redis | `SET` es idempotente de forma trivial, así que el caso no enseña nada aquí: escribir dos veces la misma clave con el mismo valor deja el mismo estado por construcción. | Donde sí aporta es como **registro de lotes ya procesados** (`SADD lotes:procesados <id>`), que es la forma más barata de que un reintento no vuelva a aplicar lo que ya se aplicó. | [doc](https://redis.io/docs/latest/commands/sadd/) |
 
 ---
 
