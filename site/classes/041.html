@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>índice parcial</code> · <code>índice de expresión</code> · <code>GIN</code> · <code>BRIN</code> · <code>costo de mantenimiento</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Salir del B-Tree. Hay consultas —contención de arreglos, texto, rangos, geometría, tablas enormes correlacionadas— para las que existe una estructura mucho mejor, y saber cuál evita rediseños innecesarios.</p>
@@ -334,6 +335,319 @@ CREATE INDEX eventos_carga ON eventos USING gin (carga jsonb_path_ops);
 <li>Da una consulta de tu dominio que solo un GIN pueda acelerar.</li>
 <li>Calcula el ahorro de convertir en parcial uno de tus índices, con cifras reales.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Indexar solo lo que se consulta: los dos pedidos pendientes de seis</p>
+<p>El índice B-Tree completo no siempre es la respuesta. Cuando la consulta
+caliente mira <strong>una fracción pequeña</strong> de la tabla —los pedidos pendientes,
+las filas no borradas, los usuarios activos—, un índice parcial indexa solo
+esas filas: ocupa una fracción, se mantiene en una fracción de las
+escrituras y cabe entero en memoria.</p>
+<p>El caso tiene seis pedidos de los que dos están pendientes, y pide esos dos
+ordenados por fecha. El resultado es trivial; lo que se compara es qué
+índice puede construir cada motor para responderlo sin tocar los otros
+cuatro, y qué hacen los que no tienen índices parciales.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>pedido</th>
+<th>fecha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>P-2</code></td>
+<td><code>2026-08-02</code></td>
+</tr>
+<tr>
+<td><code>P-5</code></td>
+<td><code>2026-08-05</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 041</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/partialindex.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-partial/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/indexes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-usage.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/zadd/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/indexes-types.html
+-- nota: el indice de abajo es PARCIAL y ademas CUBRIENTE: con INCLUDE (id), el
+--       plan pasa a «Index Only Scan» y no toca la tabla en ningun momento.
+--       El resto del catalogo, para tenerlo a la vista:
+--         GIN   arreglos, jsonb, busqueda de texto
+--         GiST  geometria, rangos, vecino mas cercano
+--         BRIN  tablas enormes ya ordenadas por la columna (fechas, series)
+--         HASH  solo igualdad, sin orden ni rangos
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    estado text NOT NULL,
+    fecha  text NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+CREATE INDEX pedidos_pendientes ON pedidos (fecha) INCLUDE (id)
+    WHERE estado = 'pendiente';
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene el catálogo más completo y cada tipo resuelve un problema distinto: <strong>parcial</strong> para subconjuntos, <code>INCLUDE</code> para cubrir la consulta sin ir a la tabla, <strong>GIN</strong> para arreglos y texto, <strong>GiST</strong> para geometría y rangos, <strong>BRIN</strong> para tablas enormes y ordenadas por naturaleza, y <strong>hash</strong> para igualdad pura.</li>
+<li><strong>Por qué no:</strong> Elegir mal es fácil y sale caro: BRIN sobre datos desordenados no descarta nada, hash no sirve para rangos ni para ordenar, y cada índice de más se paga en cada escritura. Y un índice parcial solo se usa si el planificador puede <strong>demostrar</strong> que la consulta implica su predicado.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-types.html">https://www.postgresql.org/docs/current/indexes-types.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/partialindex.html
+-- nota: el indice tiene DOS entradas, no seis. En una tabla de diez millones de
+--       pedidos con mil pendientes, la diferencia entre el indice completo y el
+--       parcial es de cuatro ordenes de magnitud, y el parcial cabe en memoria.
+--       Para comprobar que se usa: EXPLAIN QUERY PLAN delante de la consulta.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    estado TEXT NOT NULL,
+    fecha  TEXT NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+CREATE INDEX pedidos_pendientes ON pedidos (fecha) WHERE estado = 'pendiente';
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene índices parciales y por expresión, que es casi todo lo que hace falta: el índice de los pendientes ocupa dos entradas en vez de seis, y en una tabla real la diferencia es de órdenes de magnitud.</li>
+<li><strong>Por qué no:</strong> No hay GIN, ni GiST, ni BRIN, ni cubrientes explícitos: para buscar dentro de un JSON o por geometría hay que extraer a una columna e indexar esa, o recurrir a extensiones como R-Tree.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/partialindex.html">https://sqlite.org/partialindex.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+-- nota: MySQL NO tiene indices parciales. El rodeo estandar es una columna
+--       generada que vale NULL en las filas que no interesan —los NULL no
+--       ocupan entrada util en el arbol— e indexarla junto a la fecha. Funciona,
+--       y hay que explicarlo cada vez que alguien lee el esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     VARCHAR(10) PRIMARY KEY,
+    estado VARCHAR(20) NOT NULL,
+    fecha  VARCHAR(10) NOT NULL,
+    fecha_pendiente VARCHAR(10)
+        AS (IF(estado = 'pendiente', fecha, NULL)) STORED,
+    KEY pedidos_pendientes (fecha_pendiente)
+) ENGINE=InnoDB;
+
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene índices por prefijo —útiles en columnas de texto largas—, multivaluados sobre JSON y espaciales con R-Tree, y su optimizador aplica «índice cubriente» cuando el índice contiene todas las columnas pedidas.</li>
+<li><strong>Por qué no:</strong> <strong>No tiene índices parciales</strong>. La única forma de acercarse es una columna generada que valga <code>NULL</code> para las filas que no interesan e indexarla, un rodeo que hay que explicar cada vez que alguien lo lee.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">https://dev.mysql.com/doc/refman/8.4/en/create-index.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-partial/
+// nota: el indice parcial solo se usa si la consulta INCLUYE su predicado. Si
+//       la consulta pidiera { estado: { $in: [&quot;pendiente&quot;, &quot;enviado&quot;] } }, el
+//       motor no puede demostrar que implica el filtro del indice y lo ignora
+//       en silencio: no hay aviso, solo una consulta mas lenta.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertMany([
+  { _id: &quot;P-1&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-01&quot; },
+  { _id: &quot;P-2&quot;, estado: &quot;pendiente&quot;, fecha: &quot;2026-08-02&quot; },
+  { _id: &quot;P-3&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-03&quot; },
+  { _id: &quot;P-4&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-04&quot; },
+  { _id: &quot;P-5&quot;, estado: &quot;pendiente&quot;, fecha: &quot;2026-08-05&quot; },
+  { _id: &quot;P-6&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-06&quot; },
+]);
+db.pedidos.createIndex(
+  { fecha: 1 },
+  { partialFilterExpression: { estado: &quot;pendiente&quot; } },
+);
+
+// === consulta ===
+db.pedidos
+  .find({ estado: &quot;pendiente&quot; }, { _id: 1, fecha: 1 })
+  .sort({ fecha: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.fecha));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>partialFilterExpression</code> es el índice parcial con otro nombre, y además tiene índices dispersos, TTL, geoespaciales, de texto y hasta con recolección diferida (<code>hidden</code>) para probar si un índice hace falta antes de borrarlo.</li>
+<li><strong>Por qué no:</strong> Un índice parcial solo se usa si la consulta <strong>incluye</strong> su predicado: si la consulta pide <code>estado: "pendiente"</code> y el índice se creó sobre <code>estado: {$eq: "pendiente"}</code>, la coincidencia tiene que ser exacta o el índice se ignora en silencio.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-partial/">https://www.mongodb.com/docs/manual/core/index-partial/</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/indexes.html
+-- nota: aqui no se crea ningun indice, y es a proposito. Cada grupo de filas
+--       guarda el minimo y el maximo de cada columna, asi que descartar bloques
+--       enteros es gratis: es la idea de BRIN aplicada por omision a todo.
+--       Con una condicion: los datos tienen que estar ORDENADOS por la columna
+--       que se filtra. Si no, no se descarta nada.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    estado VARCHAR NOT NULL,
+    fecha  VARCHAR NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Está aquí para mostrar la alternativa a los índices: no los necesita porque cada grupo de filas guarda los valores mínimo y máximo de cada columna, así que descartar bloques enteros es gratis. Es la misma idea que BRIN, aplicada por omisión a todo.</li>
+<li><strong>Por qué no:</strong> Esa técnica solo funciona si los datos están <strong>ordenados</strong> por la columna que se filtra: sobre datos desordenados no descarta nada, exactamente igual que un BRIN mal usado.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/indexes.html">https://duckdb.org/docs/stable/sql/indexes.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>Su índice secundario es local a cada nodo, así que una consulta por él pregunta a todo el anillo. Y sobre una columna de baja cardinalidad como <code>estado</code>, cada nodo devolvería muchísimas filas: es el antipatrón documentado.</td>
+<td>Una tabla <code>pedidos_pendientes</code> con <code>estado</code> como clave de partición y la fecha como agrupamiento, alimentada por la aplicación y vaciada al entregar: el índice parcial construido a mano.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-usage.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay índices que crear sobre datos ya escritos: la estructura de acceso se decide al escribir y no hay forma de añadir otra después sin recorrer todo el espacio de claves.</td>
+<td>Un conjunto ordenado <code>pedidos:pendientes</code> con la fecha como puntuación, del que se saca el pedido al entregarlo. Es literalmente un índice parcial mantenido a mano, con la ventaja de que se lee en microsegundos y el inconveniente de que hay que acordarse de mantenerlo.</td>
+<td><a href="https://redis.io/docs/latest/commands/zadd/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

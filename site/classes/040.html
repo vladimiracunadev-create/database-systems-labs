@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code>, <code>redis</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>memtable</code> · <code>SSTable</code> · <code>compactación</code> · <code>amplificación de escritura</code> · <code>filtro de Bloom</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender la otra gran familia de estructuras de almacenamiento. El LSM-Tree sostiene Cassandra, RocksDB, ScyllaDB y LevelDB, y su compromiso es el inverso al del B-Tree.</p>
@@ -282,6 +283,149 @@ tras compactación completa         700 MB
 <li>Explica por qué borrar puede aumentar el espacio ocupado y ralentizar las lecturas.</li>
 <li>¿Qué estrategia de compactación elegirías para datos con TTL de 30 días, y por qué?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Escribir rápido y pagarlo después, o escribir despacio y no pagarlo</p>
+<p>Un árbol B modifica la página donde está la fila: la escritura es una
+lectura, un cambio y una escritura en un sitio concreto del disco. Un árbol
+LSM no modifica nada: acumula en memoria, vuelca archivos <strong>inmutables</strong>
+ordenados y los fusiona después en segundo plano. La escritura se vuelve
+secuencial y barata; la lectura puede tener que mirar en varios archivos, y
+la fusión consume entrada y salida para siempre.</p>
+<p>De ahí las tres amplificaciones que hay que saber nombrar: de <strong>escritura</strong>
+(cada byte se reescribe varias veces al compactar), de <strong>lectura</strong> (una
+consulta toca varios archivos) y de <strong>espacio</strong> (conviven versiones y datos
+borrados que aún no se han retirado). Ninguna estructura las minimiza las
+tres: elegir es decidir cuál se paga.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">doc oficial</a></td>
+</tr>
+<tr>
+<td>ScyllaDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/lang_vacuum.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> LSM puro. Escribe en el registro de compromiso y en una tabla en memoria, vuelca SSTables inmutables y las compacta con la estrategia que se elija: por tamaño (<code>STCS</code>), por niveles (<code>LCS</code>) o por ventana temporal (<code>TWCS</code>). Esa elección es la decisión de operación más importante del motor.</li>
+<li><strong>Por qué sí:</strong> La escritura no lee nada antes: es secuencial y de latencia muy predecible, y por eso Cassandra ingiere volúmenes que un árbol B no aguantaría en una sola máquina.</li>
+<li><strong>Por qué no:</strong> Se paga en lectura y en fusión. Con <code>STCS</code> la amplificación de espacio puede llegar a exigir el doble de disco libre para compactar; con <code>LCS</code> baja la amplificación de lectura y sube mucho la de escritura. Y los datos borrados no desaparecen: son lápidas que hay que recorrer hasta la compactación.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/</a></li>
+</ul>
+<h4 id="scylladb">ScyllaDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> El mismo modelo LSM con las mismas estrategias, más una propia (<code>Incremental</code>) pensada para reducir el espacio libre necesario, y con la compactación planificada por su propio programador de entrada y salida en vez de competir con las consultas.</li>
+<li><strong>Por qué sí:</strong> Controlar el reparto de entrada y salida entre consultas y compactación es justo lo que evita el síntoma clásico: la latencia que se dispara cada vez que empieza una compactación grande.</li>
+<li><strong>Por qué no:</strong> Sigue siendo un LSM: las tres amplificaciones están ahí. Lo que cambia es quién decide cuándo se paga, no si se paga.</li>
+<li>📄 Documentación oficial: <a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">https://opensource.docs.scylladb.com/stable/kb/compaction.html</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> No tiene ninguna de las dos estructuras: los datos viven en memoria. Su persistencia AOF, sin embargo, <strong>es</strong> un registro que crece y que hay que reescribir periódicamente para compactarlo, con el mismo dilema de fondo.</li>
+<li><strong>Por qué sí:</strong> Enseña la idea desnuda: un registro que solo crece necesita, tarde o temprano, un proceso que lo reescriba. Eso es la compactación, sin árbol de por medio.</li>
+<li><strong>Por qué no:</strong> La reescritura del AOF la hace un proceso hijo que duplica memoria por copia al escribir: en el peor momento —mucha escritura— es cuando más memoria hace falta, que es exactamente cuando menos hay.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> WiredTiger usa un árbol B con escritura en un espacio nuevo: los bloques modificados no se sobrescriben en su sitio, se escriben en otro y se publican en el siguiente punto de control. Es un punto intermedio entre las dos familias.</li>
+<li><strong>Por qué sí:</strong> Evita la escritura parcial de páginas sin necesitar un búfer de doble escritura, y permite comprimir cada bloque por separado.</li>
+<li><strong>Por qué no:</strong> Deja bloques huérfanos que hay que recuperar, así que el espacio en disco no baja al borrar datos hasta que se compacta: la amplificación de espacio del LSM reaparece con otro nombre.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
+</ul>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio, y MVCC encima: un <code>UPDATE</code> no modifica la fila, escribe una versión nueva y deja la vieja muerta. La limpieza la hace <code>VACUUM</code>.</li>
+<li><strong>Por qué sí:</strong> La lectura por clave toca un solo camino del árbol: la amplificación de lectura es la mínima posible, y el plan es fácil de predecir.</li>
+<li><strong>Por qué no:</strong> Su amplificación de escritura es alta y poco visible: un <code>UPDATE</code> puede escribir en todos los índices de la tabla, y si la página está limpia desde el último punto de control, el WAL guarda la <strong>página entera</strong> (<code>full_page_writes</code>), no solo el cambio.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">https://www.postgresql.org/docs/current/routine-vacuuming.html</a></li>
+</ul>
+<h4 id="sqlite">SQLite</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio y sin recolección de versiones: al borrar, el espacio queda en una lista de páginas libres que se reutiliza, y solo <code>VACUUM</code> devuelve el archivo a su tamaño mínimo.</li>
+<li><strong>Por qué sí:</strong> Es el modelo más simple y predecible: sin compactación de fondo, sin procesos auxiliares y sin sorpresas de latencia.</li>
+<li><strong>Por qué no:</strong> Sin compactación de fondo, la fragmentación se acumula y el archivo no encoge solo. En dispositivos con almacenamiento limitado, ese <code>VACUUM</code> olvidado es una avería real.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_vacuum.html">https://sqlite.org/lang_vacuum.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>Su almacenamiento no pertenece a ninguna de las dos familias: guarda grupos de filas por columnas, comprimidos, pensados para escribirse una vez y leerse muchas. La pregunta de esta clase —cómo se absorbe la escritura aleatoria constante— no es la suya.</td>
+<td>Se estudia donde le corresponde, en la parte de analítica columnar, donde la pregunta es cuántos bytes hay que leer y no cuántas veces se reescriben.</td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

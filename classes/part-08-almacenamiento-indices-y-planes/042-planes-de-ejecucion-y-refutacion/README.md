@@ -8,6 +8,8 @@ Parte 08 — Almacenamiento, índices y planes · Avanzado ·
 
 **Conceptos centrales:** `optimizador por costos` · `estadística` · `estimación de cardinalidad` · `costo frente a tiempo`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -230,6 +232,379 @@ Un plan que degrada tras un despliegue suele deberse a una carga masiva sin `ANA
 2. Explica por qué el planificador subestima con columnas correlacionadas y cómo se corrige.
 3. ¿Qué significa `Heap Fetches` distinto de cero en un barrido de índice?
 4. Da una hipótesis tuya que resultó refutada y qué hiciste con el cambio.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Tres consultas que devuelven lo mismo y no cuestan lo mismo
+
+Un plan de ejecución no se lee para admirarlo: se lee para **refutar una
+hipótesis**. «Esta consulta es lenta porque falta un índice» es una hipótesis,
+y el plan es lo que la confirma o la tumba. Sin esa disciplina, optimizar
+consiste en añadir índices hasta que algo mejore.
+
+El caso pregunta quién tiene al menos una inscripción, y admite tres
+formulaciones equivalentes: reunión con `DISTINCT`, `IN` con subconsulta y
+semirreunión con `EXISTS`. Las tres devuelven las mismas dos filas —eso lo
+garantiza el álgebra relacional— y ninguna cuesta lo mismo. Cuál gana no se
+decide leyendo el SQL: se decide midiendo, y cada implementación trae al lado
+la orden exacta con la que se mide en ese motor.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| nombre |
+|---|
+| `Ada` |
+| `Linus` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 042`: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/using-explain.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/explain.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/eqp.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/guides/meta/explain_analyze.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/reference/explain-results/) |
+| Apache Cassandra | sí | declarado | [código](implementaciones/cassandra/consulta.cql) | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/slowlog-get/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/using-explain.html
+-- nota: como se mide aqui:
+--         EXPLAIN (ANALYZE, BUFFERS) SELECT ...
+--       Lo que hay que mirar, en este orden:
+--         1. «rows=X ... actual rows=Y»: si X e Y difieren en un orden de
+--            magnitud, el problema son las ESTADISTICAS, no el indice.
+--         2. «Rows Removed by Filter»: trabajo hecho y tirado.
+--         3. «shared read» frente a «shared hit»: cuanto vino del disco.
+--       Y un aviso: ANALYZE EJECUTA la consulta. Sobre un UPDATE o un DELETE
+--       hay que envolverlo en BEGIN ... ROLLBACK.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -> multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -> el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** `EXPLAIN (ANALYZE, BUFFERS)` es el mejor instrumento de esta lista: da coste estimado **y** tiempo real, filas estimadas **y** filas reales —cuando divergen mucho, el problema son las estadísticas y no el índice— y cuántos bloques vinieron de la caché y cuántos del disco.
+- **Por qué no:** `ANALYZE` **ejecuta la consulta**: sobre un `UPDATE` o un `DELETE` hay que envolverlo en una transacción y deshacerla, o se aplica de verdad. Es un error que se comete una sola vez en producción.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/using-explain.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/explain.html
+-- nota: como se mide aqui:
+--         EXPLAIN ANALYZE SELECT ...        (8.0.18 y posteriores, con tiempos)
+--         EXPLAIN FORMAT=JSON SELECT ...    (el coste que calculo el optimizador)
+--       La columna `rows` del EXPLAIN clasico es una ESTIMACION, no un hecho:
+--       se lee como si fuera un dato medido y no lo es.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -> multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -> el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** Desde 8.0.18 tiene `EXPLAIN ANALYZE` con tiempos reales, y `EXPLAIN FORMAT=JSON` expone el coste que calculó el optimizador para cada alternativa.
+- **Por qué no:** La columna `rows` del `EXPLAIN` clásico es una **estimación** que la gente lee como si fuera un hecho, y sus estadísticas son mucho más pobres que las de PostgreSQL: se muestrean pocas páginas del índice y se recalculan en momentos difíciles de predecir.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/explain.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/eqp.html
+-- nota: como se mide aqui:
+--         EXPLAIN QUERY PLAN SELECT ...
+--       Dos lineas y una pregunta: SCAN o SEARCH. No hay coste ni tiempo, asi
+--       que no se pueden comparar dos planes por numero; solo por forma.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -> multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -> el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** `EXPLAIN QUERY PLAN` cabe en dos líneas y dice lo único que suele importar: si hubo `SCAN` o `SEARCH ... USING INDEX`. Para aprender a leer planes es el mejor punto de partida, porque no hay ruido.
+- **Por qué no:** No da coste ni tiempo ni filas: no se puede comparar dos planes por número, solo por forma. Y como el planificador tiene pocas opciones, no enseña a diagnosticar los casos difíciles.
+- 📄 Documentación oficial: <https://sqlite.org/eqp.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/guides/meta/explain_analyze.html
+-- nota: como se mide aqui:
+--         EXPLAIN ANALYZE SELECT ...
+--       Dibuja el arbol con el tiempo de cada operador. Aviso: el optimizador
+--       reescribe tanto que este EXISTS acabara convertido en una reunion, y el
+--       plan no se parecera a lo escrito.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -> multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -> el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+```
+
+- **Por qué sí:** `EXPLAIN ANALYZE` dibuja el árbol de operadores con el tiempo de cada uno y las filas que pasaron: es la forma más legible de ver dónde se va el tiempo de una consulta analítica.
+- **Por qué no:** Su optimizador reescribe tanto —descorrelación, empuje de filtros, reordenación de reuniones— que el plan casi nunca se parece a la consulta escrita, y eso confunde a quien está aprendiendo a relacionar ambas cosas.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/guides/meta/explain_analyze.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/explain-results/
+// nota: como se mide aqui:
+//         db.estudiantes.aggregate([...]).explain("executionStats")
+//       Las tres cifras que resuelven casi todo:
+//         nReturned            lo que devolvio
+//         totalKeysExamined    entradas de indice leidas
+//         totalDocsExamined    documentos leidos
+//       Si los dos ultimos son mucho mayores que el primero, se lee de mas.
+//       Y recordar que el plan ganador queda CACHEADO: la consulta puede
+//       degradarse meses despues sin que el codigo haya cambiado.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.inscripciones.drop();
+db.estudiantes.insertMany([
+  { _id: "Ada" }, { _id: "Linus" }, { _id: "Grace" },
+]);
+db.inscripciones.insertMany([
+  { estudiante: "Ada", curso: "DB-101" },
+  { estudiante: "Ada", curso: "SE-201" },
+  { estudiante: "Linus", curso: "DB-101" },
+]);
+db.inscripciones.createIndex({ estudiante: 1 });
+
+// === consulta ===
+// La forma barata: agrupar por estudiante en la coleccion PEQUENA de las
+// inscripciones, en vez de recorrer los estudiantes buscando cada uno.
+db.inscripciones
+  .aggregate([
+    { $group: { _id: "$estudiante" } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) => print(d._id));
+```
+
+- **Por qué sí:** `explain("executionStats")` da las tres cifras que resuelven casi todo: `nReturned`, `totalKeysExamined` y `totalDocsExamined`. Si el segundo o el tercero son mucho mayores que el primero, se está leyendo de más, y ahí está el diagnóstico.
+- **Por qué no:** Su planificador prueba varios planes y **cachea el ganador**: la consulta puede ir bien meses y degradarse cuando la distribución cambia, sin que nada haya cambiado en el código. Diagnosticarlo exige acordarse de que la caché de planes existe.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/reference/explain-results/>
+
+#### Apache Cassandra · [`implementaciones/cassandra/consulta.cql`](implementaciones/cassandra/consulta.cql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html
+-- nota: implementacion declarada. Aqui no hay plan que leer porque no hay
+--       optimizador que elija: la consulta hace lo que el modelo permite. Lo que
+--       si hay es TRACING, que muestra la traza DISTRIBUIDA:
+--         - que nodo coordino la consulta
+--         - a que replicas pregunto y cuanto tardo cada una
+--         - cuantas SSTables se abrieron
+--         - cuantas lapidas se recorrieron  <- el diagnostico mas util del motor
+--
+--       Y la consecuencia incomoda: si va lenta, la culpa es del modelo de
+--       datos. El diagnostico es barato; la correccion es crear otra tabla y
+--       migrar los datos.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.inscripciones_por_estudiante;
+
+CREATE TABLE escuela.inscripciones_por_estudiante (
+    estudiante text,
+    curso      text,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'DB-101');
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'SE-201');
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Linus', 'DB-101');
+
+-- === consulta ===
+TRACING ON;
+SELECT DISTINCT estudiante FROM escuela.inscripciones_por_estudiante;
+TRACING OFF;
+```
+
+- **Por qué sí:** `TRACING ON` no muestra un plan —no hay optimizador que elija— sino la **traza distribuida** de la consulta: qué nodo coordinó, a qué réplicas preguntó, cuántas SSTables se abrieron y cuántas lápidas se recorrieron. Para diagnosticar este motor, esa información vale más que un plan.
+- **Por qué no:** Precisamente porque no hay optimizador, no hay nada que refutar sobre la consulta: si va lenta, la culpa es del modelo de datos, y arreglarlo significa crear otra tabla y migrar. El diagnóstico es barato; la corrección, no.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | No hay planes: cada orden tiene una complejidad fija y documentada, y está escrita en su página de referencia. `SMEMBERS` es O(N) y siempre lo será; no hay optimizador que pueda cambiarlo. | La disciplina equivalente es leer la complejidad en la documentación antes de usar la orden, y vigilar el registro de órdenes lentas (`SLOWLOG GET`), que delata las que bloquearon el hilo único. | [doc](https://redis.io/docs/latest/commands/slowlog-get/) |
 
 ---
 

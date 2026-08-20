@@ -8,6 +8,8 @@ Parte 08 — Almacenamiento, índices y planes · Intermedio ·
 
 **Conceptos centrales:** `B-Tree` · `prefijo más a la izquierda` · `selectividad` · `índice cubriente`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -243,6 +245,278 @@ Los índices se acumulan: cada incidencia añade uno y nadie retira los anterior
 2. ¿Por qué un índice sobre `(a, b)` no sirve para `WHERE b = 2`?
 3. Explica por qué un rango impide aprovechar las columnas posteriores.
 4. Da una consulta tuya donde el índice cubriente compense y otra donde no.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Igualdad primero, rango después: por qué el orden de las columnas del índice decide todo
+
+Un índice B-Tree ordena las filas por la concatenación de sus columnas, en
+el orden en que se declararon. De ahí sale la única regla de diseño de
+índices que hay que recordar: **las columnas de igualdad van primero, la de
+rango va al final**, y después de una columna de rango el índice deja de
+poder acotar nada.
+
+El caso pide los alumnos de DB-101 con nota entre 60 y 90. Con el índice
+`(curso, nota)`, el motor entra por la igualdad y recorre un rango contiguo:
+lee exactamente las filas que devuelve. Con `(nota, curso)` tendría que
+recorrer todas las notas entre 60 y 90 de **todos** los cursos y descartar
+después. El resultado es idéntico en los dos casos; el trabajo, no.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| estudiante | nota |
+|---|---|
+| `Bob` | `61` |
+| `Grace` | `72` |
+| `Ada` | `90` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 039`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/optoverview.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/indexes.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/indexes-multicolumn.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/zrangebyscore/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/optoverview.html
+-- nota: para comprobarlo, anteponer EXPLAIN QUERY PLAN a la consulta:
+--         SEARCH notas USING INDEX notas_curso_nota (curso=? AND nota>? AND nota<?)
+--       Con el indice creado como (nota, curso) la misma linea diria
+--         SEARCH notas USING INDEX ... (nota>? AND nota<?)
+--       sin la igualdad: el motor recorreria las notas de TODOS los cursos.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+```
+
+- **Por qué sí:** `EXPLAIN QUERY PLAN` dice en una línea si hubo `SEARCH ... USING INDEX` o `SCAN`: es la forma más directa que existe de comprobar si el índice sirvió.
+- **Por qué no:** Su planificador solo usa **un** índice por tabla y no tiene reunión hash ni por fusión: las conclusiones sobre estrategias de índice no se transfieren a un motor grande.
+- 📄 Documentación oficial: <https://sqlite.org/optoverview.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/indexes.html
+-- nota: aqui el indice apenas cambia nada, y esa es la comparacion. El filtro se
+--       resuelve leyendo la columna comprimida y descartando bloques por sus
+--       valores minimo y maximo: no hay arbol que recorrer.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+```
+
+- **Por qué sí:** Sirve para ver el contraste: aquí el índice apenas importa, porque el filtro se resuelve leyendo la columna comprimida y descartando bloques por sus valores mínimo y máximo. El mismo problema, otra solución.
+- **Por qué no:** Sus índices ART están pensados para restricciones de unicidad y búsquedas muy selectivas, no para sostener planes: razonar sobre orden de columnas aquí no lleva a ninguna parte.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/indexes.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/indexes-multicolumn.html
+-- nota: la medicion que cierra la discusion:
+--         EXPLAIN (ANALYZE, BUFFERS) SELECT ...
+--       Con (curso, nota): «Index Cond» lleva las dos condiciones.
+--       Con (nota, curso): la igualdad baja a «Filter» y aparece
+--       «Rows Removed by Filter», que es exactamente el trabajo desperdiciado.
+--       Y con INCLUDE (estudiante) el indice cubre la consulta entera y el plan
+--       pasa a «Index Only Scan»: no se toca la tabla.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+```
+
+- **Por qué sí:** Es donde la regla se puede medir: `EXPLAIN (ANALYZE, BUFFERS)` muestra las filas leídas frente a las devueltas, y `Rows Removed by Filter` delata al índice con las columnas en mal orden. Además tiene índices cubrientes con `INCLUDE`, para responder sin ir a la tabla.
+- **Por qué no:** Cada índice es una estructura más que mantener en cada `INSERT`, `UPDATE` y `DELETE`, y en su modelo MVCC un `UPDATE` puede tener que escribir en **todos** los índices de la tabla aunque no cambie ninguna columna indexada.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/indexes-multicolumn.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html
+-- nota: EXPLAIN muestra key_len, que dice cuantos BYTES del indice se usaron.
+--       Si key_len solo cubre la primera columna, el motor no llego a acotar por
+--       la segunda, y ahi esta el diagnostico.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+```
+
+- **Por qué sí:** La regla es la misma y `EXPLAIN` muestra `key_len`, que dice **cuántos bytes del índice se usaron de verdad**: es la forma más precisa de comprobar hasta qué columna llegó a acotar el motor.
+- **Por qué no:** InnoDB organiza la tabla por la clave primaria, así que todo índice secundario guarda la clave primaria como puntero: una clave primaria ancha —un UUID en texto— engorda todos los índices de la tabla a la vez.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/
+// nota: la regla tiene nombre propio en la documentacion de MongoDB —«igualdad,
+//       orden, rango»— y es la misma de esta clase. Para medirla:
+//         db.notas.find(...).explain("executionStats")
+//       y comparar totalKeysExamined con nReturned: si el primero es mucho
+//       mayor, el indice esta en mal orden.
+
+// === preparacion ===
+db.notas.drop();
+db.notas.insertMany([
+  { estudiante: "Ada", curso: "DB-101", nota: 90 },
+  { estudiante: "Linus", curso: "DB-101", nota: 58 },
+  { estudiante: "Grace", curso: "DB-101", nota: 72 },
+  { estudiante: "Bob", curso: "DB-101", nota: 61 },
+  { estudiante: "Ada", curso: "SE-201", nota: 66 },
+  { estudiante: "Grace", curso: "SE-201", nota: 78 },
+]);
+db.notas.createIndex({ curso: 1, nota: 1 });
+
+// === consulta ===
+db.notas
+  .find({ curso: "DB-101", nota: { $gte: 60, $lte: 90 } },
+        { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ nota: 1, estudiante: 1 })
+  .forEach((d) => print(d.estudiante + "|" + d.nota));
+```
+
+- **Por qué sí:** La regla se llama aquí «igualdad, orden, rango» y está documentada con ese nombre: es la misma idea, y `explain("executionStats")` compara `totalKeysExamined` con `nReturned` para ver cuánto se leyó de más.
+- **Por qué no:** El límite de 64 índices por colección y el costo de mantenerlos en cada escritura son los mismos que en un relacional, con un agravante: sin esquema, es fácil acabar con índices sobre campos que solo existen en la mitad de los documentos.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Apache Cassandra | No hay índices que diseñar sobre una tabla existente: el orden lo fija la clave primaria al crearla, y cambiarlo significa crear otra tabla y reescribir los datos. La decisión de esta clase se toma una vez, al modelar, y no se puede corregir después. | La clave de agrupamiento **es** el índice: `PRIMARY KEY ((curso), nota, estudiante)` da exactamente el mismo acceso por igualdad y rango que el índice `(curso, nota)` de esta clase. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html) |
+| Redis | No hay índices sobre valores: el acceso es por clave. Un rango solo se puede pedir sobre la puntuación de un conjunto ordenado, y eso hay que haberlo previsto al escribir. | Un conjunto ordenado por curso (`notas:DB-101`) con la nota como puntuación, que da el mismo acceso por rango que el índice de esta clase, a cambio de mantener una estructura por criterio. | [doc](https://redis.io/docs/latest/commands/zrangebyscore/) |
 
 ---
 

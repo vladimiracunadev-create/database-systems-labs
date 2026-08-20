@@ -8,6 +8,8 @@ Parte 08 — Almacenamiento, índices y planes · Intermedio ·
 
 **Conceptos centrales:** `pagina` · `factor de bloque` · `buffer pool` · `localidad` · `lectura secuencial`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -210,6 +212,91 @@ Cuando una base «se pone lenta al crecer», casi siempre significa que el conju
 2. ¿Por qué 40 000 lecturas aleatorias pueden ser más lentas que 65 000 secuenciales?
 3. Explica la diferencia entre montón e índice agrupado y una consecuencia práctica de cada una.
 4. Da un caso donde una tasa de aciertos del 99 % siga siendo un problema.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** La unidad de trabajo no es la fila, es la página
+
+Ningún motor lee una fila. Lee la **página** que la contiene —entre 4 y 16
+kibibytes según el motor— y la deja en una caché en memoria. De ahí salen
+casi todas las intuiciones de rendimiento que importan: por qué una fila
+ancha cuesta más aunque solo se lea una columna, por qué el orden físico de
+las filas cambia el número de páginas leídas, y por qué la primera consulta
+tarda diez veces más que la segunda.
+
+Lo que se compara aquí no admite una salida común: es el tamaño de página,
+dónde vive la caché y **quién decide su tamaño**. La respuesta a esa última
+pregunta separa a los motores que hay que dimensionar a mano de los que se
+apoyan en la caché del sistema operativo.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/storage-page-layout.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/fileformat.html) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/wiredtiger/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Página de 8 KiB fija en compilación. La caché es `shared_buffers`, en memoria compartida, y **encima** está la caché del sistema operativo: los datos se cachean dos veces. La recomendación clásica —una cuarta parte de la memoria— viene precisamente de esa doble caché.
+- **Por qué sí:** Apoyarse en el sistema operativo hace que un servidor mal dimensionado siga funcionando razonablemente, en vez de derrumbarse.
+- **Por qué no:** La doble caché desperdicia memoria y hace difícil razonar sobre qué está donde. Y como una fila no puede cruzar páginas, los valores grandes se van a un almacén aparte (TOAST), lo que añade lecturas invisibles en el plan.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/storage-page-layout.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** Página de 16 KiB por omisión. El `innodb_buffer_pool_size` es una caché propia que se recomienda dimensionar entre el 50 % y el 75 % de la memoria de la máquina, porque InnoDB usa entrada y salida directa y **no** se apoya en la caché del sistema.
+- **Por qué sí:** Una sola caché, bajo control del motor, con estadísticas propias sobre aciertos y fallos: es más fácil de razonar y de medir.
+- **Por qué no:** Ese dimensionado es responsabilidad de quien administra: por omisión, InnoDB reserva 128 MiB, una cifra pensada para un portátil de 2010 que sigue apareciendo en servidores de producción.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** Página configurable —4 KiB por omisión desde la versión 3.12— y una caché por **conexión**, no por proceso: `PRAGMA cache_size` se fija en cada conexión y su valor por omisión equivale a unos 2 MiB.
+- **Por qué sí:** `PRAGMA page_count` y `PRAGMA page_size` permiten ver el tamaño real del archivo en páginas sin ninguna herramienta: es el sitio más barato para entender de qué se está hablando.
+- **Por qué no:** Una caché por conexión significa que diez conexiones cachean diez veces lo mismo, y que cerrar la conexión tira la caché entera: el patrón «abrir, consultar, cerrar» paga cada consulta a precio de primera vez.
+- 📄 Documentación oficial: <https://sqlite.org/fileformat.html>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** No guarda filas en páginas: guarda **grupos de filas** partidos en vectores por columna, comprimidos de forma distinta según el tipo. La unidad de lectura es el segmento de columna, no la fila.
+- **Por qué sí:** Leer dos columnas de una tabla de cien cuesta dos columnas: la unidad de entrada y salida está alineada con lo que pide una consulta analítica.
+- **Por qué no:** Reconstruir una fila entera obliga a tocar tantos segmentos como columnas tenga: lo que es óptimo para agregar es pésimo para el acceso por clave.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/internals/storage.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** WiredTiger organiza los datos en bloques de tamaño variable con compresión —snappy por omisión— y mantiene su propia caché fuera del montón, dimensionada por omisión al 50 % de la memoria menos 1 GiB. El sistema operativo cachea además los bloques comprimidos.
+- **Por qué sí:** La compresión reduce mucho la entrada y salida real, y separar la caché del montón evita las pausas del recolector.
+- **Por qué no:** Los datos están descomprimidos en la caché y comprimidos en la del sistema: calcular cuánta memoria hace falta de verdad exige entender las dos, y el valor por omisión deja poco margen si en la misma máquina corre algo más.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/wiredtiger/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** Los datos viven en archivos inmutables (SSTables) con un índice de particiones y un filtro de Bloom por archivo. La caché relevante no es la de filas —que está desactivada por omisión— sino la de claves y, sobre todo, la del sistema operativo sobre los archivos.
+- **Por qué sí:** El filtro de Bloom evita abrir archivos que seguro no contienen la clave: es lo que hace que una lectura no tenga que mirar en todos.
+- **Por qué no:** Una lectura puede acabar tocando varios archivos igualmente, y la caché de filas activada sin criterio expulsa datos útiles y empeora el rendimiento. Es de los pocos motores donde activar una caché suele ser mala idea.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | No hay páginas ni caché de disco que discutir: **todo** el conjunto de datos está en memoria y las estructuras son las del propio lenguaje C. La pregunta de esta clase —cuántas páginas hay que leer— no existe. | La pregunta equivalente es otra: cuánta memoria ocupa cada estructura y qué codificación interna usa. `OBJECT ENCODING` y `MEMORY USAGE` la responden. | [doc](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/) |
 
 ---
 

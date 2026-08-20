@@ -8,6 +8,8 @@ Parte 08 — Almacenamiento, índices y planes · Avanzado ·
 
 **Conceptos centrales:** `memtable` · `SSTable` · `compactación` · `amplificación de escritura` · `filtro de Bloom`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -188,6 +190,92 @@ Las incidencias de un LSM se ven como picos de latencia y de espacio, no como le
 2. Calcula la tasa de falsos positivos con 8 bits por clave y 5 funciones hash.
 3. Explica por qué borrar puede aumentar el espacio ocupado y ralentizar las lecturas.
 4. ¿Qué estrategia de compactación elegirías para datos con TTL de 30 días, y por qué?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Escribir rápido y pagarlo después, o escribir despacio y no pagarlo
+
+Un árbol B modifica la página donde está la fila: la escritura es una
+lectura, un cambio y una escritura en un sitio concreto del disco. Un árbol
+LSM no modifica nada: acumula en memoria, vuelca archivos **inmutables**
+ordenados y los fusiona después en segundo plano. La escritura se vuelve
+secuencial y barata; la lectura puede tener que mirar en varios archivos, y
+la fusión consume entrada y salida para siempre.
+
+De ahí las tres amplificaciones que hay que saber nombrar: de **escritura**
+(cada byte se reescribe varias veces al compactar), de **lectura** (una
+consulta toca varios archivos) y de **espacio** (conviven versiones y datos
+borrados que aún no se han retirado). Ninguna estructura las minimiza las
+tres: elegir es decidir cuál se paga.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/) |
+| ScyllaDB | sí | conceptual | — | [doc oficial](https://opensource.docs.scylladb.com/stable/kb/compaction.html) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/wiredtiger/) |
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/routine-vacuuming.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/lang_vacuum.html) |
+| DuckDB | **no** | — | — | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
+
+### Los que resuelven el caso
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** LSM puro. Escribe en el registro de compromiso y en una tabla en memoria, vuelca SSTables inmutables y las compacta con la estrategia que se elija: por tamaño (`STCS`), por niveles (`LCS`) o por ventana temporal (`TWCS`). Esa elección es la decisión de operación más importante del motor.
+- **Por qué sí:** La escritura no lee nada antes: es secuencial y de latencia muy predecible, y por eso Cassandra ingiere volúmenes que un árbol B no aguantaría en una sola máquina.
+- **Por qué no:** Se paga en lectura y en fusión. Con `STCS` la amplificación de espacio puede llegar a exigir el doble de disco libre para compactar; con `LCS` baja la amplificación de lectura y sube mucho la de escritura. Y los datos borrados no desaparecen: son lápidas que hay que recorrer hasta la compactación.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/>
+
+#### ScyllaDB
+
+- **Cómo se hace aquí:** El mismo modelo LSM con las mismas estrategias, más una propia (`Incremental`) pensada para reducir el espacio libre necesario, y con la compactación planificada por su propio programador de entrada y salida en vez de competir con las consultas.
+- **Por qué sí:** Controlar el reparto de entrada y salida entre consultas y compactación es justo lo que evita el síntoma clásico: la latencia que se dispara cada vez que empieza una compactación grande.
+- **Por qué no:** Sigue siendo un LSM: las tres amplificaciones están ahí. Lo que cambia es quién decide cuándo se paga, no si se paga.
+- 📄 Documentación oficial: <https://opensource.docs.scylladb.com/stable/kb/compaction.html>
+
+#### Redis
+
+- **Cómo se hace aquí:** No tiene ninguna de las dos estructuras: los datos viven en memoria. Su persistencia AOF, sin embargo, **es** un registro que crece y que hay que reescribir periódicamente para compactarlo, con el mismo dilema de fondo.
+- **Por qué sí:** Enseña la idea desnuda: un registro que solo crece necesita, tarde o temprano, un proceso que lo reescriba. Eso es la compactación, sin árbol de por medio.
+- **Por qué no:** La reescritura del AOF la hace un proceso hijo que duplica memoria por copia al escribir: en el peor momento —mucha escritura— es cuando más memoria hace falta, que es exactamente cuando menos hay.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** WiredTiger usa un árbol B con escritura en un espacio nuevo: los bloques modificados no se sobrescriben en su sitio, se escriben en otro y se publican en el siguiente punto de control. Es un punto intermedio entre las dos familias.
+- **Por qué sí:** Evita la escritura parcial de páginas sin necesitar un búfer de doble escritura, y permite comprimir cada bloque por separado.
+- **Por qué no:** Deja bloques huérfanos que hay que recuperar, así que el espacio en disco no baja al borrar datos hasta que se compacta: la amplificación de espacio del LSM reaparece con otro nombre.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/wiredtiger/>
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Árbol B con escritura en el sitio, y MVCC encima: un `UPDATE` no modifica la fila, escribe una versión nueva y deja la vieja muerta. La limpieza la hace `VACUUM`.
+- **Por qué sí:** La lectura por clave toca un solo camino del árbol: la amplificación de lectura es la mínima posible, y el plan es fácil de predecir.
+- **Por qué no:** Su amplificación de escritura es alta y poco visible: un `UPDATE` puede escribir en todos los índices de la tabla, y si la página está limpia desde el último punto de control, el WAL guarda la **página entera** (`full_page_writes`), no solo el cambio.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/routine-vacuuming.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** Árbol B con escritura en el sitio y sin recolección de versiones: al borrar, el espacio queda en una lista de páginas libres que se reutiliza, y solo `VACUUM` devuelve el archivo a su tamaño mínimo.
+- **Por qué sí:** Es el modelo más simple y predecible: sin compactación de fondo, sin procesos auxiliares y sin sorpresas de latencia.
+- **Por qué no:** Sin compactación de fondo, la fragmentación se acumula y el archivo no encoge solo. En dispositivos con almacenamiento limitado, ese `VACUUM` olvidado es una avería real.
+- 📄 Documentación oficial: <https://sqlite.org/lang_vacuum.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| DuckDB | Su almacenamiento no pertenece a ninguna de las dos familias: guarda grupos de filas por columnas, comprimidos, pensados para escribirse una vez y leerse muchas. La pregunta de esta clase —cómo se absorbe la escritura aleatoria constante— no es la suya. | Se estudia donde le corresponde, en la parte de analítica columnar, donde la pregunta es cuántos bytes hay que leer y no cuántas veces se reescriben. | [doc](https://duckdb.org/docs/stable/internals/storage.html) |
 
 ---
 

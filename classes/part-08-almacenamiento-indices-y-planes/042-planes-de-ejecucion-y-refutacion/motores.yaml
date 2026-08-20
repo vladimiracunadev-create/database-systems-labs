@@ -1,0 +1,122 @@
+---
+caso:
+  titulo: Tres consultas que devuelven lo mismo y no cuestan lo mismo
+  contrato: |
+    Un plan de ejecución no se lee para admirarlo: se lee para **refutar una
+    hipótesis**. «Esta consulta es lenta porque falta un índice» es una hipótesis,
+    y el plan es lo que la confirma o la tumba. Sin esa disciplina, optimizar
+    consiste en añadir índices hasta que algo mejore.
+
+    El caso pregunta quién tiene al menos una inscripción, y admite tres
+    formulaciones equivalentes: reunión con `DISTINCT`, `IN` con subconsulta y
+    semirreunión con `EXISTS`. Las tres devuelven las mismas dos filas —eso lo
+    garantiza el álgebra relacional— y ninguna cuesta lo mismo. Cuál gana no se
+    decide leyendo el SQL: se decide midiendo, y cada implementación trae al lado
+    la orden exacta con la que se mide en ese motor.
+  columnas: [nombre]
+  esperado:
+    - [Ada]
+    - [Linus]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `EXPLAIN (ANALYZE, BUFFERS)` es el mejor instrumento de esta lista: da
+      coste estimado **y** tiempo real, filas estimadas **y** filas reales
+      —cuando divergen mucho, el problema son las estadísticas y no el índice— y
+      cuántos bloques vinieron de la caché y cuántos del disco.
+    porque_no: >-
+      `ANALYZE` **ejecuta la consulta**: sobre un `UPDATE` o un `DELETE` hay que
+      envolverlo en una transacción y deshacerla, o se aplica de verdad. Es un
+      error que se comete una sola vez en producción.
+    doc: https://www.postgresql.org/docs/current/using-explain.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Desde 8.0.18 tiene `EXPLAIN ANALYZE` con tiempos reales, y `EXPLAIN
+      FORMAT=JSON` expone el coste que calculó el optimizador para cada
+      alternativa.
+    porque_no: >-
+      La columna `rows` del `EXPLAIN` clásico es una **estimación** que la gente
+      lee como si fuera un hecho, y sus estadísticas son mucho más pobres que
+      las de PostgreSQL: se muestrean pocas páginas del índice y se recalculan en
+      momentos difíciles de predecir.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/explain.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `EXPLAIN QUERY PLAN` cabe en dos líneas y dice lo único que suele importar:
+      si hubo `SCAN` o `SEARCH ... USING INDEX`. Para aprender a leer planes es
+      el mejor punto de partida, porque no hay ruido.
+    porque_no: >-
+      No da coste ni tiempo ni filas: no se puede comparar dos planes por número,
+      solo por forma. Y como el planificador tiene pocas opciones, no enseña a
+      diagnosticar los casos difíciles.
+    doc: https://sqlite.org/eqp.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      `EXPLAIN ANALYZE` dibuja el árbol de operadores con el tiempo de cada uno y
+      las filas que pasaron: es la forma más legible de ver dónde se va el tiempo
+      de una consulta analítica.
+    porque_no: >-
+      Su optimizador reescribe tanto —descorrelación, empuje de filtros,
+      reordenación de reuniones— que el plan casi nunca se parece a la consulta
+      escrita, y eso confunde a quien está aprendiendo a relacionar ambas cosas.
+    doc: https://duckdb.org/docs/stable/guides/meta/explain_analyze.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `explain("executionStats")` da las tres cifras que resuelven casi todo:
+      `nReturned`, `totalKeysExamined` y `totalDocsExamined`. Si el segundo o el
+      tercero son mucho mayores que el primero, se está leyendo de más, y ahí
+      está el diagnóstico.
+    porque_no: >-
+      Su planificador prueba varios planes y **cachea el ganador**: la consulta
+      puede ir bien meses y degradarse cuando la distribución cambia, sin que
+      nada haya cambiado en el código. Diagnosticarlo exige acordarse de que la
+      caché de planes existe.
+    doc: https://www.mongodb.com/docs/manual/reference/explain-results/
+
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      `TRACING ON` no muestra un plan —no hay optimizador que elija— sino la
+      **traza distribuida** de la consulta: qué nodo coordinó, a qué réplicas
+      preguntó, cuántas SSTables se abrieron y cuántas lápidas se recorrieron.
+      Para diagnosticar este motor, esa información vale más que un plan.
+    porque_no: >-
+      Precisamente porque no hay optimizador, no hay nada que refutar sobre la
+      consulta: si va lenta, la culpa es del modelo de datos, y arreglarlo
+      significa crear otra tabla y migrar. El diagnóstico es barato; la
+      corrección, no.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay planes: cada orden tiene una complejidad fija y documentada, y está
+      escrita en su página de referencia. `SMEMBERS` es O(N) y siempre lo será;
+      no hay optimizador que pueda cambiarlo.
+    alternativa: >-
+      La disciplina equivalente es leer la complejidad en la documentación antes
+      de usar la orden, y vigilar el registro de órdenes lentas
+      (`SLOWLOG GET`), que delata las que bloquearon el hilo único.
+    doc: https://redis.io/docs/latest/commands/slowlog-get/
