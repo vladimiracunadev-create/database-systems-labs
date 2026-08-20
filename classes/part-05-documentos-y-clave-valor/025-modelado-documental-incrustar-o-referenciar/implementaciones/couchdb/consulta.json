@@ -1,0 +1,30 @@
+{
+  "_comentario": [
+    "motor: couchdb",
+    "doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html",
+    "nota: implementacion declarada. En CouchDB el documento es la unidad de",
+    "todo: de lectura, de escritura, de conflicto y de replica. Incrustar no es",
+    "una opcion de diseno, es el modelo. Y cualquier consulta que no sea por",
+    "identificador exige definir antes una vista con map/reduce.",
+    "Se aplica con:  curl -X PUT $COUCH/pedidos/_design/lineas -d @consulta.json",
+    "y se consulta:  curl $COUCH/pedidos/_design/lineas/_view/por_producto?key=\"P-1\""
+  ],
+
+  "_id": "_design/lineas",
+  "language": "javascript",
+  "views": {
+    "por_producto": {
+      "map": "function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit([doc._id, l.producto], l.importe); }); } }"
+    }
+  },
+
+  "_documento_de_ejemplo": {
+    "_id": "P-1",
+    "type": "pedido",
+    "lineas": [
+      { "producto": "teclado", "importe": 120 },
+      { "producto": "raton", "importe": 80 },
+      { "producto": "cable", "importe": 100 }
+    ]
+  }
+}

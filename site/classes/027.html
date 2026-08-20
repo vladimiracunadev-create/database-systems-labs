@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>redis</code>, <code>dynamodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>TTL</code> · <code>invalidación</code> · <code>estampida de caché</code> · <code>durabilidad configurable</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Usar un almacén clave-valor sabiendo exactamente qué se pierde y cuándo. Una caché mal diseñada no solo no acelera: sirve datos incorrectos y derriba el origen cuando expira.</p>
@@ -351,6 +352,353 @@ def panel_curso(redis, db, course_id):
 <li>Calcula la estampida esperada en tu sistema con sus cifras de tráfico.</li>
 <li>Da un dato de tu dominio que <strong>no</strong> guardarías en Redis y explica por qué.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Los tres estados de una clave con caducidad</p>
+<p>Una caché no tiene dos estados sino tres, y confundirlos es la causa de casi
+todos los errores de caducidad: la clave <strong>existe y caduca</strong>, la clave
+<strong>existe y no caduca</strong>, o la clave <strong>no está</strong>. Redis los distingue en el
+valor que devuelve <code>TTL</code>: un número positivo, <code>-1</code> y <code>-2</code>.</p>
+<p>El caso guarda <code>k1</code> con caducidad, <code>k2</code> sin ella, no guarda <code>k3</code>, y pide el
+estado de las tres, ordenadas por clave. Lo revelador es lo que hay que
+escribir en los motores que <strong>no</strong> tienen caducidad: la columna de
+vencimiento, el filtro en cada lectura y el trabajo que borra lo vencido.
+Todo eso es lo que Redis regala y lo que se paga al no usarlo.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>clave</th>
+<th>estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k1</code></td>
+<td><code>expira</code></td>
+</tr>
+<tr>
+<td><code>k2</code></td>
+<td><code>permanente</code></td>
+</tr>
+<tr>
+<td><code>k3</code></td>
+<td><code>ausente</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 027</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/commands/expire/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-ttl/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_datefunc.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/date.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-partial.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/commands/expire/
+# nota: TTL devuelve tres cosas distintas y hay que leerlas como tres:
+#         &gt; 0   segundos que le quedan
+#         -1    existe y no caduca
+#         -2    no existe
+#       Confundir -1 con -2 es el error clasico: «la clave no esta» y «la clave
+#       esta y no caduca» son estados opuestos.
+
+# === preparacion ===
+FLUSHDB
+SET k1 &quot;con caducidad&quot; EX 3600
+SET k2 &quot;permanente&quot;
+# k3 no se escribe: la ausencia tambien es un estado.
+
+# === consulta ===
+EVAL &quot;local r={} for _,k in ipairs({'k1','k2','k3'}) do local t=redis.call('TTL',k) local e='expira' if t==-1 then e='permanente' elseif t==-2 then e='ausente' end r[#r+1]=k..'|'..e end return r&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La caducidad es parte del almacén: se fija por clave, la aplica el servidor y <code>TTL</code> distingue los tres estados sin ambigüedad. La memoria se libera sola, con caducidad pasiva al leer y un muestreo activo de fondo.</li>
+<li><strong>Por qué no:</strong> La expiración es <strong>aproximada</strong>: entre el instante de vencimiento y el momento en que la memoria se libera pasa un tiempo indeterminado. Y si la memoria se agota antes, la política de desalojo puede borrar claves que todavía no habían vencido: una caché no es un almacén.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/expire/">https://redis.io/docs/latest/commands/expire/</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-ttl/
+// nota: el indice TTL libera ESPACIO, no define VISIBILIDAD: el proceso que
+//       borra corre cada 60 segundos, asi que un documento vencido sigue
+//       siendo visible hasta un minuto despues. La consulta filtra por fecha
+//       igualmente; el indice solo evita que la coleccion crezca sin fin.
+
+// === preparacion ===
+db.cache.drop();
+db.cache.createIndex({ expira_en: 1 }, { expireAfterSeconds: 0 });
+
+db.cache.insertMany([
+  { _id: &quot;k1&quot;, valor: &quot;con caducidad&quot;, expira_en: new Date(&quot;2099-01-01T00:00:00Z&quot;) },
+  { _id: &quot;k2&quot;, valor: &quot;permanente&quot; },
+]);
+// k3 no se inserta.
+
+// === consulta ===
+for (const clave of [&quot;k1&quot;, &quot;k2&quot;, &quot;k3&quot;]) {
+  const doc = db.cache.findOne({ _id: clave });
+  const estado = doc === null
+    ? &quot;ausente&quot;
+    : doc.expira_en === undefined
+      ? &quot;permanente&quot;
+      : &quot;expira&quot;;
+  print(clave + &quot;|&quot; + estado);
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un índice TTL sobre un campo de fecha borra los documentos vencidos sin que nadie lo pida, así que la colección puede hacer de caché duradera con la misma semántica de tres estados.</li>
+<li><strong>Por qué no:</strong> El proceso que borra corre <strong>cada 60 segundos</strong>: un documento vencido sigue siendo visible hasta un minuto después, así que la consulta tiene que filtrar por la fecha igualmente. El índice TTL libera espacio; no define visibilidad.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-ttl/">https://www.mongodb.com/docs/manual/core/index-ttl/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada. Aqui la caducidad es POR CELDA, no por fila:
+--       un atributo puede caducar y el resto de la fila seguir viva. Ningun
+--       otro motor de esta lista ofrece esa granularidad.
+--       El precio: cada celda vencida deja una lapida que hay que recorrer en
+--       las lecturas hasta que la compactacion la retire.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.cache;
+
+CREATE TABLE escuela.cache (
+    clave text PRIMARY KEY,
+    valor text
+);
+
+INSERT INTO escuela.cache (clave, valor) VALUES ('k1', 'con caducidad') USING TTL 3600;
+INSERT INTO escuela.cache (clave, valor) VALUES ('k2', 'permanente');
+-- k3 no se escribe.
+
+-- === consulta ===
+-- TTL() sobre una columna devuelve los segundos que le quedan, o null si no
+-- caduca. La fila ausente sencillamente no aparece: los tres estados hay que
+-- reconstruirlos en el cliente, igual que en los motores relacionales.
+SELECT clave, TTL(valor) AS segundos FROM escuela.cache;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La caducidad se declara por <strong>celda</strong>, no por fila: <code>USING TTL</code> permite que un atributo caduque y el resto de la fila siga viva, algo que ningún otro motor de esta lista ofrece.</li>
+<li><strong>Por qué no:</strong> Cada celda vencida se convierte en una lápida que hay que recorrer en las lecturas hasta que la compactación la retire: usar TTL como mecanismo de cola de trabajo es uno de los antipatrones más conocidos de Cassandra.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_datefunc.html
+-- nota: esta es la version larga de lo que Redis hace con una letra. La
+--       caducidad son tres cosas que hay que escribir a mano: la columna, el
+--       filtro en CADA lectura y el borrado periodico
+--         DELETE FROM cache WHERE expira_en IS NOT NULL AND expira_en &lt;= datetime('now');
+--       Olvidar cualquiera de las tres deja datos vencidos a la vista.
+
+-- === preparacion ===
+CREATE TABLE cache (
+    clave     TEXT PRIMARY KEY,
+    valor     TEXT NOT NULL,
+    expira_en TEXT          -- nulo = sin caducidad
+);
+
+INSERT INTO cache (clave, valor, expira_en) VALUES
+    ('k1', 'con caducidad', '2099-01-01T00:00:00Z'),
+    ('k2', 'permanente',    NULL);
+-- k3 no se inserta: la ausencia tambien es un estado, y hay que distinguirla.
+
+-- === consulta ===
+-- Los tres estados que un almacen clave-valor con caducidad distingue, y que
+-- aqui hay que reconstruir a mano porque el motor no los conoce.
+WITH consultadas(clave) AS (
+    VALUES ('k1'), ('k2'), ('k3')
+)
+SELECT c.clave,
+       CASE
+           WHEN e.clave IS NULL     THEN 'ausente'
+           WHEN e.expira_en IS NULL THEN 'permanente'
+           ELSE 'expira'
+       END AS estado
+FROM consultadas c
+LEFT JOIN cache e ON e.clave = c.clave
+ORDER BY c.clave;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Enseña lo que cuesta no tener caducidad: una columna de vencimiento, un filtro en <strong>cada</strong> lectura y un borrado periódico. Escrito así, se ve que la caducidad no es magia, es trabajo que alguien tiene que hacer.</li>
+<li><strong>Por qué no:</strong> Ese trabajo hay que acordarse de hacerlo siempre: la consulta que olvide el filtro devolverá datos vencidos, y el borrado que nadie programe hará crecer la tabla para siempre.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_datefunc.html">https://sqlite.org/lang_datefunc.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/date.html
+-- nota: aqui no se implementa una cache: se AUDITA. Sobre un volcado de la
+--       cache real, esta consulta responde cuantas claves hay en cada estado,
+--       que es la pregunta de operacion que nadie se hace a tiempo.
+
+-- === preparacion ===
+CREATE TABLE cache (
+    clave     VARCHAR PRIMARY KEY,
+    valor     VARCHAR NOT NULL,
+    expira_en VARCHAR          -- nulo = sin caducidad
+);
+
+INSERT INTO cache (clave, valor, expira_en) VALUES
+    ('k1', 'con caducidad', '2099-01-01T00:00:00Z'),
+    ('k2', 'permanente',    NULL);
+-- k3 no se inserta: la ausencia tambien es un estado, y hay que distinguirla.
+
+-- === consulta ===
+-- Los tres estados que un almacen clave-valor con caducidad distingue, y que
+-- aqui hay que reconstruir a mano porque el motor no los conoce.
+WITH consultadas(clave) AS (
+    VALUES ('k1'), ('k2'), ('k3')
+)
+SELECT c.clave,
+       CASE
+           WHEN e.clave IS NULL     THEN 'ausente'
+           WHEN e.expira_en IS NULL THEN 'permanente'
+           ELSE 'expira'
+       END AS estado
+FROM consultadas c
+LEFT JOIN cache e ON e.clave = c.clave
+ORDER BY c.clave;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para la pregunta de operación que nadie se hace a tiempo: cuántas claves hay vencidas, desde cuándo y cuánto espacio ocupan, sobre un volcado de la caché.</li>
+<li><strong>Por qué no:</strong> No es un almacén de claves ni tiene caducidad: aquí solo se analiza el estado de una caché que vive en otro sitio.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/date.html">https://duckdb.org/docs/stable/sql/functions/date.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/027-clave-valor-cache-y-expiracion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/indexes-partial.html
+-- nota: aqui aparece un limite que sorprende. Un indice parcial
+--         CREATE INDEX ... WHERE expira_en &gt; now()
+--       NO se puede crear: el predicado de un indice tiene que ser IMMUTABLE y
+--       now() es STABLE. Si se pudiera, el indice quedaria obsoleto en cuanto
+--       pasara el tiempo. Asi que el indice va sobre la columna y el filtro se
+--       aplica en cada consulta, que es exactamente el trabajo que Redis evita.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cache;
+
+CREATE TABLE cache (
+    clave     text PRIMARY KEY,
+    valor     text NOT NULL,
+    expira_en timestamptz
+);
+CREATE INDEX cache_por_vencimiento ON cache (expira_en);
+
+INSERT INTO cache (clave, valor, expira_en) VALUES
+    ('k1', 'con caducidad', TIMESTAMPTZ '2099-01-01 00:00:00+00'),
+    ('k2', 'permanente',    NULL);
+
+-- === consulta ===
+WITH consultadas(clave) AS (
+    VALUES ('k1'), ('k2'), ('k3')
+)
+SELECT c.clave,
+       CASE
+           WHEN e.clave IS NULL     THEN 'ausente'
+           WHEN e.expira_en IS NULL THEN 'permanente'
+           ELSE 'expira'
+       END AS estado
+FROM consultadas c
+LEFT JOIN cache e ON e.clave = c.clave
+ORDER BY c.clave;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>timestamptz</code>, un índice sobre el vencimiento y un programador (<code>pg_cron</code>) para el borrado se consigue una caché duradera, transaccional y consultable: a veces es exactamente lo que hace falta y ahorra un sistema entero.</li>
+<li><strong>Por qué no:</strong> Cada lectura se convierte en una consulta al motor transaccional, con su conexión y su latencia: si la caché existía para descargar a PostgreSQL, ponerla dentro de PostgreSQL no descarga nada. Y ni siquiera se puede indexar «lo vigente»: un índice parcial con <code>now()</code> se rechaza, porque el predicado de un índice tiene que ser inmutable.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-partial.html">https://www.postgresql.org/docs/current/indexes-partial.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>Tiene caducidad por elemento, pero su documentación advierte de que el borrado puede tardar <strong>hasta 48 horas</strong> en aplicarse: no sirve para distinguir los tres estados en el momento de la lectura.</td>
+<td>Guardar la marca de vencimiento como atributo y filtrarla en cada lectura, usando el TTL solo como mecanismo de limpieza de espacio, nunca como control de visibilidad.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

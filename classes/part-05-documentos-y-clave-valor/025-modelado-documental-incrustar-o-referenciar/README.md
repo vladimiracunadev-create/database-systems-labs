@@ -8,6 +8,8 @@ Parte 05 — Documentos y clave-valor · Intermedio ·
 
 **Conceptos centrales:** `incrustación` · `referencia` · `crecimiento no acotado` · `patrón de extensión`
 
+**En este caso se comparan 6 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -185,6 +187,243 @@ Cambiar la forma de los documentos con datos en producción exige una migración
 2. Calcula el punto de equilibrio de duplicar un campo en tu dominio, con cifras reales.
 3. Explica el efecto de un arreglo de 5 000 elementos sobre un índice multiclave.
 4. Da un caso de tu dominio donde el modelo documental sea peor que el relacional, y justifícalo.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Las líneas de un pedido, incrustadas o referenciadas
+
+La decisión central del modelado documental cabe en una pregunta: ¿este dato
+vive **dentro** del documento o **al lado**? Y la respuesta no sale del
+dominio, sale del patrón de acceso: se incrusta lo que siempre se lee junto
+y cambia junto; se referencia lo que se comparte, lo que crece sin límite y
+lo que cambia por su cuenta.
+
+El caso pide las líneas del pedido `P-1` con su importe, ordenadas por
+producto. Los seis motores devuelven lo mismo; lo que cambia es dónde
+estaban guardadas, y el bloque de cada uno muestra la forma que le es
+natural. Compararlas es comparar el precio de cada decisión.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| producto | importe |
+|---|---|
+| `cable` | `100` |
+| `raton` | `80` |
+| `teclado` | `120` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 025`: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/json1.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/data_types/struct.html) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/datatype-json.html) |
+| Apache CouchDB | sí | declarado | [código](implementaciones/couchdb/consulta.json) | [doc oficial](https://docs.couchdb.org/en/stable/ddocs/views/intro.html) |
+| Amazon DynamoDB | **no** | — | — | [doc oficial](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html) |
+
+### Los que resuelven el caso
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+// nota: forma INCRUSTADA. Un documento, un viaje, sin reunion. La forma
+//       referenciada seria una coleccion `lineas` con `pedido_id` y un $lookup:
+//       correcta cuando las lineas crecen sin techo o se consultan solas.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertOne({
+  _id: "P-1",
+  lineas: [
+    { producto: "teclado", importe: 120 },
+    { producto: "raton", importe: 80 },
+    { producto: "cable", importe: 100 },
+  ],
+});
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $match: { _id: "P-1" } },
+    { $unwind: "$lineas" },
+    { $project: { _id: 0, producto: "$lineas.producto", importe: "$lineas.importe" } },
+    { $sort: { producto: 1 } },
+  ])
+  .forEach((d) => print(d.producto + "|" + d.importe));
+```
+
+- **Por qué sí:** Incrustar es una lectura: un documento, un viaje, sin reunión. Para datos que solo tienen sentido dentro de su padre —las líneas de un pedido— es la forma correcta y la que su propia guía de modelado recomienda.
+- **Por qué no:** Deja de serlo en cuanto el arreglo crece sin techo: el documento tiene un límite de 16 MB, y cada actualización reescribe el documento entero aunque solo cambie un elemento del arreglo.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/json1.html
+-- nota: forma INCRUSTADA con JSON. Para el motor eso es texto: no hay
+--       restricciones sobre su contenido, ni claves foraneas, ni indice que lo
+--       recorra. La forma referenciada seria una tabla `lineas` de toda la vida.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    lineas TEXT NOT NULL   -- arreglo JSON incrustado
+);
+
+INSERT INTO pedidos (id, lineas) VALUES (
+    'P-1',
+    '[{"producto":"teclado","importe":120},
+      {"producto":"raton","importe":80},
+      {"producto":"cable","importe":100}]'
+);
+
+-- === consulta ===
+SELECT json_extract(l.value, '$.producto') AS producto,
+       json_extract(l.value, '$.importe')  AS importe
+FROM pedidos p, json_each(p.lineas) l
+WHERE p.id = 'P-1'
+ORDER BY producto;
+```
+
+- **Por qué sí:** Con las funciones JSON integradas se puede incrustar de verdad: el pedido es una fila y sus líneas un arreglo JSON dentro de una columna, que `json_each` desanida cuando hace falta.
+- **Por qué no:** Ese arreglo es texto para el motor: no hay restricciones sobre su contenido, ni claves foráneas, ni índice que lo recorra. Se gana la forma documental y se pierde todo lo que hacía valioso al relacional.
+- 📄 Documentación oficial: <https://sqlite.org/json1.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/data_types/struct.html
+-- nota: aqui lo anidado no es texto: STRUCT y LIST son tipos con tipo interno
+--       declarado, asi que la columna sigue siendo columnar y UNNEST la abre
+--       sin analizar ninguna cadena.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    lineas STRUCT(producto VARCHAR, importe INTEGER)[]
+);
+
+INSERT INTO pedidos VALUES ('P-1', [
+    {'producto': 'teclado', 'importe': 120},
+    {'producto': 'raton',   'importe': 80},
+    {'producto': 'cable',   'importe': 100}
+]);
+
+-- === consulta ===
+SELECT l.producto, l.importe
+FROM (SELECT UNNEST(lineas) AS l FROM pedidos WHERE id = 'P-1')
+ORDER BY l.producto;
+```
+
+- **Por qué sí:** Tiene tipos anidados de verdad —`STRUCT` y `LIST` con tipos declarados—, así que el documento incrustado sigue siendo columnar y `UNNEST` lo abre sin analizar texto.
+- **Por qué no:** Está pensado para leer datos anidados que vienen de otro sitio (Parquet, JSON), no para ser el sistema donde esos documentos se editan a diario.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/data_types/struct.html>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/datatype-json.html
+-- nota: jsonb no guarda texto: guarda una representacion binaria indexable con
+--       GIN. Por eso aqui se puede incrustar SIN renunciar al indice, a las
+--       transacciones ni a las claves foraneas del resto del esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    lineas jsonb NOT NULL
+);
+CREATE INDEX pedidos_lineas ON pedidos USING GIN (lineas);
+
+INSERT INTO pedidos (id, lineas) VALUES (
+    'P-1',
+    '[{"producto":"teclado","importe":120},
+      {"producto":"raton","importe":80},
+      {"producto":"cable","importe":100}]'::jsonb
+);
+
+-- === consulta ===
+SELECT l->>'producto' AS producto,
+       (l->>'importe')::int AS importe
+FROM pedidos p
+CROSS JOIN LATERAL jsonb_array_elements(p.lineas) AS l
+WHERE p.id = 'P-1'
+ORDER BY producto;
+```
+
+- **Por qué sí:** `jsonb` no guarda texto: guarda una representación binaria indexable con GIN, así que se puede incrustar sin renunciar al índice ni a las transacciones ni a las claves foráneas del resto del esquema. Es la opción que permite decidir tabla por tabla.
+- **Por qué no:** Un `UPDATE` sobre un campo del `jsonb` reescribe la fila entera y genera una versión nueva: con documentos grandes y cambios frecuentes, el almacenamiento y el autovacío se resienten.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/datatype-json.html>
+
+#### Apache CouchDB · [`implementaciones/couchdb/consulta.json`](implementaciones/couchdb/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: couchdb",
+    "doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html",
+    "nota: implementacion declarada. En CouchDB el documento es la unidad de",
+    "todo: de lectura, de escritura, de conflicto y de replica. Incrustar no es",
+    "una opcion de diseno, es el modelo. Y cualquier consulta que no sea por",
+    "identificador exige definir antes una vista con map/reduce.",
+    "Se aplica con:  curl -X PUT $COUCH/pedidos/_design/lineas -d @consulta.json",
+    "y se consulta:  curl $COUCH/pedidos/_design/lineas/_view/por_producto?key=\"P-1\""
+  ],
+
+  "_id": "_design/lineas",
+  "language": "javascript",
+  "views": {
+    "por_producto": {
+      "map": "function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit([doc._id, l.producto], l.importe); }); } }"
+    }
+  },
+
+  "_documento_de_ejemplo": {
+    "_id": "P-1",
+    "type": "pedido",
+    "lineas": [
+      { "producto": "teclado", "importe": 120 },
+      { "producto": "raton", "importe": 80 },
+      { "producto": "cable", "importe": 100 }
+    ]
+  }
+}
+```
+
+- **Por qué sí:** Lleva la idea al extremo: el documento es la unidad de todo —de lectura, de escritura, de conflicto y de réplica—, así que incrustar no es una opción de diseño sino el modelo. Y su réplica multimaestro está construida sobre esa unidad.
+- **Por qué no:** No hay reuniones ni consultas ad hoc eficientes: todo lo que no sea leer por identificador exige definir una vista con `map`/`reduce` de antemano. Referenciar es posible y es incómodo a propósito.
+- 📄 Documentación oficial: <https://docs.couchdb.org/en/stable/ddocs/views/intro.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Amazon DynamoDB | Aquí la disyuntiva no se plantea igual: el límite duro de 400 KB por elemento hace que incrustar una lista sin techo sea inviable desde el primer día, y no hay consulta que sirva para descubrirlo tarde. | Diseño de tabla única: el pedido y sus líneas comparten clave de partición (`PEDIDO#P-1`) y se distinguen por la de ordenación (`META`, `LINEA#cable`), de modo que una sola `Query` devuelve el pedido entero sin incrustar nada. | [doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html) |
 
 ---
 

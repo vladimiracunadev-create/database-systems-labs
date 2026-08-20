@@ -8,6 +8,8 @@ Parte 05 — Documentos y clave-valor · Intermedio ·
 
 **Conceptos centrales:** `índice compuesto` · `canalización de agregación` · `índice multiclave` · `cobertura`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -208,6 +210,280 @@ El síntoma habitual —«MongoDB se puso lento al crecer»— casi siempre sign
 2. ¿Qué condiciones exactas debe cumplir una consulta cubierta?
 3. Explica el efecto de un `$lookup` colocado antes de un `$match` selectivo.
 4. Da un caso de tu dominio donde un índice parcial reduzca el tamaño más de un 80 %.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Cuánto se vendió por categoría, con las líneas dentro de los documentos
+
+Agregar sobre documentos obliga a hacer algo que en una tabla no hace falta:
+**desanidar** antes de agrupar. Las líneas viven dentro del pedido, así que
+primero hay que abrirlas en filas y después sumarlas por categoría.
+
+El caso parte de dos pedidos con sus líneas incrustadas y pide el importe
+total por categoría, ordenado alfabéticamente. La comparación deja a la
+vista dos cosas: que la tubería de agregación de MongoDB y una consulta SQL
+sobre `jsonb` son la misma idea con distinta sintaxis, y que el índice que
+hace rápida esta consulta no es el mismo en los dos.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| categoria | importe |
+|---|---|
+| `accesorios` | `180` |
+| `perifericos` | `120` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 026`: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/aggregation-pipeline/) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/functions-json.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/json1.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/unnest.html) |
+| OpenSearch | sí | declarado | [código](implementaciones/opensearch/consulta.json) | [doc oficial](https://docs.opensearch.org/latest/aggregations/bucket/terms/) |
+| Apache CouchDB | sí | declarado | [código](implementaciones/couchdb/consulta.json) | [doc oficial](https://docs.couchdb.org/en/stable/ddocs/views/intro.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/hincrby/) |
+
+### Los que resuelven el caso
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
+// nota: el indice multiclave sobre lineas.categoria acelera el FILTRO, no el
+//       $group: agrupar siempre recorre los documentos que pasen el filtro, con
+//       un limite de 100 MB por etapa salvo que se permita usar disco.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertMany([
+  { _id: "P-1", lineas: [
+    { producto: "teclado", categoria: "perifericos", importe: 120 },
+    { producto: "raton", categoria: "accesorios", importe: 80 },
+  ] },
+  { _id: "P-2", lineas: [
+    { producto: "cable", categoria: "accesorios", importe: 100 },
+  ] },
+]);
+db.pedidos.createIndex({ "lineas.categoria": 1 });
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $unwind: "$lineas" },
+    { $group: { _id: "$lineas.categoria", importe: { $sum: "$lineas.importe" } } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) => print(d._id + "|" + d.importe));
+```
+
+- **Por qué sí:** `$unwind` seguido de `$group` es la forma canónica, y `explain("executionStats")` dice si la etapa inicial usó índice o recorrió la colección. Con un índice multiclave sobre `lineas.categoria`, el filtro previo se resuelve sin abrir los documentos que no interesan.
+- **Por qué no:** El índice ayuda a **filtrar**, no a agrupar: el `$group` siempre procesa documento a documento en memoria, con el límite de 100 MB por etapa. Para agregaciones grandes hay que permitir disco o precalcular.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/aggregation-pipeline/>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-json.html
+-- nota: lo que aqui se puede hacer y en un almacen documental puro no: esta
+--       misma consulta podria reunir los documentos con tablas normales del
+--       mismo esquema, en la misma transaccion.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    lineas jsonb NOT NULL
+);
+CREATE INDEX pedidos_lineas ON pedidos USING GIN (lineas);
+
+INSERT INTO pedidos (id, lineas) VALUES
+    ('P-1', '[{"producto":"teclado","categoria":"perifericos","importe":120},
+              {"producto":"raton","categoria":"accesorios","importe":80}]'::jsonb),
+    ('P-2', '[{"producto":"cable","categoria":"accesorios","importe":100}]'::jsonb);
+
+-- === consulta ===
+SELECT l->>'categoria' AS categoria,
+       SUM((l->>'importe')::int) AS importe
+FROM pedidos p
+CROSS JOIN LATERAL jsonb_array_elements(p.lineas) AS l
+GROUP BY l->>'categoria'
+ORDER BY categoria;
+```
+
+- **Por qué sí:** `jsonb_array_elements` desanida y el `GROUP BY` de siempre agrupa: la misma consulta puede reunir documentos con tablas normales, que es justamente lo que un almacén documental puro no puede hacer.
+- **Por qué no:** El índice GIN acelera la búsqueda dentro del `jsonb`, pero no evita desanidar en la agregación; y cada elemento extraído se convierte de texto a número en tiempo de consulta, lo que en volúmenes grandes se nota.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/functions-json.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/json1.html
+-- nota: json_each se comporta como una tabla virtual, asi que desanidar y
+--       agrupar se escribe como cualquier otra consulta. Lo que no hay es
+--       indice: esto recorre la tabla entera siempre.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    lineas TEXT NOT NULL
+);
+
+INSERT INTO pedidos (id, lineas) VALUES
+    ('P-1', '[{"producto":"teclado","categoria":"perifericos","importe":120},
+              {"producto":"raton","categoria":"accesorios","importe":80}]'),
+    ('P-2', '[{"producto":"cable","categoria":"accesorios","importe":100}]');
+
+-- === consulta ===
+SELECT json_extract(l.value, '$.categoria') AS categoria,
+       SUM(json_extract(l.value, '$.importe')) AS importe
+FROM pedidos p, json_each(p.lineas) l
+GROUP BY categoria
+ORDER BY categoria;
+```
+
+- **Por qué sí:** `json_each` se comporta como una tabla virtual, así que desanidar y agrupar se escribe como cualquier otra consulta: sirve para entender el mecanismo sin levantar nada.
+- **Por qué no:** No hay ningún índice posible sobre el contenido del JSON salvo que se extraiga a una columna generada e indexada: toda agregación recorre la tabla completa.
+- 📄 Documentación oficial: <https://sqlite.org/json1.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/unnest.html
+-- nota: la misma consulta funciona sobre un fichero anidado sin cargarlo:
+--         SELECT ... FROM read_json_auto('pedidos.json'), UNNEST(lineas) ...
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    lineas STRUCT(producto VARCHAR, categoria VARCHAR, importe INTEGER)[]
+);
+
+INSERT INTO pedidos VALUES
+    ('P-1', [{'producto': 'teclado', 'categoria': 'perifericos', 'importe': 120},
+             {'producto': 'raton',   'categoria': 'accesorios',  'importe': 80}]),
+    ('P-2', [{'producto': 'cable',   'categoria': 'accesorios',  'importe': 100}]);
+
+-- === consulta ===
+SELECT l.categoria, SUM(l.importe) AS importe
+FROM (SELECT UNNEST(lineas) AS l FROM pedidos)
+GROUP BY l.categoria
+ORDER BY l.categoria;
+```
+
+- **Por qué sí:** `UNNEST` sobre tipos anidados nativos y agregación vectorizada: es el motor donde esta forma de consulta escala mejor sin cambiar de sintaxis, y puede leer directamente un fichero JSON o Parquet anidado.
+- **Por qué no:** No hay índices que valgan aquí: la velocidad viene de leer menos columnas, no de saltar filas. Si la consulta filtra por un valor muy selectivo, un motor con índice gana.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/unnest.html>
+
+#### OpenSearch · [`implementaciones/opensearch/consulta.json`](implementaciones/opensearch/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/aggregations/bucket/terms/",
+    "nota: implementacion declarada. Para que el desanidado sea CORRECTO, el",
+    "arreglo `lineas` tiene que estar mapeado como `nested`; si no, OpenSearch",
+    "aplana los campos y pierde la correlacion entre categoria e importe de la",
+    "misma linea. Ese mapeo convierte cada linea en un documento oculto con su",
+    "propio costo de indexacion.",
+    "Se aplica con:  PUT /pedidos  con el bloque `mappings`",
+    "y se consulta:  POST /pedidos/_search  con el bloque `busqueda`"
+  ],
+
+  "mappings": {
+    "properties": {
+      "lineas": {
+        "type": "nested",
+        "properties": {
+          "producto": { "type": "keyword" },
+          "categoria": { "type": "keyword" },
+          "importe": { "type": "integer" }
+        }
+      }
+    }
+  },
+
+  "busqueda": {
+    "size": 0,
+    "aggs": {
+      "lineas": {
+        "nested": { "path": "lineas" },
+        "aggs": {
+          "por_categoria": {
+            "terms": { "field": "lineas.categoria", "order": { "_key": "asc" } },
+            "aggs": { "importe": { "sum": { "field": "lineas.importe" } } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+- **Por qué sí:** Las agregaciones por término son su especialidad: calcula el total por categoría sobre millones de documentos en milisegundos, porque el índice invertido y los `doc_values` columnares ya tienen los datos agrupados por valor.
+- **Por qué no:** Para que el desanidado sea correcto hay que declarar `nested`, y eso convierte cada línea en un documento oculto con su propio costo de indexación; sin `nested`, los campos del arreglo se aplanan y las correlaciones entre ellos se pierden.
+- 📄 Documentación oficial: <https://docs.opensearch.org/latest/aggregations/bucket/terms/>
+
+#### Apache CouchDB · [`implementaciones/couchdb/consulta.json`](implementaciones/couchdb/consulta.json)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```json
+{
+  "_comentario": [
+    "motor: couchdb",
+    "doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html",
+    "nota: implementacion declarada. La vista se calcula de forma INCREMENTAL al",
+    "escribir y se guarda en un arbol B, asi que la consulta solo lee el",
+    "resultado ya agregado. El precio: hay que decidir la agregacion antes de",
+    "necesitarla, y una pregunta nueva es una vista nueva sobre toda la base.",
+    "Se consulta con: _view/por_categoria?group=true"
+  ],
+
+  "_id": "_design/ventas",
+  "language": "javascript",
+  "views": {
+    "por_categoria": {
+      "map": "function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit(l.categoria, l.importe); }); } }",
+      "reduce": "_sum"
+    }
+  }
+}
+```
+
+- **Por qué sí:** Su modelo de vistas `map`/`reduce` está pensado exactamente para esto: el resultado se calcula de forma incremental al escribir, así que la consulta solo lee un árbol B ya agregado.
+- **Por qué no:** Hay que decidir la agregación **antes** de necesitarla: una pregunta nueva es una vista nueva que hay que construir sobre toda la base. No existe la consulta ad hoc.
+- 📄 Documentación oficial: <https://docs.couchdb.org/en/stable/ddocs/views/intro.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | No hay desanidado ni agrupación: los documentos serían cadenas opacas y todo el cálculo tendría que hacerse en el cliente después de traérselos. | Mantener el total por categoría en un hash actualizado con `HINCRBY` en cada venta: el resultado está siempre listo, y a cambio solo responde la pregunta que se decidió de antemano. | [doc](https://redis.io/docs/latest/commands/hincrby/) |
 
 ---
 

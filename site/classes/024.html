@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>mongodb</code>, <code>redis</code>, <code>dynamodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>agregado</code> · <code>frontera transaccional</code> · <code>entidad</code> · <code>actividad</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender la idea que organiza casi todo el mundo no relacional: el <strong>agregado</strong>. Elegir sus fronteras es elegir dónde hay transacciones y dónde no.</p>
@@ -265,6 +266,336 @@
 <li>Explica el criterio de Helland de idempotencia con un mensaje concreto de tu sistema.</li>
 <li>¿En qué caso concreto renunciarías al modelo relacional por uno de agregados, y con qué evidencia?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un pedido y sus líneas que cambian juntos o no cambian</p>
+<p>Un <strong>agregado</strong>, en el sentido de Evans y de Vernon, es el grupo de datos
+que se trata como una unidad: tiene una raíz —el pedido—, un límite —sus
+líneas— y un invariante que debe cumplirse siempre. Aquí el invariante es
+que el total guardado sea igual a la suma de las líneas.</p>
+<p>El caso crea el pedido con dos líneas, añade una tercera y sube el total. La
+consulta devuelve el total guardado y el calculado. Que coincidan es todo el
+ejercicio: lo interesante no es el número, sino <strong>qué mecanismo garantiza
+que nunca se separen</strong> en cada motor, y qué pasa cuando el agregado no cabe
+en la unidad atómica que ese motor ofrece.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>pedido</th>
+<th>total_guardado</th>
+<th>total_calculado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>P-1</code></td>
+<td><code>300</code></td>
+<td><code>300</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 024</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_transaction.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_transaction.html
+-- nota: el limite del agregado es una CONVENCION, no una propiedad del
+--       esquema. Nada impide un UPDATE suelto que rompa el invariante.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id    TEXT PRIMARY KEY,
+    total INTEGER NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id TEXT NOT NULL REFERENCES pedidos(id),
+    producto  TEXT NOT NULL,
+    importe   INTEGER NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El agregado se reparte en dos tablas y la transacción lo mantiene entero: <code>BEGIN</code>/<code>COMMIT</code> es la frontera. En un motor relacional el límite del agregado lo decide el diseñador, no el almacén.</li>
+<li><strong>Por qué no:</strong> Precisamente por eso el límite es invisible: nada en el esquema dice que <code>pedidos</code> y <code>lineas</code> son una unidad, y basta un <code>UPDATE</code> suelto sin transacción para romper el invariante sin que nada proteste.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_transaction.html">https://sqlite.org/lang_transaction.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id    VARCHAR PRIMARY KEY,
+    total INTEGER NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id VARCHAR NOT NULL,
+    producto  VARCHAR NOT NULL,
+    importe   INTEGER NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene transacciones ACID sobre el archivo, así que el mismo guion sirve para comprobar el invariante sobre un volcado analítico.</li>
+<li><strong>Por qué no:</strong> Un solo proceso escritor: el agregado está a salvo de una escritura a medias, pero no de dos aplicaciones que quieran escribirlo a la vez, porque esa situación sencillamente no está contemplada.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+-- nota: el invariante se puede llevar al esquema con una restriccion diferible
+--       comprobada al COMMIT, en vez de dejarlo en manos de quien escriba.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lineas, pedidos;
+
+CREATE TABLE pedidos (
+    id    text PRIMARY KEY,
+    total integer NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id text NOT NULL REFERENCES pedidos(id),
+    producto  text NOT NULL,
+    importe   integer NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La transacción abarca cuantas tablas haga falta, con aislamiento configurable y con restricciones diferibles: el límite del agregado puede ser tan grande como el problema pida, y el invariante se puede comprobar al confirmar en vez de en cada sentencia.</li>
+<li><strong>Por qué no:</strong> Esa libertad invita a agregados enormes: una transacción que toca diez tablas retiene bloqueos y versiones durante todo su recorrido, y en concurrencia alta convierte el invariante en una cola.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
+// nota: aqui NO hay transaccion, y no hace falta. El pedido y sus lineas son un
+//       solo documento, y la escritura de un documento es atomica: $push y $inc
+//       en la misma orden se aplican juntos o no se aplica ninguno.
+
+// === preparacion ===
+db.pedidos.drop();
+
+db.pedidos.insertOne({
+  _id: &quot;P-1&quot;,
+  total: 200,
+  lineas: [
+    { producto: &quot;teclado&quot;, importe: 120 },
+    { producto: &quot;raton&quot;, importe: 80 },
+  ],
+});
+
+// Una sola orden: la linea nueva y el total suben juntos.
+db.pedidos.updateOne(
+  { _id: &quot;P-1&quot; },
+  {
+    $push: { lineas: { producto: &quot;cable&quot;, importe: 100 } },
+    $inc: { total: 100 },
+  },
+);
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $project: { _id: 0, pedido: &quot;$_id&quot;, total_guardado: &quot;$total&quot;,
+                  total_calculado: { $sum: &quot;$lineas.importe&quot; } } },
+    { $sort: { pedido: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.pedido + &quot;|&quot; + d.total_guardado + &quot;|&quot; + d.total_calculado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí el agregado es literal: pedido y líneas son <strong>un documento</strong>, y la escritura de un documento es atómica por definición. El límite del agregado deja de ser una convención y pasa a ser una propiedad del almacén, sin transacción que declarar.</li>
+<li><strong>Por qué no:</strong> Ese límite es también una jaula: el documento no puede pasar de 16 MB, un pedido con cien mil líneas no cabe, y todo lo que cruce la frontera del documento vuelve a necesitar transacciones de varios documentos, que aquí cuestan más que en un motor relacional.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">https://www.mongodb.com/docs/manual/core/write-operations-atomicity/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/programmability/eval-intro/
+# nota: el script Lua es la unidad atomica: se ejecuta entero, sin que ninguna
+#       otra orden se cuele en medio. Es lo que permite que la linea nueva y el
+#       total suban juntos. Lo que NO garantiza es durabilidad: atomico y
+#       durable son dos propiedades distintas.
+
+# === preparacion ===
+FLUSHDB
+HSET pedido:P-1 total 200
+HSET pedido:P-1:linea teclado 120
+HSET pedido:P-1:linea raton 80
+
+# Anadir la linea y subir el total, sin estado intermedio observable.
+EVAL &quot;redis.call('HSET','pedido:P-1:linea','cable',100) redis.call('HINCRBY','pedido:P-1','total',100) return 1&quot; 0
+
+# === consulta ===
+EVAL &quot;local t=redis.call('HGET','pedido:P-1','total') local ls=redis.call('HVALS','pedido:P-1:linea') local s=0 for _,v in ipairs(ls) do s=s+tonumber(v) end return {'P-1|'..t..'|'..s}&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un script Lua se ejecuta entero y sin interrupciones: es la unidad atómica de Redis y permite actualizar varias claves del mismo agregado sin que nadie vea un estado intermedio.</li>
+<li><strong>Por qué no:</strong> La atomicidad no es durabilidad: si el servidor cae antes de volcar, el agregado consistente que se acaba de escribir puede no existir al arrancar. Y en un clúster, las claves del agregado tienen que compartir ranura (<code>hash tag</code>) o el script ni siquiera se puede ejecutar.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">https://redis.io/docs/latest/develop/programmability/eval-intro/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>Un elemento es la unidad atómica, y está limitado a 400 KB. Un agregado que no quepa ahí necesita <code>TransactWriteItems</code>, que admite como mucho 100 elementos, cuesta el doble de capacidad de escritura y no admite dos operaciones sobre el mismo elemento.</td>
+<td>Diseñar el agregado para que quepa en un elemento, o repartirlo en la misma clave de partición y aceptar que la coherencia entre sus elementos la comprueba un proceso posterior.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><code>BATCH</code> no es una transacción: no hay aislamiento entre particiones y no se puede deshacer. Solo dentro de <strong>una</strong> partición la escritura por lotes es atómica y aislada; en cuanto el agregado toca dos particiones, se puede observar a medias.</td>
+<td>Modelar el agregado entero dentro de una sola partición —el pedido como clave, las líneas como filas de agrupamiento— y usar <code>BATCH</code> únicamente dentro de ella.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

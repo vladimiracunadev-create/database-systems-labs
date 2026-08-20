@@ -1,0 +1,116 @@
+---
+caso:
+  titulo: Cuánto se vendió por categoría, con las líneas dentro de los documentos
+  contrato: |
+    Agregar sobre documentos obliga a hacer algo que en una tabla no hace falta:
+    **desanidar** antes de agrupar. Las líneas viven dentro del pedido, así que
+    primero hay que abrirlas en filas y después sumarlas por categoría.
+
+    El caso parte de dos pedidos con sus líneas incrustadas y pide el importe
+    total por categoría, ordenado alfabéticamente. La comparación deja a la
+    vista dos cosas: que la tubería de agregación de MongoDB y una consulta SQL
+    sobre `jsonb` son la misma idea con distinta sintaxis, y que el índice que
+    hace rápida esta consulta no es el mismo en los dos.
+  columnas: [categoria, importe]
+  esperado:
+    - [accesorios, "180"]
+    - [perifericos, "120"]
+
+motores:
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `$unwind` seguido de `$group` es la forma canónica, y `explain("executionStats")`
+      dice si la etapa inicial usó índice o recorrió la colección. Con un índice
+      multiclave sobre `lineas.categoria`, el filtro previo se resuelve sin
+      abrir los documentos que no interesan.
+    porque_no: >-
+      El índice ayuda a **filtrar**, no a agrupar: el `$group` siempre procesa
+      documento a documento en memoria, con el límite de 100 MB por etapa. Para
+      agregaciones grandes hay que permitir disco o precalcular.
+    doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `jsonb_array_elements` desanida y el `GROUP BY` de siempre agrupa: la
+      misma consulta puede reunir documentos con tablas normales, que es
+      justamente lo que un almacén documental puro no puede hacer.
+    porque_no: >-
+      El índice GIN acelera la búsqueda dentro del `jsonb`, pero no evita
+      desanidar en la agregación; y cada elemento extraído se convierte de texto
+      a número en tiempo de consulta, lo que en volúmenes grandes se nota.
+    doc: https://www.postgresql.org/docs/current/functions-json.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `json_each` se comporta como una tabla virtual, así que desanidar y
+      agrupar se escribe como cualquier otra consulta: sirve para entender el
+      mecanismo sin levantar nada.
+    porque_no: >-
+      No hay ningún índice posible sobre el contenido del JSON salvo que se
+      extraiga a una columna generada e indexada: toda agregación recorre la
+      tabla completa.
+    doc: https://sqlite.org/json1.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      `UNNEST` sobre tipos anidados nativos y agregación vectorizada: es el
+      motor donde esta forma de consulta escala mejor sin cambiar de sintaxis, y
+      puede leer directamente un fichero JSON o Parquet anidado.
+    porque_no: >-
+      No hay índices que valgan aquí: la velocidad viene de leer menos columnas,
+      no de saltar filas. Si la consulta filtra por un valor muy selectivo, un
+      motor con índice gana.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/unnest.html
+
+  - id: opensearch
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/opensearch/consulta.json
+    porque_si: >-
+      Las agregaciones por término son su especialidad: calcula el total por
+      categoría sobre millones de documentos en milisegundos, porque el índice
+      invertido y los `doc_values` columnares ya tienen los datos agrupados por
+      valor.
+    porque_no: >-
+      Para que el desanidado sea correcto hay que declarar `nested`, y eso
+      convierte cada línea en un documento oculto con su propio costo de
+      indexación; sin `nested`, los campos del arreglo se aplanan y las
+      correlaciones entre ellos se pierden.
+    doc: https://docs.opensearch.org/latest/aggregations/bucket/terms/
+
+  - id: couchdb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/couchdb/consulta.json
+    porque_si: >-
+      Su modelo de vistas `map`/`reduce` está pensado exactamente para esto: el
+      resultado se calcula de forma incremental al escribir, así que la consulta
+      solo lee un árbol B ya agregado.
+    porque_no: >-
+      Hay que decidir la agregación **antes** de necesitarla: una pregunta nueva
+      es una vista nueva que hay que construir sobre toda la base. No existe la
+      consulta ad hoc.
+    doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay desanidado ni agrupación: los documentos serían cadenas opacas y
+      todo el cálculo tendría que hacerse en el cliente después de traérselos.
+    alternativa: >-
+      Mantener el total por categoría en un hash actualizado con `HINCRBY` en
+      cada venta: el resultado está siempre listo, y a cambio solo responde la
+      pregunta que se decidió de antemano.
+    doc: https://redis.io/docs/latest/commands/hincrby/

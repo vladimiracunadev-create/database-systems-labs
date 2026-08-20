@@ -1,0 +1,17 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/commands/expire/
+# nota: TTL devuelve tres cosas distintas y hay que leerlas como tres:
+#         > 0   segundos que le quedan
+#         -1    existe y no caduca
+#         -2    no existe
+#       Confundir -1 con -2 es el error clasico: «la clave no esta» y «la clave
+#       esta y no caduca» son estados opuestos.
+
+# === preparacion ===
+FLUSHDB
+SET k1 "con caducidad" EX 3600
+SET k2 "permanente"
+# k3 no se escribe: la ausencia tambien es un estado.
+
+# === consulta ===
+EVAL "local r={} for _,k in ipairs({'k1','k2','k3'}) do local t=redis.call('TTL',k) local e='expira' if t==-1 then e='permanente' elseif t==-2 then e='ausente' end r[#r+1]=k..'|'..e end return r" 0
