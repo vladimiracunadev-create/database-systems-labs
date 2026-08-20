@@ -42,6 +42,7 @@ ARCHIVOS_OBLIGATORIOS = [
     "labs/06-vector-search/run_vector_lab.py",
     "reference-data/school/schema.sqlite.sql", "reference-data/school/seed.sqlite.sql",
     "assessments/rubric.md",
+    "rutas/README.md",
     "scripts/build_classes.py", "scripts/generate_site.py",
     "site/index.html",
 ]
@@ -60,6 +61,23 @@ SECCIONES_LECCION = [
 
 MINIMO_FUENTES_POR_CLASE = 2
 MINIMO_CARACTERES_LECCION = 2500
+# Una guia de rol corta no orienta a nadie: repite el titulo del cargo y ya.
+MINIMO_CARACTERES_GUIA = 6000
+
+# Lo que toda guia de rol debe responder. Sin esto es una lista de partes con
+# un nombre de cargo encima.
+SECCIONES_GUIA = [
+    "## 🧭 Qué es y por qué importa",
+    "## 🗓️ Un día en el puesto",
+    "## 🧠 Qué necesitas saber",
+    "## 📚 Tu ruta en el programa",
+    "## 🧪 Qué tienes que poder demostrar",
+    "## 🎓 Credenciales",
+    "## 📈 Progresión y mercado",
+    "## ⚠️ Mitos y errores comunes",
+    "## 🚀 Siguientes pasos",
+    "## 📖 De dónde sale esto",
+]
 ENLACE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 SLUG_VALIDO = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
@@ -139,7 +157,8 @@ def validar_curriculo(curriculo: dict, fuentes: dict, motores: dict,
     # que nadie la revise: se trata como error, no como aviso.
     huerfanas = sorted(ids_fuente - citadas)
     if huerfanas:
-        fallo(f"fuentes registradas y no citadas por ninguna clase ni laboratorio: {huerfanas}")
+        fallo("fuentes registradas y no citadas por ninguna clase, laboratorio ni ruta: "
+              f"{huerfanas}")
 
 
 def validar_laboratorios(curriculo: dict, fuentes: dict) -> set[str]:
@@ -196,6 +215,71 @@ def validar_laboratorios(curriculo: dict, fuentes: dict) -> set[str]:
             if clase["lab"] not in rutas:
                 fallo(f"clase {clase['id']}: el laboratorio {clase['lab']} no esta "
                       f"declarado en la seccion `laboratorios`")
+    return citadas
+
+
+def validar_rutas(curriculo: dict, fuentes: dict) -> set[str]:
+    """Comprueba las rutas por rol y devuelve las fuentes que citan.
+
+    Una ruta es una promesa de recorrido: si apunta a una parte que no existe,
+    a una clase que se renombro o a una guia que nadie escribio, deja de serlo.
+    """
+    ids_fuente = {f["id"] for f in fuentes["sources"]}
+    ids_parte = {p["id"] for p in curriculo["parts"]}
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    ids_lab = {lab["id"] for lab in curriculo.get("laboratorios", [])}
+    horas_por_parte = {p["id"]: sum(c["hours"] for c in p["classes"]) for p in curriculo["parts"]}
+    citadas: set[str] = set()
+
+    for clave, ruta in curriculo["rutas"].items():
+        if not SLUG_VALIDO.match(clave):
+            fallo(f"ruta {clave!r}: clave no ASCII-kebab")
+
+        for pid in ruta["partes"]:
+            if pid not in ids_parte:
+                fallo(f"ruta {clave}: la parte {pid} no existe")
+        if len(set(ruta["partes"])) != len(ruta["partes"]):
+            fallo(f"ruta {clave}: partes repetidas")
+
+        for cid in ruta["clases_clave"]:
+            if cid not in ids_clase:
+                fallo(f"ruta {clave}: la clase clave {cid} no existe")
+        for lid in ruta["laboratorios"]:
+            if lid not in ids_lab:
+                fallo(f"ruta {clave}: el laboratorio {lid} no esta declarado")
+
+        if ruta["nivel"] not in {"entrada", "intermedio", "avanzado"}:
+            fallo(f"ruta {clave}: nivel desconocido {ruta['nivel']!r}")
+        if not ruta.get("cargos"):
+            fallo(f"ruta {clave}: no declara a que cargos apunta")
+
+        guia = ROOT / ruta["guia"]
+        if not guia.exists():
+            fallo(f"ruta {clave}: falta la guia {ruta['guia']}")
+        else:
+            texto = guia.read_text(encoding="utf-8")
+            if len(texto) < MINIMO_CARACTERES_GUIA:
+                fallo(f"ruta {clave}: guia de {len(texto)} caracteres; el minimo es "
+                      f"{MINIMO_CARACTERES_GUIA}")
+            for seccion in SECCIONES_GUIA:
+                if seccion not in texto:
+                    fallo(f"ruta {clave}: la guia no tiene la seccion {seccion!r}")
+            # Las horas de la guia salen de sus partes: escritas a mano se
+            # desincronizan en cuanto una parte cambia de duracion.
+            horas = sum(horas_por_parte.get(pid, 0) for pid in ruta["partes"])
+            if f"{horas} horas" not in texto:
+                fallo(f"ruta {clave}: la guia no declara las {horas} horas que suman sus partes")
+
+        if len(ruta["fuentes"]) < MINIMO_FUENTES_POR_CLASE:
+            fallo(f"ruta {clave}: {len(ruta['fuentes'])} fuentes; el minimo es "
+                  f"{MINIMO_FUENTES_POR_CLASE}")
+        for sid in ruta["fuentes"]:
+            citadas.add(sid)
+            if sid not in ids_fuente:
+                fallo(f"ruta {clave}: cita la fuente inexistente {sid!r}")
+
+    if not (ROOT / "rutas" / "README.md").exists():
+        fallo("falta el indice de rutas rutas/README.md")
     return citadas
 
 
@@ -335,7 +419,8 @@ def main() -> int:
     validar_fuentes(fuentes)
     validar_catalogo_motores(motores)
     citadas_labs = validar_laboratorios(curriculo, fuentes)
-    validar_curriculo(curriculo, fuentes, motores, citadas_labs)
+    citadas_rutas = validar_rutas(curriculo, fuentes)
+    validar_curriculo(curriculo, fuentes, motores, citadas_labs | citadas_rutas)
     validar_clases(curriculo)
     validar_datos_referencia()
     validar_enlaces_relativos()

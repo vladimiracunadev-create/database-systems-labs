@@ -34,23 +34,108 @@ evaluacion:
     aprobación exige ademas evidencia de restauración probada, control de
     acceso y pruebas.
 
+# Rutas por rol. Cada una declara su recorrido por partes, las clases que no
+# se pueden saltar, los laboratorios que la sostienen, los cargos a los que
+# apunta y las fuentes de las que salen sus afirmaciones de oficio y de
+# mercado. La guia larga vive en `rutas/<clave>.md`; aqui solo los datos.
 rutas:
   desarrollo-de-aplicaciones:
     titulo: Desarrollador de aplicaciones
     descripcion: Modelar bien, consultar con seguridad y no romper producción.
+    nivel: entrada
+    foco: >-
+      La base de datos vista desde el código que la usa: esquema como contrato,
+      consultas correctas, concurrencia y despliegues sin caída.
     partes: ["00", "01", "02", "03", "04", "05", "07", "08", "10", "13"]
+    clases_clave: ["007", "014", "016", "019", "037", "049", "051"]
+    laboratorios: ["01", "03", "04"]
+    cargos: [Desarrollador backend, Desarrollador full-stack, Ingeniero de software]
+    guia: rutas/desarrollo-de-aplicaciones.md
+    fuentes: [karwin-sql-antipatterns, date-sql-relational-theory, owasp-sqli-cheatsheet, so-developer-survey-2025]
+
   ingenieria-de-datos:
     titulo: Ingeniero de datos
     descripcion: Mover datos entre sistemas conservando trazabilidad y semántica.
+    nivel: intermedio
+    foco: >-
+      Tuberías que otros usan para decidir: integración, captura de cambios,
+      modelado analítico y streaming con semántica declarada.
     partes: ["00", "01", "02", "03", "06", "09", "11", "12", "13"]
+    clases_clave: ["030", "032", "054", "055", "056", "057"]
+    laboratorios: ["01", "02", "05"]
+    cargos: [Ingeniero de datos, Ingeniero de plataforma de datos, Ingeniero de streaming]
+    guia: rutas/ingenieria-de-datos.md
+    fuentes: [reis-housley-data-engineering, kimball-toolkit, streaming-systems, cert-google-data-engineer]
+
   fiabilidad-y-operacion:
     titulo: DBA / SRE de datos
     descripcion: Sostener disponibilidad, rendimiento y recuperación demostrada.
+    nivel: intermedio
+    foco: >-
+      Que el sistema siga en pie y se pueda volver atrás: respaldo restaurado,
+      planes de ejecución, réplica, objetivos de servicio y migraciones.
     partes: ["00", "01", "03", "04", "07", "08", "09", "10", "13"]
+    clases_clave: ["036", "038", "042", "048", "049", "052"]
+    laboratorios: ["01", "03", "04"]
+    cargos: [Administrador de bases de datos, SRE de datos, Ingeniero de fiabilidad]
+    guia: rutas/fiabilidad-y-operacion.md
+    fuentes: [campbell-majors-dbre, google-sre-book, bls-ooh-dba, cert-microsoft-dp300]
+
   arquitectura:
     titulo: Arquitecto de datos
     descripcion: Elegir por evidencia y defender el costo de la decisión.
+    nivel: avanzado
+    foco: >-
+      Decidir qué motor, qué modelo y qué garantías, con la medición y el
+      registro de decisión que permiten defenderlo y revertirlo.
     partes: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"]
+    clases_clave: ["045", "046", "047", "062", "063", "064"]
+    laboratorios: ["02", "04", "06"]
+    cargos: [Arquitecto de datos, Arquitecto de soluciones, Ingeniero de staff]
+    guia: rutas/arquitectura.md
+    fuentes: [kleppmann-ddia, redbook5, helland-life-beyond-2007, db-engines-ranking]
+
+  analitica-y-bi:
+    titulo: Analytics engineer / BI
+    descripcion: Convertir datos crudos en modelos que una organización pueda consultar sin equivocarse.
+    nivel: intermedio
+    foco: >-
+      SQL analítico serio, modelado dimensional, transformaciones versionadas y
+      la frontera entre la carga transaccional y la analítica.
+    partes: ["00", "01", "02", "03", "04", "08", "11", "13"]
+    clases_clave: ["017", "018", "032", "054", "055", "056"]
+    laboratorios: ["01", "04"]
+    cargos: [Analytics engineer, Ingeniero de BI, Analista de datos sénior]
+    guia: rutas/analitica-y-bi.md
+    fuentes: [kimball-toolkit, docs-dbt, docs-duckdb, so-developer-survey-2025]
+
+  ia-y-recuperacion:
+    titulo: Ingeniero de IA aplicada y recuperación
+    descripcion: Construir recuperación medible antes de dejar que un modelo hable.
+    nivel: avanzado
+    foco: >-
+      Embeddings, índices aproximados, búsqueda híbrida y evaluación de la
+      recuperación: la parte del RAG que decide si la respuesta es defendible.
+    partes: ["00", "01", "02", "03", "05", "06", "08", "12", "13"]
+    clases_clave: ["031", "041", "058", "059", "060", "061"]
+    laboratorios: ["01", "05", "06"]
+    cargos: [Ingeniero de IA aplicada, Ingeniero de búsqueda y recuperación, ML engineer de producto]
+    guia: rutas/ia-y-recuperacion.md
+    fuentes: [lewis-rag-2020, malkov-hnsw-2018, robertson-bm25-2009, docs-pgvector]
+
+  gobierno-y-privacidad:
+    titulo: Gobierno y privacidad del dato
+    descripcion: Responder quién accede a qué, con qué base legal y hasta cuándo se conserva.
+    nivel: intermedio
+    foco: >-
+      Control de acceso, minimización, retención, trazabilidad y la evidencia
+      que exige una auditoría o un regulador.
+    partes: ["00", "01", "03", "07", "09", "10", "11", "13"]
+    clases_clave: ["013", "048", "050", "051", "053", "063"]
+    laboratorios: ["01", "03"]
+    cargos: [Responsable de gobierno del dato, Especialista en cumplimiento de datos, Delegado de protección de datos técnico]
+    guia: rutas/gobierno-y-privacidad.md
+    fuentes: [gdpr-2016-679, chile-ley-19628, nist-sp800-53, cert-dama-cdmp]
 
 # Los laboratorios, con lo que cada uno demuestra y de donde procede el
 # criterio. `comando` vacio significa que el laboratorio es de diseno y se

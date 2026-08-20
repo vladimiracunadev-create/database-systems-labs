@@ -23,7 +23,7 @@ el validador deja de ser el único componente sin pruebas.
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.
-- **Pruebas** (`tests/`): 39 pruebas que ejecutan los laboratorios, comprueban
+- **Pruebas** (`tests/`): 93 pruebas que ejecutan los laboratorios, comprueban
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo `--check`, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro
@@ -33,7 +33,7 @@ el validador deja de ser el único componente sin pruebas.
 - `requirements-dev.txt` y `pytest.ini` para el entorno de desarrollo.
 - Trabajo `pruebas` en integración continua, y los tres laboratorios nuevos en
   la matriz de Python 3.11, 3.12 y 3.13.
-- **Sitio como producto**: barra de navegación y pie comunes a las 102 páginas,
+- **Sitio como producto**: barra de navegación y pie comunes a las 111 páginas,
   tema claro y oscuro con conmutador que recuerda la elección, progreso de
   lectura por clase guardado en el navegador, filtro «solo pendientes»,
   anterior/siguiente y migas en cada clase, barra de avance, copiar bloque de
@@ -57,6 +57,25 @@ el validador deja de ser el único componente sin pruebas.
   comprueba que el guion existe y que imprime de verdad la marca que declara.
 - Análisis CodeQL semanal y en cada cambio, y Dependabot mensual para acciones y
   dependencias de Python.
+- **Rutas por rol con guía de carrera** (`rutas/`): las cuatro rutas por objetivo pasan
+  de una fila en una tabla a siete recorridos con guía completa —qué es el puesto, un día
+  en el trabajo, qué necesitas saber, la ruta por partes con sus clases clave, qué tienes
+  que poder demostrar, credenciales, progresión, mitos y siguientes pasos—. Se añaden
+  Analytics engineer / BI, Ingeniero de IA aplicada y recuperación, y Gobierno y
+  privacidad del dato, con lo que las 14 partes quedan cubiertas por alguna ruta.
+- Las rutas viven como **datos** en `curriculum.yaml` (nivel, foco, partes, clases clave,
+  laboratorios, cargos y fuentes) y el validador comprueba que todo lo que prometen
+  existe, que la guía trae sus diez secciones y que **las horas que declara son las que
+  suman sus partes**.
+- Seis fuentes nuevas para sostener las afirmaciones de oficio y de mercado: el
+  *Occupational Outlook Handbook* del U.S. Bureau of Labor Statistics, la *Stack Overflow
+  Developer Survey 2025*, el *DB-Engines Ranking* y los temarios oficiales de DP-300,
+  Google Professional Data Engineer y CDMP. Donde no hay fuente pública para el mercado
+  local, las guías **no publican cifras**.
+- Nueve páginas más en el sitio: índice de rutas, cómo elegir y una por rol, con datos
+  estructurados de itinerario y las fuentes enlazadas a su ficha.
+- Pruebas de coherencia del README: la tabla del programa, la de rutas y las cifras de las
+  insignias se comprueban contra `curriculum.yaml` y contra el propio repositorio.
 
 ### Cambiado
 
@@ -65,8 +84,14 @@ el validador deja de ser el único componente sin pruebas.
   buscar fuentes huérfanas.
 - `labs/README.md` declara qué mide cada laboratorio y por qué ninguno afirma
   nada en milisegundos.
-- `scripts/generate_site.py` pasa de 82 a 102 páginas y admite artefactos
+- `scripts/generate_site.py` pasa de 82 a 111 páginas y admite artefactos
   binarios, con `--check` byte a byte también para los iconos.
+- Los README de clase pierden la tabla de metadatos y las cifras del README raíz dejan de
+  duplicar las insignias; la ficha de clase pasa a una línea corrida.
+- El bloque «Laboratorio» de cada clase publica el comando real del laboratorio: antes
+  anunciaba un `run_lab.py` que solo existe en el primero.
+- Corregidas las horas de las partes 08 y 09 en la tabla del README, que declaraban 19 y
+  suman 17.
 - El sistema visual se reescribe sobre variables CSS: un solo bloque de tokens
   define color y ritmo, y de ahí sale el tema claro sin excepciones.
 - El flujo de Pages vigila todas las entradas del generador; antes ignoraba

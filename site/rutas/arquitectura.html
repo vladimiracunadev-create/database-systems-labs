@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Decidir qué motor, qué modelo y qué garantías, con la medición y el registro de decisión que permiten defenderlo y revertirlo.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/arquitectura.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Arquitecto de datos · Rutas · Database Systems Labs">
+<meta property="og:description" content="Decidir qué motor, qué modelo y qué garantías, con la medición y el registro de decisión que permiten defenderlo y revertirlo.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/arquitectura.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "Ruta: Arquitecto de datos", "learningResourceType": "Career pathway", "inLanguage": "es", "educationalLevel": "avanzado", "timeRequired": "PT210H", "teaches": ["Arquitecto de datos", "Arquitecto de soluciones", "Ingeniero de staff"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}}</script>
+<title>Arquitecto de datos · Rutas · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../rutas/index.html" aria-current="page">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Rutas por rol</a><span aria-hidden="true">/</span>
+  <span>Arquitecto de datos</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="arquitecto-de-datos">🏛️ Arquitecto de datos</h1>
+<blockquote>
+<p>Decides qué se guarda dónde, con qué garantías y a qué costo, y después tienes que
+defenderlo delante de gente que preferiría otra cosa. Tu producto no es un diagrama: es una
+decisión con evidencia, con límites declarados y con vuelta atrás.</p>
+<p><strong>Nivel de entrada:</strong> avanzado (requiere haber operado o construido sistemas reales) ·
+<strong>Foco:</strong> elección de motor y modelo, garantías distribuidas y costo total ·
+<strong>Cargos habituales:</strong> arquitecto de datos, arquitecto de soluciones, ingeniero de staff.</p>
+</blockquote>
+<h2 id="qué-es-y-por-qué-importa">🧭 Qué es y por qué importa</h2>
+<p>Un arquitecto de datos no es «el que sabe más SQL». Es quien responde preguntas que no tienen
+respuesta única: ¿un motor o cinco? ¿consistencia fuerte o disponibilidad bajo partición?
+¿duplicamos el dato para servir esta consulta o pagamos la reunión cada vez? Cada respuesta
+tiene un costo que alguien pagará durante años: en dinero, en complejidad operativa y en
+libertad para cambiar de idea.</p>
+<p>Importa porque estas decisiones son las más caras de revertir. Cambiar un framework web es un
+trimestre incómodo; cambiar el modelo de datos de un sistema en producción es un proyecto con
+riesgo de pérdida. Por eso el oficio consiste tanto en decidir como en <strong>dejar constancia</strong>:
+qué contexto había, qué alternativas se consideraron, qué medición apoyó la elección y qué
+tendría que cambiar para revisarla.</p>
+<p>La tentación del rol es opinar sin medir. La disciplina que este programa impone —cada
+afirmación con su fuente, cada conclusión con su evidencia— es exactamente el antídoto. Una
+arquitectura defendida con «es lo estándar» o «lo usa Netflix» no es una arquitectura: es una
+apuesta con el dinero de otro.</p>
+<p>Lo que aquí <strong>no</strong> vas a aprender: la política de una organización, que es la mitad del
+trabajo. Convencer a tres equipos con incentivos distintos no se estudia; se practica.</p>
+<h2 id="un-día-en-el-puesto">🗓️ Un día en el puesto</h2>
+<ul>
+<li><strong>Una propuesta que llega con la solución ya elegida.</strong> Tu primer trabajo es reconstruir el
+  problema: patrón de acceso, volumen, latencia aceptable, consistencia necesaria.</li>
+<li><strong>Comparar dos opciones con datos.</strong> No con tablas de marketing: con una prueba pequeña sobre
+  el dominio real y una medición reproducible.</li>
+<li><strong>Escribir un registro de decisión (ADR).</strong> Contexto, alternativas, decisión, consecuencias y
+  criterio de revisión. Media página que ahorra un año de discusiones.</li>
+<li><strong>Revisar un diseño ajeno.</strong> Buscar el punto donde la garantía prometida no se sostiene: una
+  transacción que cruza dos sistemas, un identificador que no es único, una réplica leída como
+  si fuera la fuente de verdad.</li>
+<li><strong>Hablar de dinero.</strong> Licencias, almacenamiento, transferencia, personas que operarán eso.
+  El costo total incluye el equipo que se levanta de madrugada.</li>
+<li><strong>Decir que no.</strong> A un motor más «porque encaja bonito», a una consistencia más fuerte de la
+  necesaria, a una migración sin plan de vuelta.</li>
+</ul>
+<h2 id="qué-necesitas-saber">🧠 Qué necesitas saber</h2>
+<h3 id="conocimiento-técnico">Conocimiento técnico</h3>
+<ul>
+<li><strong>Todos los modelos, con criterio:</strong> relacional, documental, clave-valor, grafo, columna
+  ancha, series temporales, búsqueda y vectorial —qué problema resuelve cada uno y qué exige a
+  cambio—.</li>
+<li><strong>Garantías distribuidas sin folclore:</strong> CAP y PACELC leídos con precisión, modelos de
+  consistencia, garantías de sesión, consenso y por qué las transacciones distribuidas son
+  caras.</li>
+<li><strong>Transacciones y recuperación:</strong> para saber qué prometes cuando prometes durabilidad.</li>
+<li><strong>Rendimiento con medición:</strong> planes, índices, formatos y particionado; la diferencia entre
+  una intuición y un experimento.</li>
+<li><strong>Evolución:</strong> migraciones, compatibilidad, versionado de esquemas y el costo de cada
+  acoplamiento que introduces.</li>
+<li><strong>Costo total de propiedad:</strong> infraestructura, licencias, operación, formación y la deuda que
+  dejas.</li>
+</ul>
+<h3 id="herramientas-del-oficio">Herramientas del oficio</h3>
+<ul>
+<li>Prototipos pequeños y reproducibles: contenedores con el motor candidato y datos propios.</li>
+<li>Registros de decisión (ADR) versionados junto al código.</li>
+<li>Diagramas que expliquen el flujo del dato y las garantías, no el organigrama del sistema.</li>
+<li>Herramientas de medición: planes de ejecución, generadores de carga, métricas de latencia por
+  percentil.</li>
+</ul>
+<h3 id="habilidades-no-técnicas">Habilidades no técnicas</h3>
+<ul>
+<li><strong>Escribir para que otro decida:</strong> un documento que se entiende sin ti es la mitad del valor.</li>
+<li><strong>Escuchar la restricción real</strong> detrás de la petición: presupuesto, plazo, equipo, miedo.</li>
+<li><strong>Sostener una decisión impopular</strong> con evidencia, y <strong>cambiarla en público</strong> cuando la
+  evidencia cambia.</li>
+</ul>
+<h2 id="tu-ruta-en-el-programa">📚 Tu ruta en el programa</h2>
+<p>Las 14 partes, 210 horas. Es la única ruta completa, y con razón: no puedes elegir entre
+modelos que no conoces.</p>
+<ul>
+<li>📚 <a href="../classes/parte-00.html">Parte 00 — Fundamentos</a> ·
+  <a href="../classes/parte-01.html">01 — Modelado</a> ·
+  <a href="../classes/parte-02.html">02 — Modelo relacional</a> ·
+  <a href="../classes/parte-03.html">03 — SQL</a> ·
+  <a href="../classes/parte-04.html">04 — Motores y dialectos</a>.</li>
+<li>📚 <a href="../classes/parte-05.html">05 — Documentos y clave-valor</a> ·
+  <a href="../classes/parte-06.html">06 — Grafos, columnas, tiempo y búsqueda</a>.
+  Aquí se construye el criterio para no elegir por moda.</li>
+<li>📚 <a href="../classes/parte-07.html">07 — Transacciones</a> ·
+  <a href="../classes/parte-08.html">08 — Almacenamiento, índices y planes</a>.</li>
+<li>📚 <a href="../classes/parte-09.html">09 — Distribución, réplica y consistencia</a>.
+  El corazón del rol:
+  <a href="../classes/045.html">045 — CAP, PACELC y lo que realmente se elige</a>,
+  <a href="../classes/046.html">046 — Modelos de consistencia y garantías de sesión</a>
+  y <a href="../classes/047.html">047 — Consenso y transacciones distribuidas</a>.</li>
+<li>📚 <a href="../classes/parte-10.html">10 — Operación, seguridad y gobierno</a> ·
+  <a href="../classes/parte-11.html">11 — Analítica, integración y streaming</a> ·
+  <a href="../classes/parte-12.html">12 — Vectores, recuperación y RAG</a>.</li>
+<li>📚 <a href="../classes/parte-13.html">13 — Arquitectura y proyecto final</a>.
+  Donde se cierra todo:
+  <a href="../classes/062.html">062 — Persistencia políglota por evidencia</a>,
+  <a href="../classes/063.html">063 — Registro de decisiones y costo total</a>
+  y <a href="../classes/064.html">064 — Proyecto final: diseñar, medir y defender</a>.</li>
+</ul>
+<p>Laboratorios de la ruta:</p>
+<ul>
+<li>🧪 <a href="../laboratorios.html"><code>02-polyglot-modeling</code></a> — el mismo dominio en tres
+  modelos, con lo que gana y pierde cada uno declarado.</li>
+<li>🧪 <a href="../laboratorios.html"><code>04-indexing</code></a> — cómo se mide una hipótesis de rendimiento
+  sin caer en el cronómetro.</li>
+<li>🧪 <a href="../laboratorios.html"><code>06-vector-search</code></a> — recuperación medible, antes de
+  aprobar un proyecto de IA con recuperación.</li>
+</ul>
+<h2 id="qué-tienes-que-poder-demostrar">🧪 Qué tienes que poder demostrar</h2>
+<ul>
+<li><strong>elegir un motor para un caso concreto y defender la elección</strong> con una medición propia y
+  un límite declarado;</li>
+<li>explicar qué garantía pierdes exactamente al distribuir, en el vocabulario de los modelos de
+  consistencia y no en el de los eslóganes;</li>
+<li>escribir un ADR que otra persona pueda usar para revisar la decisión dentro de dos años;</li>
+<li>estimar el costo total de una opción, incluida la operación y la formación del equipo;</li>
+<li>diseñar la evolución: cómo se migra hacia esa arquitectura y cómo se vuelve atrás;</li>
+<li>decir en qué condiciones tu propia decisión sería equivocada.</li>
+</ul>
+<h2 id="credenciales">🎓 Credenciales</h2>
+<p>No existe una credencial que acredite «arquitecto de datos» de forma reconocida y neutral. Las
+que hay son de proveedor —de nube, sobre todo— y validan su catálogo, no el criterio. Sirven
+para pasar filtros, no para demostrar arquitectura.</p>
+<p>Lo que sí se reconoce en este rol: decisiones documentadas que otros pueden auditar. El
+<a href="../classes/063.html">registro de decisiones</a>
+y el <a href="../docs/proyecto-final.html">proyecto final</a> de este programa producen justamente ese
+material.</p>
+<p>Como referencia de contexto —no de calidad—, el
+<a href="https://db-engines.com/en/ranking">DB-Engines Ranking</a> publica cada mes la popularidad de más
+de 400 gestores a partir de menciones, ofertas de empleo y perfiles profesionales. Es útil para
+saber qué vas a encontrar en el mercado y qué te costará contratar; no dice nada sobre si un
+motor es adecuado para tu problema.</p>
+<h2 id="progresión-y-mercado">📈 Progresión y mercado</h2>
+<p>Casi nadie llega aquí de entrada. Los caminos habituales:</p>
+<ol>
+<li><strong>Desarrollo o ingeniería de datos con años de sistemas reales</strong> — es donde se forma el
+   criterio.</li>
+<li><strong>Referente técnico de un dominio</strong> — decides el modelo de una parte del producto.</li>
+<li><strong>Arquitecto de datos / de soluciones</strong> — decides entre sistemas y equipos.</li>
+<li><strong>Bifurcación:</strong> ingeniero de staff o principal (influencia técnica sin gestión), o
+   dirección técnica (con gestión).</li>
+</ol>
+<p>Sobre cifras: el <a href="https://www.bls.gov/ooh/computer-and-information-technology/database-administrators.htm">Occupational Outlook Handbook</a>
+del U.S. Bureau of Labor Statistics agrupa administradores y <strong>arquitectos</strong> de bases de datos,
+y publica para estos últimos una mediana claramente superior a la del administrador —datos de
+mayo de 2024 para Estados Unidos—. Es la única referencia oficial que este repositorio cita
+para el rol; para tu mercado, contrasta ofertas reales.</p>
+<h2 id="mitos-y-errores-comunes">⚠️ Mitos y errores comunes</h2>
+<ul>
+<li><strong>«Lo usa una empresa grande, luego nos sirve.»</strong> Su escala, su equipo y su presupuesto no
+  son los tuyos. La solución de otro es un dato, no un argumento.</li>
+<li><strong>«Más motores, más flexible.»</strong> Cada motor añadido multiplica respaldo, monitorización,
+  actualizaciones, seguridad y personas que deben saber operarlo.</li>
+<li><strong>«CAP dice que hay que elegir dos de tres.»</strong> Esa lectura es folclore. La elección real
+  aparece solo durante la partición, y el resto del tiempo el compromiso es entre latencia y
+  consistencia.</li>
+<li><strong>«Eventualmente consistente» como respuesta.</strong> ¿Eventualmente cuánto? ¿Qué ve una sesión que
+  acaba de escribir? Sin eso, no has definido nada.</li>
+<li><strong>«El diagrama es la arquitectura.»</strong> El diagrama es una vista. La arquitectura es el
+  conjunto de decisiones y sus consecuencias, y vive en el ADR.</li>
+<li><strong>«Ya lo optimizaremos después.»</strong> Algunas decisiones —el modelo, la clave de partición, la
+  garantía prometida— no se optimizan después: se migran, y eso cuesta.</li>
+</ul>
+<h2 id="siguientes-pasos">🚀 Siguientes pasos</h2>
+<ol>
+<li>Recorre las 14 partes; si vienes con experiencia, no te saltes la 05 y la 06: son las que
+   evitan el sesgo relacional.</li>
+<li>Haz la Parte 09 con lápiz y papel: escribe qué garantía necesita cada caso de uso que
+   conoces.</li>
+<li>Ejecuta <a href="../laboratorios.html"><code>02-polyglot-modeling</code></a> sobre un dominio de
+   tu trabajo, no sobre el del ejemplo.</li>
+<li>Escribe tres ADR de decisiones ya tomadas en tu empresa, con la información que había
+   entonces. Es el mejor ejercicio de calibración que existe.</li>
+<li>Cierra con el <a href="../docs/proyecto-final.html">proyecto final</a>: diseñar, medir y <strong>defender</strong> ante
+   alguien que pregunte.</li>
+</ol>
+<h2 id="de-dónde-sale-esto">📖 De dónde sale esto</h2>
+<ul>
+<li><strong>Martin Kleppmann</strong>, <em>Designing Data-Intensive Applications</em> — el marco completo de
+  garantías, réplica y compromisos.</li>
+<li><strong>Peter Bailis, Joseph M. Hellerstein, Michael Stonebraker (eds.)</strong>, <em>Readings in Database
+  Systems</em> — la conversación de fondo del campo, con sus desacuerdos.</li>
+<li><strong>Pat Helland</strong>, <em>Life beyond Distributed Transactions</em> — por qué el mundo distribuido obliga
+  a rediseñar, no solo a escalar.</li>
+<li><strong>solid IT</strong>, <em>DB-Engines Ranking</em> — visibilidad y demanda por motor, con su metodología
+  declarada.</li>
+</ul>
+<p>Fichas completas en el <a href="../fuentes.html">registro de fuentes</a>.</p>
+<hr />
+<ul>
+<li>⬅️ <a href="guia.html">Volver al índice de rutas</a></li>
+<li>🏠 <a href="../index.html">Inicio del programa</a></li>
+</ul>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Que el sistema siga en pie y se pueda volver atrás: respaldo restaurado, planes de ejecución, réplica, objetivos de servicio y migraciones.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/fiabilidad-y-operacion.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="DBA / SRE de datos · Rutas · Database Systems Labs">
+<meta property="og:description" content="Que el sistema siga en pie y se pueda volver atrás: respaldo restaurado, planes de ejecución, réplica, objetivos de servicio y migraciones.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/fiabilidad-y-operacion.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "Ruta: DBA / SRE de datos", "learningResourceType": "Career pathway", "inLanguage": "es", "educationalLevel": "intermedio", "timeRequired": "PT143H", "teaches": ["Administrador de bases de datos", "SRE de datos", "Ingeniero de fiabilidad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}}</script>
+<title>DBA / SRE de datos · Rutas · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../rutas/index.html" aria-current="page">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Rutas por rol</a><span aria-hidden="true">/</span>
+  <span>DBA / SRE de datos</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="dba--sre-de-datos">🛡️ DBA / SRE de datos</h1>
+<blockquote>
+<p>Eres quien responde cuando la base de datos deja de responder. Tu trabajo se mide en dos
+números: cuánto tiempo estuvo caída y cuántos datos se perdieron. Todo lo demás —índices,
+réplicas, planes— existe para mantener esos dos números bajos.</p>
+<p><strong>Nivel de entrada:</strong> intermedio · <strong>Foco:</strong> disponibilidad, rendimiento, recuperación
+demostrada y cambios sin caída · <strong>Cargos habituales:</strong> administrador de bases de datos, SRE
+de datos, ingeniero de fiabilidad.</p>
+</blockquote>
+<h2 id="qué-es-y-por-qué-importa">🧭 Qué es y por qué importa</h2>
+<p>El rol clásico de DBA —crear usuarios, ejecutar respaldos, vigilar espacio— se ha ido
+fundiendo con el de SRE: la operación se automatiza, se versiona y se mide con objetivos de
+servicio. Lo que no ha cambiado es la responsabilidad de fondo: <strong>eres el último punto entre un
+incidente y la pérdida de datos</strong>. Un servicio sin estado se reinicia; una base de datos
+corrupta sin respaldo restaurable es una empresa con un problema existencial.</p>
+<p>La afirmación que ordena el oficio es incómoda: <em>un respaldo que nunca se ha restaurado no es
+un respaldo, es un archivo</em>. La mitad del trabajo consiste en convertir supuestos en evidencia:
+restaurar de verdad y cronometrarlo, provocar una conmutación por error a propósito, medir el
+retraso de la réplica bajo carga, comprobar que la migración se puede revertir.</p>
+<p>Es un rol con guardias, con presión y con una asimetría desagradable: cuando todo va bien,
+nadie lo nota. Compensa con algo que pocos puestos dan: entiendes el sistema entero, del disco
+al plan de ejecución, y tu criterio pesa en decisiones caras.</p>
+<p>Lo que este programa <strong>no</strong> te da: la experiencia de un incidente real a las tres de la mañana,
+ni el músculo político para negociar una ventana de mantenimiento. Sí te da el método y las
+mediciones con las que se argumenta.</p>
+<h2 id="un-día-en-el-puesto">🗓️ Un día en el puesto</h2>
+<ul>
+<li><strong>Revisión de la noche.</strong> Respaldos, réplicas, alertas, consumo de espacio. Primero el estado
+  real; después el trabajo planificado.</li>
+<li><strong>Una consulta que degradó el sistema.</strong> La localizas, lees su plan, decides si es índice,
+  estadísticas, esquema o una aplicación que pide demasiado.</li>
+<li><strong>Prueba de restauración.</strong> Con calendario, no cuando haga falta. Restaurar a un punto en el
+  tiempo y cronometrarlo, para poder responder con un número al «cuánto tardaríamos».</li>
+<li><strong>Una migración de esquema en producción.</strong> En pasos compatibles hacia atrás, con
+  interruptor de vuelta y sin bloquear escrituras.</li>
+<li><strong>Capacidad.</strong> Proyectar crecimiento y decidir con antelación, en vez de reaccionar cuando el
+  disco llega al 90 %.</li>
+<li><strong>Un incidente.</strong> Contención, diagnóstico, recuperación y —lo que más valor deja— un análisis
+  posterior sin culpables que cambie algo del sistema.</li>
+</ul>
+<h2 id="qué-necesitas-saber">🧠 Qué necesitas saber</h2>
+<h3 id="conocimiento-técnico">Conocimiento técnico</h3>
+<ul>
+<li><strong>Recuperación:</strong> registro anticipado (WAL), punto de recuperación, restauración a un punto
+  en el tiempo, y los dos objetivos que gobiernan todo: RPO y RTO.</li>
+<li><strong>Transacciones y aislamiento por dentro:</strong> bloqueo en dos fases, MVCC, versiones muertas y
+  su recolección.</li>
+<li><strong>Almacenamiento e índices:</strong> páginas, buffer, B-tree frente a LSM, amplificación de
+  escritura y coste real de cada índice.</li>
+<li><strong>Planes de ejecución:</strong> leer <code>EXPLAIN</code>, entender estadísticas y refutar hipótesis con
+  medición.</li>
+<li><strong>Réplica y distribución:</strong> líder único frente a multilíder, retraso de réplica, conmutación
+  por error y qué se pierde en cada opción.</li>
+<li><strong>Operación segura:</strong> privilegio mínimo, seguridad por fila, cifrado y gestión de
+  credenciales.</li>
+<li><strong>Observabilidad:</strong> métricas que importan, objetivos de servicio (SLO), presupuesto de error
+  y alertas que se pueden atender.</li>
+</ul>
+<h3 id="herramientas-del-oficio">Herramientas del oficio</h3>
+<ul>
+<li>El motor que operas, a fondo: PostgreSQL, MySQL, SQL Server u Oracle —y su documentación
+  oficial como primera parada, no el blog de turno—.</li>
+<li>Herramientas de respaldo y restauración del motor, automatizadas y verificadas.</li>
+<li>Métricas y trazas (Prometheus, Grafana o equivalentes) con paneles que respondan preguntas,
+  no que decoren.</li>
+<li>Infraestructura y cambios de esquema versionados: nada de tocar producción a mano.</li>
+</ul>
+<h3 id="habilidades-no-técnicas">Habilidades no técnicas</h3>
+<ul>
+<li><strong>Calma bajo presión</strong> y método: contener antes de diagnosticar, diagnosticar antes de
+  arreglar.</li>
+<li><strong>Escribir análisis posteriores</strong> que cambien el sistema y no busquen culpables.</li>
+<li><strong>Decir que no con datos</strong>: negarse a un cambio arriesgado con una medición delante convence;
+  sin ella, solo molesta.</li>
+</ul>
+<h2 id="tu-ruta-en-el-programa">📚 Tu ruta en el programa</h2>
+<p>9 partes, 143 horas estimadas.</p>
+<ol>
+<li>📚 <a href="../classes/parte-00.html"><strong>Parte 00 — Fundamentos</strong></a>
+   (4 clases · 12 h).</li>
+<li>📚 <a href="../classes/parte-01.html"><strong>Parte 01 — Modelado conceptual</strong></a>
+   (5 clases · 16 h). Operar un modelo malo cuesta el doble; conviene reconocerlo.</li>
+<li>📚 <a href="../classes/parte-03.html"><strong>Parte 03 — SQL en profundidad</strong></a>
+   (6 clases · 20 h).</li>
+<li>📚 <a href="../classes/parte-04.html"><strong>Parte 04 — Motores relacionales y dialectos</strong></a>
+   (4 clases · 12 h). Lo que cambia de un motor a otro cuando toca operarlo.</li>
+<li>📚 <a href="../classes/parte-07.html"><strong>Parte 07 — Transacciones, concurrencia y recuperación</strong></a>
+   (5 clases · 18 h). Imprescindible:
+   <a href="../classes/036.html">036 — Registro anticipado y recuperación (WAL y ARIES)</a>.</li>
+<li>📚 <a href="../classes/parte-08.html"><strong>Parte 08 — Almacenamiento, índices y planes</strong></a>
+   (5 clases · 17 h). Con
+   <a href="../classes/038.html">038 — Páginas, filas y buffer</a>
+   y <a href="../classes/042.html">042 — Planes de ejecución y refutación</a>.</li>
+<li>📚 <a href="../classes/parte-09.html"><strong>Parte 09 — Distribución, réplica y consistencia</strong></a>
+   (5 clases · 17 h).</li>
+<li>📚 <a href="../classes/parte-10.html"><strong>Parte 10 — Operación, seguridad y gobierno</strong></a>
+   (6 clases · 19 h). El núcleo del rol:
+   <a href="../classes/048.html">048 — Respaldo y restauración probada</a>,
+   <a href="../classes/049.html">049 — Migraciones evolutivas sin caída</a>
+   y <a href="../classes/052.html">052 — Observabilidad, objetivos de servicio y capacidad</a>.</li>
+<li>📚 <a href="../classes/parte-13.html"><strong>Parte 13 — Arquitectura y proyecto final</strong></a>
+   (3 clases · 12 h).</li>
+</ol>
+<p>Laboratorios de la ruta:</p>
+<ul>
+<li>🧪 <a href="../laboratorios.html"><code>01-sql-foundations</code></a>.</li>
+<li>🧪 <a href="../laboratorios.html"><code>03-transactions</code></a> — el comportamiento concurrente que
+  vas a tener que explicar a un equipo de desarrollo.</li>
+<li>🧪 <a href="../laboratorios.html"><code>04-indexing</code></a> — planes y coste de escritura medidos, que
+  es como se argumenta un índice ante quien lo pide «por si acaso».</li>
+</ul>
+<h2 id="qué-tienes-que-poder-demostrar">🧪 Qué tienes que poder demostrar</h2>
+<ul>
+<li><strong>restaurar</strong> una base a un punto en el tiempo y decir cuánto tardaste;</li>
+<li>declarar el RPO y el RTO que tu sistema cumple hoy, con la prueba que lo respalda;</li>
+<li>leer un plan de ejecución y explicar por qué el motor eligió ese camino;</li>
+<li>describir el efecto de un índice nuevo sobre la escritura, con números;</li>
+<li>explicar el retraso de réplica y qué lecturas pueden ver datos viejos;</li>
+<li>planificar una migración sin ventana de caída, con vuelta atrás;</li>
+<li>definir un objetivo de servicio útil y una alerta que alguien pueda atender.</li>
+</ul>
+<h2 id="credenciales">🎓 Credenciales</h2>
+<p>Aquí las credenciales sí pesan, sobre todo en empresas grandes y en consultoría. La más
+directa para el mundo Microsoft es
+<a href="https://learn.microsoft.com/en-us/credentials/certifications/azure-database-administrator-associate/"><strong>Azure Database Administrator Associate (DP-300)</strong></a>:
+evalúa planificación e implementación de recursos de plataforma de datos, entorno seguro,
+monitorización y optimización, automatización de tareas y alta disponibilidad con recuperación
+ante desastres. Se rinde en español, entre otros idiomas, y <strong>se renueva cada doce meses</strong>.</p>
+<p>Ese temario es, casi punto por punto, la Parte 10 de este programa más partes de la 07, la 08 y
+la 09. Si trabajas sobre otro motor, busca el equivalente de tu proveedor: lo que se evalúa es
+el mismo oficio.</p>
+<h2 id="progresión-y-mercado">📈 Progresión y mercado</h2>
+<ol>
+<li><strong>Soporte o desarrollo con inclinación a operación</strong> — la entrada habitual.</li>
+<li><strong>DBA junior / operador de plataforma</strong> — ejecutas procedimientos escritos por otros.</li>
+<li><strong>DBA / SRE de datos</strong> — respondes por disponibilidad, rendimiento y recuperación.</li>
+<li><strong>Sénior o líder de fiabilidad</strong> — defines objetivos de servicio, capacidad y estrategia de
+   continuidad; participas en decisiones de arquitectura.</li>
+</ol>
+<p>Este es el único rol de las siete rutas con una fuente oficial de mercado dedicada. Según el
+<a href="https://www.bls.gov/ooh/computer-and-information-technology/database-administrators.htm">Occupational Outlook Handbook</a>
+del U.S. Bureau of Labor Statistics —datos de mayo de 2024, Estados Unidos— la mediana salarial
+fue de unos <strong>104 620 USD</strong> anuales para administradores de bases de datos y de unos
+<strong>135 980 USD</strong> para arquitectos, con una proyección de crecimiento del empleo de alrededor del
+<strong>4 % entre 2024 y 2034</strong>. Son cifras de un solo país y con su propio coste de vida: úsalas
+como referencia de forma y proporción, no como expectativa local. Consulta la fuente para el
+dato vigente, que se actualiza cada año.</p>
+<h2 id="mitos-y-errores-comunes">⚠️ Mitos y errores comunes</h2>
+<ul>
+<li><strong>«Tenemos respaldos.»</strong> Tenéis archivos. Hasta que no restauráis y cronometráis, no sabéis
+  si tenéis respaldos.</li>
+<li><strong>«La réplica es el respaldo.»</strong> La réplica copia también el <code>DELETE</code> equivocado, y lo copia
+  rápido.</li>
+<li><strong>«Añadamos índices, no molestan.»</strong> Cada índice se paga en cada escritura y en cada
+  recuperación. Mídelo antes.</li>
+<li><strong>«El motor ya se encarga.»</strong> El motor hace lo que le configuraste, incluidos los valores por
+  defecto que nadie revisó.</li>
+<li><strong>«Ese ajuste funcionó en mi anterior empresa.»</strong> Otra carga, otros datos, otro hardware.
+  Refuta o confirma con una medición en tu sistema.</li>
+<li><strong>«Alta disponibilidad es lo mismo que durabilidad.»</strong> Sobrevivir a la caída de un nodo y no
+  perder datos confirmados son problemas distintos, con soluciones distintas.</li>
+</ul>
+<h2 id="siguientes-pasos">🚀 Siguientes pasos</h2>
+<ol>
+<li>Haz las Partes 07 → 08 → 10 como bloque: es el corazón del rol.</li>
+<li>Restaura un respaldo real en un entorno de prueba y <strong>cronométralo</strong>. Escribe el número.</li>
+<li>Ejecuta <a href="../laboratorios.html"><code>03-transactions</code></a> y <a href="../laboratorios.html"><code>04-indexing</code></a>,
+   y repite ambos contra tu motor real.</li>
+<li>Define un objetivo de servicio para una base que operes y una alerta que lo vigile.</li>
+<li>Ensaya una migración sin caída en un entorno de prueba, con su vuelta atrás.</li>
+<li>Si trabajas con Azure o SQL Server, usa el temario del
+   <a href="https://learn.microsoft.com/en-us/credentials/certifications/azure-database-administrator-associate/">DP-300</a>
+   como lista de comprobación de lo aprendido.</li>
+</ol>
+<h2 id="de-dónde-sale-esto">📖 De dónde sale esto</h2>
+<ul>
+<li><strong>Laine Campbell, Charity Majors</strong>, <em>Database Reliability Engineering</em> — el puente entre el
+  DBA clásico y la fiabilidad moderna.</li>
+<li><strong>Betsy Beyer y otros</strong>, <em>Site Reliability Engineering</em> — objetivos de servicio, presupuesto
+  de error y análisis posteriores sin culpables.</li>
+<li><strong>U.S. Bureau of Labor Statistics</strong>, <em>Occupational Outlook Handbook</em> — las cifras de mercado
+  citadas arriba.</li>
+<li><strong>Microsoft</strong>, <em>Azure Database Administrator Associate (DP-300)</em> — temario oficial de la
+  credencial.</li>
+</ul>
+<p>Fichas completas en el <a href="../fuentes.html">registro de fuentes</a>.</p>
+<hr />
+<ul>
+<li>⬅️ <a href="guia.html">Volver al índice de rutas</a></li>
+<li>🏠 <a href="../index.html">Inicio del programa</a></li>
+</ul>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 # 🗄️ Database Systems Labs
 
-## **14 partes · 64 clases · 210 horas · 109 fuentes verificables**
+## **14 partes · 64 clases · 210 horas · 115 fuentes verificables**
 
 **Programa abierto de ingeniería de bases de datos, del modelado conceptual a la
 arquitectura distribuida, la operación y los sistemas de recuperación para
@@ -18,13 +18,13 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 [![Versión](https://img.shields.io/badge/versión-2.0.0-orange?style=for-the-badge)](CHANGELOG.md)
 [![Clases](https://img.shields.io/badge/clases-64%20·%2014%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
-[![Fuentes](https://img.shields.io/badge/fuentes-109%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
+[![Fuentes](https://img.shields.io/badge/fuentes-115%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
 [![Laboratorios](https://img.shields.io/badge/laboratorios-5%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-3fb950?style=for-the-badge)](LICENSE)
 
 [![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
 [![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
-[![Pruebas](https://img.shields.io/badge/pruebas-74%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Pruebas](https://img.shields.io/badge/pruebas-93%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
@@ -91,8 +91,8 @@ explicación no demuestra transferencia**.
 | [05](classes/part-05-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
 | [06](classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
 | [07](classes/part-07-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
-| [08](classes/part-08-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 19 |
-| [09](classes/part-09-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 19 |
+| [08](classes/part-08-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
+| [09](classes/part-09-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
 | [10](classes/part-10-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
 | [11](classes/part-11-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
 | [12](classes/part-12-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
@@ -101,14 +101,34 @@ explicación no demuestra transferencia**.
 El índice completo está en [`classes/README.md`](classes/README.md) y el
 currículo canónico, en [`curriculum.yaml`](curriculum.yaml).
 
-### Rutas por objetivo
+## Rutas por rol
 
-| Ruta | Partes |
-|---|---|
-| Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 07 · 08 · 10 · 13 |
-| Ingeniero de datos | 00 · 01 · 02 · 03 · 06 · 09 · 11 · 12 · 13 |
-| DBA / SRE de datos | 00 · 01 · 03 · 04 · 07 · 08 · 09 · 10 · 13 |
-| Arquitecto de datos | todas |
+Las 64 clases no son para todos a la vez. Siete recorridos ordenan el programa
+según el cargo al que apuntas, y cada uno tiene su **guía de carrera**: qué es
+el puesto, cómo es un día de trabajo, qué necesitas saber, qué partes hacer y
+en qué orden, qué tienes que poder demostrar al terminar, qué credenciales
+existen, cómo progresa la carrera y qué mitos conviene desmontar.
+
+| Ruta | Partes | Nivel | Horas | Guía |
+|---|---|---|---:|---|
+| Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 07 · 08 · 10 · 13 | entrada | 152 | [guía](rutas/desarrollo-de-aplicaciones.md) |
+| Ingeniero de datos | 00 · 01 · 02 · 03 · 06 · 09 · 11 · 12 · 13 | intermedio | 131 | [guía](rutas/ingenieria-de-datos.md) |
+| DBA / SRE de datos | 00 · 01 · 03 · 04 · 07 · 08 · 09 · 10 · 13 | intermedio | 143 | [guía](rutas/fiabilidad-y-operacion.md) |
+| Arquitecto de datos | todas | avanzado | 210 | [guía](rutas/arquitectura.md) |
+| Analytics engineer / BI | 00 · 01 · 02 · 03 · 04 · 08 · 11 · 13 | intermedio | 115 | [guía](rutas/analitica-y-bi.md) |
+| Ingeniero de IA aplicada y recuperación | 00 · 01 · 02 · 03 · 05 · 06 · 08 · 12 · 13 | avanzado | 131 | [guía](rutas/ia-y-recuperacion.md) |
+| Gobierno y privacidad del dato | 00 · 01 · 03 · 07 · 09 · 10 · 11 · 13 | intermedio | 127 | [guía](rutas/gobierno-y-privacidad.md) |
+
+El índice está en [`rutas/README.md`](rutas/README.md), y las rutas viven como
+datos en [`curriculum.yaml`](curriculum.yaml): la validación comprueba que cada
+parte, cada clase clave y cada laboratorio que prometen existen, y que las horas
+que declara la guía son las que suman sus partes.
+
+Las afirmaciones de mercado van con fuente —el
+[Occupational Outlook Handbook](https://www.bls.gov/ooh/computer-and-information-technology/database-administrators.htm)
+del U.S. Bureau of Labor Statistics y la
+[Stack Overflow Developer Survey](https://survey.stackoverflow.co/2025/technology)—
+y donde no hay fuente pública para el mercado local, **no se publican cifras**.
 
 ## Empezar
 
@@ -159,7 +179,7 @@ versionado. **Nunca deben copiarse a otro entorno.**
 ## El sitio
 
 [**vladimiracunadev-create.github.io/database-systems-labs**](https://vladimiracunadev-create.github.io/database-systems-labs/)
-— 102 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
+— 111 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
 
 | | |
 |---|---|
@@ -167,7 +187,8 @@ versionado. **Nunca deben copiarse a otro entorno.**
 | **Clase** | lectura larga con barra de avance, anterior/siguiente, diagramas Mermaid y copiar bloque de código |
 | **[Laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)** | qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio |
 | **[Autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)** | las 256 preguntas del programa, enlazadas a su clase |
-| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 109 entradas con ISBN, DOI o URL oficial y quién las cita |
+| **[Rutas por rol](https://vladimiracunadev-create.github.io/database-systems-labs/rutas/index.html)** | siete recorridos con su guía de carrera: recorrido, credenciales, mercado y mitos |
+| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 115 entradas con ISBN, DOI o URL oficial y quién las cita |
 | **[Documentación](https://vladimiracunadev-create.github.io/database-systems-labs/docs/index.html)** | arquitectura, método, rúbrica, entornos y roadmap, publicados desde sus `.md` |
 | **Progreso** | marcar clases como completadas; se guarda solo en tu navegador |
 | **Tema** | claro y oscuro, siguiendo la preferencia del sistema o tu elección |
@@ -202,8 +223,8 @@ edita en el `lesson.md` de cada clase.
 python scripts/build_classes.py          # regenera los README de clase
 python scripts/generate_site.py          # regenera el sitio, los iconos y el sitemap
 python scripts/brand_assets.py           # solo la marca gráfica (iconos y portada social)
-python scripts/check_external_links.py   # comprueba las 109 fuentes
-python -m pytest                         # 74 pruebas: laboratorios, generadores, validador y sitio
+python scripts/check_external_links.py   # comprueba las 115 fuentes
+python -m pytest                         # 93 pruebas: laboratorios, generadores, validador, sitio y rutas
 ```
 
 ## Alcance de la cobertura de motores

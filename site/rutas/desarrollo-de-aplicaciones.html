@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="La base de datos vista desde el código que la usa: esquema como contrato, consultas correctas, concurrencia y despliegues sin caída.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/desarrollo-de-aplicaciones.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Desarrollador de aplicaciones · Rutas · Database Systems Labs">
+<meta property="og:description" content="La base de datos vista desde el código que la usa: esquema como contrato, consultas correctas, concurrencia y despliegues sin caída.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/rutas/desarrollo-de-aplicaciones.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "Ruta: Desarrollador de aplicaciones", "learningResourceType": "Career pathway", "inLanguage": "es", "educationalLevel": "entrada", "timeRequired": "PT152H", "teaches": ["Desarrollador backend", "Desarrollador full-stack", "Ingeniero de software"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}}</script>
+<title>Desarrollador de aplicaciones · Rutas · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html">Clases</a>
+    <a href="../rutas/index.html" aria-current="page">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Rutas por rol</a><span aria-hidden="true">/</span>
+  <span>Desarrollador de aplicaciones</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="desarrollador-de-aplicaciones">🧑‍💻 Desarrollador de aplicaciones</h1>
+<blockquote>
+<p>Escribes el código que usa la base de datos todos los días. Tu trabajo no es administrarla:
+es no romperla, no corromper sus datos y no descubrir en producción que la consulta que
+funcionaba con mil filas no funciona con diez millones.</p>
+<p><strong>Nivel de entrada:</strong> entrada · <strong>Foco:</strong> el esquema como contrato, consultas correctas,
+concurrencia y despliegues sin caída · <strong>Cargos habituales:</strong> desarrollador backend,
+desarrollador full-stack, ingeniero de software.</p>
+</blockquote>
+<h2 id="qué-es-y-por-qué-importa">🧭 Qué es y por qué importa</h2>
+<p>Casi todo el software que existe guarda algo. El desarrollador de aplicaciones es quien decide
+—muchas veces sin darse cuenta— qué se guarda, con qué forma, con qué garantías y qué pasa
+cuando dos personas hacen lo mismo a la vez. Ese conjunto de decisiones sobrevive al código:
+un endpoint se reescribe en una tarde, un esquema mal diseñado condiciona la aplicación
+durante años y arrastra a cada equipo que llegue después.</p>
+<p>Importa porque el daño de una decisión de datos es asimétrico. Una función lenta se optimiza;
+un dato corrompido puede no tener vuelta atrás. Si aceptaste dos reservas para el último cupo,
+si guardaste el importe como número de coma flotante, si borraste en cascada lo que debía
+quedar como histórico, el problema ya no es de rendimiento: es de confianza.</p>
+<p>Y hay una razón práctica: el motor relacional sigue siendo el sustrato del oficio. En la
+<a href="https://survey.stackoverflow.co/2025/technology">Stack Overflow Developer Survey 2025</a>,
+PostgreSQL aparece como el sistema más usado (55,6 % de quienes respondieron a esa pregunta),
+seguido de MySQL (40,5 %) y SQLite (37,5 %). La muestra es autoseleccionada y no representa a
+toda la industria, pero el orden de magnitud es claro: no vas a esquivar SQL.</p>
+<p>Lo que este programa <strong>no</strong> te da: la conversación con el equipo de producto para negociar un
+plazo, la presión de un incidente en vivo, ni el criterio que solo aparece tras mantener el
+mismo sistema durante tres años. Eso llega trabajando. Lo que sí te da es la capacidad de
+justificar cada decisión de datos con un mecanismo y una medición, en vez de con una costumbre.</p>
+<h2 id="un-día-en-el-puesto">🗓️ Un día en el puesto</h2>
+<ul>
+<li><strong>Una historia de usuario nueva.</strong> Antes de escribir el endpoint, decides qué entidades
+  toca, qué restricciones la protegen y si el esquema actual la admite sin duplicar datos.</li>
+<li><strong>Consultas.</strong> Escribes la consulta, la lees en voz alta y compruebas qué devuelve cuando
+  hay nulos, cuando no hay filas y cuando hay duplicados. Ese trío causa la mayoría de los
+  errores silenciosos.</li>
+<li><strong>Revisión de código ajeno.</strong> Alguien mete un <code>SELECT *</code> dentro de un bucle, o concatena un
+  parámetro en la consulta. Tu comentario evita un incidente futuro y, en el segundo caso, una
+  brecha.</li>
+<li><strong>Una migración.</strong> Añadir una columna es fácil; añadirla con <code>NOT NULL</code> sobre una tabla de
+  millones de filas y sin bloquear escrituras, no. Se hace por pasos y con vuelta atrás.</li>
+<li><strong>Un error raro en producción.</strong> Dos usuarios, la misma fila, resultado imposible. Aquí
+  empieza el trabajo de verdad: reproducir la carrera, entender el nivel de aislamiento y
+  corregir con la herramienta adecuada.</li>
+<li><strong>Rendimiento.</strong> Una pantalla tarda. Miras el plan de ejecución antes de tocar nada, y
+  descubres que el índice existe pero la consulta no puede usarlo.</li>
+</ul>
+<h2 id="qué-necesitas-saber">🧠 Qué necesitas saber</h2>
+<h3 id="conocimiento-técnico">Conocimiento técnico</h3>
+<ul>
+<li><strong>SQL de verdad, no el mínimo para que compile:</strong> reuniones internas y externas, agregación
+  correcta, subconsultas, funciones de ventana y el comportamiento de los nulos.</li>
+<li><strong>Modelado:</strong> entidades, claves, normalización hasta donde tenga sentido y desnormalización
+  deliberada cuando la carga lo justifique.</li>
+<li><strong>Restricciones como red de seguridad:</strong> <code>NOT NULL</code>, <code>UNIQUE</code>, <code>CHECK</code> y claves foráneas. La
+  validación en la aplicación se salta; la del motor, no.</li>
+<li><strong>Transacciones y aislamiento:</strong> qué garantiza cada nivel y qué anomalías deja pasar. Este es
+  el punto donde más código correcto en apariencia falla bajo carga.</li>
+<li><strong>Índices y planes:</strong> por qué una consulta usa o no usa un índice, y qué cuesta cada índice
+  en escritura.</li>
+<li><strong>Parametrización:</strong> la única defensa real contra la inyección SQL, y por qué escapar a mano
+  no cuenta como defensa.</li>
+</ul>
+<h3 id="herramientas-del-oficio">Herramientas del oficio</h3>
+<ul>
+<li>Un cliente de SQL decente y <code>EXPLAIN</code> (o su equivalente) como reflejo, no como último recurso.</li>
+<li>El driver o el ORM de tu lenguaje, sabiendo <strong>qué SQL genera</strong>. Un ORM que no sabes leer es
+  una caja negra que decide por ti.</li>
+<li>Migraciones versionadas en el repositorio, aplicadas en orden y reversibles.</li>
+<li>Contenedores para tener el mismo motor que producción en tu máquina, no uno parecido.</li>
+</ul>
+<h3 id="habilidades-no-técnicas">Habilidades no técnicas</h3>
+<ul>
+<li><strong>Leer un requisito y detectar la regla de negocio</strong> que debería ser una restricción.</li>
+<li><strong>Explicar por qué un cambio de esquema no es "solo añadir un campo"</strong> a quien pide plazos.</li>
+<li><strong>Escribir el porqué</strong>, no solo el qué: la próxima persona que abra esa tabla serás tú
+  dentro de un año.</li>
+</ul>
+<h2 id="tu-ruta-en-el-programa">📚 Tu ruta en el programa</h2>
+<p>10 partes, 152 horas estimadas. El orden importa: cada parte apoya a la siguiente.</p>
+<ol>
+<li>📚 <a href="../classes/parte-00.html"><strong>Parte 00 — Fundamentos, sistemas y método</strong></a>
+   (4 clases · 12 h). Qué resuelve un gestor y qué no, y cómo montar un entorno donde puedas
+   comprobar lo que afirmas.</li>
+<li>📚 <a href="../classes/parte-01.html"><strong>Parte 01 — Modelado conceptual y requisitos</strong></a>
+   (5 clases · 16 h). De requisitos a entidades. Clase que no puedes saltarte:
+   <a href="../classes/007.html">007 — Claves, identidad y el debate natural frente a sustituta</a>.</li>
+<li>📚 <a href="../classes/parte-02.html"><strong>Parte 02 — Modelo relacional y álgebra</strong></a>
+   (4 clases · 13 h). Por qué SQL se comporta como se comporta.</li>
+<li>📚 <a href="../classes/parte-03.html"><strong>Parte 03 — SQL en profundidad</strong></a>
+   (6 clases · 20 h). El núcleo del rol. Imprescindibles:
+   <a href="../classes/014.html">014 — DDL: el esquema como contrato</a>,
+   <a href="../classes/016.html">016 — Reuniones</a>
+   y <a href="../classes/019.html">019 — Nulos y lógica de tres valores</a>,
+   que explica los resultados «imposibles» que verás en producción.</li>
+<li>📚 <a href="../classes/parte-04.html"><strong>Parte 04 — Motores relacionales y dialectos</strong></a>
+   (4 clases · 12 h). Lo que cambia al pasar de SQLite a PostgreSQL o MySQL.</li>
+<li>📚 <a href="../classes/parte-05.html"><strong>Parte 05 — Documentos y clave-valor</strong></a>
+   (4 clases · 13 h). Cuándo un documento o una caché ayudan, y qué consistencia pierdes.</li>
+<li>📚 <a href="../classes/parte-07.html"><strong>Parte 07 — Transacciones, concurrencia y recuperación</strong></a>
+   (5 clases · 18 h). La parte que separa al que escribe consultas del que escribe sistemas.
+   Clase clave: <a href="../classes/037.html">037 — Concurrencia en la aplicación</a>.</li>
+<li>📚 <a href="../classes/parte-08.html"><strong>Parte 08 — Almacenamiento, índices y planes</strong></a>
+   (5 clases · 17 h). Para dejar de adivinar por qué algo va lento.</li>
+<li>📚 <a href="../classes/parte-10.html"><strong>Parte 10 — Operación, seguridad y gobierno</strong></a>
+   (6 clases · 19 h). Aquí solo dos son obligatorias para ti:
+   <a href="../classes/049.html">049 — Migraciones evolutivas sin ventana de caída</a>
+   y <a href="../classes/051.html">051 — Inyección SQL y el contrato de parametrización</a>.</li>
+<li>📚 <a href="../classes/parte-13.html"><strong>Parte 13 — Arquitectura y proyecto final</strong></a>
+    (3 clases · 12 h). Cierra con una decisión defendida.</li>
+</ol>
+<p>Practica en los laboratorios, que es donde el conocimiento se vuelve tuyo:</p>
+<ul>
+<li>🧪 <a href="../laboratorios.html"><code>01-sql-foundations</code></a> — consultas e invariantes
+  sobre el dominio educativo.</li>
+<li>🧪 <a href="../laboratorios.html"><code>03-transactions</code></a> — reproduce una actualización
+  perdida con dos hilos reales y corrígela de tres formas. Si un día vendiste dos veces el
+  mismo asiento, aquí está la explicación y el arreglo.</li>
+<li>🧪 <a href="../laboratorios.html"><code>04-indexing</code></a> — el plan antes y después del índice, y lo
+  que ese índice cuesta en cada escritura.</li>
+</ul>
+<h2 id="qué-tienes-que-poder-demostrar">🧪 Qué tienes que poder demostrar</h2>
+<p>Al terminar la ruta, en una entrevista o en una revisión de código deberías poder:</p>
+<ul>
+<li>diseñar un esquema para un dominio nuevo y <strong>justificar cada restricción</strong> que pones;</li>
+<li>explicar qué devuelve una reunión externa cuando no hay coincidencias, y por qué
+  <code>WHERE columna &lt;&gt; 'x'</code> descarta las filas con nulo;</li>
+<li>reproducir una actualización perdida y corregirla con actualización atómica, control
+  optimista o bloqueo, sabiendo cuál conviene en cada caso;</li>
+<li>leer un plan de ejecución y decir por qué la consulta no usa el índice que existe;</li>
+<li>describir una migración de esquema en pasos reversibles, sin ventana de caída;</li>
+<li>demostrar que tu código parametriza, y explicar por qué escapar comillas no es equivalente.</li>
+</ul>
+<h2 id="credenciales">🎓 Credenciales</h2>
+<p>Para este rol, <strong>las certificaciones de base de datos pesan poco</strong>: contratan por lo que
+demuestras en código. Ninguna credencial sustituye un repositorio donde se vea tu esquema, tus
+migraciones y tus pruebas. Si tu empresa trabaja sobre una nube concreta, la credencial de esa
+nube puede abrir la puerta de RR. HH., pero llega después, no antes.</p>
+<p>Lo que sí funciona como portafolio: un proyecto pequeño con esquema versionado, migraciones,
+pruebas de concurrencia y un <code>EXPLAIN</code> comentado. Eso es exactamente lo que produce el
+<a href="../docs/proyecto-final.html">proyecto final</a> de este programa.</p>
+<h2 id="progresión-y-mercado">📈 Progresión y mercado</h2>
+<p>Camino habitual, con nombres que cambian según la empresa:</p>
+<ol>
+<li><strong>Desarrollador junior</strong> — trabajas dentro de un esquema que otros diseñaron.</li>
+<li><strong>Desarrollador</strong> — diseñas tus tablas, revisas las de otros y llevas tus migraciones.</li>
+<li><strong>Desarrollador sénior / referente técnico</strong> — decides el modelo de datos de una parte del
+   producto y respondes por su evolución.</li>
+<li><strong>Bifurcación:</strong> <a href="ingenieria-de-datos.html">ingeniería de datos</a>, si te atrae mover y modelar
+   datos a escala; <a href="arquitectura.html">arquitectura</a>, si te atrae decidir y defender; o
+   especialización en rendimiento y fiabilidad, cerca de <a href="fiabilidad-y-operacion.html">DBA / SRE</a>.</li>
+</ol>
+<p>Sobre dinero, este repositorio solo publica cifras con fuente. La referencia pública más
+sólida es estadounidense: el <a href="https://www.bls.gov/ooh/computer-and-information-technology/database-administrators.htm">Occupational Outlook Handbook</a>
+del U.S. Bureau of Labor Statistics. Para desarrollo puro no hay un epígrafe equivalente en
+español con datos comparables, así que <strong>aquí no encontrarás rangos inventados para tu país</strong>:
+consulta ofertas reales de tu mercado y contrástalas entre varias fuentes.</p>
+<h2 id="mitos-y-errores-comunes">⚠️ Mitos y errores comunes</h2>
+<ul>
+<li><strong>«El ORM me abstrae de SQL.»</strong> Te abstrae de escribirlo, no de entenderlo. El día que
+  genere una consulta con veinte reuniones, tendrás que leerla.</li>
+<li><strong>«Valido en la aplicación, no necesito restricciones.»</strong> Toda validación que no está en el
+  motor se salta: por otro servicio, por un script, por una carga masiva.</li>
+<li><strong>«Ya funciona en mi máquina con cien filas.»</strong> El plan de ejecución cambia con el volumen y
+  con las estadísticas. Prueba con datos que se parezcan a los reales.</li>
+<li><strong>«Añado un índice y listo.»</strong> Cada índice se mantiene en cada <code>INSERT</code>, <code>UPDATE</code> y
+  <code>DELETE</code>. El laboratorio 04 lo mide: dos índices encarecen la escritura de forma visible.</li>
+<li><strong>«Guardo todo por si acaso.»</strong> Los datos personales que no guardas no se filtran, no se
+  auditan y no hay que borrarlos. La minimización es diseño, no burocracia.</li>
+<li><strong>«Los nulos son como los ceros.»</strong> No: son «no se sabe», y contaminan comparaciones,
+  agregados y reuniones de formas que sorprenden a todo el mundo una vez.</li>
+</ul>
+<h2 id="siguientes-pasos">🚀 Siguientes pasos</h2>
+<ol>
+<li>Haz las Partes 00 → 01 → 02 sin saltarte nada, aunque ya sepas SQL: son el vocabulario.</li>
+<li>Ataca la Parte 03 completa y ejecuta <a href="../laboratorios.html"><code>01-sql-foundations</code></a>
+   prediciendo cada resultado <strong>antes</strong> de ejecutarlo.</li>
+<li>Ejecuta <a href="../laboratorios.html"><code>03-transactions</code></a> y reescribe una operación
+   crítica de tu propio proyecto con la corrección que corresponda.</li>
+<li>Ejecuta <a href="../laboratorios.html"><code>04-indexing</code></a> y repite el experimento contra tu
+   motor real, con <code>EXPLAIN</code> en la mano.</li>
+<li>Aplica el <a href="../docs/modelo-pedagogico.html">reto de transferencia</a> de cada clase a tu código de
+   trabajo: es donde el programa deja de ser teoría.</li>
+<li>Cierra con el <a href="../docs/proyecto-final.html">proyecto final</a> y guarda la evidencia: es tu
+   portafolio.</li>
+</ol>
+<h2 id="de-dónde-sale-esto">📖 De dónde sale esto</h2>
+<ul>
+<li><strong>Bill Karwin</strong>, <em>SQL Antipatterns</em> — el catálogo de errores de esquema y consulta que
+  comete todo equipo de desarrollo.</li>
+<li><strong>C. J. Date</strong>, <em>SQL and Relational Theory</em> — por qué SQL se aparta del modelo relacional y
+  qué problemas causa eso en el código.</li>
+<li><strong>OWASP</strong>, <em>SQL Injection Prevention Cheat Sheet</em> — la defensa por parametrización, en su
+  fuente original.</li>
+<li><strong>Stack Overflow</strong>, <em>Developer Survey 2025</em> — uso declarado de cada motor, con su sesgo de
+  muestra.</li>
+</ul>
+<p>Las fichas completas, con ISBN, DOI o URL oficial, están en el
+<a href="../fuentes.html">registro de fuentes</a> y en la
+<a href="https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html">bibliografía del sitio</a>.</p>
+<hr />
+<ul>
+<li>⬅️ <a href="guia.html">Volver al índice de rutas</a></li>
+<li>🏠 <a href="../index.html">Inicio del programa</a></li>
+</ul>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

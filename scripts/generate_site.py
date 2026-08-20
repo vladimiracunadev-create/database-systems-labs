@@ -45,6 +45,7 @@ NIVELES = {"fundamentos": "Fundamentos", "intermedio": "Intermedio", "avanzado":
 # Barra de navegacion comun a todas las paginas: (clave, texto, destino).
 NAV = [
     ("clases", "Clases", "classes/indice.html"),
+    ("rutas", "Rutas por rol", "rutas/index.html"),
     ("laboratorios", "Laboratorios", "laboratorios.html"),
     ("autoevaluacion", "Autoevaluación", "autoevaluacion.html"),
     ("fuentes", "Fuentes", "fuentes.html"),
@@ -225,6 +226,42 @@ def reescribir_enlaces(texto: str) -> str:
     # cualquier otro archivo del repositorio: al codigo fuente en GitHub
     texto = re.sub(r"\((?:\.\./)+([A-Za-z0-9_\-./]+\.(?:md|py|sql|json|yaml|yml))\)",
                    lambda m: f"({REPO}/blob/main/{m.group(1)})", texto)
+    return texto
+
+
+def enlaces_de_ruta(texto: str) -> str:
+    """Lleva los enlaces de una guia de rol a sus paginas del sitio.
+
+    Las guias viven en `rutas/` y enlazan al repositorio; el sitio publica las
+    mismas piezas en otras direcciones. Lo que no tiene pagina propia se manda
+    al archivo en GitHub, para que ningun enlace muera en un `.md` que el
+    navegador solo sabria descargar.
+    """
+    # clase concreta -> pagina de clase
+    texto = re.sub(r"\.\./classes/part-\d{2}-[^/)]+/(\d{3})-[^/)]+/README\.md",
+                   r"../classes/\1.html", texto)
+    # indice de parte -> pagina de parte
+    texto = re.sub(r"\.\./classes/part-(\d{2})-[^/)]+/README\.md",
+                   r"../classes/parte-\1.html", texto)
+    reemplazos = {
+        "../classes/README.md": "../classes/indice.html",
+        "../labs/README.md": "../laboratorios.html",
+        "../catalog/sources.json": "../fuentes.html",
+        "../projects/capstone.md": "../docs/proyecto-final.html",
+        "../docs/LEARNING-MODEL.md": "../docs/modelo-pedagogico.html",
+        "../README.md": "../index.html",
+    }
+    for viejo, nuevo in reemplazos.items():
+        texto = texto.replace(f"]({viejo})", f"]({nuevo})")
+    # cualquier laboratorio concreto -> la pagina de laboratorios
+    texto = re.sub(r"\]\(\.\./labs/[^)]+\)", "](../laboratorios.html)", texto)
+    # el indice de rutas se publica como `guia.html`
+    texto = texto.replace("](README.md)", "](guia.html)")
+    # guias hermanas
+    texto = re.sub(r"\]\((?!https?:|\.\./|#)([a-z0-9-]+)\.md\)", r"](\1.html)", texto)
+    # lo que quede apuntando al repositorio, al codigo fuente
+    texto = re.sub(r"\]\(\.\./([A-Za-z0-9_\-./]+\.(?:md|py|sql|json|yaml|yml))\)",
+                   lambda m: f"]({REPO}/blob/main/{m.group(1)})", texto)
     return texto
 
 
@@ -437,11 +474,14 @@ def construir() -> dict[Path, str | bytes]:
         for p in partes)
     opciones_motor = "\n".join(f'<option value="{m}">{m}</option>' for m in todos_motores)
 
+    horas_parte_portada = {p["id"]: sum(c["hours"] for c in p["classes"]) for p in partes}
     rutas = "\n".join(
-        f"""<tr><td><strong>{escapar(r['titulo'])}</strong><br>
+        f"""<tr><td><strong><a href="rutas/{clave}.html">{escapar(r['titulo'])}</a></strong><br>
         <span class="fuente-meta">{escapar(r['descripcion'])}</span></td>
-        <td>{' · '.join(r['partes'])}</td></tr>"""
-        for r in curriculo["rutas"].values())
+        <td>{' · '.join(r['partes'])}</td>
+        <td class="nivel-{'fundamentos' if r['nivel'] == 'entrada' else r['nivel']}">{r['nivel']}</td>
+        <td>{sum(horas_parte_portada[pid] for pid in r['partes'])} h</td></tr>"""
+        for clave, r in curriculo["rutas"].items())
 
     ejecutables = [lab for lab in laboratorios if lab["comando"]]
 
@@ -459,6 +499,7 @@ def construir() -> dict[Path, str | bytes]:
   </div>
   <div class="cta">
     <a class="btn btn-primary" href="classes/001.html">Empezar por la clase 001</a>
+    <a class="btn btn-ghost" href="rutas/index.html">Elegir ruta por rol</a>
     <a class="btn btn-ghost" href="laboratorios.html">Laboratorios ejecutables</a>
     <a class="btn btn-ghost" href="fuentes.html">Las {len(fuentes['sources'])} fuentes</a>
     <a class="btn btn-ghost" href="{REPO}" rel="noopener">Repositorio</a>
@@ -489,9 +530,13 @@ def construir() -> dict[Path, str | bytes]:
   <p class="vacio hidden" id="vacio">Ninguna clase coincide con el filtro.</p>
 
   <section class="seccion">
-    <h2>Rutas por objetivo</h2>
+    <h2>Rutas por rol</h2>
+    <p>El mismo programa recorrido de siete maneras, según el cargo al que apuntes. Cada ruta
+    declara qué partes hacer y en qué orden, qué clases no se saltan, con qué laboratorios se
+    practica y qué hay que poder demostrar al terminar:
+    <a href="rutas/index.html">ver las siete rutas</a>.</p>
     <div class="tabla-scroll"><table>
-      <thead><tr><th>Ruta</th><th>Partes</th></tr></thead>
+      <thead><tr><th>Ruta</th><th>Partes</th><th>Nivel</th><th>Horas</th></tr></thead>
       <tbody>
 {rutas}
       </tbody>
@@ -627,6 +672,107 @@ def construir() -> dict[Path, str | bytes]:
 </header>
 <main id="principal">
 {chr(10).join(bloques_preguntas)}
+</main>""")
+
+    # ---------- rutas por rol ----------
+    horas_por_parte = {p["id"]: sum(c["hours"] for c in p["classes"]) for p in partes}
+    titulo_parte = {p["id"]: p["title"] for p in partes}
+    por_lab = {lab["id"]: lab for lab in laboratorios}
+
+    tarjetas_ruta = []
+    for clave, ruta in curriculo["rutas"].items():
+        horas_ruta = sum(horas_por_parte[pid] for pid in ruta["partes"])
+        clases_ruta = sum(len(p["classes"]) for p in partes if p["id"] in ruta["partes"])
+        etiquetas_parte = " ".join(
+            f'<a class="tag" href="../classes/parte-{pid}.html" '
+            f'title="{escapar(titulo_parte[pid])}">{pid}</a>' for pid in ruta["partes"])
+        claves = " ".join(f'<a href="../classes/{cid}.html">{cid}</a>'
+                          for cid in ruta["clases_clave"])
+        labs_ruta = " · ".join(escapar(por_lab[lid]["titulo"]) for lid in ruta["laboratorios"])
+        cargos = ", ".join(escapar(c) for c in ruta["cargos"])
+        citas_ruta = "".join(f"<li>{cita(sid, '../')}</li>" for sid in ruta["fuentes"])
+        tarjetas_ruta.append(f"""  <article class="lab" id="{clave}">
+    <span class="estado estado-{ruta['nivel']}">{ruta['nivel']}</span>
+    <h3><a href="{clave}.html">{escapar(ruta['titulo'])}</a></h3>
+    <p class="lab-meta">{len(ruta['partes'])} partes · {clases_ruta} clases ·
+      {horas_ruta} horas estimadas</p>
+    <p>{escapar(' '.join(ruta['foco'].split()))}</p>
+    <p class="rotulo">Recorrido</p>
+    <div class="tags">{etiquetas_parte}</div>
+    <p class="lab-meta">Clases que no se saltan: {claves}</p>
+    <p class="lab-meta">Laboratorios: {labs_ruta}</p>
+    <p class="lab-meta">Cargos a los que apunta: {cargos}</p>
+    <p class="rotulo">De dónde sale el criterio</p>
+    <ul>{citas_ruta}</ul>
+    <p><a class="btn btn-ghost" href="{clave}.html">Guía de carrera completa →</a></p>
+  </article>""")
+
+    salidas[SITE / "rutas" / "index.html"] = pagina(
+        titulo="Rutas por rol · Database Systems Labs",
+        descripcion=(f"{len(curriculo['rutas'])} recorridos por cargo: qué partes hacer, en qué "
+                     "orden, con qué laboratorios y qué hay que poder demostrar."),
+        prefijo="../", ruta="rutas/index.html", programa=programa, activo="rutas",
+        extra_css='<link rel="stylesheet" href="../assets/class.css">\n',
+        cuerpo=f"""<header class="hero">
+  <p class="eyebrow">Recorridos por cargo</p>
+  <h1>{len(curriculo['rutas'])} rutas: el mismo programa, <span class="gradient">siete oficios</span></h1>
+  <p class="lead">Las {total_clases} clases no son para todos a la vez. Cada ruta ordena el
+  recorrido según el puesto al que apuntas —qué partes, en qué orden, qué clases no puedes
+  saltarte y qué tienes que poder demostrar al terminar— y cita de dónde sale su criterio.
+  Todas empiezan por la Parte 00 y terminan en el proyecto final.</p>
+  <p class="lead"><strong>Este programa da conocimiento y método verificables, no
+  experiencia.</strong> Lo segundo se gana trabajando; lo primero puede demostrarse con
+  evidencia reproducible, y de eso trata cada ruta.</p>
+</header>
+<main id="principal">
+<div class="labs">
+{chr(10).join(tarjetas_ruta)}
+</div>
+</main>""")
+
+    indice_rutas = enlaces_de_ruta((ROOT / "rutas" / "README.md").read_text(encoding="utf-8"))
+    salidas[SITE / "rutas" / "guia.html"] = pagina(
+        titulo="Cómo elegir tu ruta · Database Systems Labs",
+        descripcion="Cómo elegir el recorrido cuando ninguno de los siete roles encaja del todo.",
+        prefijo="../", ruta="rutas/guia.html", programa=programa, activo="rutas",
+        extra_css='<link rel="stylesheet" href="../assets/class.css">\n',
+        cuerpo=f"""<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Rutas por rol</a><span aria-hidden="true">/</span>
+  <span>Cómo elegir</span>
+</nav>
+<main class="content" id="principal">
+{render_markdown(indice_rutas)}
+</main>""")
+
+    for clave, ruta in curriculo["rutas"].items():
+        guia = enlaces_de_ruta((ROOT / ruta["guia"]).read_text(encoding="utf-8"))
+        horas_ruta = sum(horas_por_parte[pid] for pid in ruta["partes"])
+        salidas[SITE / "rutas" / f"{clave}.html"] = pagina(
+            titulo=f"{ruta['titulo']} · Rutas · Database Systems Labs",
+            descripcion=" ".join(ruta["foco"].split()),
+            prefijo="../", ruta=f"rutas/{clave}.html", programa=programa, activo="rutas",
+            extra_css='<link rel="stylesheet" href="../assets/class.css">\n',
+            scripts='  <script src="../assets/class.js"></script>\n',
+            jsonld=json.dumps({
+                "@context": "https://schema.org",
+                "@type": "LearningResource",
+                "name": f"Ruta: {ruta['titulo']}",
+                "learningResourceType": "Career pathway",
+                "inLanguage": "es",
+                "educationalLevel": ruta["nivel"],
+                "timeRequired": f"PT{horas_ruta}H",
+                "teaches": ruta["cargos"],
+                "isPartOf": {"@type": "Course", "name": programa["nombre"], "url": BASE},
+            }, ensure_ascii=False),
+            cuerpo=f"""<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="index.html">Rutas por rol</a><span aria-hidden="true">/</span>
+  <span>{escapar(ruta['titulo'])}</span>
+</nav>
+<main class="content" id="principal">
+{render_markdown(guia)}
 </main>""")
 
     # ---------- documentacion ----------

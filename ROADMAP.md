@@ -75,7 +75,10 @@ clase que lo trate; nunca solo con una línea en el catálogo:
 - proyecto final con conjunto de datos de mayor escala y mediciones esperadas;
 - guion de defensa técnica con criterios públicos;
 - portafolio verificable a partir de las evidencias generadas;
-- traducción al inglés, conservando el mismo registro de fuentes.
+- traducción al inglés, conservando el mismo registro de fuentes;
+- mapa de cobertura por certificación, al estilo del que ya existe para las rutas: qué
+  parte del temario de DP-300, Professional Data Engineer o CDMP cubre cada parte del
+  programa, medido y no afirmado.
 
 ## Criterios para cerrar un hito
 
