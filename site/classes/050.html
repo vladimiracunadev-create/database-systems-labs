@@ -61,6 +61,7 @@
 3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>privilegio mínimo</code> · <code>rol</code> · <code>seguridad por fila</code> · <code>separación de funciones</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Declarar quién puede ver y hacer qué, en el motor y no solo en la aplicación. El control de acceso que vive únicamente en el código se salta con una consola y unas credenciales.</p>
@@ -265,6 +266,404 @@ WHERE rolsuper OR rolbypassrls;    -- debe ser una lista muy corta y conocida
 <li>¿Qué añade <code>WITH CHECK</code> que <code>USING</code> no cubre?</li>
 <li>Da un caso donde <code>SECURITY DEFINER</code> sea necesario y cómo lo asegurarías.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Cada cliente ve sus filas y solo las suyas</p>
+<p>Tres notas de dos clientes en la misma tabla. La aplicación del cliente
+<code>acme</code> tiene que ver dos filas y <strong>no puede</strong> ver la tercera. La pregunta de
+la clase no es cómo filtrar —eso es un <code>WHERE</code>— sino <strong>dónde vive ese
+filtro</strong>: si está en cada consulta, basta que una lo olvide para filtrar los
+datos de otro cliente, y ese error no se detecta con pruebas funcionales
+porque la consulta devuelve resultados perfectamente plausibles.</p>
+<p>Cada motor ofrece un sitio distinto donde poner la frontera: una política de
+fila que el servidor aplica siempre, una vista con permisos, un usuario por
+inquilino o nada en absoluto. El caso muestra la forma mínima —la vista— y
+la matriz dice hasta dónde llega cada uno.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Bea</code></td>
+<td><code>58</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 050</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-view.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/views/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/sql-server/consulta.sql">código</a></td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/security/row-level-security">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+-- nota: aqui la frontera NO esta en la consulta: la aplica el servidor. El
+--       SELECT de abajo no lleva ningun WHERE sobre el inquilino y aun asi
+--       devuelve solo dos filas.
+--
+--       TRES trampas, y las tres se descubren tarde:
+--       1) El SUPERUSUARIO se salta TODAS las politicas, siempre, y no hay
+--          FORCE que lo impida. Como el usuario de la aplicacion en un entorno
+--          de desarrollo suele ser superusuario, la proteccion parece no
+--          funcionar. Por eso este guion crea un rol sin privilegios y cambia a
+--          el antes de consultar: sin ese SET ROLE, esta consulta devuelve las
+--          TRES filas.
+--       2) FORCE ROW LEVEL SECURITY: sin el, el DUENO de la tabla tambien se
+--          salta sus propias politicas.
+--       3) La politica se evalua por fila: si consulta otras tablas, puede
+--          impedir el uso de indices y costar mas que la propia consulta.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    inquilino  text NOT NULL,
+    estudiante text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+ALTER TABLE notas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notas FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY solo_mi_inquilino ON notas
+    USING (inquilino = current_setting('app.inquilino', true));
+
+-- El rol de la aplicacion: sin privilegios especiales, que es la unica forma de
+-- que las politicas se le apliquen.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_inquilino') THEN
+        CREATE ROLE app_inquilino NOLOGIN;
+    END IF;
+END;
+$$;
+-- Y los permisos minimos: ver el esquema y leer la tabla. Nada mas.
+DO $$
+BEGIN
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO app_inquilino', current_schema());
+END;
+$$;
+GRANT SELECT ON notas TO app_inquilino;
+
+-- === consulta ===
+-- La aplicacion fija su identidad al abrir la conexion. A partir de ahi,
+-- ninguna consulta necesita —ni puede— saltarse el filtro.
+SET app.inquilino = 'acme';
+SET ROLE app_inquilino;
+
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La seguridad a nivel de fila la aplica <strong>el servidor</strong>, no la consulta: con <code>ENABLE ROW LEVEL SECURITY</code> y una política, una consulta sin <code>WHERE</code> devuelve solo las filas permitidas. Es la única forma de que olvidarse del filtro deje de ser posible.</li>
+<li><strong>Por qué no:</strong> La política se evalúa por fila y puede impedir el uso de índices si está mal escrita; y hay que recordar <code>FORCE ROW LEVEL SECURITY</code>, porque el dueño de la tabla <strong>se salta sus propias políticas</strong> por omisión. Es una trampa que aparece justo en las pruebas, donde todo se ejecuta como dueño.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">https://www.postgresql.org/docs/current/ddl-rowsecurity.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createview.html
+-- nota: la vista es una CONVENCION, no un control de acceso: nada impide que el
+--       mismo proceso consulte `notas` directamente. En SQLite, quien tiene el
+--       archivo lo tiene todo.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inquilino  TEXT NOT NULL,
+    estudiante TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La vista es la forma mínima y portable de la frontera: la aplicación consulta <code>mis_notas</code> y nunca <code>notas</code>, así que el filtro está en un solo sitio.</li>
+<li><strong>Por qué no:</strong> No hay usuarios ni permisos: nada impide que el mismo proceso consulte la tabla de debajo. La frontera es una convención, no un control de acceso, y quien tenga el archivo lo tiene todo.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createview.html">https://sqlite.org/lang_createview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_view
+-- nota: la auditoria que precede a cualquier control de acceso:
+--         SELECT inquilino, COUNT(*) FROM notas GROUP BY inquilino;
+--         SELECT COUNT(*) FROM notas WHERE inquilino IS NULL OR inquilino = '';
+--       La segunda busca el agujero clasico del esquema multiinquilino: filas
+--       sin inquilino, que las politicas no saben de quien son.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inquilino  VARCHAR NOT NULL,
+    estudiante VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para la auditoría que precede a cualquier control de acceso: contar cuántas filas de cada inquilino hay y comprobar que ninguna tiene el campo vacío, que es el agujero clásico de los esquemas multiinquilino.</li>
+<li><strong>Por qué no:</strong> No tiene usuarios, roles ni políticas: no es un sitio donde poner una frontera de seguridad, sino donde analizar los datos que ya cruzaron una.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_view">https://duckdb.org/docs/stable/sql/statements/create_view</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-view.html
+-- nota: MySQL NO tiene seguridad a nivel de fila. Lo mas parecido es una vista
+--       con SQL SECURITY DEFINER y permisos:
+--         GRANT SELECT ON learning.mis_notas TO 'app_acme'@'%';
+--         REVOKE ALL ON learning.notas FROM 'app_acme'@'%';
+--       Asi la vista deja de ser una convencion y pasa a ser una frontera. El
+--       limite: para cien inquilinos hacen falta cien vistas o cien bases.
+
+-- === preparacion ===
+DROP VIEW IF EXISTS mis_notas;
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    inquilino  VARCHAR(50) NOT NULL,
+    estudiante VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene vistas con <code>SQL SECURITY DEFINER</code>, que ejecutan con los privilegios de quien las creó: se puede dar acceso a la vista y negarlo a la tabla, lo que convierte la vista en una frontera de verdad y no solo en una convención.</li>
+<li><strong>Por qué no:</strong> <strong>No tiene seguridad a nivel de fila.</strong> Todo se apoya en vistas y permisos, y para muchos inquilinos hace falta una vista o una base por inquilino: la solución no escala a cientos de clientes.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-view.html">https://dev.mysql.com/doc/refman/8.4/en/create-view.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/views/
+// nota: la vista de solo lectura con la tuberia filtrada, mas un rol que de
+//       acceso a la vista y NO a la coleccion, consigue la misma frontera:
+//         db.createRole({ role: &quot;acme_lector&quot;,
+//                         privileges: [{ resource: { db: &quot;learning&quot;,
+//                                                    collection: &quot;mis_notas&quot; },
+//                                        actions: [&quot;find&quot;] }], roles: [] })
+//       En la version Community no hay control por documento: es por coleccion.
+
+// === preparacion ===
+db.mis_notas.drop();
+db.notas.drop();
+
+db.notas.insertMany([
+  { inquilino: &quot;acme&quot;, estudiante: &quot;Ada&quot;, nota: 90 },
+  { inquilino: &quot;acme&quot;, estudiante: &quot;Bea&quot;, nota: 58 },
+  { inquilino: &quot;globex&quot;, estudiante: &quot;Cid&quot;, nota: 77 },
+]);
+
+db.createView(&quot;mis_notas&quot;, &quot;notas&quot;, [
+  { $match: { inquilino: &quot;acme&quot; } },
+  { $project: { _id: 0, estudiante: 1, nota: 1 } },
+]);
+
+// === consulta ===
+db.mis_notas
+  .find()
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una vista de solo lectura con la tubería filtrada, más un rol que dé acceso a la vista y no a la colección, consigue lo mismo. Y con la versión Enterprise existe redacción a nivel de campo.</li>
+<li><strong>Por qué no:</strong> No hay seguridad a nivel de documento en la versión Community: el control es por colección. Y el modelo habitual —un campo <code>inquilino</code> en cada documento— depende por completo de que la aplicación no se equivoque.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/views/">https://www.mongodb.com/docs/manual/core/views/</a></li>
+</ul>
+<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/relational-databases/security/row-level-security
+-- nota: implementacion declarada. SQL Server separa dos cosas que conviene no
+--       confundir:
+--         predicado de FILTRO   -&gt; que filas se VEN
+--         predicado de BLOQUEO  -&gt; que filas se pueden ESCRIBIR
+--       Sin el segundo, un usuario puede insertar filas de otro inquilino que
+--       despues no podra ver: el dato se pierde de vista sin haberse borrado.
+
+-- === preparacion ===
+DROP SECURITY POLICY IF EXISTS dbo.politica_inquilino;
+DROP FUNCTION IF EXISTS dbo.fn_inquilino;
+DROP TABLE IF EXISTS dbo.notas;
+
+CREATE TABLE dbo.notas (
+    inquilino  NVARCHAR(50) NOT NULL,
+    estudiante NVARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO dbo.notas (inquilino, estudiante, nota) VALUES
+    (N'acme', N'Ada', 90), (N'acme', N'Bea', 58), (N'globex', N'Cid', 77);
+GO
+
+-- SCHEMABINDING y una funcion simple: se ejecuta POR FILA.
+CREATE FUNCTION dbo.fn_inquilino(@inquilino AS NVARCHAR(50))
+RETURNS TABLE
+WITH SCHEMABINDING
+AS
+RETURN SELECT 1 AS visible
+       WHERE @inquilino = CAST(SESSION_CONTEXT(N'inquilino') AS NVARCHAR(50));
+GO
+
+CREATE SECURITY POLICY dbo.politica_inquilino
+ADD FILTER PREDICATE dbo.fn_inquilino(inquilino) ON dbo.notas,
+ADD BLOCK PREDICATE dbo.fn_inquilino(inquilino) ON dbo.notas AFTER INSERT
+WITH (STATE = ON);
+GO
+
+-- === consulta ===
+EXEC sp_set_session_context @key = N'inquilino', @value = N'acme';
+
+SELECT estudiante, nota FROM dbo.notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su seguridad a nivel de fila se declara con una función con valores de tabla y una política de seguridad, y distingue <strong>predicados de filtro</strong> —qué se ve— de <strong>predicados de bloqueo</strong> —qué se puede escribir—, una separación que PostgreSQL cubre con dos cláusulas distintas.</li>
+<li><strong>Por qué no:</strong> La función de predicado se ejecuta por fila y se convierte en el cuello de botella si consulta otras tablas; hay que escribirla con <code>SCHEMABINDING</code> y mantenerla simple, o el filtro cuesta más que la consulta.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/security/row-level-security">https://learn.microsoft.com/sql/relational-databases/security/row-level-security</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>El control de acceso llega hasta el patrón de clave: las ACL permiten restringir a <code>~acme:*</code>, pero no hay forma de filtrar <strong>dentro</strong> de un valor. Si los datos de dos inquilinos comparten una estructura, no hay frontera posible.</td>
+<td>Separar por prefijo de clave desde el diseño (<code>acme:notas:...</code>) y usar ACL por usuario sobre ese patrón: la frontera se consigue por nomenclatura, y hay que sostenerla en cada escritura.</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

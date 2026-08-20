@@ -8,6 +8,8 @@ Parte 10 — Operación, seguridad y gobierno · Avanzado ·
 
 **Conceptos centrales:** `percentil` · `presupuesto de error` · `saturación` · `consulta lenta`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -230,6 +232,92 @@ La instrumentación se instala **antes** del incidente. Durante uno, no hay tiem
 2. ¿Por qué una consulta de 2 ms puede ser más urgente que una de 8 s?
 3. Da tres métricas de saturación de tu base y el umbral que elegirías para cada una.
 4. Interpreta un `wait_event` de `Client:ClientRead` sostenido en 50 conexiones.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Qué mirar cuando la base va lenta, y desde dónde
+
+«La base de datos va lenta» no es un diagnóstico: es una queja. Convertirla
+en un diagnóstico exige tres cosas distintas, y cada motor las expone en
+sitios distintos: **qué consultas** consumen el tiempo, **en qué esperan**
+las sesiones, y **cuánta capacidad** queda antes de que deje de aguantar.
+
+Y antes de mirar nada, hay que haber decidido **qué se promete**: un
+objetivo de nivel de servicio expresado en percentiles —«el 99 % de las
+lecturas en menos de 50 ms»— y no en medias, porque la media esconde
+justamente la cola que sufre el usuario.
+
+Esta comparación no ejecuta nada: enumera, motor por motor, dónde está cada
+una de esas tres respuestas.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/pgstatstatements.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/) |
+| Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/commands/slowlog-get/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/c3ref/profile.html) |
+| DuckDB | **no** | — | — | [doc oficial](https://duckdb.org/docs/stable/dev/profiling) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** `pg_stat_statements` acumula tiempo total, llamadas y filas por consulta normalizada: es la respuesta a «qué consume el tiempo». `pg_stat_activity` con la columna `wait_event` responde «en qué esperan». Y `pg_stat_user_tables` con `n_dead_tup` y la antigüedad de transacción avisan de la capacidad que queda antes de que el vacío se convierta en un incidente.
+- **Por qué sí:** Es la instrumentación más completa y **consultable con SQL**: los mismos paneles se construyen con las mismas consultas, sin agente ni producto.
+- **Por qué no:** `pg_stat_statements` es una extensión que hay que activar y que cuesta un poco de sobrecarga, y sus contadores son acumulados desde el arranque: sin tomar diferencias entre dos instantes, no dicen nada del último minuto.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/pgstatstatements.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** El esquema `performance_schema` y las vistas de `sys` —`sys.statement_analysis`, `sys.schema_table_statistics`— dan el mismo trío, y el registro de consultas lentas sigue siendo la vía más directa para encontrar las peores.
+- **Por qué sí:** `sys` presenta la información ya interpretada y con unidades legibles, que es exactamente lo que falta cuando hay que diagnosticar deprisa.
+- **Por qué no:** `performance_schema` tiene un costo notable y viene con parte de la instrumentación desactivada: decidir qué activar es un compromiso entre visibilidad y rendimiento que hay que tomar antes del incidente, no durante.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** El perfilador de base de datos guarda las operaciones lentas en una colección consultable, `db.currentOp()` muestra lo que está corriendo ahora, y `db.serverStatus()` da los contadores globales.
+- **Por qué sí:** Que el perfil sea una **colección** significa que se analiza con las mismas herramientas que los datos: se puede agregar, ordenar y filtrar sin exportar nada.
+- **Por qué no:** El perfilador tiene costo y por eso viene desactivado; activarlo al 100 % en producción es una mala idea, y activarlo solo por encima de un umbral hace que se pierdan justo las operaciones que aún no eran lentas y estaban a punto de serlo.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/>
+
+#### Redis
+
+- **Cómo se hace aquí:** `SLOWLOG GET` guarda las órdenes que superaron un umbral —y en un servidor de un solo hilo, esas son las que bloquearon a todos—, `INFO` da memoria, conexiones y aciertos de caché, y `LATENCY DOCTOR` interpreta los picos.
+- **Por qué sí:** La métrica que importa es una y es evidente: cuánto tiempo estuvo bloqueado el hilo único. El registro de lentas la responde directamente.
+- **Por qué no:** `INFO` no da percentiles ni series temporales: solo el estado actual y contadores acumulados. Cualquier objetivo de servicio en percentiles hay que medirlo desde el cliente, no desde Redis.
+- 📄 Documentación oficial: <https://redis.io/docs/latest/commands/slowlog-get/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** `nodetool tpstats` muestra las colas de hilos y las tareas descartadas —la señal más clara de saturación—, `nodetool tablehistograms` da percentiles reales de latencia por tabla, y `nodetool tablestats` avisa de particiones grandes y de lápidas por lectura.
+- **Por qué sí:** Es de los pocos que expone **percentiles** directamente, en vez de medias, y por tabla: es la información que un objetivo de servicio necesita.
+- **Por qué no:** Todo es por nodo: no hay una vista del clúster sin una herramienta que agregue. Diagnosticar un clúster de treinta nodos con `nodetool` es inviable sin recolección centralizada.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** No hay vistas de estadísticas ni sesiones que observar: la instrumentación es del proceso que lo enlaza. `sqlite3_profile`, `sqlite3_status` y `PRAGMA compile_options` dan lo que hay.
+- **Por qué sí:** Al vivir dentro de la aplicación, se instrumenta con las mismas herramientas que el resto del código: no hay un sistema aparte que monitorizar.
+- **Por qué no:** Tampoco hay nada que consultar desde fuera: si el proceso no publica la métrica, la métrica no existe. La observabilidad hay que construirla entera.
+- 📄 Documentación oficial: <https://sqlite.org/c3ref/profile.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| DuckDB | Se ejecuta como parte de un análisis, no como un servicio que atienda tráfico: no hay sesiones que vigilar, ni saturación que anticipar, ni objetivo de servicio que cumplir. | Su instrumentación útil es por consulta —`EXPLAIN ANALYZE` y `PRAGMA enable_profiling`— y sirve para optimizar un informe, no para operar un sistema. | [doc](https://duckdb.org/docs/stable/dev/profiling) |
 
 ---
 

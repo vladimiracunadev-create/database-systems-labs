@@ -61,6 +61,7 @@
 4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md"><code>labs/08-recovery</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>RPO</code> · <code>RTO</code> · <code>recuperación a un punto en el tiempo</code> · <code>prueba de restauración</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Convertir la copia de seguridad en una garantía verificada. Una copia que nunca se ha restaurado no es una copia: es una carpeta que ocupa espacio.</p>
@@ -367,6 +368,333 @@ echo &quot;RTO medido: $(( ($(date +%s) - INICIO) / 60 )) min · filas: $FILAS&q
 <li>¿Qué comprobarías tras restaurar, antes de promover a producción?</li>
 <li>Diseña la protección de tus copias frente a un atacante con credenciales de administrador.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un respaldo que nadie ha restaurado no es un respaldo, es un archivo</p>
+<p>La única propiedad que importa de una copia de seguridad no es que exista:
+es que se pueda <strong>restaurar y comprobar</strong>. Y comprobar no es mirar si el
+archivo pesa lo esperado: es contar lo restaurado y compararlo con el
+origen.</p>
+<p>El caso reduce esa disciplina a su forma mínima: seis notas, una copia, y la
+pareja de cifras que las compara —cuántas filas y cuánto suman—. En
+producción la copia la hace <code>pg_dump</code>, <code>mysqldump</code>, <code>mongodump</code> o una
+instantánea del volumen; lo que aquí se compara no es la herramienta, es el
+<strong>método de verificación</strong>, que es el mismo en todas partes y el que casi
+nadie ejecuta hasta el día del incidente.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>copia</th>
+<th>filas</th>
+<th>suma</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>origen</code></td>
+<td><code>6</code></td>
+<td><code>402</code></td>
+</tr>
+<tr>
+<td><code>restaurado</code></td>
+<td><code>6</code></td>
+<td><code>402</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 048</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/continuous-archiving.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/backup.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/export">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/database-tools/mongodump/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/backups.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/continuous-archiving.html
+-- nota: las dos familias, y hacen falta las dos:
+--         pg_dump -Fc base &gt; copia.dump        copia logica, portable
+--         pg_basebackup + archive_command      punto en el tiempo
+--       La segunda es la unica que salva de un DELETE sin WHERE a las once de
+--       la noche: permite restaurar al segundo anterior.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas_restauradas, notas;
+
+CREATE TABLE notas (
+    id         integer PRIMARY KEY,
+    estudiante text NOT NULL,
+    nota       integer NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene las dos familias y hacen falta las dos: <code>pg_dump</code> para una copia lógica portable entre versiones, y el archivado continuo del WAL con <code>pg_basebackup</code> para recuperación <strong>a un punto en el tiempo</strong>, que es lo único que salva de un <code>DELETE</code> sin <code>WHERE</code> a las once de la noche.</li>
+<li><strong>Por qué no:</strong> <code>pg_dump</code> sobre una base grande tarda horas y la restauración tarda más, porque hay que reconstruir todos los índices. Y el archivado continuo no sirve de nada si nadie ha probado la restauración: la copia se verifica restaurando, no listando archivos.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/continuous-archiving.html">https://www.postgresql.org/docs/current/continuous-archiving.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html
+-- nota: mysqldump SIN --single-transaction bloquea las tablas y puede producir
+--       una copia incoherente. Y la recuperacion a un punto en el tiempo exige
+--       que log_bin este activado y que los registros se conserven: comprobarlo
+--       forma parte del plan de respaldo, no del de rendimiento.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas_restauradas;
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    id         INT PRIMARY KEY,
+    estudiante VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>mysqldump</code> para la copia lógica y el registro binario para el punto en el tiempo; con el clon de InnoDB o XtraBackup, además, copia física en caliente sin bloquear.</li>
+<li><strong>Por qué no:</strong> <code>mysqldump</code> sin <code>--single-transaction</code> bloquea las tablas y produce copias incoherentes entre tablas de motores distintos; y la recuperación desde el registro binario exige que ese registro esté activado y conservado, cosa que <strong>no</strong> es el valor por omisión en todas las instalaciones.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html">https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/backup.html
+-- nota: en produccion la copia se hace SIN detener la base con
+--         VACUUM INTO 'copia-2026-08-19.sqlite';
+--       Lo que NO hay que hacer nunca es `cp base.sqlite copia.sqlite` mientras
+--       alguien escribe: produce un archivo que parece valido y no lo es.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT NOT NULL,
+    nota       INTEGER NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene la API de respaldo en línea y la orden <code>VACUUM INTO</code>, que produce una copia coherente <strong>mientras la base está en uso</strong>, sin detener nada. Para una aplicación de escritorio, eso es todo lo que hace falta.</li>
+<li><strong>Por qué no:</strong> Copiar el archivo con <code>cp</code> mientras alguien escribe produce una copia corrupta que <strong>parece válida</strong> hasta que se abre. Es el error de respaldo más frecuente que se comete con SQLite, y no da ningún aviso.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/backup.html">https://sqlite.org/backup.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/export
+-- nota: aqui el respaldo es exportar a un formato ABIERTO:
+--         EXPORT DATABASE 'copia' (FORMAT PARQUET);
+--       La copia sobrevive a la desaparicion del motor que la creo, cosa que
+--       ningun volcado propietario garantiza. A cambio: no hay punto en el
+--       tiempo ni copia incremental.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí el respaldo es exportar a Parquet, un formato abierto que otras herramientas leen: la copia sobrevive incluso a la desaparición del motor que la creó, que es una propiedad que ningún volcado propietario tiene.</li>
+<li><strong>Por qué no:</strong> No hay punto en el tiempo ni copia incremental: se exporta todo o nada, y lo que se pierde entre dos exportaciones se pierde del todo.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/export">https://duckdb.org/docs/stable/sql/statements/export</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/database-tools/mongodump/
+// nota: mongodump sobre un conjunto de replicas NO da una copia coherente entre
+//       colecciones salvo que se use --oplog, y sobre un cluster fragmentado
+//       hay que detener el balanceador. Son detalles que solo se descubren
+//       restaurando, y por eso hay que restaurar antes del incidente.
+
+// === preparacion ===
+db.notas.drop();
+db.notas_restauradas.drop();
+
+db.notas.insertMany([
+  { _id: 1, estudiante: &quot;Ada&quot;, nota: 90 },
+  { _id: 2, estudiante: &quot;Ada&quot;, nota: 58 },
+  { _id: 3, estudiante: &quot;Linus&quot;, nota: 78 },
+  { _id: 4, estudiante: &quot;Linus&quot;, nota: 66 },
+  { _id: 5, estudiante: &quot;Grace&quot;, nota: 55 },
+  { _id: 6, estudiante: &quot;Grace&quot;, nota: 55 },
+]);
+
+// La «restauracion»: aqui, una copia de la coleccion.
+db.notas.aggregate([{ $out: &quot;notas_restauradas&quot; }]).toArray();
+
+// === consulta ===
+for (const [nombre, coleccion] of [[&quot;origen&quot;, db.notas],
+                                   [&quot;restaurado&quot;, db.notas_restauradas]]) {
+  const r = coleccion
+    .aggregate([{ $group: { _id: null, filas: { $sum: 1 }, suma: { $sum: &quot;$nota&quot; } } }])
+    .toArray()[0];
+  print(nombre + &quot;|&quot; + r.filas + &quot;|&quot; + r.suma);
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>mongodump</code> y <code>mongorestore</code> para la copia lógica, y en un conjunto de réplicas se puede usar el registro de operaciones para recuperar a un punto en el tiempo.</li>
+<li><strong>Por qué no:</strong> <code>mongodump</code> sobre un conjunto de réplicas <strong>no</strong> da una copia coherente entre colecciones salvo que se use <code>--oplog</code>, y sobre un clúster fragmentado la coherencia entre fragmentos exige detener el balanceador. Son detalles que solo se descubren restaurando.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/database-tools/mongodump/">https://www.mongodb.com/docs/database-tools/mongodump/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>El archivo RDB es una instantánea de un momento, y el AOF un registro de órdenes: los dos se pueden copiar, pero Redis casi nunca es la fuente de la verdad, así que restaurarlo no restaura nada que importe.</td>
+<td>Tratar Redis como reconstruible: el plan de recuperación no es restaurarlo, es <strong>volver a llenarlo</strong> desde el sistema que sí guarda la verdad, y medir cuánto tarda ese llenado, porque ese tiempo es el de la caída.</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>Las instantáneas son por nodo y consisten en enlaces duros a las SSTables: la copia del clúster es la unión de las de todos los nodos, y <strong>no</strong> están tomadas en el mismo instante. No hay una copia coherente del conjunto.</td>
+<td>Instantáneas por nodo más el archivado incremental, y aceptar que la restauración devuelve un estado <em>aproximadamente</em> coherente que hay que reparar después con <code>nodetool repair</code>.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/backups.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py

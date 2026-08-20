@@ -1,0 +1,129 @@
+---
+caso:
+  titulo: Qué mirar cuando la base va lenta, y desde dónde
+  modo: conceptual
+  contrato: |
+    «La base de datos va lenta» no es un diagnóstico: es una queja. Convertirla
+    en un diagnóstico exige tres cosas distintas, y cada motor las expone en
+    sitios distintos: **qué consultas** consumen el tiempo, **en qué esperan**
+    las sesiones, y **cuánta capacidad** queda antes de que deje de aguantar.
+
+    Y antes de mirar nada, hay que haber decidido **qué se promete**: un
+    objetivo de nivel de servicio expresado en percentiles —«el 99 % de las
+    lecturas en menos de 50 ms»— y no en medias, porque la media esconde
+    justamente la cola que sufre el usuario.
+
+    Esta comparación no ejecuta nada: enumera, motor por motor, dónde está cada
+    una de esas tres respuestas.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: postgresql
+    aplica: si
+    como: >-
+      `pg_stat_statements` acumula tiempo total, llamadas y filas por consulta
+      normalizada: es la respuesta a «qué consume el tiempo». `pg_stat_activity`
+      con la columna `wait_event` responde «en qué esperan». Y `pg_stat_user_tables`
+      con `n_dead_tup` y la antigüedad de transacción avisan de la capacidad que
+      queda antes de que el vacío se convierta en un incidente.
+    porque_si: >-
+      Es la instrumentación más completa y **consultable con SQL**: los mismos
+      paneles se construyen con las mismas consultas, sin agente ni producto.
+    porque_no: >-
+      `pg_stat_statements` es una extensión que hay que activar y que cuesta un
+      poco de sobrecarga, y sus contadores son acumulados desde el arranque: sin
+      tomar diferencias entre dos instantes, no dicen nada del último minuto.
+    doc: https://www.postgresql.org/docs/current/pgstatstatements.html
+
+  - id: mysql
+    aplica: si
+    como: >-
+      El esquema `performance_schema` y las vistas de `sys` —`sys.statement_analysis`,
+      `sys.schema_table_statistics`— dan el mismo trío, y el registro de
+      consultas lentas sigue siendo la vía más directa para encontrar las peores.
+    porque_si: >-
+      `sys` presenta la información ya interpretada y con unidades legibles,
+      que es exactamente lo que falta cuando hay que diagnosticar deprisa.
+    porque_no: >-
+      `performance_schema` tiene un costo notable y viene con parte de la
+      instrumentación desactivada: decidir qué activar es un compromiso entre
+      visibilidad y rendimiento que hay que tomar antes del incidente, no
+      durante.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html
+
+  - id: mongodb
+    aplica: si
+    como: >-
+      El perfilador de base de datos guarda las operaciones lentas en una
+      colección consultable, `db.currentOp()` muestra lo que está corriendo
+      ahora, y `db.serverStatus()` da los contadores globales.
+    porque_si: >-
+      Que el perfil sea una **colección** significa que se analiza con las
+      mismas herramientas que los datos: se puede agregar, ordenar y filtrar sin
+      exportar nada.
+    porque_no: >-
+      El perfilador tiene costo y por eso viene desactivado; activarlo al 100 %
+      en producción es una mala idea, y activarlo solo por encima de un umbral
+      hace que se pierdan justo las operaciones que aún no eran lentas y estaban
+      a punto de serlo.
+    doc: https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/
+
+  - id: redis
+    aplica: si
+    como: >-
+      `SLOWLOG GET` guarda las órdenes que superaron un umbral —y en un servidor
+      de un solo hilo, esas son las que bloquearon a todos—, `INFO` da memoria,
+      conexiones y aciertos de caché, y `LATENCY DOCTOR` interpreta los picos.
+    porque_si: >-
+      La métrica que importa es una y es evidente: cuánto tiempo estuvo
+      bloqueado el hilo único. El registro de lentas la responde directamente.
+    porque_no: >-
+      `INFO` no da percentiles ni series temporales: solo el estado actual y
+      contadores acumulados. Cualquier objetivo de servicio en percentiles hay
+      que medirlo desde el cliente, no desde Redis.
+    doc: https://redis.io/docs/latest/commands/slowlog-get/
+
+  - id: cassandra
+    aplica: si
+    como: >-
+      `nodetool tpstats` muestra las colas de hilos y las tareas descartadas
+      —la señal más clara de saturación—, `nodetool tablehistograms` da
+      percentiles reales de latencia por tabla, y `nodetool tablestats` avisa de
+      particiones grandes y de lápidas por lectura.
+    porque_si: >-
+      Es de los pocos que expone **percentiles** directamente, en vez de medias,
+      y por tabla: es la información que un objetivo de servicio necesita.
+    porque_no: >-
+      Todo es por nodo: no hay una vista del clúster sin una herramienta que
+      agregue. Diagnosticar un clúster de treinta nodos con `nodetool` es
+      inviable sin recolección centralizada.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html
+
+  - id: sqlite
+    aplica: si
+    como: >-
+      No hay vistas de estadísticas ni sesiones que observar: la instrumentación
+      es del proceso que lo enlaza. `sqlite3_profile`, `sqlite3_status` y
+      `PRAGMA compile_options` dan lo que hay.
+    porque_si: >-
+      Al vivir dentro de la aplicación, se instrumenta con las mismas
+      herramientas que el resto del código: no hay un sistema aparte que
+      monitorizar.
+    porque_no: >-
+      Tampoco hay nada que consultar desde fuera: si el proceso no publica la
+      métrica, la métrica no existe. La observabilidad hay que construirla
+      entera.
+    doc: https://sqlite.org/c3ref/profile.html
+
+  - id: duckdb
+    aplica: no
+    porque_no: >-
+      Se ejecuta como parte de un análisis, no como un servicio que atienda
+      tráfico: no hay sesiones que vigilar, ni saturación que anticipar, ni
+      objetivo de servicio que cumplir.
+    alternativa: >-
+      Su instrumentación útil es por consulta —`EXPLAIN ANALYZE` y
+      `PRAGMA enable_profiling`— y sirve para optimizar un informe, no para
+      operar un sistema.
+    doc: https://duckdb.org/docs/stable/dev/profiling

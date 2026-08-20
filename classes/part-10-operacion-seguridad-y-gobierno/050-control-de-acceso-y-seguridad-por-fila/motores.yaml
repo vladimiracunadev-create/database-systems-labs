@@ -1,0 +1,121 @@
+---
+caso:
+  titulo: Cada cliente ve sus filas y solo las suyas
+  contrato: |
+    Tres notas de dos clientes en la misma tabla. La aplicación del cliente
+    `acme` tiene que ver dos filas y **no puede** ver la tercera. La pregunta de
+    la clase no es cómo filtrar —eso es un `WHERE`— sino **dónde vive ese
+    filtro**: si está en cada consulta, basta que una lo olvide para filtrar los
+    datos de otro cliente, y ese error no se detecta con pruebas funcionales
+    porque la consulta devuelve resultados perfectamente plausibles.
+
+    Cada motor ofrece un sitio distinto donde poner la frontera: una política de
+    fila que el servidor aplica siempre, una vista con permisos, un usuario por
+    inquilino o nada en absoluto. El caso muestra la forma mínima —la vista— y
+    la matriz dice hasta dónde llega cada uno.
+  columnas: [estudiante, nota]
+  esperado:
+    - [Ada, "90"]
+    - [Bea, "58"]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      La seguridad a nivel de fila la aplica **el servidor**, no la consulta: con
+      `ENABLE ROW LEVEL SECURITY` y una política, una consulta sin `WHERE`
+      devuelve solo las filas permitidas. Es la única forma de que olvidarse del
+      filtro deje de ser posible.
+    porque_no: >-
+      La política se evalúa por fila y puede impedir el uso de índices si está
+      mal escrita; y hay que recordar `FORCE ROW LEVEL SECURITY`, porque el
+      dueño de la tabla **se salta sus propias políticas** por omisión. Es una
+      trampa que aparece justo en las pruebas, donde todo se ejecuta como dueño.
+    doc: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      La vista es la forma mínima y portable de la frontera: la aplicación
+      consulta `mis_notas` y nunca `notas`, así que el filtro está en un solo
+      sitio.
+    porque_no: >-
+      No hay usuarios ni permisos: nada impide que el mismo proceso consulte la
+      tabla de debajo. La frontera es una convención, no un control de acceso, y
+      quien tenga el archivo lo tiene todo.
+    doc: https://sqlite.org/lang_createview.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Sirve para la auditoría que precede a cualquier control de acceso: contar
+      cuántas filas de cada inquilino hay y comprobar que ninguna tiene el campo
+      vacío, que es el agujero clásico de los esquemas multiinquilino.
+    porque_no: >-
+      No tiene usuarios, roles ni políticas: no es un sitio donde poner una
+      frontera de seguridad, sino donde analizar los datos que ya cruzaron una.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_view
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Tiene vistas con `SQL SECURITY DEFINER`, que ejecutan con los privilegios
+      de quien las creó: se puede dar acceso a la vista y negarlo a la tabla, lo
+      que convierte la vista en una frontera de verdad y no solo en una
+      convención.
+    porque_no: >-
+      **No tiene seguridad a nivel de fila.** Todo se apoya en vistas y
+      permisos, y para muchos inquilinos hace falta una vista o una base por
+      inquilino: la solución no escala a cientos de clientes.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-view.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Una vista de solo lectura con la tubería filtrada, más un rol que dé
+      acceso a la vista y no a la colección, consigue lo mismo. Y con la
+      versión Enterprise existe redacción a nivel de campo.
+    porque_no: >-
+      No hay seguridad a nivel de documento en la versión Community: el control
+      es por colección. Y el modelo habitual —un campo `inquilino` en cada
+      documento— depende por completo de que la aplicación no se equivoque.
+    doc: https://www.mongodb.com/docs/manual/core/views/
+
+  - id: sql-server
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/sql-server/consulta.sql
+    porque_si: >-
+      Su seguridad a nivel de fila se declara con una función con valores de
+      tabla y una política de seguridad, y distingue **predicados de filtro**
+      —qué se ve— de **predicados de bloqueo** —qué se puede escribir—, una
+      separación que PostgreSQL cubre con dos cláusulas distintas.
+    porque_no: >-
+      La función de predicado se ejecuta por fila y se convierte en el cuello de
+      botella si consulta otras tablas; hay que escribirla con
+      `SCHEMABINDING` y mantenerla simple, o el filtro cuesta más que la
+      consulta.
+    doc: https://learn.microsoft.com/sql/relational-databases/security/row-level-security
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      El control de acceso llega hasta el patrón de clave: las ACL permiten
+      restringir a `~acme:*`, pero no hay forma de filtrar **dentro** de un
+      valor. Si los datos de dos inquilinos comparten una estructura, no hay
+      frontera posible.
+    alternativa: >-
+      Separar por prefijo de clave desde el diseño (`acme:notas:...`) y usar
+      ACL por usuario sobre ese patrón: la frontera se consigue por
+      nomenclatura, y hay que sostenerla en cada escritura.
+    doc: https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/

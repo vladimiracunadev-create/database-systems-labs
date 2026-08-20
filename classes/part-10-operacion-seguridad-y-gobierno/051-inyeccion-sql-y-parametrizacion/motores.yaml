@@ -1,0 +1,116 @@
+---
+caso:
+  titulo: El texto que buscaba ser código y se quedó en dato
+  contrato: |
+    Alguien escribe `' OR '1'='1` en un formulario de búsqueda. Si la aplicación
+    construye la consulta pegando cadenas, lo que llega al motor deja de ser una
+    búsqueda: `WHERE nombre = '' OR '1'='1'` devuelve **todos** los usuarios,
+    incluido el administrador. Si la aplicación usa un parámetro, la consulta y
+    el valor viajan por caminos distintos, el texto nunca se analiza como SQL y
+    el resultado es cero: no hay ningún usuario que se llame así.
+
+    Esa es toda la defensa, y no es una biblioteca ni un cortafuegos: es no
+    construir sentencias con concatenación. El caso lo comprueba en cada motor,
+    y la matriz añade lo que casi nadie mira: que **el mismo problema existe sin
+    SQL** —en MongoDB, en Redis, en un índice de búsqueda— con otra sintaxis.
+  columnas: [encontrados]
+  esperado:
+    - ["0"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Su interfaz de Python usa marcadores `?` y la biblioteca estándar rechaza
+      pasar parámetros con `execute` sobre varias sentencias: el camino fácil es
+      también el seguro.
+    porque_no: >-
+      `executescript` **no** admite parámetros, así que quien necesite ejecutar
+      varias sentencias se ve empujado a concatenar. Es un empujón hacia el
+      error justo donde más duele.
+    doc: https://sqlite.org/lang_expr.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Admite sentencias preparadas con `?` igual que el resto, y es donde más
+      tentador resulta saltárselas: los guiones de análisis se escriben deprisa,
+      con nombres de tabla pegados desde una variable.
+    porque_no: >-
+      Los identificadores —nombres de tabla y de columna— **no** se pueden
+      parametrizar en ningún motor, y en analítica son justo lo que suele venir
+      de fuera. Ahí la defensa es una lista blanca, no un parámetro.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      El protocolo extendido separa de verdad la sentencia del valor: no es que
+      el controlador escape bien, es que el valor viaja en otro mensaje. Y
+      `quote_literal` y `format` con `%L` cubren los casos en que hay que
+      construir SQL dinámico dentro de una función.
+    porque_no: >-
+      Ese SQL dinámico dentro de funciones es la puerta que sigue abierta:
+      `EXECUTE 'SELECT ... ' || parametro` es inyectable exactamente igual, y
+      vive dentro de la base, donde ninguna revisión del código de la
+      aplicación lo va a mirar.
+    doc: https://www.postgresql.org/docs/current/plpgsql-statements.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Sentencias preparadas en el protocolo y `PREPARE`/`EXECUTE` en SQL, con la
+      misma separación entre sentencia y valor.
+    porque_no: >-
+      Su historial de conectores con opción de «emular» las sentencias
+      preparadas del lado del cliente —PDO con `ATTR_EMULATE_PREPARES` activado
+      por omisión durante años— hizo que muchas aplicaciones creyeran estar
+      parametrizando cuando estaban concatenando con escape.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Las consultas son documentos, no cadenas: no hay sintaxis que romper con
+      comillas, así que la inyección clásica no existe.
+    porque_no: >-
+      Existe otra. Si un valor recibido de fuera se inserta tal cual en el
+      filtro y resulta ser un objeto —`{"$ne": null}` o `{"$gt": ""}`— deja de
+      ser un dato y pasa a ser un operador: **inyección de operador**. La
+      defensa no es escapar, es comprobar el tipo antes de construir el filtro.
+    doc: https://www.mongodb.com/docs/manual/faq/fundamentals/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      El protocolo RESP indica la longitud de cada argumento, así que un valor
+      no puede convertirse en otra orden: la inyección de órdenes no es posible
+      por diseño.
+    alternativa: >-
+      Donde sí reaparece el problema es en los scripts Lua construidos con
+      concatenación: si el guion se arma pegando texto del usuario, hay
+      inyección de Lua. Los valores van en `KEYS` y `ARGV`, nunca dentro del
+      texto del script.
+    doc: https://redis.io/docs/latest/develop/reference/protocol-spec/
+
+  - id: opensearch
+    aplica: no
+    porque_no: >-
+      Sus consultas son JSON, así que no hay comillas que romper; pero tiene su
+      propia versión del problema con `query_string`, que **sí** interpreta una
+      sintaxis con operadores dentro de una cadena de texto del usuario.
+    alternativa: >-
+      Usar `match` en vez de `query_string` para el texto que venga de fuera, y
+      si hace falta la sintaxis avanzada, `simple_query_string`, que ignora los
+      errores en vez de ejecutar cosas raras.
+    doc: https://docs.opensearch.org/latest/query-dsl/full-text/query-string/

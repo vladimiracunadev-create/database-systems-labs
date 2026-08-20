@@ -8,6 +8,8 @@ Parte 10 — Operación, seguridad y gobierno · Fundamentos ·
 
 **Conceptos centrales:** `consulta parametrizada` · `identificador dinamico` · `lista blanca` · `defensa en profundidad`
 
+**En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -257,6 +259,268 @@ Las inyecciones que llegan a producción hoy casi nunca están en el `WHERE`: es
 2. ¿Por qué el nombre de una columna no se puede parametrizar?
 3. Describe un caso de inyección de segundo orden en tu propio sistema.
 4. Si una inyección llegara a ejecutarse, ¿qué podría hacer con tus privilegios actuales?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** El texto que buscaba ser código y se quedó en dato
+
+Alguien escribe `' OR '1'='1` en un formulario de búsqueda. Si la aplicación
+construye la consulta pegando cadenas, lo que llega al motor deja de ser una
+búsqueda: `WHERE nombre = '' OR '1'='1'` devuelve **todos** los usuarios,
+incluido el administrador. Si la aplicación usa un parámetro, la consulta y
+el valor viajan por caminos distintos, el texto nunca se analiza como SQL y
+el resultado es cero: no hay ningún usuario que se llame así.
+
+Esa es toda la defensa, y no es una biblioteca ni un cortafuegos: es no
+construir sentencias con concatenación. El caso lo comprueba en cada motor,
+y la matriz añade lo que casi nadie mira: que **el mismo problema existe sin
+SQL** —en MongoDB, en Redis, en un índice de búsqueda— con otra sintaxis.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| encontrados |
+|---|
+| `0` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 051`: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_expr.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/plpgsql-statements.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/faq/fundamentals/) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
+| OpenSearch | **no** | — | — | [doc oficial](https://docs.opensearch.org/latest/query-dsl/full-text/query-string/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+-- nota: en Python, la forma correcta es la de siempre:
+--         cur.execute("SELECT COUNT(*) FROM usuarios WHERE nombre = ?", (entrada,))
+--       Y el detalle que empuja al error: executescript() NO admite parametros,
+--       asi que quien necesita varias sentencias acaba concatenando.
+
+-- === preparacion ===
+CREATE TABLE usuarios (
+    nombre TEXT PRIMARY KEY,
+    rol    TEXT NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -> devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+```
+
+- **Por qué sí:** Su interfaz de Python usa marcadores `?` y la biblioteca estándar rechaza pasar parámetros con `execute` sobre varias sentencias: el camino fácil es también el seguro.
+- **Por qué no:** `executescript` **no** admite parámetros, así que quien necesite ejecutar varias sentencias se ve empujado a concatenar. Es un empujón hacia el error justo donde más duele.
+- 📄 Documentación oficial: <https://sqlite.org/lang_expr.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements
+-- nota: la trampa propia de la analitica: los IDENTIFICADORES —nombres de tabla
+--       y de columna— no se pueden parametrizar en NINGUN motor, y en un guion
+--       de analisis suelen venir de fuera. Ahi la defensa no es un parametro:
+--       es una lista blanca de nombres permitidos.
+
+-- === preparacion ===
+CREATE TABLE usuarios (
+    nombre VARCHAR PRIMARY KEY,
+    rol    VARCHAR NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -> devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+```
+
+- **Por qué sí:** Admite sentencias preparadas con `?` igual que el resto, y es donde más tentador resulta saltárselas: los guiones de análisis se escriben deprisa, con nombres de tabla pegados desde una variable.
+- **Por qué no:** Los identificadores —nombres de tabla y de columna— **no** se pueden parametrizar en ningún motor, y en analítica son justo lo que suele venir de fuera. Ahí la defensa es una lista blanca, no un parámetro.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/plpgsql-statements.html
+-- nota: la puerta que sigue abierta no esta en la aplicacion, esta DENTRO de la
+--       base. Esto es inyectable igual:
+--         EXECUTE 'SELECT * FROM usuarios WHERE nombre = ''' || entrada || '''';
+--       y la forma correcta es:
+--         EXECUTE format('SELECT * FROM usuarios WHERE nombre = %L', entrada);
+--       Ninguna revision del codigo de la aplicacion va a mirar ahi.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS usuarios;
+
+CREATE TABLE usuarios (
+    nombre text PRIMARY KEY,
+    rol    text NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -> devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+```
+
+- **Por qué sí:** El protocolo extendido separa de verdad la sentencia del valor: no es que el controlador escape bien, es que el valor viaja en otro mensaje. Y `quote_literal` y `format` con `%L` cubren los casos en que hay que construir SQL dinámico dentro de una función.
+- **Por qué no:** Ese SQL dinámico dentro de funciones es la puerta que sigue abierta: `EXECUTE 'SELECT ... ' || parametro` es inyectable exactamente igual, y vive dentro de la base, donde ninguna revisión del código de la aplicación lo va a mirar.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/plpgsql-statements.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html
+-- nota: durante anos, PDO traia ATTR_EMULATE_PREPARES activado por omision: el
+--       controlador construia la sentencia con escape en el CLIENTE en vez de
+--       enviar sentencia y valor por separado. Miles de aplicaciones creyeron
+--       estar parametrizando mientras concatenaban.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS usuarios;
+
+CREATE TABLE usuarios (
+    nombre VARCHAR(50) PRIMARY KEY,
+    rol    VARCHAR(50) NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -> devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+```
+
+- **Por qué sí:** Sentencias preparadas en el protocolo y `PREPARE`/`EXECUTE` en SQL, con la misma separación entre sentencia y valor.
+- **Por qué no:** Su historial de conectores con opción de «emular» las sentencias preparadas del lado del cliente —PDO con `ATTR_EMULATE_PREPARES` activado por omisión durante años— hizo que muchas aplicaciones creyeran estar parametrizando cuando estaban concatenando con escape.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/faq/fundamentals/
+// nota: la inyeccion clasica no existe —las consultas son documentos, no
+//       cadenas— pero hay otra. Si `entrada` viene de un cuerpo JSON sin
+//       comprobar el tipo y resulta ser un OBJETO:
+//         entrada = { "$ne": null }
+//         db.usuarios.find({ nombre: entrada })   -> devuelve TODOS
+//       Eso es inyeccion de OPERADOR, y la defensa no es escapar: es comprobar
+//       que lo recibido es una cadena antes de construir el filtro.
+
+// === preparacion ===
+db.usuarios.drop();
+db.usuarios.insertMany([
+  { nombre: "ada", rol: "admin" },
+  { nombre: "linus", rol: "lector" },
+  { nombre: "grace", rol: "lector" },
+]);
+
+// === consulta ===
+const entrada = "' OR '1'='1";
+if (typeof entrada !== "string") throw new Error("entrada no es una cadena");
+print(db.usuarios.countDocuments({ nombre: entrada }));
+```
+
+- **Por qué sí:** Las consultas son documentos, no cadenas: no hay sintaxis que romper con comillas, así que la inyección clásica no existe.
+- **Por qué no:** Existe otra. Si un valor recibido de fuera se inserta tal cual en el filtro y resulta ser un objeto —`{"$ne": null}` o `{"$gt": ""}`— deja de ser un dato y pasa a ser un operador: **inyección de operador**. La defensa no es escapar, es comprobar el tipo antes de construir el filtro.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/faq/fundamentals/>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | El protocolo RESP indica la longitud de cada argumento, así que un valor no puede convertirse en otra orden: la inyección de órdenes no es posible por diseño. | Donde sí reaparece el problema es en los scripts Lua construidos con concatenación: si el guion se arma pegando texto del usuario, hay inyección de Lua. Los valores van en `KEYS` y `ARGV`, nunca dentro del texto del script. | [doc](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
+| OpenSearch | Sus consultas son JSON, así que no hay comillas que romper; pero tiene su propia versión del problema con `query_string`, que **sí** interpreta una sintaxis con operadores dentro de una cadena de texto del usuario. | Usar `match` en vez de `query_string` para el texto que venga de fuera, y si hace falta la sintaxis avanzada, `simple_query_string`, que ignora los errores en vez de ejecutar cosas raras. | [doc](https://docs.opensearch.org/latest/query-dsl/full-text/query-string/) |
 
 ---
 

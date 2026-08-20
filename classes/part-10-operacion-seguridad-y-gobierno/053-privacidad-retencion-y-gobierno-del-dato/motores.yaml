@@ -1,0 +1,123 @@
+---
+caso:
+  titulo: Borrar lo que ya no hace falta y enmascarar lo que no debe salir
+  contrato: |
+    El gobierno del dato se reduce, en la práctica, a dos gestos que casi nunca
+    se automatizan: **retención** —lo que ya no hace falta se borra— y
+    **minimización** —lo que sale del sistema sale con lo mínimo indispensable—.
+    Guardar «por si acaso» no es prudencia: cada dato conservado de más es un
+    dato que se puede filtrar y que alguien puede reclamar.
+
+    El caso tiene tres eventos, uno de ellos de hace más de un año. Se borra por
+    política de retención, y los dos que quedan se exportan con el correo
+    enmascarado: se conserva el dominio, que es lo que el análisis necesita, y
+    se pierde la persona, que es lo que el análisis no necesita.
+  columnas: [correo, fecha]
+  esperado:
+    - ["***@example.org", "2026-08-10"]
+    - ["***@otro.org", "2026-08-15"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Muestra los dos gestos en su forma desnuda: un `DELETE` con una condición
+      de fecha y una expresión de enmascarado. No hay nada más, y eso deja claro
+      que el gobierno del dato es una decisión, no una funcionalidad.
+    porque_no: >-
+      El `DELETE` no reduce el archivo: el espacio queda libre para reutilizarse
+      y **los datos siguen ahí** hasta que se sobrescriban. Para borrado real
+      hace falta `VACUUM`, y aun así el sistema de archivos puede conservar
+      copias.
+    doc: https://sqlite.org/lang_delete.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es donde ocurre de verdad la exportación a otro entorno —analítica,
+      pruebas, un cuaderno— y por tanto donde el enmascarado importa más: el
+      dato personal que sale de aquí ya no vuelve.
+    porque_no: >-
+      Enmascarar en la consulta de exportación es frágil: basta una consulta
+      distinta para llevarse el original. El enmascarado tiene que estar en el
+      proceso que exporta, no en la voluntad de quien consulta.
+    doc: https://duckdb.org/docs/stable/sql/functions/char
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Con particionado por rango de fecha, la retención deja de ser un `DELETE`
+      de millones de filas y pasa a ser `DROP TABLE` de una partición:
+      instantáneo y sin hinchar la tabla. Y las vistas con `security_barrier`
+      permiten publicar la versión enmascarada sin dar acceso a la original.
+    porque_no: >-
+      Un `DELETE` normal no libera espacio hasta el vacío, y las filas borradas
+      siguen siendo legibles en el archivo hasta que se sobrescriban: para
+      cumplir un «derecho al olvido» de verdad hay que pensar también en las
+      copias de seguridad, que conservan lo borrado durante meses.
+    doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Tiene particionado por rango con `ALTER TABLE ... DROP PARTITION` para la
+      retención, y el programador de eventos integrado permite dejar la política
+      declarada dentro de la propia base en vez de en un `cron` que nadie
+      revisa.
+    porque_no: >-
+      Ese programador viene desactivado por omisión, así que la política puede
+      estar escrita y no ejecutarse nunca. Y el registro binario conserva las
+      filas borradas durante su periodo de retención, que a veces es más largo
+      que el de los datos.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El índice TTL aplica la retención sin que nadie programe nada: se declara
+      una vez sobre el campo de fecha y el motor borra. Es la forma más difícil
+      de olvidar.
+    porque_no: >-
+      Borra por documento, así que en colecciones grandes el borrado compite con
+      la carga normal; y el espacio en disco no se devuelve al sistema hasta que
+      se compacta. Además, un TTL mal configurado borra lo que no debía y no hay
+      papelera.
+    doc: https://www.mongodb.com/docs/manual/core/index-ttl/
+
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      El TTL por celda expresa la retención en el momento de escribir —«esto
+      caduca en noventa días»—, que es cuando de verdad se sabe cuánto tiempo
+      hace falta el dato. Con la estrategia de compactación por ventana temporal,
+      además, expirar un periodo entero es tirar un archivo.
+    porque_no: >-
+      Cada dato expirado deja una lápida, y las lápidas se recorren en las
+      lecturas hasta que la compactación las retira: una política de retención
+      agresiva sobre datos muy leídos degrada las lecturas justo donde más
+      duelen.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      Tiene caducidad, pero no es el sitio donde vive el dato personal que hay
+      que gobernar: es una caché. Aplicar aquí una política de retención da una
+      falsa sensación de cumplimiento mientras el original sigue en otro sistema.
+    alternativa: >-
+      Tratarlo como lo que es —una copia derivada y desechable— e invalidar sus
+      claves cuando el dato de origen se borra, para no servir desde la caché
+      algo que ya no debería existir.
+    doc: https://redis.io/docs/latest/commands/expire/

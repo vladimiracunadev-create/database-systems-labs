@@ -8,6 +8,8 @@ Parte 10 — Operación, seguridad y gobierno · Avanzado ·
 
 **Conceptos centrales:** `expandir y contraer` · `doble escritura` · `relleno` · `compatibilidad hacia atras`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -224,6 +226,325 @@ Las migraciones son el cambio con mayor probabilidad de causar una caída, porqu
 2. Explica la cola de bloqueos y cómo `lock_timeout` la evita.
 3. ¿Qué aporta `SKIP LOCKED` en un relleno por lotes?
 4. Da un cambio de tu esquema que sí exigiría una ventana de parada, y justifícalo.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Añadir una columna con la aplicación en marcha y sin que nadie lo note
+
+Una migración sin caída no es una migración rápida: es una migración
+**compatible en los dos sentidos**. Durante el despliegue conviven la versión
+vieja del código y la nueva, así que el esquema tiene que servir a las dos a
+la vez. De ahí el patrón de tres tiempos: **expandir** —añadir lo nuevo sin
+tocar lo viejo—, **migrar** —rellenar por lotes mientras ambas versiones
+funcionan— y **contraer** —retirar lo viejo, y solo cuando ya no queda nadie
+usándolo.
+
+El caso ejecuta los tres pasos sobre una tabla de personas: se añade
+`apellido` anulable, se rellena y se inserta una fila nueva con las dos
+columnas. El resultado es trivial; lo que cambia entre motores es **cuánto
+bloquea cada paso**, y ahí está la diferencia entre un despliegue invisible y
+una caída de veinte minutos.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| id | apellido |
+|---|---|
+| `1` | `Lovelace` |
+| `2` | `Torvalds` |
+| `3` | `Hopper` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 049`: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/sql-altertable.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html) |
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_altertable.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/statements/alter_table) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/) |
+| Apache Cassandra | sí | declarado | [código](implementaciones/cassandra/consulta.cql) | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/using-commands/keyspace/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-altertable.html
+-- nota: casi todo ALTER TABLE pide un bloqueo ACCESS EXCLUSIVE, aunque sea un
+--       instante. Si hay una consulta larga en marcha, el ALTER espera Y TODO
+--       LO QUE LLEGUE DETRAS ESPERA CON EL. La forma segura es:
+--         SET lock_timeout = '3s';
+--         ALTER TABLE personas ADD COLUMN apellido text;
+--       y reintentar si falla, en vez de confiar en que sera rapido.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS personas;
+
+CREATE TABLE personas (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido text;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+```
+
+- **Por qué sí:** Desde la versión 11, añadir una columna con valor por omisión **no reescribe la tabla**: es un cambio de catálogo instantáneo. Y el DDL es transaccional, así que una migración a medias se deshace entera.
+- **Por qué no:** Casi todo `ALTER TABLE` pide un bloqueo `ACCESS EXCLUSIVE`, aunque sea por un instante: si hay una consulta larga en marcha, el `ALTER` espera **y todo lo que llegue detrás espera con él**. La regla práctica es poner siempre `lock_timeout` y reintentar, en vez de confiar en que será rápido.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/sql-altertable.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html
+-- nota: declarar el algoritmo a proposito, para que el motor FALLE en vez de
+--       copiar en silencio una tabla de 200 GB:
+--         ALTER TABLE personas ADD COLUMN apellido VARCHAR(50), ALGORITHM=INSTANT;
+--       Y recordar que el DDL NO es transaccional: una migracion a medias se
+--       queda a medias.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS personas;
+
+CREATE TABLE personas (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido VARCHAR(50);
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+```
+
+- **Por qué sí:** InnoDB tiene DDL en línea con `ALGORITHM=INPLACE` y, para añadir columnas, `ALGORITHM=INSTANT` desde 8.0.12: la columna se añade en milisegundos sin copiar la tabla.
+- **Por qué no:** El DDL **no** es transaccional: una migración a medias se queda a medias. Y no todos los cambios admiten `INSTANT`; los que no, copian la tabla entera, así que hay que declarar el algoritmo explícitamente para que el motor **falle** en vez de copiar en silencio una tabla de 200 GB.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html>
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_altertable.html
+-- nota: ADD COLUMN es casi instantaneo. Cambiar un tipo o anadir una
+--       restriccion, en cambio, exige el procedimiento de doce pasos que
+--       documenta el propio proyecto: crear tabla nueva, copiar, borrar,
+--       renombrar. Y durante ese rato la base esta bloqueada.
+
+-- === preparacion ===
+CREATE TABLE personas (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido TEXT;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+```
+
+- **Por qué sí:** `ALTER TABLE ... ADD COLUMN` es una operación de catálogo, casi instantánea, y desde la versión 3.35 también existe `DROP COLUMN`.
+- **Por qué no:** Es casi lo único que se puede alterar: cambiar un tipo, añadir una restricción o reordenar columnas exige el procedimiento de doce pasos que documenta el propio proyecto —crear tabla nueva, copiar, borrar, renombrar—, y durante ese rato la base está bloqueada.
+- 📄 Documentación oficial: <https://sqlite.org/lang_altertable.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/alter_table
+-- nota: la consulta util antes de migrar es esta otra, sobre una copia de los
+--       datos reales:
+--         SELECT COUNT(*) FILTER (WHERE apellido IS NULL) AS sin_apellido,
+--                COUNT(*) AS total FROM personas;
+--       Migrar sin esa cuenta es empezar a ciegas.
+
+-- === preparacion ===
+CREATE TABLE personas (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido VARCHAR;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+```
+
+- **Por qué sí:** Admite el mismo `ALTER TABLE` para el caso, y sirve para lo que de verdad hace falta antes de migrar: **comprobar sobre una copia de los datos reales** cuántas filas tienen el campo vacío o mal formado. Migrar sin esa cuenta es empezar a ciegas.
+- **Por qué no:** No hay aplicación en marcha que proteger: el problema de esta clase —dos versiones del código conviviendo— no existe aquí.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/statements/alter_table>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/
+// nota: la fase de EXPANDIR es gratis: anadir un campo es escribir documentos
+//       con el. Lo que no es gratis es lo de despues: el codigo tiene que
+//       tratar con documentos viejos SIN el campo y nuevos con el, a veces
+//       durante anos. La migracion no desaparece, se vuelve invisible.
+
+// === preparacion ===
+db.personas.drop();
+db.personas.insertMany([
+  { _id: 1, nombre: "Ada Lovelace" },
+  { _id: 2, nombre: "Linus Torvalds" },
+]);
+
+// MIGRAR: por lotes, sin bloquear nada.
+db.personas.updateOne({ _id: 1 }, { $set: { apellido: "Lovelace" } });
+db.personas.updateOne({ _id: 2 }, { $set: { apellido: "Torvalds" } });
+
+// La version nueva del codigo ya escribe las dos cosas.
+db.personas.insertOne({ _id: 3, nombre: "Grace Hopper", apellido: "Hopper" });
+
+// CONTRAER seria, aqui, un validador $jsonSchema que exija el campo. Y solo
+// cuando ya no queden documentos sin el:
+//   db.personas.countDocuments({ apellido: { $exists: false } })  ->  0
+
+// === consulta ===
+db.personas
+  .find({}, { _id: 1, apellido: 1 })
+  .sort({ _id: 1 })
+  .forEach((d) => print(d._id + "|" + d.apellido));
+```
+
+- **Por qué sí:** No hay `ALTER TABLE` que ejecutar: añadir un campo es escribir documentos con él. La fase de expandir es gratis y la migración se puede hacer documento a documento sin bloquear nada.
+- **Por qué no:** Esa facilidad esconde el trabajo: el esquema pasa a estar en el código, que tiene que tratar con documentos viejos **sin** el campo y nuevos con él, a veces durante años. La migración no desaparece; se vuelve invisible y permanente.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/>
+
+#### Apache Cassandra · [`implementaciones/cassandra/consulta.cql`](implementaciones/cassandra/consulta.cql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+-- nota: implementacion declarada. ADD es barato: no reescribe datos y las filas
+--       viejas devuelven null en la columna nueva.
+--       Lo que NO se puede alterar nunca: la clave primaria, el tipo de una
+--       columna existente y el orden de agrupamiento. Para eso hay que crear
+--       otra tabla, migrar los datos y cambiar la aplicacion. La decision de
+--       modelado se toma una vez.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.personas;
+
+CREATE TABLE escuela.personas (
+    id     int PRIMARY KEY,
+    nombre text
+);
+INSERT INTO escuela.personas (id, nombre) VALUES (1, 'Ada Lovelace');
+INSERT INTO escuela.personas (id, nombre) VALUES (2, 'Linus Torvalds');
+
+-- EXPANDIR
+ALTER TABLE escuela.personas ADD apellido text;
+
+-- MIGRAR
+UPDATE escuela.personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE escuela.personas SET apellido = 'Torvalds' WHERE id = 2;
+
+INSERT INTO escuela.personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM escuela.personas;
+```
+
+- **Por qué sí:** `ALTER TABLE ... ADD` es un cambio de esquema que se propaga por el clúster y no reescribe datos: las filas viejas devuelven `null` en la columna nueva, sin coste.
+- **Por qué no:** Lo que **no** se puede cambiar es la clave primaria, ni el tipo de una columna existente, ni el orden de agrupamiento: para eso hay que crear otra tabla y migrar los datos. La decisión de modelado se toma una vez.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | No hay esquema que migrar, pero sí hay **formato de valor**, y cambiarlo es el mismo problema con menos ayuda: no hay `ALTER` que avise ni catálogo que consultar para saber qué claves tienen el formato viejo. | Versionar el formato en el nombre de la clave (`sesion:v2:123`) y hacer que el código lea las dos versiones durante la transición: expandir, migrar y contraer, escrito a mano. | [doc](https://redis.io/docs/latest/develop/using-commands/keyspace/) |
 
 ---
 

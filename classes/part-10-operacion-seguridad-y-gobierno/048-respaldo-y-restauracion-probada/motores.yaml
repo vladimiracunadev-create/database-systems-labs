@@ -1,0 +1,118 @@
+---
+caso:
+  titulo: Un respaldo que nadie ha restaurado no es un respaldo, es un archivo
+  contrato: |
+    La única propiedad que importa de una copia de seguridad no es que exista:
+    es que se pueda **restaurar y comprobar**. Y comprobar no es mirar si el
+    archivo pesa lo esperado: es contar lo restaurado y compararlo con el
+    origen.
+
+    El caso reduce esa disciplina a su forma mínima: seis notas, una copia, y la
+    pareja de cifras que las compara —cuántas filas y cuánto suman—. En
+    producción la copia la hace `pg_dump`, `mysqldump`, `mongodump` o una
+    instantánea del volumen; lo que aquí se compara no es la herramienta, es el
+    **método de verificación**, que es el mismo en todas partes y el que casi
+    nadie ejecuta hasta el día del incidente.
+  columnas: [copia, filas, suma]
+  esperado:
+    - [origen, "6", "402"]
+    - [restaurado, "6", "402"]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Tiene las dos familias y hacen falta las dos: `pg_dump` para una copia
+      lógica portable entre versiones, y el archivado continuo del WAL con
+      `pg_basebackup` para recuperación **a un punto en el tiempo**, que es lo
+      único que salva de un `DELETE` sin `WHERE` a las once de la noche.
+    porque_no: >-
+      `pg_dump` sobre una base grande tarda horas y la restauración tarda más,
+      porque hay que reconstruir todos los índices. Y el archivado continuo no
+      sirve de nada si nadie ha probado la restauración: la copia se verifica
+      restaurando, no listando archivos.
+    doc: https://www.postgresql.org/docs/current/continuous-archiving.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      `mysqldump` para la copia lógica y el registro binario para el punto en el
+      tiempo; con el clon de InnoDB o XtraBackup, además, copia física en
+      caliente sin bloquear.
+    porque_no: >-
+      `mysqldump` sin `--single-transaction` bloquea las tablas y produce copias
+      incoherentes entre tablas de motores distintos; y la recuperación desde el
+      registro binario exige que ese registro esté activado y conservado, cosa
+      que **no** es el valor por omisión en todas las instalaciones.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene la API de respaldo en línea y la orden `VACUUM INTO`, que produce una
+      copia coherente **mientras la base está en uso**, sin detener nada. Para
+      una aplicación de escritorio, eso es todo lo que hace falta.
+    porque_no: >-
+      Copiar el archivo con `cp` mientras alguien escribe produce una copia
+      corrupta que **parece válida** hasta que se abre. Es el error de respaldo
+      más frecuente que se comete con SQLite, y no da ningún aviso.
+    doc: https://sqlite.org/backup.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Aquí el respaldo es exportar a Parquet, un formato abierto que otras
+      herramientas leen: la copia sobrevive incluso a la desaparición del motor
+      que la creó, que es una propiedad que ningún volcado propietario tiene.
+    porque_no: >-
+      No hay punto en el tiempo ni copia incremental: se exporta todo o nada, y
+      lo que se pierde entre dos exportaciones se pierde del todo.
+    doc: https://duckdb.org/docs/stable/sql/statements/export
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `mongodump` y `mongorestore` para la copia lógica, y en un conjunto de
+      réplicas se puede usar el registro de operaciones para recuperar a un
+      punto en el tiempo.
+    porque_no: >-
+      `mongodump` sobre un conjunto de réplicas **no** da una copia coherente
+      entre colecciones salvo que se use `--oplog`, y sobre un clúster
+      fragmentado la coherencia entre fragmentos exige detener el balanceador.
+      Son detalles que solo se descubren restaurando.
+    doc: https://www.mongodb.com/docs/database-tools/mongodump/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      El archivo RDB es una instantánea de un momento, y el AOF un registro de
+      órdenes: los dos se pueden copiar, pero Redis casi nunca es la fuente de
+      la verdad, así que restaurarlo no restaura nada que importe.
+    alternativa: >-
+      Tratar Redis como reconstruible: el plan de recuperación no es
+      restaurarlo, es **volver a llenarlo** desde el sistema que sí guarda la
+      verdad, y medir cuánto tarda ese llenado, porque ese tiempo es el de la
+      caída.
+    doc: https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Las instantáneas son por nodo y consisten en enlaces duros a las SSTables:
+      la copia del clúster es la unión de las de todos los nodos, y **no** están
+      tomadas en el mismo instante. No hay una copia coherente del conjunto.
+    alternativa: >-
+      Instantáneas por nodo más el archivado incremental, y aceptar que la
+      restauración devuelve un estado *aproximadamente* coherente que hay que
+      reparar después con `nodetool repair`.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/managing/operating/backups.html

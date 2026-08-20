@@ -8,6 +8,8 @@ Parte 10 — Operación, seguridad y gobierno · Intermedio ·
 
 **Conceptos centrales:** `minimización` · `limitación de finalidad` · `seudonimización` · `derecho de supresión`
 
+**En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
 ---
 
 ## Propósito
@@ -244,6 +246,303 @@ La mayor parte del trabajo de cumplimiento se ahorra al diseñar: separar identi
 2. Da una columna de tu sistema que hoy no tendría base legal declarada.
 3. Explica cómo atiendes una supresión conservando una obligación legal.
 4. ¿Cuándo se completa realmente una supresión, dado tu ciclo de copias?
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** Borrar lo que ya no hace falta y enmascarar lo que no debe salir
+
+El gobierno del dato se reduce, en la práctica, a dos gestos que casi nunca
+se automatizan: **retención** —lo que ya no hace falta se borra— y
+**minimización** —lo que sale del sistema sale con lo mínimo indispensable—.
+Guardar «por si acaso» no es prudencia: cada dato conservado de más es un
+dato que se puede filtrar y que alguien puede reclamar.
+
+El caso tiene tres eventos, uno de ellos de hace más de un año. Se borra por
+política de retención, y los dos que quedan se exportan con el correo
+enmascarado: se conserva el dominio, que es lo que el análisis necesita, y
+se pierde la persona, que es lo que el análisis no necesita.
+
+Salida esperada, idéntica en todos los motores que lo resuelven:
+
+| correo | fecha |
+|---|---|
+| `***@example.org` | `2026-08-10` |
+| `***@otro.org` | `2026-08-15` |
+
+El contrato vive en [`motores.yaml`](motores.yaml) y lo comprueba
+`python scripts/verificar_equivalencia.py --clase 053`: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/lang_delete.html) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/functions/char) |
+| PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
+| MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html) |
+| MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/index-ttl/) |
+| Apache Cassandra | sí | declarado | [código](implementaciones/cassandra/consulta.cql) | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/expire/) |
+
+### Los que resuelven el caso
+
+#### SQLite · [`implementaciones/sqlite/consulta.sql`](implementaciones/sqlite/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: sqlite
+-- doc: https://sqlite.org/lang_delete.html
+-- nota: el DELETE no reduce el archivo ni borra los bytes: el espacio queda en
+--       la lista de paginas libres y los datos siguen legibles hasta que algo
+--       los sobrescriba. Para borrado real hace falta VACUUM, y ni asi se
+--       controla lo que el sistema de archivos haya copiado.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL,
+    fecha  TEXT NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+-- RETENCION: lo que ya no hace falta se borra. Guardar «por si acaso» no es
+-- prudencia, es responsabilidad acumulada: cada dato conservado de mas es un
+-- dato que se puede filtrar y que alguien puede reclamar.
+DELETE FROM eventos WHERE fecha < '2026-01-01';
+
+-- === consulta ===
+-- MINIMIZACION: el analisis necesita el dominio, no la persona. Enmascarar en
+-- la CONSULTA no protege nada —el dato sigue ahi—; esto es lo que se hace al
+-- exportar a un entorno que no deberia tener el dato original.
+SELECT '***@' || SUBSTR(correo, INSTR(correo, '@') + 1) AS correo, fecha
+FROM eventos
+ORDER BY fecha;
+```
+
+- **Por qué sí:** Muestra los dos gestos en su forma desnuda: un `DELETE` con una condición de fecha y una expresión de enmascarado. No hay nada más, y eso deja claro que el gobierno del dato es una decisión, no una funcionalidad.
+- **Por qué no:** El `DELETE` no reduce el archivo: el espacio queda libre para reutilizarse y **los datos siguen ahí** hasta que se sobrescriban. Para borrado real hace falta `VACUUM`, y aun así el sistema de archivos puede conservar copias.
+- 📄 Documentación oficial: <https://sqlite.org/lang_delete.html>
+
+#### DuckDB · [`implementaciones/duckdb/consulta.sql`](implementaciones/duckdb/consulta.sql)
+
+✅ **verificado** — se ejecuta en CI sin servicios
+
+```sql
+-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/char
+-- nota: aqui es donde el dato SALE hacia otro entorno —analitica, pruebas, un
+--       cuaderno— y de donde ya no vuelve. Enmascarar en la consulta es fragil:
+--       basta escribir otra consulta para llevarse el original. El enmascarado
+--       tiene que estar en el proceso que exporta.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL,
+    fecha  VARCHAR NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+-- RETENCION: lo que ya no hace falta se borra. Guardar «por si acaso» no es
+-- prudencia, es responsabilidad acumulada: cada dato conservado de mas es un
+-- dato que se puede filtrar y que alguien puede reclamar.
+DELETE FROM eventos WHERE fecha < '2026-01-01';
+
+-- === consulta ===
+-- MINIMIZACION: el analisis necesita el dominio, no la persona. Enmascarar en
+-- la CONSULTA no protege nada —el dato sigue ahi—; esto es lo que se hace al
+-- exportar a un entorno que no deberia tener el dato original.
+SELECT '***@' || SUBSTR(correo, INSTR(correo, '@') + 1) AS correo, fecha
+FROM eventos
+ORDER BY fecha;
+```
+
+- **Por qué sí:** Es donde ocurre de verdad la exportación a otro entorno —analítica, pruebas, un cuaderno— y por tanto donde el enmascarado importa más: el dato personal que sale de aquí ya no vuelve.
+- **Por qué no:** Enmascarar en la consulta de exportación es frágil: basta una consulta distinta para llevarse el original. El enmascarado tiene que estar en el proceso que exporta, no en la voluntad de quien consulta.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/sql/functions/char>
+
+#### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+-- nota: con particionado por rango de fecha, la retencion deja de ser un DELETE
+--       de millones de filas y pasa a ser
+--         DROP TABLE eventos_2025_01;
+--       instantaneo y sin hinchar nada. Y el aviso incomodo: las copias de
+--       seguridad conservan lo borrado durante meses, asi que un «derecho al
+--       olvido» de verdad tiene que contemplarlas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS eventos;
+
+CREATE TABLE eventos (
+    id     integer PRIMARY KEY,
+    correo text NOT NULL,
+    fecha  date NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   DATE '2025-01-15'),
+    (2, 'linus@example.org', DATE '2026-08-10'),
+    (3, 'grace@otro.org',    DATE '2026-08-15');
+
+DELETE FROM eventos WHERE fecha < DATE '2026-01-01';
+
+-- === consulta ===
+SELECT '***@' || split_part(correo, '@', 2) AS correo,
+       to_char(fecha, 'YYYY-MM-DD') AS fecha
+FROM eventos
+ORDER BY fecha;
+```
+
+- **Por qué sí:** Con particionado por rango de fecha, la retención deja de ser un `DELETE` de millones de filas y pasa a ser `DROP TABLE` de una partición: instantáneo y sin hinchar la tabla. Y las vistas con `security_barrier` permiten publicar la versión enmascarada sin dar acceso a la original.
+- **Por qué no:** Un `DELETE` normal no libera espacio hasta el vacío, y las filas borradas siguen siendo legibles en el archivo hasta que se sobrescriban: para cumplir un «derecho al olvido» de verdad hay que pensar también en las copias de seguridad, que conservan lo borrado durante meses.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/ddl-partitioning.html>
+
+#### MySQL · [`implementaciones/mysql/consulta.sql`](implementaciones/mysql/consulta.sql)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```sql
+-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html
+-- nota: la politica se puede dejar declarada DENTRO de la base:
+--         CREATE EVENT retencion_eventos ON SCHEDULE EVERY 1 DAY
+--         DO DELETE FROM eventos WHERE fecha < CURRENT_DATE - INTERVAL 1 YEAR;
+--       Con un aviso: el programador de eventos viene DESACTIVADO por omision
+--       (event_scheduler), asi que la politica puede estar escrita y no
+--       ejecutarse nunca.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS eventos;
+
+CREATE TABLE eventos (
+    id     INT PRIMARY KEY,
+    correo VARCHAR(200) NOT NULL,
+    fecha  DATE NOT NULL
+) ENGINE=InnoDB;
+
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+DELETE FROM eventos WHERE fecha < '2026-01-01';
+
+-- === consulta ===
+SELECT CONCAT('***@', SUBSTRING_INDEX(correo, '@', -1)) AS correo,
+       DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha
+FROM eventos
+ORDER BY fecha;
+```
+
+- **Por qué sí:** Tiene particionado por rango con `ALTER TABLE ... DROP PARTITION` para la retención, y el programador de eventos integrado permite dejar la política declarada dentro de la propia base en vez de en un `cron` que nadie revisa.
+- **Por qué no:** Ese programador viene desactivado por omisión, así que la política puede estar escrita y no ejecutarse nunca. Y el registro binario conserva las filas borradas durante su periodo de retención, que a veces es más largo que el de los datos.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html>
+
+#### MongoDB · [`implementaciones/mongodb/consulta.js`](implementaciones/mongodb/consulta.js)
+
+✅ **verificado** — se ejecuta contra el motor real levantado con `docker compose`
+
+```javascript
+// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-ttl/
+// nota: el indice TTL es la forma mas dificil de OLVIDAR una politica de
+//       retencion: se declara una vez y el motor borra. Y el aviso: borra por
+//       documento, compite con la carga normal, no devuelve el espacio hasta
+//       compactar, y si se configura mal borra lo que no debia sin papelera.
+
+// === preparacion ===
+db.eventos.drop();
+db.eventos.insertMany([
+  { _id: 1, correo: "ada@example.org", fecha: new Date("2025-01-15") },
+  { _id: 2, correo: "linus@example.org", fecha: new Date("2026-08-10") },
+  { _id: 3, correo: "grace@otro.org", fecha: new Date("2026-08-15") },
+]);
+
+// Retencion explicita (el indice TTL haria lo mismo sin que nadie lo pida):
+db.eventos.deleteMany({ fecha: { $lt: new Date("2026-01-01") } });
+
+// === consulta ===
+db.eventos
+  .aggregate([
+    { $project: {
+        _id: 0,
+        correo: { $concat: ["***@", { $arrayElemAt: [{ $split: ["$correo", "@"] }, 1] }] },
+        fecha: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } } } },
+    { $sort: { fecha: 1 } },
+  ])
+  .forEach((d) => print(d.correo + "|" + d.fecha));
+```
+
+- **Por qué sí:** El índice TTL aplica la retención sin que nadie programe nada: se declara una vez sobre el campo de fecha y el motor borra. Es la forma más difícil de olvidar.
+- **Por qué no:** Borra por documento, así que en colecciones grandes el borrado compite con la carga normal; y el espacio en disco no se devuelve al sistema hasta que se compacta. Además, un TTL mal configurado borra lo que no debía y no hay papelera.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/index-ttl/>
+
+#### Apache Cassandra · [`implementaciones/cassandra/consulta.cql`](implementaciones/cassandra/consulta.cql)
+
+⚪ **declarado** — se revisa a mano contra la documentación citada; la máquina no lo ejecuta
+
+```sql
+-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada. Aqui la retencion se declara AL ESCRIBIR, que
+--       es cuando de verdad se sabe cuanto tiempo hace falta el dato:
+--         USING TTL 7776000    -- noventa dias
+--       Con la estrategia de compactacion por ventana temporal (TWCS), expirar
+--       un periodo entero es tirar un archivo completo, sin recorrer filas.
+--       El precio: cada dato expirado deja una lapida que se recorre en las
+--       lecturas hasta que la compactacion la retire.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS gobierno
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS gobierno.eventos;
+
+CREATE TABLE gobierno.eventos (
+    id     int PRIMARY KEY,
+    correo text,
+    fecha  date
+) WITH compaction = {'class': 'TimeWindowCompactionStrategy',
+                     'compaction_window_unit': 'DAYS',
+                     'compaction_window_size': 30};
+
+INSERT INTO gobierno.eventos (id, correo, fecha)
+  VALUES (2, 'linus@example.org', '2026-08-10') USING TTL 7776000;
+INSERT INTO gobierno.eventos (id, correo, fecha)
+  VALUES (3, 'grace@otro.org', '2026-08-15') USING TTL 7776000;
+
+-- === consulta ===
+-- CQL no tiene funciones de cadena para enmascarar: el enmascarado se hace en
+-- la capa que exporta. Es una limitacion, y tambien un recordatorio de donde
+-- deberia estar siempre.
+SELECT id, correo, fecha, TTL(correo) AS segundos_restantes FROM gobierno.eventos;
+```
+
+- **Por qué sí:** El TTL por celda expresa la retención en el momento de escribir —«esto caduca en noventa días»—, que es cuando de verdad se sabe cuánto tiempo hace falta el dato. Con la estrategia de compactación por ventana temporal, además, expirar un periodo entero es tirar un archivo.
+- **Por qué no:** Cada dato expirado deja una lápida, y las lápidas se recorren en las lecturas hasta que la compactación las retira: una política de retención agresiva sobre datos muy leídos degrada las lecturas justo donde más duelen.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | Tiene caducidad, pero no es el sitio donde vive el dato personal que hay que gobernar: es una caché. Aplicar aquí una política de retención da una falsa sensación de cumplimiento mientras el original sigue en otro sistema. | Tratarlo como lo que es —una copia derivada y desechable— e invalidar sus claves cuando el dato de origen se borra, para no servir desde la caché algo que ya no debería existir. | [doc](https://redis.io/docs/latest/commands/expire/) |
 
 ---
 
