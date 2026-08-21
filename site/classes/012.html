@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Cálculo relacional y su equivalencia con el álgebra. Parte 02: Modelo relacional y álgebra.">
+<meta name="description" content="Arquitectura interna de un gestor, del cliente al disco. Parte 01: Fundamentos, sistemas y método.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/012.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="012 — Cálculo relacional y su equivalencia con el álgebra · Database Systems Labs">
-<meta property="og:description" content="Cálculo relacional y su equivalencia con el álgebra. Parte 02: Modelo relacional y álgebra.">
+<meta property="og:title" content="012 — Arquitectura interna de un gestor, del cliente al disco · Database Systems Labs">
+<meta property="og:description" content="Arquitectura interna de un gestor, del cliente al disco. Parte 01: Fundamentos, sistemas y método.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/012.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "012 — Cálculo relacional y su equivalencia con el álgebra", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["cálculo de tuplas", "seguridad de expresión", "equivalencia", "declaratividad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>012 — Cálculo relacional y su equivalencia con el álgebra · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "012 — Arquitectura interna de un gestor, del cliente al disco", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["analizador", "planificador", "ejecutor", "gestor de almacenamiento", "buffer pool"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>012 — Arquitectura interna de un gestor, del cliente al disco · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,232 +49,179 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-02.html">Parte 02 · Modelo relacional y álgebra</a>
+  <a href="parte-01.html">Parte 01 · Fundamentos, sistemas y método</a>
   <span aria-hidden="true">/</span><span>Clase 012</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="012--cálculo-relacional-y-su-equivalencia-con-el-álgebra">012 — Cálculo relacional y su equivalencia con el álgebra</h1>
+<h1 id="012--arquitectura-interna-de-un-gestor-del-cliente-al-disco">012 — Arquitectura interna de un gestor, del cliente al disco</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 02 — Modelo relacional y álgebra · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code> · laboratorio
+<p>Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>cálculo de tuplas</code> · <code>seguridad de expresión</code> · <code>equivalencia</code> · <code>declaratividad</code></p>
-<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>analizador</code> · <code>planificador</code> · <code>ejecutor</code> · <code>gestor de almacenamiento</code> · <code>buffer pool</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender por qué SQL es declarativo. El cálculo relacional describe <strong>qué</strong> se quiere sin decir cómo obtenerlo; su equivalencia con el álgebra es el teorema que autoriza a un optimizador a elegir el cómo.</p>
+<p>Abrir la caja negra. Saber qué le ocurre a una consulta desde que sale del cliente hasta que vuelve con filas permite razonar sobre rendimiento, bloqueos y fallos en lugar de adivinar.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Escribir consultas en cálculo relacional de tuplas.</li>
-<li>Explicar qué es una expresión segura y por qué importa.</li>
-<li>Enunciar la completitud relacional y qué implica para SQL.</li>
-<li>Reconocer los cuantificadores ∃ y ∀ detrás de <code>EXISTS</code> y <code>NOT EXISTS</code>.</li>
-<li>Argumentar qué preguntas quedan fuera del cálculo relacional puro.</li>
+<li>Nombrar los cinco componentes de un SGBD relacional y qué hace cada uno.</li>
+<li>Seguir el recorrido de una consulta y señalar en qué etapa se decide el rendimiento.</li>
+<li>Explicar por qué el mismo SQL puede tardar 2 ms o 2 s sin que cambie el dato.</li>
+<li>Distinguir el modelo de proceso por conexión del de hilos, y su consecuencia operativa.</li>
+<li>Localizar cada afirmación en la fuente que la respalda.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-forma-de-una-expresión">La forma de una expresión</h3>
-<p>Una consulta en cálculo de tuplas se escribe:</p>
-<pre><code class="language-text">{ t | P(t) }
-</code></pre>
-<p>«el conjunto de tuplas <code>t</code> que cumplen el predicado <code>P</code>». No hay orden de operaciones, no hay reuniones explícitas, no hay decisión sobre índices: solo una condición lógica.</p>
-<p>Ejemplo: estudiantes con nota mayor que 6 en algún curso.</p>
-<pre><code class="language-text">{ s | s ∈ students ∧ ∃e ∈ enrollments ( e.student_id = s.id ∧ e.nota &gt; 6.0 ) }
-</code></pre>
-<p>El paralelo con SQL es directo, y no por casualidad:</p>
-<pre><code class="language-sql">SELECT * FROM students s
-WHERE EXISTS (SELECT 1 FROM enrollments e
-              WHERE e.student_id = s.id AND e.nota &gt; 6.0);
-</code></pre>
-<p><code>EXISTS</code> <strong>es</strong> el ∃. <code>NOT EXISTS</code> combinado con negación <strong>es</strong> el ∀, porque <code>∀x P(x) ≡ ¬∃x ¬P(x)</code>. De ahí la doble negación de la división relacional de la clase 011: no es un truco, es la traducción literal del cuantificador universal.</p>
-<h3 id="expresiones-seguras">Expresiones seguras</h3>
-<p>El cálculo permite escribir cosas sin sentido computable:</p>
-<pre><code class="language-text">{ t | ¬(t ∈ students) }
-</code></pre>
-<p>«todas las tuplas que no son estudiantes»: un conjunto infinito. Una expresión es <strong>segura</strong> si su resultado está contenido en el dominio de los valores que aparecen en la base de datos. SQL fuerza la seguridad por construcción: toda consulta parte de un <code>FROM</code>, así que el universo siempre está acotado.</p>
-<p>Es la razón por la que no existe en SQL un <code>SELECT</code> sin origen que devuelva «todo lo demás».</p>
-<h3 id="completitud-relacional">Completitud relacional</h3>
-<p><strong>Teorema (Codd).</strong> El cálculo relacional seguro y el álgebra relacional tienen exactamente el mismo poder expresivo: toda consulta escribible en uno lo es en el otro.</p>
-<p>Un lenguaje es <em>relacionalmente completo</em> si expresa todo lo del álgebra. SQL lo es, y además la excede con agregación, ordenación, recursión y funciones de ventana, que <strong>no</strong> forman parte del álgebra relacional original.</p>
-<p>La consecuencia práctica es toda la arquitectura de un motor moderno:</p>
+<h3 id="los-cinco-componentes">Los cinco componentes</h3>
+<p>Hellerstein, Stonebraker y Hamilton organizan cualquier SGBD relacional en cinco piezas. La lista es estable desde System R y sigue describiendo PostgreSQL, MySQL u Oracle:</p>
+<ol>
+<li><strong>Gestor de procesos y conexiones.</strong> Acepta clientes, autentica y asigna a cada sesión un contexto de ejecución.</li>
+<li><strong>Procesador de consultas.</strong> Analiza, reescribe, planifica y ejecuta. Aquí vive el optimizador.</li>
+<li><strong>Gestor de transacciones.</strong> Bloqueos, registro de escritura anticipada, control de versiones y recuperación.</li>
+<li><strong>Gestor de almacenamiento.</strong> Páginas, buffer, organización de archivos e índices.</li>
+<li><strong>Utilidades compartidas.</strong> Catálogo, memoria, replicación, respaldo, estadísticas.</li>
+</ol>
+<h3 id="el-recorrido-de-una-consulta">El recorrido de una consulta</h3>
 <pre><code class="language-mermaid">flowchart LR
-    U[&quot;Consulta declarativa&lt;br/&gt;(cálculo / SQL)&quot;] --&gt; T[&quot;Traducción a&lt;br/&gt;álgebra&quot;]
-    T --&gt; E[&quot;Expresiones equivalentes&lt;br/&gt;E1…E6 (clase 011)&quot;]
-    E --&gt; C[&quot;Estimación de costo&lt;br/&gt;con estadísticas&quot;]
-    C --&gt; P[&quot;Plan físico elegido&quot;]
-    P --&gt; R[&quot;Mismas filas,&lt;br/&gt;coste distinto&quot;]
+    C[&quot;Cliente&quot;] --&gt; P[&quot;1. Analizador&lt;br/&gt;sintaxis y nombres&quot;]
+    P --&gt; R[&quot;2. Reescritor&lt;br/&gt;vistas, reglas&quot;]
+    R --&gt; O[&quot;3. Planificador&lt;br/&gt;optimizador por costos&quot;]
+    O --&gt; E[&quot;4. Ejecutor&lt;br/&gt;árbol de operadores&quot;]
+    E --&gt; B[&quot;5. Buffer&lt;br/&gt;páginas en memoria&quot;]
+    B --&gt; D[(&quot;Disco&quot;)]
+    E --&gt; T[&quot;Gestor de&lt;br/&gt;transacciones&quot;]
+    T --&gt; W[&quot;WAL&quot;]
+    E --&gt; C
 </code></pre>
-<p>Si el cálculo no fuese equivalente al álgebra, el motor no podría reescribir la consulta: tendría que ejecutar literalmente lo que se escribió, como hacían los sistemas anteriores a 1970.</p>
-<h3 id="lo-que-el-cálculo-relacional-no-expresa">Lo que el cálculo relacional no expresa</h3>
+<p>Las etapas 1 y 2 son deterministas y baratas. La etapa 3 es donde se juega el rendimiento: el optimizador estima cuántas filas producirá cada operador y elige un plan. La etapa 5 es donde se paga: cada página que no esté en memoria es una lectura de disco.</p>
+<p>El punto pedagógico: <strong>la misma consulta puede recibir planes distintos</strong> según las estadísticas del catálogo, la memoria disponible y los índices existentes. Por eso el rendimiento se diagnostica leyendo el plan (clase 042), no leyendo el SQL.</p>
+<h3 id="buffer-pool-por-qué-la-memoria-manda">Buffer pool: por qué la memoria manda</h3>
+<p>El gestor de almacenamiento no lee filas, lee <strong>páginas</strong> (8 KB en PostgreSQL, configurable en otros motores). Esas páginas se mantienen en un caché compartido. Una lectura servida desde el buffer cuesta cientos de nanosegundos; una que llega al disco, cientos de microsegundos en SSD. Tres órdenes de magnitud de diferencia por el mismo SQL.</p>
+<p>Petrov desarrolla la consecuencia: casi todas las decisiones de diseño de un motor —tamaño de página, estructura del índice, política de compactación— son intentos de reducir el número de páginas tocadas.</p>
+<h3 id="modelo-de-proceso-qué-cambia-en-operación">Modelo de proceso: qué cambia en operación</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Pregunta</th>
-<th>¿Cálculo relacional puro?</th>
-<th>Cómo se resuelve</th>
+<th>Modelo</th>
+<th>Motor típico</th>
+<th>Consecuencia práctica</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>«¿Cuántos estudiantes hay?»</td>
-<td>No: la agregación no es relacional</td>
-<td>Extensión de SQL (<code>COUNT</code>)</td>
+<td>Proceso por conexión</td>
+<td>PostgreSQL</td>
+<td>Cada conexión cuesta memoria; hace falta un agrupador de conexiones</td>
 </tr>
 <tr>
-<td>«Los 10 mejores promedios»</td>
-<td>No: exige orden</td>
-<td><code>ORDER BY</code> + <code>LIMIT</code></td>
+<td>Hilo por conexión</td>
+<td>MySQL, SQL Server</td>
+<td>Conexiones más baratas; más riesgo de contención en estructuras compartidas</td>
 </tr>
 <tr>
-<td>«Todos los prerrequisitos, a cualquier profundidad»</td>
-<td>No: cierre transitivo</td>
-<td>CTE recursiva (clase 018)</td>
-</tr>
-<tr>
-<td>«El promedio móvil de 3 períodos»</td>
-<td>No</td>
-<td>Función de ventana</td>
-</tr>
-<tr>
-<td>«¿Está inscrito en algún curso?»</td>
-<td>Sí (∃)</td>
-<td><code>EXISTS</code></td>
-</tr>
-<tr>
-<td>«¿Está en todos los obligatorios?»</td>
-<td>Sí (∀)</td>
-<td>Doble <code>NOT EXISTS</code></td>
+<td>Biblioteca embebida</td>
+<td>SQLite, DuckDB</td>
+<td>No hay servidor: el proceso de la aplicación <em>es</em> el motor</td>
 </tr>
 </tbody>
 </table></div>
-<p>El límite del cierre transitivo es históricamente importante: es el motivo por el que las bases de datos de grafos existen (clase 028) y por el que SQL:1999 añadió <code>WITH RECURSIVE</code>.</p>
+<p>Rogov documenta el caso de PostgreSQL con detalle: el proceso de fondo <code>autovacuum</code>, la memoria compartida y por qué abrir 500 conexiones directas hunde un servidor que soporta sin esfuerzo 500 clientes a través de un agrupador.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Pregunta: <em>«estudiantes que no están inscritos en ningún curso del período 2026-1»</em>.</p>
-<p><strong>Cálculo:</strong></p>
-<pre><code class="language-text">{ s | s ∈ students ∧ ¬∃e ∈ enrollments (
-        e.student_id = s.id ∧
-        ∃c ∈ courses ( c.id = e.course_id ∧ c.periodo = '2026-1' ) ) }
+<p>Sigamos <code>SELECT nombre FROM students WHERE id = 3</code> sobre el dominio canónico del repositorio.</p>
+<p><strong>Etapa 1 — Análisis.</strong> Se comprueba la sintaxis y se resuelve <code>students</code> en el catálogo. Si la tabla no existe, el error llega aquí, antes de tocar un solo dato.</p>
+<p><strong>Etapa 3 — Planificación.</strong> El planificador tiene dos caminos:</p>
+<pre><code class="language-text">Plan A  Barrido secuencial: leer las N páginas de la tabla y filtrar
+Plan B  Búsqueda por índice: descender el B-Tree de la clave primaria
 </code></pre>
-<p><strong>SQL, traducción literal:</strong></p>
-<pre><code class="language-sql">SELECT s.*
-FROM students s
-WHERE NOT EXISTS (
-  SELECT 1 FROM enrollments e
-  JOIN courses c ON c.id = e.course_id
-  WHERE e.student_id = s.id AND c.periodo = '2026-1'
-);
+<p>Con la tabla de ejemplo (4 filas, 1 página), el coste estimado del barrido es menor que el del índice: leer una página y descartar tres filas es más barato que descender un árbol. <strong>El motor elige el barrido y hace bien.</strong> Con 4 millones de filas repartidas en 30 000 páginas, el mismo optimizador elige el índice, porque descender tres niveles del árbol toca 4 páginas frente a 30 000.</p>
+<p>Este es el resultado que sorprende a quien empieza: <em>no usar el índice puede ser la decisión correcta</em>. Depende de la selectividad, y la selectividad la estima el optimizador a partir de estadísticas.</p>
+<p><strong>Etapa 5 — Acceso.</strong> Si esas páginas ya estaban en el buffer por una consulta anterior, no hay lectura física. La segunda ejecución de la misma consulta suele ser mucho más rápida que la primera, y eso <strong>no</strong> significa que la consulta haya mejorado: significa que el caché está caliente. Cualquier medición que ignore este efecto es una medición inválida.</p>
+<p>Comprobación directa en el laboratorio, sin instalar nada:</p>
+<pre><code class="language-sql">EXPLAIN QUERY PLAN SELECT nombre FROM students WHERE id = 3;
 </code></pre>
-<p><strong>Álgebra, misma consulta:</strong></p>
-<pre><code class="language-text">students − π_students.*( students ⋈ enrollments ⋈ σ_periodo='2026-1'(courses) )
-</code></pre>
-<p>Las tres formulaciones devuelven el mismo conjunto. La tercera hace explícita la diferencia (<code>−</code>), que es lo que un plan de ejecución llamará <em>anti-join</em>.</p>
-<p><strong>Contraste con la trampa de <code>NOT IN</code>:</strong></p>
-<pre><code class="language-sql">SELECT * FROM students
-WHERE id NOT IN (SELECT student_id FROM enrollments);   -- peligroso
-</code></pre>
-<p>Si <code>enrollments.student_id</code> admite nulos y hay uno solo, el resultado es <strong>vacío</strong>, no el esperado. La razón es la lógica de tres valores (clase 019): <code>id NOT IN (1, 2, NULL)</code> se evalúa como <code>id&lt;&gt;1 ∧ id&lt;&gt;2 ∧ id&lt;&gt;NULL</code>, y el último término es <code>UNKNOWN</code>, que nunca es verdadero.</p>
-<p><code>NOT EXISTS</code> no sufre este problema porque no compara valores: comprueba la existencia de filas. Esta es la razón técnica —no estilística— para preferirlo.</p>
-<p><strong>Traza numérica:</strong> con 2 000 estudiantes, 1 fila con <code>student_id</code> nulo basta para que <code>NOT IN</code> devuelva 0 filas en lugar de las 340 correctas. Un fallo silencioso de 340 registros perdidos.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Aspecto</th>
-<th>Álgebra</th>
-<th>Cálculo</th>
-<th>SQL</th>
+<th>Etapa</th>
+<th>Qué decide</th>
+<th>Coste típico</th>
+<th>Se diagnostica con</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Estilo</td>
-<td>Procedimental</td>
-<td>Declarativo</td>
-<td>Declarativo</td>
+<td>Análisis</td>
+<td>Validez sintáctica y de nombres</td>
+<td>microsegundos</td>
+<td>mensaje de error</td>
 </tr>
 <tr>
-<td>Especifica el orden</td>
-<td>Sí</td>
-<td>No</td>
-<td>No</td>
+<td>Reescritura</td>
+<td>Expansión de vistas y reglas</td>
+<td>microsegundos</td>
+<td>plan expandido</td>
 </tr>
 <tr>
-<td>Riesgo de expresión insegura</td>
-<td>No</td>
-<td>Sí</td>
-<td>No (acotado por <code>FROM</code>)</td>
+<td>Planificación</td>
+<td>Orden de reunión, uso de índices</td>
+<td>microsegundos a ms</td>
+<td><code>EXPLAIN</code></td>
 </tr>
 <tr>
-<td>Poder expresivo</td>
-<td>Igual</td>
-<td>Igual</td>
-<td>Mayor</td>
+<td>Ejecución</td>
+<td>Trabajo real sobre filas</td>
+<td>ms a minutos</td>
+<td><code>EXPLAIN ANALYZE</code></td>
 </tr>
 <tr>
-<td>Uso real</td>
-<td>Interno del motor</td>
-<td>Fundamento teórico</td>
-<td>Interfaz del usuario</td>
+<td>Almacenamiento</td>
+<td>Páginas leídas y escritas</td>
+<td>dominante</td>
+<td>contadores de E/S y aciertos de buffer</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Usar <code>NOT IN</code> con subconsulta que puede devolver nulos.</strong> Devuelve vacío sin avisar.</li>
-<li><strong>Creer que el orden de los <code>JOIN</code> escritos es el ejecutado.</strong> La equivalencia autoriza al motor a reordenar.</li>
-<li><strong>Intentar expresar «todos» con <code>IN</code>.</strong> <code>IN</code> es ∃; para ∀ hace falta la doble negación.</li>
-<li><strong>Esperar cierre transitivo sin recursión.</strong> Un <code>JOIN</code> de profundidad fija no recorre jerarquías de profundidad variable.</li>
-<li><strong>Confundir declarativo con «el motor lo hará bien siempre».</strong> El motor elige el cómo, pero con estadísticas malas elige mal (clase 042).</li>
+<li><strong>«El motor no usa mi índice, está roto.»</strong> Casi siempre el optimizador estimó que el barrido era más barato, y con pocas filas suele acertar. Antes de forzar nada, mira la estimación frente al conteo real.</li>
+<li><strong>«Mido el tiempo de la primera ejecución.»</strong> Esa medición incluye el llenado del buffer. Compara siempre ejecuciones en frío contra ejecuciones en frío.</li>
+<li><strong>«Más conexiones, más rendimiento.»</strong> Por encima del paralelismo útil, cada conexión adicional añade contención y memoria. La curva baja, no sube.</li>
+<li><strong>«El plan es estable.»</strong> Cambia con las estadísticas, el volumen y la versión del motor. Un plan bueno hoy puede degradarse tras una carga masiva sin recolección de estadísticas.</li>
+<li><strong>«SQLite no tiene arquitectura.»</strong> Tiene los mismos componentes; lo que no tiene es un proceso servidor. Precisamente por eso es el mejor motor para leer un gestor entero.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Cuando una consulta con <code>NOT IN</code> empieza a devolver menos filas tras una carga de datos, la causa casi siempre es un nulo nuevo en la subconsulta. Conocer el fundamento lógico convierte un misterio de tres días en una comprobación de tres minutos.</p>
+<p>Los incidentes de bases de datos casi nunca son «la consulta es lenta»: son «el plan cambió tras una migración», «el buffer se quedó pequeño al crecer los datos», «el agrupador de conexiones se agotó». Reconocer en qué componente ocurre un síntoma reduce el diagnóstico de horas a minutos.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Ejecuta la misma consulta dos veces sobre el dominio del repositorio y documenta:</p>
 <ol>
-<li>Escribe en cálculo de tuplas dos consultas reales de tu trabajo, una con ∃ y otra con ∀.</li>
-<li>Tradúcelas a SQL y al álgebra.</li>
-<li>Construye el caso con nulos que rompe la versión con <code>NOT IN</code> y captura la evidencia.</li>
-<li>Formula una pregunta de tu dominio que exija cierre transitivo y explica por qué queda fuera del cálculo.</li>
+<li>El plan elegido en cada caso, con la salida literal.</li>
+<li>La diferencia de tiempo, y a qué componente la atribuyes.</li>
+<li>Una modificación (índice, volumen de datos o filtro) que haga cambiar el plan, con la evidencia del cambio.</li>
+<li>Qué medirías para demostrar que la mejora es real y no un efecto de caché.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué toda consulta SQL es automáticamente una expresión segura?</li>
-<li>Traduce <code>∀c ∈ obligatorios: inscrito(s, c)</code> a SQL y explica cada negación.</li>
-<li>Da un caso real donde <code>NOT IN</code> y <code>NOT EXISTS</code> devuelvan resultados distintos, con datos concretos.</li>
-<li>¿Qué le añade SQL al álgebra relacional, y por qué esas adiciones no rompen la capacidad de optimizar?</li>
+<li>¿En qué etapa se detecta un nombre de columna mal escrito, y por qué no puede detectarse antes ni después?</li>
+<li>Explica con números por qué un barrido secuencial puede ganarle a una búsqueda por índice.</li>
+<li>Tu servidor pasa de 50 a 500 conexiones y el rendimiento cae. Da dos causas plausibles ligadas al modelo de proceso.</li>
+<li>¿Qué componente falla si, tras un corte de energía, aparecen filas de una transacción que nunca se confirmó?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Los estudiantes inscritos en todos los cursos: el cuantificador universal</p>
-<p>El cálculo relacional describe <strong>qué</strong> se quiere, con cuantificadores; el
-álgebra describe <strong>cómo</strong> obtenerlo, con operadores. Codd demostró que los
-dos tienen el mismo poder expresivo, y esta clase lo comprueba con la
-pregunta que peor se traduce: «¿quién está inscrito en todos los cursos?».</p>
-<p>No hay operador <code>PARA TODO</code> en SQL. La traducción es doble negación —«no
-existe un curso para el que no exista su inscripción»— y con los datos del
-caso (Ada en los dos cursos, Linus en uno, Grace en ninguno) solo Ada
-sobrevive. Que Grace <strong>no</strong> salga es la parte que atrapa a casi todo el
-mundo: sin inscripciones, «todos sus cursos cumplen» sería cierto por
-vacuidad si la pregunta estuviera mal escrita.</p>
-<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>nombre</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Ada</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 012</code>: 5 de
-las 5 implementaciones se ejecutan de verdad y su
-resultado se compara con esa tabla; el resto se declara como material revisado,
-no ejecutado.</p>
+<p><strong>Caso:</strong> Qué hay entre la consulta y el disco, motor por motor</p>
+<p>Una consulta atraviesa siempre las mismas capas —protocolo, analizador,
+planificador, ejecutor, gestor de almacenamiento y caché de páginas—, pero
+cada motor las reparte de forma distinta entre procesos, hilos y archivos.
+Aquí no hay una salida que comparar: lo que se compara es <strong>dónde vive cada
+capa</strong> en cada motor, porque de ese reparto salen sus límites de operación.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -287,266 +234,133 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>SQLite</td>
-<td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>DuckDB</td>
-<td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/expressions/subqueries.html">doc oficial</a></td>
-</tr>
-<tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/functions-subquery.html">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-arch.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/arch.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/internals/overview.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://clickhouse.com/docs/en/development/architecture">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_expr.html
-
--- === preparacion ===
-CREATE TABLE cursos (
-    codigo TEXT PRIMARY KEY
-);
-CREATE TABLE estudiantes (
-    nombre TEXT PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
--- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
--- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
--- literal del cuantificador universal.
-SELECT e.nombre
-FROM estudiantes e
-WHERE NOT EXISTS (
-    SELECT 1 FROM cursos c
-    WHERE NOT EXISTS (
-        SELECT 1 FROM inscripciones i
-        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
-    )
-)
-ORDER BY e.nombre;
-</code></pre>
+<h4 id="postgresql">PostgreSQL</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Soporta subconsultas correlacionadas anidadas, que es todo lo que la doble negación necesita: la traducción del cálculo cabe entera en SQL estándar.</li>
-<li><strong>Por qué no:</strong> Sin índice sobre <code>inscripciones</code>, la subconsulta interna se reevalúa por cada par estudiante-curso; con datos reales, ese plan es cuadrático.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_expr.html">https://sqlite.org/lang_expr.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> Un proceso supervisor (<code>postmaster</code>) acepta la conexión y lanza <strong>un proceso del sistema operativo por sesión</strong>. Ese proceso analiza, planifica y ejecuta; las páginas se comparten en memoria (<code>shared_buffers</code>) y los cambios se escriben antes al registro anticipado (WAL) y después a los archivos de datos, con procesos auxiliares para el vaciado y el autovacío.</li>
+<li><strong>Por qué sí:</strong> El aislamiento entre procesos hace que la caída de una sesión no arrastre al servidor, y permite extensiones cargadas por sesión sin recompilar nada.</li>
+<li><strong>Por qué no:</strong> Un proceso por conexión cuesta memoria y cambio de contexto: por encima de unos cientos de conexiones hace falta un agrupador (PgBouncer) delante, y eso es una pieza más que operar.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-arch.html">https://www.postgresql.org/docs/current/tutorial-arch.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/expressions/subqueries.html
--- nota: DuckDB descorrelaciona esta consulta y la convierte en reuniones. La
---       forma del calculo y la del algebra terminan en el mismo plan: eso es
---       la equivalencia de Codd, comprobada por el optimizador.
-
--- === preparacion ===
-CREATE TABLE cursos (
-    codigo VARCHAR PRIMARY KEY
-);
-CREATE TABLE estudiantes (
-    nombre VARCHAR PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
--- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
--- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
--- literal del cuantificador universal.
-SELECT e.nombre
-FROM estudiantes e
-WHERE NOT EXISTS (
-    SELECT 1 FROM cursos c
-    WHERE NOT EXISTS (
-        SELECT 1 FROM inscripciones i
-        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
-    )
-)
-ORDER BY e.nombre;
-</code></pre>
+<h4 id="mysql">MySQL</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Su optimizador convierte las subconsultas correlacionadas en reuniones (descorrelación): es el motor donde mejor se ve que la forma del cálculo y la del álgebra terminan siendo el mismo plan.</li>
-<li><strong>Por qué no:</strong> Esa reescritura automática oculta el costo real de la forma escrita: lo que aquí es gratis, en otro motor puede ser el bucle anidado que tumba el informe.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/expressions/subqueries.html">https://duckdb.org/docs/stable/sql/expressions/subqueries.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> Un servidor multihilo con <strong>un hilo por conexión</strong> y, debajo, un motor de almacenamiento intercambiable: InnoDB aporta el buffer pool, el registro de rehacer y el control de concurrencia. La capa SQL y la capa de almacenamiento están separadas por una interfaz.</li>
+<li><strong>Por qué sí:</strong> Los hilos pesan menos que los procesos y el arranque de conexión es más barato; la separación por motores permitió que InnoDB sustituyera a MyISAM sin reescribir el SQL.</li>
+<li><strong>Por qué no:</strong> Esa misma separación deja al optimizador con menos información sobre el almacenamiento, y explica varias de sus decisiones de plan peores que las de PostgreSQL en consultas anidadas.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/functions-subquery.html
--- nota: la forma equivalente con agregacion es
---         SELECT estudiante FROM inscripciones GROUP BY estudiante
---         HAVING COUNT(DISTINCT curso) = (SELECT COUNT(*) FROM cursos);
---       Da lo mismo aqui, pero deja de dar lo mismo si hay nulos.
-
-DROP TABLE IF EXISTS inscripciones, estudiantes, cursos;
-
--- === preparacion ===
-CREATE TABLE cursos (
-    codigo text PRIMARY KEY
-);
-CREATE TABLE estudiantes (
-    nombre text PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante text NOT NULL,
-    curso      text NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
--- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
--- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
--- literal del cuantificador universal.
-SELECT e.nombre
-FROM estudiantes e
-WHERE NOT EXISTS (
-    SELECT 1 FROM cursos c
-    WHERE NOT EXISTS (
-        SELECT 1 FROM inscripciones i
-        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
-    )
-)
-ORDER BY e.nombre;
-</code></pre>
+<h4 id="sqlite">SQLite</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Además de la doble negación admite la forma con agregación —contar cursos distintos por estudiante y compararlo con el total—, y <code>EXPLAIN</code> permite medir cuál de las dos es más barata con los datos reales.</li>
-<li><strong>Por qué no:</strong> Las dos formas dejan de ser equivalentes en cuanto hay nulos o el conjunto divisor está vacío: la equivalencia es del modelo relacional, no de cualquier consulta que se le parezca.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-subquery.html">https://www.postgresql.org/docs/current/functions-subquery.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> No hay servidor: la biblioteca se enlaza dentro del proceso de la aplicación y <strong>la base de datos es un archivo</strong>. El analizador genera un programa para una máquina virtual de bytecode (VDBE) que el propio proceso ejecuta; el bloqueo lo da el sistema de archivos y el registro es el archivo WAL de al lado.</li>
+<li><strong>Por qué sí:</strong> Cero administración, cero red, cero latencia de conexión: es el motor más desplegado del mundo justamente por lo que no tiene.</li>
+<li><strong>Por qué no:</strong> Sin servidor no hay control de acceso por usuario, ni conexiones remotas, ni escrituras concurrentes de varios procesos más allá de lo que el bloqueo de archivo permite.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/arch.html">https://sqlite.org/arch.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html
-
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS estudiantes;
-DROP TABLE IF EXISTS cursos;
-
--- === preparacion ===
-CREATE TABLE cursos (
-    codigo VARCHAR(50) PRIMARY KEY
-);
-CREATE TABLE estudiantes (
-    nombre VARCHAR(50) PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
--- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
--- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
--- literal del cuantificador universal.
-SELECT e.nombre
-FROM estudiantes e
-WHERE NOT EXISTS (
-    SELECT 1 FROM cursos c
-    WHERE NOT EXISTS (
-        SELECT 1 FROM inscripciones i
-        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
-    )
-)
-ORDER BY e.nombre;
-</code></pre>
+<h4 id="duckdb">DuckDB</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Desde 8.0 su optimizador también transforma buena parte de las subconsultas en semirreuniones, y la forma con doble <code>NOT EXISTS</code> es portable tal cual.</li>
-<li><strong>Por qué no:</strong> Históricamente materializaba las subconsultas correlacionadas y volvía lentísima esta forma; en bases heredadas con versiones antiguas hay que escribir la variante con agregación.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html">https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> También embebido y sin servidor, pero el ejecutor es <strong>vectorizado y columnar</strong>: procesa lotes de miles de valores de una columna por operación, en vez de una fila cada vez, y paraleliza por trozos del archivo.</li>
+<li><strong>Por qué sí:</strong> Ese ejecutor es la razón de que consultas analíticas sobre millones de filas terminen en un portátil sin clúster.</li>
+<li><strong>Por qué no:</strong> El mismo diseño hace caras las escrituras fila a fila y no ofrece concurrencia entre escritores: no es el sitio donde vive la verdad del negocio.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/internals/overview.html">https://duckdb.org/docs/stable/internals/overview.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/012-calculo-relacional-y-equivalencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/
-// nota: sin cuantificadores, la unica via es la variante con agregacion:
-//       recoger los cursos de cada estudiante y comprobar que el conjunto de
-//       TODOS los cursos esta contenido en el suyo.
-
-// === preparacion ===
-db.cursos.drop();
-db.inscripciones.drop();
-
-db.cursos.insertMany([{ _id: &quot;DB-101&quot; }, { _id: &quot;SE-201&quot; }]);
-db.inscripciones.insertMany([
-  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
-  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
-  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
-]);
-
-// === consulta ===
-const todos = db.cursos.find({}, { _id: 1 }).toArray().map((c) =&gt; c._id);
-db.inscripciones
-  .aggregate([
-    { $group: { _id: &quot;$estudiante&quot;, suyos: { $addToSet: &quot;$curso&quot; } } },
-    { $match: { $expr: { $setIsSubset: [todos, &quot;$suyos&quot;] } } },
-    { $sort: { _id: 1 } },
-  ])
-  .forEach((d) =&gt; print(d._id));
-</code></pre>
+<h4 id="mongodb">MongoDB</h4>
 <ul>
-<li><strong>Por qué sí:</strong> La variante con agregación se traduce bien: agrupar por estudiante, recoger sus cursos en un conjunto y comparar su tamaño con el número total de cursos.</li>
-<li><strong>Por qué no:</strong> No hay cuantificadores ni subconsultas correlacionadas: la doble negación no se puede escribir, así que la equivalencia con el cálculo se pierde y hay que reformular la pregunta a mano cada vez.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/</a></li>
+<li><strong>Cómo se hace aquí:</strong> Servidor multihilo cuyo almacenamiento es WiredTiger: control de concurrencia por documento con múltiples versiones, caché propia fuera del montón del proceso y un registro de diario para durabilidad. El planificador prueba varios planes en paralelo y <strong>guarda en caché el que gana</strong>.</li>
+<li><strong>Por qué sí:</strong> La caché de planes con reevaluación automática ahorra estadísticas manuales, y la concurrencia por documento evita bloqueos de colección enteros.</li>
+<li><strong>Por qué no:</strong> Los planes en caché pueden envejecer mal cuando la distribución de datos cambia, y diagnosticar eso exige leer <code>explain</code> con detalle, no adivinar.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
 </ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Un <strong>único hilo</strong> ejecuta las órdenes una tras otra sobre estructuras de datos en memoria; la red se atiende con multiplexación de eventos y la persistencia es opcional (instantáneas RDB o registro AOF) y la hace un proceso hijo.</li>
+<li><strong>Por qué sí:</strong> Un solo hilo elimina los bloqueos: cada orden es atómica sin que nadie escriba una sola línea de sincronización, y la latencia es de microsegundos.</li>
+<li><strong>Por qué no:</strong> Una orden lenta (<code>KEYS *</code>, un script Lua largo) bloquea a todos los demás clientes, y la memoria es el límite duro del tamaño del conjunto de datos.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">https://redis.io/docs/latest/develop/reference/protocol-spec/</a></li>
+</ul>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> <strong>No hay nodo maestro</strong>: cualquier nodo actúa de coordinador, calcula el token de la clave, reenvía a las réplicas y espera tantas respuestas como pida el nivel de consistencia. Debajo, cada nodo escribe en memoria (memtable) y en el registro de compromiso, y vuelca a archivos inmutables (SSTables) que después se compactan.</li>
+<li><strong>Por qué sí:</strong> Esa arquitectura da escritura lineal y disponibilidad ante caídas de nodos: no hay una pieza cuya caída detenga el sistema.</li>
+<li><strong>Por qué no:</strong> El precio es que la lectura puede tener que consultar varias SSTables y varias réplicas, y que la compactación consume entrada y salida de forma sostenida.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse</td>
+<td>Su arquitectura no es una variante de las anteriores sino otra cosa: <code>MergeTree</code> ordena y comprime por partes, la ejecución es vectorizada y masivamente paralela, y las actualizaciones fila a fila son operaciones pesadas y asíncronas. Compararlo aquí como si fuera un motor transaccional induce a error.</td>
+<td>Se estudia donde le corresponde, en la parte de analítica columnar, junto a DuckDB, con su propio caso y su propia medición.</td>
+<td><a href="https://clickhouse.com/docs/en/development/architecture">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
@@ -594,22 +408,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
-  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
-<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
-  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
-<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
-  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="011.html">← Anterior</a> · <a href="013.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="012">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="011.html"><span class="sentido">← Anterior · 011</span>Álgebra relacional: selección, proyección, producto y reunión</a>
-<a class="siguiente" href="013.html"><span class="sentido">Siguiente · 013 →</span>Integridad: restricciones, claves foraneas y acciones referenciales</a>
+<a class="anterior" href="011.html"><span class="sentido">← Anterior · 011</span>Qué resuelve un sistema de bases de datos y qué no</a>
+<a class="siguiente" href="013.html"><span class="sentido">Siguiente · 013 →</span>Independencia de datos y los tres niveles de esquema</a>
 </nav>
 </main>
 <footer>

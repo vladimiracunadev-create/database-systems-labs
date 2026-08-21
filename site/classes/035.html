@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Bloqueo en dos fases, MVCC e instantáneas. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta name="description" content="Modelado documental: incrustar o referenciar. Parte 06: Documentos y clave-valor.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/035.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="035 — Bloqueo en dos fases, MVCC e instantáneas · Database Systems Labs">
-<meta property="og:description" content="Bloqueo en dos fases, MVCC e instantáneas. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta property="og:title" content="035 — Modelado documental: incrustar o referenciar · Database Systems Labs">
+<meta property="og:description" content="Modelado documental: incrustar o referenciar. Parte 06: Documentos y clave-valor.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/035.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "035 — Bloqueo en dos fases, MVCC e instantáneas", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["2PL", "versión de fila", "instantánea", "interbloqueo", "vacuum"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>035 — Bloqueo en dos fases, MVCC e instantáneas · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "035 — Modelado documental: incrustar o referenciar", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["incrustación", "referencia", "crecimiento no acotado", "patrón de extensión"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>035 — Modelado documental: incrustar o referenciar · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,273 +49,271 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-07.html">Parte 07 · Transacciones, concurrencia y recuperación</a>
+  <a href="parte-06.html">Parte 06 · Documentos y clave-valor</a>
   <span aria-hidden="true">/</span><span>Clase 035</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="035--bloqueo-en-dos-fases-mvcc-e-instantáneas">035 — Bloqueo en dos fases, MVCC e instantáneas</h1>
+<h1 id="035--modelado-documental-incrustar-o-referenciar">035 — Modelado documental: incrustar o referenciar</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
-4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>2PL</code> · <code>versión de fila</code> · <code>instantánea</code> · <code>interbloqueo</code> · <code>vacuum</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 06 — Documentos y clave-valor · Intermedio ·
+4 horas estimadas · motores <code>mongodb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>incrustación</code> · <code>referencia</code> · <code>crecimiento no acotado</code> · <code>patrón de extensión</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Conocer los dos mecanismos con que los motores implementan el aislamiento —bloqueo y versiones— porque determinan qué operaciones se estorban entre sí y cómo se resuelve un interbloqueo.</p>
+<p>Tomar la decisión central del modelado documental —incrustar o referenciar— con criterios medibles, y conocer los patrones que resuelven los casos donde ninguna de las dos basta.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar el bloqueo en dos fases y por qué garantiza serializabilidad.</li>
-<li>Leer una matriz de compatibilidad de bloqueos.</li>
-<li>Describir cómo MVCC decide qué versión de fila ve cada transacción.</li>
-<li>Diagnosticar un interbloqueo y prevenirlo.</li>
-<li>Explicar por qué MVCC necesita recolección de versiones muertas.</li>
+<li>Aplicar los cuatro criterios de decisión de la documentación de MongoDB.</li>
+<li>Reconocer y aplicar los patrones de extensión, de subconjunto y de atributo.</li>
+<li>Detectar el crecimiento no acotado antes de que llegue al límite de tamaño.</li>
+<li>Modelar relaciones N:M en documentos sin duplicación descontrolada.</li>
+<li>Justificar cuándo un modelo documental es peor que uno relacional.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="bloqueo-en-dos-fases-2pl">Bloqueo en dos fases (2PL)</h3>
-<p>Dos reglas:</p>
-<ol>
-<li><strong>Fase de crecimiento:</strong> la transacción adquiere bloqueos y no libera ninguno.</li>
-<li><strong>Fase de decrecimiento:</strong> libera bloqueos y no adquiere ninguno.</li>
-</ol>
-<p>En la práctica se usa <strong>2PL estricto</strong>: todos los bloqueos se liberan en el <code>COMMIT</code>. Eso evita además las lecturas sucias y las reversiones en cascada.</p>
-<p>Matriz de compatibilidad, para bloqueos de fila:</p>
+<h3 id="los-cuatro-criterios">Los cuatro criterios</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Tiene ↓ / Pide →</th>
-<th>Compartido (S)</th>
-<th>Exclusivo (X)</th>
+<th>Criterio</th>
+<th>Favorece incrustar</th>
+<th>Favorece referenciar</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Compartido (S)</strong></td>
-<td>Compatible</td>
-<td>Espera</td>
+<td><strong>Cómo se lee</strong></td>
+<td>Siempre junto al padre</td>
+<td>A veces solo, o desde otros padres</td>
 </tr>
 <tr>
-<td><strong>Exclusivo (X)</strong></td>
-<td>Espera</td>
-<td>Espera</td>
+<td><strong>Cardinalidad</strong></td>
+<td>Pocos y acotados</td>
+<td>Muchos o sin cota</td>
+</tr>
+<tr>
+<td><strong>Frecuencia de cambio</strong></td>
+<td>Cambian con el padre</td>
+<td>El hijo cambia mucho más</td>
+</tr>
+<tr>
+<td><strong>Duplicación</strong></td>
+<td>El hijo pertenece a un solo padre</td>
+<td>El hijo es compartido</td>
 </tr>
 </tbody>
 </table></div>
-<p>La consecuencia práctica en un motor con bloqueo puro (SQL Server en <code>READ COMMITTED</code> clásico): <strong>los lectores bloquean a los escritores</strong>. Un informe largo puede detener las escrituras.</p>
-<h3 id="mvcc">MVCC</h3>
-<p>En lugar de bloquear para leer, el motor guarda <strong>varias versiones</strong> de cada fila. Cada transacción ve una instantánea coherente.</p>
-<p>En PostgreSQL, cada fila lleva <code>xmin</code> (transacción que la creó) y <code>xmax</code> (la que la borró o actualizó). Una transacción con instantánea <code>S</code> ve una versión si:</p>
-<pre><code class="language-text">xmin está confirmada y es visible en S,  y
-xmax no existe, o no está confirmada, o no es visible en S
+<p>Regla resumida de la documentación oficial: <em>«los datos a los que se accede juntos deben almacenarse juntos»</em>. El matiz que se olvida: <strong>junto ≠ siempre dentro</strong>. Si se leen juntos pero uno se escribe cien veces más, incrustar obliga a reescribir el padre entero en cada cambio.</p>
+<h3 id="el-límite-duro">El límite duro</h3>
+<p>MongoDB limita cada documento a <strong>16 MB</strong>. Con subdocumentos de ~200 bytes, eso son unos 80 000 elementos. Pero el problema práctico llega mucho antes:</p>
+<ul>
+<li>Un arreglo de 5 000 elementos hace que cada lectura del padre transfiera 1 MB aunque se quiera un solo campo.</li>
+<li>Cada actualización de un elemento reescribe el documento; si crece más allá del espacio reservado, se reubica.</li>
+<li>Los índices multiclave generan <strong>una entrada por elemento del arreglo</strong>: un arreglo de 5 000 elementos en 10 000 documentos produce 50 millones de entradas de índice.</li>
+</ul>
+<p>Criterio operativo del repositorio: <strong>si el arreglo puede superar unos cientos de elementos, no se incrusta</strong>.</p>
+<h3 id="los-tres-patrones-que-resuelven-el-80--de-los-casos">Los tres patrones que resuelven el 80 % de los casos</h3>
+<p><strong>Patrón de extensión (<em>outlier</em>)</strong> — la mayoría de los casos son pequeños y unos pocos son enormes:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;, &quot;inscritos&quot;: [ ...40 elementos... ], &quot;tiene_extension&quot;: false}
+{&quot;_id&quot;: &quot;curso-intro&quot;, &quot;inscritos&quot;: [ ...primeros 100... ], &quot;tiene_extension&quot;: true}
 </code></pre>
-<p>Un <code>UPDATE</code> no modifica: inserta una versión nueva y marca <code>xmax</code> en la anterior.</p>
-<p><strong>La regla que resume MVCC: los lectores no bloquean a los escritores y los escritores no bloquean a los lectores.</strong> Los escritores sí se bloquean entre sí sobre la misma fila.</p>
-<p>Precio: las versiones muertas ocupan espacio hasta que <code>VACUUM</code> las recupera, y una transacción abierta impide recuperarlas (clase 033).</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Mecanismo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL</td>
-<td>MVCC con versiones en la propia tabla + <code>VACUUM</code></td>
-</tr>
-<tr>
-<td>MySQL InnoDB</td>
-<td>MVCC con versiones en el segmento de deshacer + bloqueo de siguiente clave</td>
-</tr>
-<tr>
-<td>Oracle</td>
-<td>MVCC con segmentos de deshacer</td>
-</tr>
-<tr>
-<td>SQL Server</td>
-<td>Bloqueo por defecto; MVCC con <code>READ_COMMITTED_SNAPSHOT</code></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td>Instantánea por archivo; un escritor</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="bloqueo-de-siguiente-clave">Bloqueo de siguiente clave</h3>
-<p>MVCC evita los fantasmas en lectura, pero no basta para escrituras que dependen de un rango. InnoDB añade el <strong>bloqueo de siguiente clave</strong>: bloquea el registro y el hueco anterior en el índice, impidiendo insertar en ese rango.</p>
-<pre><code class="language-sql">SELECT * FROM enrollments WHERE course_id = 42 FOR UPDATE;
--- bloquea las filas existentes Y los huecos: nadie puede insertar con course_id = 42
+<p>Los casos normales se resuelven con una lectura; los excepcionales llevan una marca y sus datos adicionales viven en otra colección. Se optimiza el caso común sin romperse en el raro.</p>
+<p><strong>Patrón de subconjunto</strong> — incrustar solo lo que se muestra:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;,
+ &quot;ultimas_inscripciones&quot;: [ {&quot;student_id&quot;: 11, &quot;nombre&quot;: &quot;Ana&quot;}, ... 5 elementos ... ],
+ &quot;total_inscritos&quot;: 3812}
 </code></pre>
-<p>Efecto secundario importante: si la consulta <strong>no</strong> usa un índice, InnoDB bloquea todas las filas examinadas, que pueden ser la tabla entera. Un <code>FOR UPDATE</code> sin índice adecuado convierte una operación puntual en un bloqueo global.</p>
-<h3 id="interbloqueo">Interbloqueo</h3>
-<pre><code class="language-text">T1: bloquea fila A ... pide fila B
-T2: bloquea fila B ... pide fila A
+<p>La portada se sirve con una lectura; el detalle completo consulta la colección de inscripciones. Es la respuesta correcta cuando la interfaz muestra «los últimos N».</p>
+<p><strong>Patrón de atributo</strong> — muchos campos opcionales sobre los que se filtra:</p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-bd&quot;,
+ &quot;atributos&quot;: [{&quot;k&quot;: &quot;sala&quot;, &quot;v&quot;: &quot;B-201&quot;}, {&quot;k&quot;: &quot;modalidad&quot;, &quot;v&quot;: &quot;presencial&quot;}]}
 </code></pre>
-<p>Ciclo de espera. El motor lo detecta y <strong>aborta una</strong> de las transacciones (la «víctima»). No es un error del motor: es su forma correcta de resolverlo.</p>
-<p>Prevención, en orden de eficacia:</p>
-<ol>
-<li><strong>Acceder siempre a los recursos en el mismo orden.</strong> Si toda transacción bloquea las cuentas por identificador ascendente, no puede haber ciclo.</li>
-<li><strong>Transacciones cortas.</strong> Menos ventana para el ciclo.</li>
-<li><strong>Bloquear lo mínimo.</strong> <code>FOR UPDATE</code> solo sobre lo que se va a escribir, y con índice.</li>
-<li><strong>Reintentar.</strong> La víctima debe reintentar con retroceso; es parte del contrato.</li>
-</ol>
+<p>Con un único índice sobre <code>atributos.k</code> y <code>atributos.v</code> se filtra por cualquier atributo. Sin este patrón haría falta un índice por campo posible.</p>
 <pre><code class="language-mermaid">flowchart TD
-    subgraph P[&quot;2PL (bloqueo)&quot;]
-        L1[&quot;Leer: bloqueo S&quot;] --&gt; L2[&quot;Escribir: bloqueo X&quot;]
-        L2 --&gt; L3[&quot;COMMIT: liberar todo&quot;]
-        L1 -.-&gt;|&quot;lector bloquea&lt;br/&gt;a escritor&quot;| X1[&quot;Contención&quot;]
-    end
-    subgraph M[&quot;MVCC&quot;]
-        V1[&quot;Leer: instantánea&lt;br/&gt;sin bloqueo&quot;] --&gt; V2[&quot;Escribir: versión nueva&lt;br/&gt;+ bloqueo de fila&quot;]
-        V2 --&gt; V3[&quot;COMMIT&quot;]
-        V3 --&gt; V4[&quot;VACUUM recupera&lt;br/&gt;versiones muertas&quot;]
-    end
+    R[&quot;Relación padre-hijo&quot;] --&gt; C{&quot;¿El hijo se consulta&lt;br/&gt;por sí solo?&quot;}
+    C -- &quot;Sí&quot; --&gt; REF[&quot;Referenciar&quot;]
+    C -- &quot;No&quot; --&gt; N{&quot;¿La cardinalidad&lt;br/&gt;está acotada?&quot;}
+    N -- &quot;No&quot; --&gt; SUB{&quot;¿Basta con mostrar&lt;br/&gt;los últimos N?&quot;}
+    SUB -- &quot;Sí&quot; --&gt; S[&quot;Patrón de subconjunto&quot;]
+    SUB -- &quot;No&quot; --&gt; REF
+    N -- &quot;Sí&quot; --&gt; F{&quot;¿El hijo cambia mucho&lt;br/&gt;más que el padre?&quot;}
+    F -- &quot;Sí&quot; --&gt; REF
+    F -- &quot;No&quot; --&gt; O{&quot;¿Hay casos atípicos&lt;br/&gt;enormes?&quot;}
+    O -- &quot;Sí&quot; --&gt; EXT[&quot;Patrón de extensión&quot;]
+    O -- &quot;No&quot; --&gt; EMB[&quot;Incrustar&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<h3 id="interbloqueo-reproducible">Interbloqueo reproducible</h3>
-<pre><code class="language-text">Sesión A                                 Sesión B
-BEGIN;
-UPDATE cuentas SET saldo=saldo-100
-  WHERE id=1;                            BEGIN;
-                                         UPDATE cuentas SET saldo=saldo-50
-                                           WHERE id=2;
-UPDATE cuentas SET saldo=saldo+100
-  WHERE id=2;      -- espera a B
-                                         UPDATE cuentas SET saldo=saldo+50
-                                           WHERE id=1;   -- espera a A → CICLO
-</code></pre>
-<p>PostgreSQL detecta el ciclo en ~1 s (<code>deadlock_timeout</code>) y aborta una:</p>
-<pre><code class="language-text">ERROR:  deadlock detected
-DETAIL: Process 1234 waits for ShareLock on transaction 5678; blocked by process 5679.
-HINT:   See server log for query details.
-</code></pre>
-<p><strong>Corrección por orden canónico:</strong></p>
-<pre><code class="language-python">def transferir(conn, origen, destino, monto):
-    # Bloquear siempre por id ascendente: dos transferencias cruzadas
-    # (1→2 y 2→1) piden los mismos bloqueos en el mismo orden y no hay ciclo.
-    primero, segundo = sorted([origen, destino])
-    with conn.transaction():
-        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (primero,))
-        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (segundo,))
-        conn.execute(&quot;UPDATE cuentas SET saldo = saldo - %s WHERE id = %s&quot;, (monto, origen))
-        conn.execute(&quot;UPDATE cuentas SET saldo = saldo + %s WHERE id = %s&quot;, (monto, destino))
-</code></pre>
-<p>Con el orden canónico, una de las dos espera y ambas terminan. Sin él, una muere y hay que reintentarla.</p>
-<h3 id="mvcc-en-acción">MVCC en acción</h3>
-<pre><code class="language-sql">-- Sesión A
-BEGIN ISOLATION LEVEL REPEATABLE READ;
-SELECT COUNT(*) FROM enrollments;   -- 240 000
+<p>Dominio: cursos, estudiantes e inscripciones, en MongoDB.</p>
+<p><strong>Modelo 1 — todo incrustado en el curso.</strong> Ya analizado en la clase 024: correcto para cursos pequeños, insostenible para uno con 20 000 inscritos.</p>
+<p><strong>Modelo 2 — copiar el relacional.</strong> Tres colecciones y <code>$lookup</code> para reunir. Funciona, pero el motor documental no está optimizado para reuniones: no hay optimizador de orden de reunión ni índices de hash de reunión. Si el modelo necesita <code>$lookup</code> en todas las consultas, la pregunta correcta es por qué no se usa un motor relacional.</p>
+<p><strong>Modelo 3 — dirigido por las consultas reales.</strong> Enumeramos primero qué se pregunta:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th style="text-align: right;">Frecuencia diaria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Portada del curso: nombre, cupo, total inscritos, últimos 5</td>
+<td style="text-align: right;">200 000</td>
+</tr>
+<tr>
+<td>Ficha del estudiante: sus cursos con nota</td>
+<td style="text-align: right;">40 000</td>
+</tr>
+<tr>
+<td>Listado completo de inscritos de un curso (paginado)</td>
+<td style="text-align: right;">3 000</td>
+</tr>
+<tr>
+<td>Inscribir</td>
+<td style="text-align: right;">400</td>
+</tr>
+</tbody>
+</table></div>
+<p>Diseño resultante:</p>
+<pre><code class="language-json">// courses
+{&quot;_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;, &quot;periodo&quot;: &quot;2026-1&quot;, &quot;cupo&quot;: 40,
+ &quot;total_inscritos&quot;: 38,
+ &quot;ultimas_inscripciones&quot;: [{&quot;student_id&quot;: 11, &quot;nombre&quot;: &quot;Ana Pérez&quot;,
+                            &quot;en&quot;: &quot;2026-03-11T12:00:00Z&quot;}]}
 
--- Sesión B (concurrente)
-INSERT INTO enrollments VALUES (...);   -- 1 000 filas
-COMMIT;
-
--- Sesión A, otra vez
-SELECT COUNT(*) FROM enrollments;   -- 240 000  ← sigue viendo su instantánea
-COMMIT;
-SELECT COUNT(*) FROM enrollments;   -- 241 000
+// enrollments
+{&quot;_id&quot;: {&quot;s&quot;: 11, &quot;c&quot;: &quot;curso-2026-1-bd&quot;},
+ &quot;student_id&quot;: 11, &quot;student_nombre&quot;: &quot;Ana Pérez&quot;,
+ &quot;course_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;course_nombre&quot;: &quot;Bases de datos&quot;,
+ &quot;nota&quot;: 6.0, &quot;estado&quot;: &quot;activa&quot;, &quot;registrada_en&quot;: &quot;2026-03-11T12:00:00Z&quot;}
 </code></pre>
-<p>Ninguna de las dos sesiones esperó a la otra. Ese es todo el valor de MVCC.</p>
-<p><strong>El precio, medido.</strong> Durante la transacción de A, las versiones antiguas no se pueden recuperar:</p>
-<pre><code class="language-sql">SELECT relname, n_dead_tup, last_autovacuum FROM pg_stat_user_tables
-WHERE relname = 'enrollments';
+<p>Justificación de cada decisión:</p>
+<ul>
+<li><strong><code>_id</code> compuesto en <code>enrollments</code></strong>: la clave natural garantiza que no haya inscripciones duplicadas. Es la misma clave natural compuesta de la clase 007, aquí como identificador del documento.</li>
+<li><strong><code>student_nombre</code> y <code>course_nombre</code> duplicados</strong>: evitan <code>$lookup</code> en la ficha del estudiante y en el listado. Son datos que cambian rarísimamente.</li>
+<li><strong><code>ultimas_inscripciones</code> acotado a 5</strong>: patrón de subconjunto, mantenido con <code>$push</code> + <code>$slice: -5</code>.</li>
+<li><strong><code>total_inscritos</code></strong>: contador declarado, con su invariante (clase 024).</li>
+</ul>
+<p><strong>El costo de duplicar el nombre.</strong> Si una estudiante cambia de nombre, hay que actualizar sus N inscripciones:</p>
+<pre><code class="language-javascript">db.enrollments.updateMany({student_id: 11}, {$set: {student_nombre: &quot;Ana Rojas&quot;}})
 </code></pre>
-<p>Con 2 000 actualizaciones por segundo y una transacción de A abierta 30 minutos, se acumulan ~3,6 millones de versiones muertas que ningún vacuum puede retirar hasta que A termine. La tabla crece, los barridos leen páginas casi vacías y el rendimiento cae de forma sostenida.</p>
-<p><strong>Diagnóstico de transacciones largas:</strong></p>
-<pre><code class="language-sql">SELECT pid, state, now() - xact_start AS duracion, query
-FROM pg_stat_activity
-WHERE state &lt;&gt; 'idle' AND xact_start IS NOT NULL
-ORDER BY duracion DESC LIMIT 5;
+<p>Con 8 inscripciones de media, son 8 escrituras por cambio de nombre. Si los cambios de nombre son ~5 al mes y las lecturas que se ahorran el <code>$lookup</code> son 40 000 diarias, la aritmética es clara: <strong>40 escrituras mensuales frente a 1,2 millones de reuniones evitadas</strong>. Esa comparación —y no una preferencia estética— es lo que justifica la duplicación.</p>
+<p>La misma aritmética con datos que cambian a diario daría el resultado opuesto.</p>
+<p><strong>Índices necesarios:</strong></p>
+<pre><code class="language-javascript">db.enrollments.createIndex({student_id: 1, registrada_en: -1})
+db.enrollments.createIndex({course_id: 1, estado: 1})
+db.courses.createIndex({periodo: 1})
 </code></pre>
-<p>Es la primera consulta que ejecutar cuando una base «crece sin motivo».</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Dimensión</th>
-<th>2PL puro</th>
-<th>MVCC</th>
+<th>Modelo</th>
+<th>Lecturas de portada</th>
+<th>Reuniones</th>
+<th>Riesgo de divergencia</th>
+<th>Escala en escritura</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Lector frente a escritor</td>
-<td>Se bloquean</td>
-<td>No se bloquean</td>
+<td>Todo incrustado</td>
+<td>1</td>
+<td>0</td>
+<td>Ninguno</td>
+<td>Mala</td>
 </tr>
 <tr>
-<td>Escritor frente a escritor</td>
-<td>Se bloquean</td>
-<td>Se bloquean</td>
+<td>Copia del relacional</td>
+<td>1 + <code>$lookup</code></td>
+<td>Muchas</td>
+<td>Ninguno</td>
+<td>Buena</td>
 </tr>
 <tr>
-<td>Coste en espacio</td>
-<td>Bajo</td>
-<td>Versiones + recolección</td>
+<td>Dirigido por consultas</td>
+<td>1</td>
+<td>0</td>
+<td>Real, acotado y medido</td>
+<td>Buena</td>
 </tr>
 <tr>
-<td>Interbloqueos</td>
-<td>Frecuentes</td>
-<td>Menos, pero existen</td>
-</tr>
-<tr>
-<td>Lecturas consistentes</td>
-<td>Con bloqueo largo</td>
-<td>Gratis, por instantánea</td>
-</tr>
-<tr>
-<td>Problema operativo típico</td>
-<td>Contención</td>
-<td>Hinchazón por transacción larga</td>
+<td>Relacional</td>
+<td>1 con reunión</td>
+<td>Optimizadas por el motor</td>
+<td>Ninguno</td>
+<td>Buena hasta un nodo</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>SELECT ... FOR UPDATE</code> sin índice.</strong> Bloquea todas las filas examinadas.</li>
-<li><strong>Orden de acceso inconsistente.</strong> Fabrica interbloqueos evitables.</li>
-<li><strong>No reintentar la víctima.</strong> El interbloqueo llega al usuario como error.</li>
-<li><strong>Transacciones largas en un motor MVCC.</strong> Impiden la recolección.</li>
-<li><strong>Suponer que MVCC elimina el bloqueo.</strong> Los escritores siguen compitiendo por la misma fila.</li>
-<li><strong>Bloquear el padre cuando bastaba una sentencia atómica.</strong></li>
+<li><strong>Incrustar arreglos sin cota.</strong> Se descubre al llegar a 16 MB, con datos ya en producción.</li>
+<li><strong>Duplicar datos que cambian a menudo.</strong> La aritmética se invierte y cada cambio propaga N escrituras.</li>
+<li><strong><code>$lookup</code> en el camino crítico.</strong> Si es imprescindible, el motor relacional lo hace mejor.</li>
+<li><strong>Un índice por campo posible.</strong> Usa el patrón de atributo.</li>
+<li><strong>Modelar antes de enumerar las consultas.</strong> En documental, las consultas <em>son</em> el modelo.</li>
+<li><strong>Olvidar el índice multiclave.</strong> Un arreglo indexado multiplica las entradas por su longitud.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los interbloqueos aumentan de golpe tras un despliegue que cambió el orden de las escrituras. Registrar el grafo de espera y el orden de acceso de cada transacción convierte un problema intermitente en uno reproducible.</p>
+<p>Cambiar la forma de los documentos con datos en producción exige una migración con lectura tolerante a las dos formas: los documentos antiguos y los nuevos conviven durante semanas. Diseñar previendo esa convivencia —con un campo de versión de esquema— es lo que evita una parada.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Provoca un interbloqueo con dos sesiones y captura el mensaje del motor.</li>
-<li>Corrígelo con orden canónico y demuestra que ya no ocurre.</li>
-<li>Mide <code>n_dead_tup</code> antes, durante y después de una transacción larga.</li>
-<li>Compara el mismo escenario en un motor con bloqueo y en uno con MVCC.</li>
+<li>Enumera las cinco consultas más frecuentes de tu dominio con su frecuencia real.</li>
+<li>Diseña el modelo documental que las sirve con una lectura cada una.</li>
+<li>Calcula la aritmética de duplicación: escrituras añadidas frente a reuniones evitadas.</li>
+<li>Identifica el arreglo con mayor riesgo de crecimiento y aplícale el patrón que corresponda.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué el 2PL estricto evita las reversiones en cascada?</li>
-<li>Explica con <code>xmin</code>/<code>xmax</code> por qué la sesión A sigue viendo 240 000 filas.</li>
-<li>¿Qué bloquea exactamente <code>FOR UPDATE</code> sobre una consulta sin índice en InnoDB?</li>
-<li>Da dos transacciones de tu sistema que podrían formar un ciclo y define su orden canónico.</li>
+<li>¿Por qué «se leen juntos» no implica «se guardan dentro»?</li>
+<li>Calcula el punto de equilibrio de duplicar un campo en tu dominio, con cifras reales.</li>
+<li>Explica el efecto de un arreglo de 5 000 elementos sobre un índice multiclave.</li>
+<li>Da un caso de tu dominio donde el modelo documental sea peor que el relacional, y justifícalo.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Bloquear o versionar: las dos familias de control de concurrencia</p>
-<p>Solo hay dos formas de que dos transacciones no se pisen. <strong>Bloquear</strong>: la
-primera que llega retiene el dato y la segunda espera —es el bloqueo en dos
-fases, que da serializabilidad a cambio de esperas e interbloqueos.
-<strong>Versionar</strong>: cada escritura crea una versión nueva y cada lector ve la que
-existía cuando empezó, de modo que <strong>los lectores nunca bloquean a los
-escritores ni al revés</strong>; es MVCC.</p>
-<p>Casi todos los motores modernos usan MVCC para leer y algún bloqueo para
-escribir, pero el reparto exacto cambia mucho, y con él el trabajo de
-limpiar las versiones viejas: el vacío de PostgreSQL, el segmento de
-deshacer de Oracle y de InnoDB, y las lápidas de Cassandra son el mismo
-problema con tres nombres.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Las líneas de un pedido, incrustadas o referenciadas</p>
+<p>La decisión central del modelado documental cabe en una pregunta: ¿este dato
+vive <strong>dentro</strong> del documento o <strong>al lado</strong>? Y la respuesta no sale del
+dominio, sale del patrón de acceso: se incrusta lo que siempre se lee junto
+y cambia junto; se referencia lo que se comparte, lo que crece sin límite y
+lo que cambia por su cuenta.</p>
+<p>El caso pide las líneas del pedido <code>P-1</code> con su importe, ordenadas por
+producto. Los seis motores devuelven lo mismo; lo que cambia es dónde
+estaban guardadas, y el bloque de cada uno muestra la forma que le es
+natural. Compararlas es comparar el precio de cada decisión.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>producto</th>
+<th>importe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cable</code></td>
+<td><code>100</code></td>
+</tr>
+<tr>
+<td><code>raton</code></td>
+<td><code>80</code></td>
+</tr>
+<tr>
+<td><code>teclado</code></td>
+<td><code>120</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 035</code>: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -328,98 +326,221 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
+<td>MongoDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/mvcc-intro.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">doc oficial</a></td>
 </tr>
 <tr>
 <td>SQLite</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://sqlite.org/wal.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/json1.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Microsoft SQL Server</td>
+<td>DuckDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/data_types/struct.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Oracle Database</td>
+<td>PostgreSQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/datatype-json.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>MongoDB</td>
+<td>Apache CouchDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/faq/concurrency/">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/couchdb/consulta.json">código</a></td>
+<td><a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
+<td>Amazon DynamoDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+// nota: forma INCRUSTADA. Un documento, un viaje, sin reunion. La forma
+//       referenciada seria una coleccion `lineas` con `pedido_id` y un $lookup:
+//       correcta cuando las lineas crecen sin techo o se consultan solas.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertOne({
+  _id: &quot;P-1&quot;,
+  lineas: [
+    { producto: &quot;teclado&quot;, importe: 120 },
+    { producto: &quot;raton&quot;, importe: 80 },
+    { producto: &quot;cable&quot;, importe: 100 },
+  ],
+});
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $match: { _id: &quot;P-1&quot; } },
+    { $unwind: &quot;$lineas&quot; },
+    { $project: { _id: 0, producto: &quot;$lineas.producto&quot;, importe: &quot;$lineas.importe&quot; } },
+    { $sort: { producto: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.producto + &quot;|&quot; + d.importe));
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> MVCC puro en el almacén: un <code>UPDATE</code> <strong>no modifica la fila</strong>, escribe una versión nueva y marca la vieja como muerta. Los lectores no toman ningún bloqueo. El precio es la limpieza: <code>VACUUM</code> recupera el espacio de las versiones muertas, y <code>autovacuum</code> lo hace solo.</li>
-<li><strong>Por qué sí:</strong> Los informes largos no bloquean nunca la escritura, y el aislamiento serializable se consigue sin bloqueos gracias a SSI.</li>
-<li><strong>Por qué no:</strong> El coste está en el mantenimiento: una transacción abierta durante horas impide vaciar y la tabla se hincha; y el contador de transacciones puede llegar a agotarse si el vacío se retrasa lo suficiente. Es la avería de operación más común del motor.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/mvcc-intro.html">https://www.postgresql.org/docs/current/mvcc-intro.html</a></li>
+<li><strong>Por qué sí:</strong> Incrustar es una lectura: un documento, un viaje, sin reunión. Para datos que solo tienen sentido dentro de su padre —las líneas de un pedido— es la forma correcta y la que su propia guía de modelado recomienda.</li>
+<li><strong>Por qué no:</strong> Deja de serlo en cuanto el arreglo crece sin techo: el documento tiene un límite de 16 MB, y cada actualización reescribe el documento entero aunque solo cambie un elemento del arreglo.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/</a></li>
 </ul>
-<h4 id="mysql">MySQL</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/json1.html
+-- nota: forma INCRUSTADA con JSON. Para el motor eso es texto: no hay
+--       restricciones sobre su contenido, ni claves foraneas, ni indice que lo
+--       recorra. La forma referenciada seria una tabla `lineas` de toda la vida.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    lineas TEXT NOT NULL   -- arreglo JSON incrustado
+);
+
+INSERT INTO pedidos (id, lineas) VALUES (
+    'P-1',
+    '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;importe&quot;:120},
+      {&quot;producto&quot;:&quot;raton&quot;,&quot;importe&quot;:80},
+      {&quot;producto&quot;:&quot;cable&quot;,&quot;importe&quot;:100}]'
+);
+
+-- === consulta ===
+SELECT json_extract(l.value, '$.producto') AS producto,
+       json_extract(l.value, '$.importe')  AS importe
+FROM pedidos p, json_each(p.lineas) l
+WHERE p.id = 'P-1'
+ORDER BY producto;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> MVCC para las lecturas mediante el <strong>registro de deshacer</strong> —la fila se modifica en su sitio y la versión anterior se reconstruye desde ese registro— y bloqueos de fila e índice para las escrituras, incluidos los bloqueos de hueco que evitan fantasmas.</li>
-<li><strong>Por qué sí:</strong> Modificar en el sitio evita la hinchazón de la tabla, y el espacio de las versiones viejas se reutiliza sin un proceso de vacío.</li>
-<li><strong>Por qué no:</strong> Los bloqueos de hueco producen interbloqueos donde no parece haberlos —dos inserciones en el mismo rango vacío— y una transacción larga hace crecer el registro de deshacer hasta llenar el disco, que es la misma avería con otro nombre.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html</a></li>
+<li><strong>Por qué sí:</strong> Con las funciones JSON integradas se puede incrustar de verdad: el pedido es una fila y sus líneas un arreglo JSON dentro de una columna, que <code>json_each</code> desanida cuando hace falta.</li>
+<li><strong>Por qué no:</strong> Ese arreglo es texto para el motor: no hay restricciones sobre su contenido, ni claves foráneas, ni índice que lo recorra. Se gana la forma documental y se pierde todo lo que hacía valioso al relacional.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/json1.html">https://sqlite.org/json1.html</a></li>
 </ul>
-<h4 id="sqlite">SQLite</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/data_types/struct.html
+-- nota: aqui lo anidado no es texto: STRUCT y LIST son tipos con tipo interno
+--       declarado, asi que la columna sigue siendo columnar y UNNEST la abre
+--       sin analizar ninguna cadena.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    lineas STRUCT(producto VARCHAR, importe INTEGER)[]
+);
+
+INSERT INTO pedidos VALUES ('P-1', [
+    {'producto': 'teclado', 'importe': 120},
+    {'producto': 'raton',   'importe': 80},
+    {'producto': 'cable',   'importe': 100}
+]);
+
+-- === consulta ===
+SELECT l.producto, l.importe
+FROM (SELECT UNNEST(lineas) AS l FROM pedidos WHERE id = 'P-1')
+ORDER BY l.producto;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> En modo WAL, los lectores leen del archivo principal más el registro y ven una instantánea; el escritor añade al registro. Es una forma mínima de MVCC: <strong>un</strong> escritor y muchos lectores, sin bloqueos de lectura.</li>
-<li><strong>Por qué sí:</strong> Cabe entero en la cabeza: un escritor, cero interbloqueos, cero configuración.</li>
-<li><strong>Por qué no:</strong> No hay grados: no se puede tener dos escritores por mucho que escriban en tablas distintas. Y el registro WAL crece hasta que un punto de control lo recorta, cosa que un lector muy largo puede impedir.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/wal.html">https://sqlite.org/wal.html</a></li>
+<li><strong>Por qué sí:</strong> Tiene tipos anidados de verdad —<code>STRUCT</code> y <code>LIST</code> con tipos declarados—, así que el documento incrustado sigue siendo columnar y <code>UNNEST</code> lo abre sin analizar texto.</li>
+<li><strong>Por qué no:</strong> Está pensado para leer datos anidados que vienen de otro sitio (Parquet, JSON), no para ser el sistema donde esos documentos se editan a diario.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/struct.html">https://duckdb.org/docs/stable/sql/data_types/struct.html</a></li>
 </ul>
-<h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/datatype-json.html
+-- nota: jsonb no guarda texto: guarda una representacion binaria indexable con
+--       GIN. Por eso aqui se puede incrustar SIN renunciar al indice, a las
+--       transacciones ni a las claves foraneas del resto del esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    lineas jsonb NOT NULL
+);
+CREATE INDEX pedidos_lineas ON pedidos USING GIN (lineas);
+
+INSERT INTO pedidos (id, lineas) VALUES (
+    'P-1',
+    '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;importe&quot;:120},
+      {&quot;producto&quot;:&quot;raton&quot;,&quot;importe&quot;:80},
+      {&quot;producto&quot;:&quot;cable&quot;,&quot;importe&quot;:100}]'::jsonb
+);
+
+-- === consulta ===
+SELECT l-&gt;&gt;'producto' AS producto,
+       (l-&gt;&gt;'importe')::int AS importe
+FROM pedidos p
+CROSS JOIN LATERAL jsonb_array_elements(p.lineas) AS l
+WHERE p.id = 'P-1'
+ORDER BY producto;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Bloqueo en dos fases de verdad como comportamiento por omisión, con granularidad de fila, página y tabla, y <strong>escalada</strong> automática de bloqueos cuando hay demasiados. Opcionalmente, versiones con <code>READ_COMMITTED_SNAPSHOT</code>, guardadas en <code>tempdb</code>.</li>
-<li><strong>Por qué sí:</strong> El bloqueo es el modelo que más fácil hace razonar sobre el orden de las operaciones, y su detector de interbloqueos elige víctima y devuelve un error claro.</li>
-<li><strong>Por qué no:</strong> La escalada de bloqueos convierte un <code>UPDATE</code> grande en un bloqueo de tabla entera; y al activar las versiones, toda la carga de versiones cae en <code>tempdb</code>, que pasa a ser el cuello de botella de la instancia.</li>
-<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide</a></li>
+<li><strong>Por qué sí:</strong> <code>jsonb</code> no guarda texto: guarda una representación binaria indexable con GIN, así que se puede incrustar sin renunciar al índice ni a las transacciones ni a las claves foráneas del resto del esquema. Es la opción que permite decidir tabla por tabla.</li>
+<li><strong>Por qué no:</strong> Un <code>UPDATE</code> sobre un campo del <code>jsonb</code> reescribe la fila entera y genera una versión nueva: con documentos grandes y cambios frecuentes, el almacenamiento y el autovacío se resienten.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/datatype-json.html">https://www.postgresql.org/docs/current/datatype-json.html</a></li>
 </ul>
-<h4 id="oracle-database">Oracle Database</h4>
+<h4 id="apache-couchdb--implementacionescouchdbconsultajson">Apache CouchDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/implementaciones/couchdb/consulta.json"><code>implementaciones/couchdb/consulta.json</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-json">{
+  &quot;_comentario&quot;: [
+    &quot;motor: couchdb&quot;,
+    &quot;doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html&quot;,
+    &quot;nota: implementacion declarada. En CouchDB el documento es la unidad de&quot;,
+    &quot;todo: de lectura, de escritura, de conflicto y de replica. Incrustar no es&quot;,
+    &quot;una opcion de diseno, es el modelo. Y cualquier consulta que no sea por&quot;,
+    &quot;identificador exige definir antes una vista con map/reduce.&quot;,
+    &quot;Se aplica con:  curl -X PUT $COUCH/pedidos/_design/lineas -d @consulta.json&quot;,
+    &quot;y se consulta:  curl $COUCH/pedidos/_design/lineas/_view/por_producto?key=\&quot;P-1\&quot;&quot;
+  ],
+
+  &quot;_id&quot;: &quot;_design/lineas&quot;,
+  &quot;language&quot;: &quot;javascript&quot;,
+  &quot;views&quot;: {
+    &quot;por_producto&quot;: {
+      &quot;map&quot;: &quot;function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit([doc._id, l.producto], l.importe); }); } }&quot;
+    }
+  },
+
+  &quot;_documento_de_ejemplo&quot;: {
+    &quot;_id&quot;: &quot;P-1&quot;,
+    &quot;type&quot;: &quot;pedido&quot;,
+    &quot;lineas&quot;: [
+      { &quot;producto&quot;: &quot;teclado&quot;, &quot;importe&quot;: 120 },
+      { &quot;producto&quot;: &quot;raton&quot;, &quot;importe&quot;: 80 },
+      { &quot;producto&quot;: &quot;cable&quot;, &quot;importe&quot;: 100 }
+    ]
+  }
+}
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> MVCC con segmentos de deshacer desde antes de que se llamara así: la lectura consistente reconstruye la versión que existía al empezar la sentencia. Si el segmento ya se reutilizó, la consulta falla con el célebre ORA-01555, «snapshot too old».</li>
-<li><strong>Por qué sí:</strong> Es la implementación más madura y probada del modelo, con décadas de carga real encima.</li>
-<li><strong>Por qué no:</strong> Ese ORA-01555 es exactamente el mismo problema que la hinchazón de PostgreSQL, resuelto al revés: en vez de que la tabla crezca, la consulta larga muere. Hay que dimensionar el espacio de deshacer, y eso es trabajo de administración.</li>
-<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html</a></li>
-</ul>
-<h4 id="mongodb">MongoDB</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> WiredTiger usa control de concurrencia optimista con versiones a nivel de documento: dos escrituras sobre el <strong>mismo</strong> documento entran en conflicto y una se reintenta, mientras que sobre documentos distintos no se estorban.</li>
-<li><strong>Por qué sí:</strong> El conflicto es por documento, no por página ni por tabla: la granularidad más fina posible en su modelo.</li>
-<li><strong>Por qué no:</strong> Un documento «caliente» —un contador global, un agregado muy actualizado— se convierte en el punto de contención, y la solución no es configurar nada, es rediseñar el modelo para repartirlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/faq/concurrency/">https://www.mongodb.com/docs/manual/faq/concurrency/</a></li>
+<li><strong>Por qué sí:</strong> Lleva la idea al extremo: el documento es la unidad de todo —de lectura, de escritura, de conflicto y de réplica—, así que incrustar no es una opción de diseño sino el modelo. Y su réplica multimaestro está construida sobre esa unidad.</li>
+<li><strong>Por qué no:</strong> No hay reuniones ni consultas ad hoc eficientes: todo lo que no sea leer por identificador exige definir una vista con <code>map</code>/<code>reduce</code> de antemano. Referenciar es posible y es incómodo a propósito.</li>
+<li>📄 Documentación oficial: <a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">https://docs.couchdb.org/en/stable/ddocs/views/intro.html</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -434,17 +555,17 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
-<td>No hay control de concurrencia: no hay bloqueos ni versiones que un lector deba respetar. La última escritura gana según su marca de tiempo, y si dos llegan con la misma, gana la mayor por valor. No es una variante de MVCC: es renunciar al problema.</td>
-<td>Transacciones ligeras (<code>IF NOT EXISTS</code>, <code>IF condicion</code>) cuando de verdad hace falta comparar antes de escribir, sabiendo que cuestan un acuerdo entre réplicas y varias veces más que una escritura normal.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc</a></td>
+<td>Amazon DynamoDB</td>
+<td>Aquí la disyuntiva no se plantea igual: el límite duro de 400 KB por elemento hace que incrustar una lista sin techo sea inviable desde el primer día, y no hay consulta que sirva para descubrirlo tarde.</td>
+<td>Diseño de tabla única: el pedido y sus líneas comparten clave de partición (<code>PEDIDO#P-1</code>) y se distinguen por la de ordenación (<code>META</code>, <code>LINEA#cable</code>), de modo que una sola <code>Query</code> devuelve el pedido entero sin incrustar nada.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -488,22 +609,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
-  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/mvcc.html">PostgreSQL: Concurrency Control</a>.<br />
-  Niveles de aislamiento tal como los implementa PostgreSQL, no como los define la norma.</li>
-<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
-  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+<li><strong>MongoDB, Inc.</strong> (2026). <a href="https://www.mongodb.com/docs/manual/data-modeling/">MongoDB: Data Modeling</a>.<br />
+  Criterio para incrustar o referenciar según patrones de acceso.</li>
+<li><strong>Shannon Bradshaw, Eoin Brazil, Kristina Chodorow</strong> (2019). <a href="https://www.oreilly.com/library/view/mongodb-the-definitive/9781491954454/">MongoDB: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-5446-1.<br />
+  Modelado documental, índices y canalización de agregación.</li>
+<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
+  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="034.html">← Anterior</a> · <a href="036.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="035">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="034.html"><span class="sentido">← Anterior · 034</span>Anomalías de aislamiento y la crítica a los niveles ANSI</a>
-<a class="siguiente" href="036.html"><span class="sentido">Siguiente · 036 →</span>Registro anticipado y recuperación: WAL y ARIES</a>
+<a class="anterior" href="034.html"><span class="sentido">← Anterior · 034</span>El agregado como unidad de consistencia</a>
+<a class="siguiente" href="036.html"><span class="sentido">Siguiente · 036 →</span>Consultas, índices y agregación sobre documentos</a>
 </nav>
 </main>
 <footer>

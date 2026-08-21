@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Analítica columnar: por qué el formato cambia el orden de magnitud. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta name="description" content="MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código. Parte 05: Motores relacionales y dialectos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/032.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="032 — Analítica columnar: por qué el formato cambia el orden de magnitud · Database Systems Labs">
-<meta property="og:description" content="Analítica columnar: por qué el formato cambia el orden de magnitud. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta property="og:title" content="032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código · Database Systems Labs">
+<meta property="og:description" content="MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código. Parte 05: Motores relacionales y dialectos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/032.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "032 — Analítica columnar: por qué el formato cambia el orden de magnitud", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["almacenamiento columnar", "compresión", "ejecución vectorizada", "poda de particiones"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>032 — Analítica columnar: por qué el formato cambia el orden de magnitud · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["colación", "modo estricto", "cadena vacia frente a nulo", "identificador citado"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,280 +49,330 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-06.html">Parte 06 · Grafos, columnas, tiempo y búsqueda</a>
+  <a href="parte-05.html">Parte 05 · Motores relacionales y dialectos</a>
   <span aria-hidden="true">/</span><span>Clase 032</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="032--analítica-columnar-por-qué-el-formato-cambia-el-orden-de-magnitud">032 — Analítica columnar: por qué el formato cambia el orden de magnitud</h1>
+<h1 id="032--mysql-mariadb-sql-server-y-oracle-divergencias-que-rompen-código">032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 06 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
-3 horas estimadas · motores <code>clickhouse</code>, <code>duckdb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>almacenamiento columnar</code> · <code>compresión</code> · <code>ejecución vectorizada</code> · <code>poda de particiones</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 05 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores <code>mysql</code>, <code>mariadb</code>, <code>sql-server</code>, <code>oracle-database</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>colación</code> · <code>modo estricto</code> · <code>cadena vacia frente a nulo</code> · <code>identificador citado</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Explicar por qué un motor columnar responde en segundos lo que un motor por filas tarda minutos, y qué se paga a cambio. La respuesta está en el formato, la compresión y la forma de ejecutar.</p>
+<p>Conocer las divergencias concretas de MySQL/MariaDB, SQL Server y Oracle que rompen código escrito para otro motor — especialmente las que no producen ningún error.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Calcular la E/S de una consulta analítica en formato por filas y por columnas.</li>
-<li>Explicar por qué la compresión es mucho más eficaz por columnas.</li>
-<li>Describir la ejecución vectorizada y su relación con la caché de la CPU.</li>
-<li>Elegir clave de ordenamiento y granularidad de índice disperso.</li>
-<li>Justificar el conteo aproximado y calcular su error.</li>
+<li>Anticipar el comportamiento de MySQL en modo estricto y fuera de él.</li>
+<li>Explicar el tratamiento de la cadena vacía en Oracle y su efecto.</li>
+<li>Comparar los niveles de aislamiento por defecto de los cuatro motores.</li>
+<li>Identificar las diferencias de identificadores, citas y sensibilidad a mayúsculas.</li>
+<li>Construir una prueba que detecte divergencias semánticas antes de migrar.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-formato-manda">El formato manda</h3>
-<pre><code class="language-text">Tabla: 20 columnas, 100 millones de filas, fila media 200 bytes → 20 GB
-
-Consulta: SELECT periodo, AVG(nota) FROM enrollments GROUP BY periodo
-Columnas necesarias: periodo (8 B) + nota (8 B) = 16 B por fila
-
-Por filas:     hay que leer las páginas completas          → ~20 GB
-Por columnas:  solo dos columnas                           → ~1,6 GB
-Con compresión columnar (factor típico 8×)                 → ~0,2 GB
+<h3 id="mysql--mariadb">MySQL / MariaDB</h3>
+<p><strong>Modo estricto.</strong> Históricamente MySQL truncaba y convertía en silencio en vez de fallar. Con <code>sql_mode</code> estricto (por defecto desde 5.7) rechaza; con él desactivado, sigue aceptando:</p>
+<pre><code class="language-sql">INSERT INTO t (n) VALUES (300);     -- columna TINYINT
+-- estricto: error 1264 out of range
+-- no estricto: guarda 127 y emite un aviso
 </code></pre>
-<p><strong>Factor 100</strong> de E/S para el mismo SQL y los mismos datos. Ninguna optimización de consulta compite con eso.</p>
-<h3 id="por-qué-comprime-tanto-mejor">Por qué comprime tanto mejor</h3>
-<p>En formato por filas, bytes contiguos pertenecen a columnas distintas: un entero, un texto, una fecha. La entropía local es alta y el compresor genérico saca poco.</p>
-<p>Por columnas, los valores contiguos son del mismo tipo y a menudo del mismo rango, lo que habilita codificaciones específicas:</p>
+<p>Un aviso no detiene un despliegue. Comprobar <code>SELECT @@sql_mode</code> es el primer paso al recibir una base MySQL heredada.</p>
+<p><strong><code>ONLY_FULL_GROUP_BY</code>.</strong> Sin este modo, MySQL permite columnas en <code>SELECT</code> que no están en <code>GROUP BY</code> y devuelve <strong>un valor arbitrario</strong> del grupo. El resultado es plausible y erróneo. Está activo por defecto desde 5.7, pero muchas bases heredadas lo desactivan «porque rompía consultas» — consultas que ya estaban mal.</p>
+<p><strong>Colación.</strong> Por defecto insensible a mayúsculas y acentos (<code>utf8mb4_0900_ai_ci</code>), a diferencia de PostgreSQL. Es la divergencia semántica de la clase 020.</p>
+<p><strong>Motores de almacenamiento.</strong> InnoDB es transaccional; MyISAM no lo es. Una tabla MyISAM ignora las transacciones sin avisar: el <code>ROLLBACK</code> no revierte nada.</p>
+<p><strong>Aislamiento por defecto:</strong> <code>REPEATABLE READ</code>, distinto de casi todos los demás.</p>
+<h3 id="sql-server">SQL Server</h3>
+<p><strong>Aislamiento por defecto: <code>READ COMMITTED</code> con bloqueo</strong>, no con versiones. Los lectores bloquean a los escritores y viceversa, salvo que se active <code>READ_COMMITTED_SNAPSHOT</code>. Es la causa de bloqueos que no aparecen en PostgreSQL ni en Oracle.</p>
+<p><strong>Identificadores</strong> entre corchetes <code>[tabla]</code> además de comillas dobles. <strong>Colación</strong> definida en la instalación, la base y hasta la columna; lo habitual es insensible a mayúsculas.</p>
+<p><strong><code>TOP</code> y <code>OFFSET ... FETCH</code>:</strong> <code>TOP</code> es propietario; <code>OFFSET/FETCH</code> es la norma y exige <code>ORDER BY</code>.</p>
+<p><strong>Concatenación con nulos:</strong> por defecto <code>'a' + NULL</code> es <code>NULL</code>, igual que en la norma, pero el ajuste <code>CONCAT_NULL_YIELDS_NULL</code> podía cambiarlo en versiones antiguas.</p>
+<h3 id="oracle">Oracle</h3>
+<p><strong>La cadena vacía es <code>NULL</code>.</strong> Es la divergencia más severa de todo el ecosistema:</p>
+<pre><code class="language-sql">INSERT INTO t (s) VALUES ('');
+SELECT * FROM t WHERE s IS NULL;   -- devuelve la fila
+SELECT * FROM t WHERE s = '';      -- no devuelve nada
+</code></pre>
+<p>Código que distingue «vacío» de «desconocido» —lo cual es una distinción legítima del dominio— no se puede portar a Oracle sin reescribir el modelo.</p>
+<p><strong>Identificadores en mayúsculas</strong> salvo que se citen: <code>create table Alumno</code> crea <code>ALUMNO</code>, y <code>"Alumno"</code> es una tabla distinta.</p>
+<p><strong>Consistencia de lectura multiversión</strong> desde siempre, con la particularidad histórica del error «snapshot too old» cuando el segmento de deshacer se recicla durante una consulta larga.</p>
+<p><strong><code>DUAL</code>:</strong> las consultas sin tabla requieren <code>SELECT 1 FROM dual</code>.</p>
+<h3 id="tabla-comparativa">Tabla comparativa</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Codificación</th>
-<th>Cuándo</th>
-<th>Ejemplo</th>
+<th>Aspecto</th>
+<th>PostgreSQL</th>
+<th>MySQL 8 (InnoDB)</th>
+<th>SQL Server</th>
+<th>Oracle</th>
+<th>SQLite</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Diccionario</td>
-<td>Pocos valores distintos</td>
-<td>300 períodos en 100 M de filas → 2 bytes por fila</td>
+<td>Aislamiento por defecto</td>
+<td><code>READ COMMITTED</code> (MVCC)</td>
+<td><code>REPEATABLE READ</code></td>
+<td><code>READ COMMITTED</code> (bloqueo)</td>
+<td><code>READ COMMITTED</code> (MVCC)</td>
+<td><code>SERIALIZABLE</code> de hecho</td>
 </tr>
 <tr>
-<td>Longitud de secuencia</td>
-<td>Valores repetidos contiguos</td>
-<td>Datos ordenados por esa columna</td>
+<td><code>''</code> es <code>NULL</code></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
 </tr>
 <tr>
-<td>Delta</td>
-<td>Valores crecientes</td>
-<td>Marcas de tiempo, identificadores</td>
+<td>Colación por defecto</td>
+<td>Sensible</td>
+<td><strong>Insensible</strong></td>
+<td>Suele ser insensible</td>
+<td>Sensible</td>
+<td><code>BINARY</code></td>
 </tr>
 <tr>
-<td>Delta-of-delta</td>
-<td>Incrementos regulares</td>
-<td>Series a intervalo fijo</td>
+<td>Identificadores sin citar</td>
+<td>minúsculas</td>
+<td>según el sistema de archivos</td>
+<td>insensible</td>
+<td><strong>MAYÚSCULAS</strong></td>
+<td>insensible</td>
 </tr>
 <tr>
-<td>Bit-packing</td>
-<td>Rango pequeño conocido</td>
-<td>Nota de 1,0 a 7,0 en un decimal → 6 bits</td>
+<td>Límite de filas</td>
+<td><code>LIMIT</code></td>
+<td><code>LIMIT</code></td>
+<td><code>TOP</code> / <code>FETCH</code></td>
+<td><code>FETCH FIRST</code></td>
+<td><code>LIMIT</code></td>
+</tr>
+<tr>
+<td>DDL transaccional</td>
+<td>Sí</td>
+<td><strong>No</strong></td>
+<td>Sí</td>
+<td>No</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Autoincremento</td>
+<td><code>GENERATED ... IDENTITY</code></td>
+<td><code>AUTO_INCREMENT</code></td>
+<td><code>IDENTITY</code></td>
+<td>secuencia / <code>IDENTITY</code></td>
+<td><code>AUTOINCREMENT</code></td>
+</tr>
+<tr>
+<td><code>7/2</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td>Índice parcial</td>
+<td>Sí</td>
+<td>No</td>
+<td>Filtrado, sí</td>
+<td>No (índice por función)</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>CHECK</code> aplicado</td>
+<td>Sí</td>
+<td>Desde 8.0.16</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
 </tr>
 </tbody>
 </table></div>
-<p>Regla práctica: <strong>la clave de ordenamiento decide la compresión</strong>. Ordenar por una columna de baja cardinalidad hace que sus valores queden contiguos y la codificación por longitud de secuencia rinda al máximo.</p>
-<h3 id="ejecución-vectorizada">Ejecución vectorizada</h3>
-<p>Un motor por filas ejecuta un árbol de operadores fila a fila: por cada fila, una llamada virtual por operador. Con 100 millones de filas y 5 operadores, son 500 millones de llamadas.</p>
-<p>Un motor vectorizado procesa <strong>lotes</strong> de ~1 024–2 048 valores por llamada. Consecuencias:</p>
-<ul>
-<li>Se amortiza el coste de la llamada entre miles de valores.</li>
-<li>El bucle interior opera sobre un arreglo contiguo, que cabe en la caché L1/L2.</li>
-<li>El compilador puede autovectorizar con instrucciones SIMD.</li>
-</ul>
-<p>Es la razón por la que DuckDB y ClickHouse superan a un motor por filas incluso cuando todos los datos están en memoria: la ventaja no es solo de E/S.</p>
-<h3 id="índice-disperso-y-poda">Índice disperso y poda</h3>
-<p>ClickHouse no indexa cada fila: guarda una marca cada <code>index_granularity</code> filas (8 192 por defecto) con el valor mínimo y máximo del bloque. Es un índice <strong>disperso</strong>.</p>
-<pre><code class="language-sql">CREATE TABLE enrollments (
-  periodo    LowCardinality(String),
-  course_id  UInt32,
-  student_id UInt32,
-  nota       Decimal(2,1),
-  registrada_en DateTime
-) ENGINE = MergeTree
-ORDER BY (periodo, course_id, registrada_en);
-</code></pre>
-<p><code>ORDER BY</code> aquí <strong>no</strong> es orden de salida: es el orden físico de almacenamiento y define el índice primario. Una consulta con <code>WHERE periodo = '2026-1'</code> descarta bloques enteros sin leerlos. Con 100 M de filas repartidas en 300 períodos, la poda elimina el 99,7 % de los datos antes de descomprimir nada.</p>
-<p><code>LowCardinality(String)</code> aplica codificación por diccionario explícita: para columnas con menos de ~10 000 valores distintos, reduce el tamaño y acelera los agrupamientos.</p>
-<h3 id="conteo-aproximado">Conteo aproximado</h3>
-<p>Contar valores distintos exactamente exige recordar todos los vistos. HyperLogLog (Flajolet et al.) lo estima con memoria prácticamente constante:</p>
-<pre><code class="language-text">memoria     ≈ 12 KB
-error medio ≈ 1,04 / √m,  con m = 2^14 = 16 384 registros
-            ≈ 0,81 %
-</code></pre>
-<pre><code class="language-sql">SELECT uniq(student_id)      FROM enrollments;   -- aproximado, ~12 KB
-SELECT uniqExact(student_id) FROM enrollments;   -- exacto, memoria proporcional a la cardinalidad
-</code></pre>
-<p>Con 50 millones de estudiantes distintos, <code>uniqExact</code> necesita gigabytes; <code>uniq</code> responde con 12 KB y un error inferior al 1 %. Para un panel, ese error es irrelevante; para una factura, no. <strong>La decisión es del negocio, y debe estar escrita.</strong></p>
 <pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta analítica&quot;] --&gt; P[&quot;1. Poda por índice disperso&lt;br/&gt;descarta bloques&quot;]
-    P --&gt; C[&quot;2. Leer solo las columnas&lt;br/&gt;necesarias&quot;]
-    C --&gt; D[&quot;3. Descomprimir&lt;br/&gt;(a menudo se opera comprimido)&quot;]
-    D --&gt; V[&quot;4. Ejecución vectorizada&lt;br/&gt;lotes de ~2 048&quot;]
-    V --&gt; A[&quot;5. Agregación&lt;br/&gt;exacta o aproximada&quot;]
-    A --&gt; R[&quot;Resultado&quot;]
+    M[&quot;Migrar entre motores&quot;] --&gt; A[&quot;1. Divergencias sintácticas&lt;br/&gt;fallan al ejecutar: baratas&quot;]
+    M --&gt; B[&quot;2. Divergencias semánticas&lt;br/&gt;NO fallan: caras&quot;]
+    B --&gt; B1[&quot;colación&quot;]
+    B --&gt; B2[&quot;'' frente a NULL&quot;]
+    B --&gt; B3[&quot;división entera&quot;]
+    B --&gt; B4[&quot;aislamiento por defecto&quot;]
+    B --&gt; B5[&quot;ONLY_FULL_GROUP_BY&quot;]
+    B1 --&gt; T[&quot;Prueba de equivalencia:&lt;br/&gt;mismas entradas, comparar salidas&quot;]
+    B2 --&gt; T
+    B3 --&gt; T
+    B4 --&gt; T
+    B5 --&gt; T
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Pregunta: <em>«promedio de nota y número de estudiantes distintos por período»</em> sobre 100 millones de inscripciones.</p>
-<p><strong>PostgreSQL (por filas), sin índice útil:</strong></p>
-<pre><code class="language-text">Barrido secuencial de enrollments      → 20 GB leídos
-HashAggregate sobre 100 M filas
-Tiempo: minutos
+<p>Prueba de equivalencia que detecta divergencias <strong>antes</strong> de migrar. La idea es ejecutar el mismo conjunto de sentencias en dos motores y comparar las salidas exactas.</p>
+<pre><code class="language-sql">-- casos.sql : cada uno pensado para exponer una divergencia conocida
+SELECT '01-division'        AS caso, CAST(7/2 AS CHAR(10))                        AS valor;
+SELECT '02-colacion'        AS caso, CAST((SELECT COUNT(*) FROM students
+                                           WHERE email='ANA@EJEMPLO.CL') AS CHAR(10));
+SELECT '03-cadena-vacia'    AS caso, CASE WHEN '' IS NULL THEN 'es-null'
+                                          ELSE 'no-es-null' END;
+SELECT '04-concat'          AS caso, CAST(('a' || 'b') AS CHAR(10));
+SELECT '05-orden-nulos'     AS caso, CAST((SELECT nota FROM enrollments
+                                           ORDER BY nota LIMIT 1) AS CHAR(10));
+SELECT '06-redondeo'        AS caso, CAST(ROUND(2.5) AS CHAR(10));
 </code></pre>
-<p><strong>ClickHouse:</strong></p>
-<pre><code class="language-sql">SELECT periodo, avg(nota) AS promedio, uniq(student_id) AS estudiantes
-FROM enrollments GROUP BY periodo ORDER BY periodo;
-</code></pre>
-<pre><code class="language-text">Columnas leídas: periodo (diccionario), nota, student_id
-Bytes leídos tras compresión: ~0,4 GB
-Agregación vectorizada + HyperLogLog
-Tiempo: segundos
-</code></pre>
-<p><strong>Y la consulta inversa</strong>, un solo registro:</p>
-<pre><code class="language-sql">SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
-</code></pre>
-<ul>
-<li>PostgreSQL con índice: <strong>una</strong> búsqueda B-Tree, ~4 páginas, latencia inferior al milisegundo.</li>
-<li>ClickHouse: <code>student_id</code> no encabeza la clave de ordenamiento, así que no hay poda. Debe leer todos los bloques de todas las columnas seleccionadas.</li>
-</ul>
-<p>Esta asimetría es el punto central: <strong>no existe un motor bueno para todo</strong>. Es la razón de que OLTP y OLAP se separen (clase 054) y de que la persistencia poliglota exista (clase 062).</p>
-<p><strong>Efecto de la clave de ordenamiento, medido.</strong> La misma tabla con dos claves distintas:</p>
+<p>Salidas observadas:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th><code>ORDER BY</code></th>
-<th style="text-align: right;">Tamaño en disco</th>
-<th><code>WHERE periodo=...</code></th>
-<th><code>WHERE student_id=...</code></th>
+<th>Caso</th>
+<th>PostgreSQL</th>
+<th>MySQL 8</th>
+<th>SQLite</th>
+<th>Oracle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>(periodo, course_id, registrada_en)</code></td>
-<td style="text-align: right;">1,2 GB</td>
-<td>Poda al 0,3 %</td>
-<td>Sin poda</td>
+<td>01 división</td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
+<td><code>3</code></td>
+<td><code>3.5</code></td>
 </tr>
 <tr>
-<td><code>(student_id, registrada_en)</code></td>
-<td style="text-align: right;">2,8 GB</td>
-<td>Sin poda</td>
-<td>Poda al 0,001 %</td>
+<td>02 colación</td>
+<td><code>0</code></td>
+<td><code>1</code></td>
+<td><code>0</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>03 cadena vacía</td>
+<td><code>no-es-null</code></td>
+<td><code>no-es-null</code></td>
+<td><code>no-es-null</code></td>
+<td><code>es-null</code></td>
+</tr>
+<tr>
+<td>04 concatenación</td>
+<td><code>ab</code></td>
+<td><code>0</code></td>
+<td><code>ab</code></td>
+<td><code>ab</code></td>
+</tr>
+<tr>
+<td>05 orden de nulos</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> primero</td>
+<td><code>NULL</code> <strong>último</strong></td>
+</tr>
+<tr>
+<td>06 redondeo de 2,5</td>
+<td><code>2</code> (al par)</td>
+<td><code>3</code></td>
+<td><code>3</code></td>
+<td><code>3</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El tamaño difiere porque ordenar por <code>periodo</code> agrupa valores repetidos y la codificación por longitud de secuencia rinde mucho más. <strong>La clave de ordenamiento afecta simultáneamente al tamaño y a qué consultas son rápidas</strong>: es la decisión de diseño más importante en un motor columnar, equivalente a la clave de partición en columnas anchas (clase 029).</p>
+<p>Seis líneas de SQL revelan seis formas distintas de obtener resultados incorrectos en silencio. El caso 06 es especialmente traicionero: PostgreSQL aplica redondeo bancario (al par más cercano) para <code>numeric</code>, y eso produce descuadres de céntimos frente a un sistema que redondea siempre hacia arriba.</p>
+<p><strong>Orden de los nulos:</strong> la norma deja la decisión al motor. La forma portable de fijarlo es escribirlo:</p>
+<pre><code class="language-sql">ORDER BY nota ASC NULLS LAST      -- PostgreSQL, Oracle, SQLite 3.30+
+ORDER BY (nota IS NULL), nota     -- portable a MySQL y SQL Server
+</code></pre>
+<p><strong>Interpretación:</strong> la migración no consiste en traducir sintaxis. Consiste en enumerar las divergencias semánticas que afectan a tu dominio y escribir una prueba por cada una. Esa prueba se ejecuta en CI contra los dos motores y es lo único que convierte «debería funcionar» en «funciona».</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Dimensión</th>
-<th>Por filas (OLTP)</th>
-<th>Columnar (OLAP)</th>
+<th>Migración</th>
+<th>Dificultad dominante</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Leer una fila entera</td>
-<td>Excelente</td>
-<td>Malo</td>
+<td>MySQL → PostgreSQL</td>
+<td>Colación, <code>ONLY_FULL_GROUP_BY</code>, tipos laxos, división</td>
 </tr>
 <tr>
-<td>Leer 2 columnas de millones de filas</td>
-<td>Malo</td>
-<td>Excelente</td>
+<td>PostgreSQL → MySQL</td>
+<td>Índices parciales, <code>jsonb</code>, tipos avanzados, DDL transaccional</td>
 </tr>
 <tr>
-<td>Insertar una fila</td>
-<td>Excelente</td>
-<td>Malo (por lotes)</td>
+<td>Oracle → PostgreSQL</td>
+<td>Cadena vacía, <code>DUAL</code>, PL/SQL, identificadores en mayúsculas</td>
 </tr>
 <tr>
-<td>Actualizar una fila</td>
-<td>Excelente</td>
-<td>Muy costoso</td>
+<td>SQL Server → PostgreSQL</td>
+<td>Aislamiento por bloqueo, <code>TOP</code>, T-SQL</td>
 </tr>
 <tr>
-<td>Compresión</td>
-<td>2–3×</td>
-<td>8–30×</td>
-</tr>
-<tr>
-<td>Transacciones</td>
-<td>Completas</td>
-<td>Limitadas</td>
-</tr>
-<tr>
-<td>Índices secundarios</td>
-<td>Muchos</td>
-<td>Pocos, dispersos</td>
+<td>Cualquiera → SQLite</td>
+<td>Concurrencia de escritura, tipado dinámico</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Usar un motor columnar como OLTP.</strong> Cada <code>UPDATE</code> puntual reescribe partes de muchas columnas.</li>
-<li><strong>Insertar fila a fila en ClickHouse.</strong> Genera miles de fragmentos pequeños y la fusión no da abasto; hay que insertar por lotes.</li>
-<li><strong>Elegir <code>ORDER BY</code> sin mirar las consultas.</strong> Se pierde la poda y la compresión a la vez.</li>
-<li><strong><code>SELECT *</code> en columnar.</strong> Anula la única ventaja del formato.</li>
-<li><strong>Presentar cifras aproximadas como exactas.</strong> <code>uniq</code> no es <code>uniqExact</code>.</li>
-<li><strong>Suponer que la compresión es gratis.</strong> Cuesta CPU al escribir; se recupera con creces en lectura.</li>
+<li><strong>Migrar comparando solo la sintaxis.</strong> Las divergencias caras no dan error.</li>
+<li><strong>Desactivar <code>ONLY_FULL_GROUP_BY</code> para que «funcione».</strong> Devuelve valores arbitrarios.</li>
+<li><strong>Suponer que <code>''</code> y <code>NULL</code> son distintos en Oracle.</strong></li>
+<li><strong>No fijar <code>NULLS FIRST/LAST</code>.</strong> Los informes ordenan distinto según el motor.</li>
+<li><strong>Ignorar el motor de almacenamiento en MySQL heredado.</strong> MyISAM no es transaccional.</li>
+<li><strong>Probar la migración solo con datos limpios.</strong> Las divergencias aparecen con nulos, vacíos y acentos.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Migrar informes de un motor por filas a uno columnar suele dar mejoras de uno o dos órdenes de magnitud, y añade un sistema que sincronizar con el origen (clase 056). Antes de eso, conviene comprobar qué consigue DuckDB sobre exportaciones Parquet: a menudo basta y no añade servicio alguno.</p>
+<p>Una migración de motor sin pruebas de equivalencia se descubre incompleta durante meses, en forma de incidencias sueltas que nadie relaciona entre sí. El conjunto de casos de esta clase es barato de escribir y es lo que convierte la migración en un proyecto con final.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma tu consulta analítica más pesada y calcula los bytes que lee en formato por filas.</li>
-<li>Exporta los datos a Parquet y ejecútala con DuckDB; mide bytes y tiempo.</li>
-<li>Prueba dos claves de ordenamiento distintas y compara tamaño y poda.</li>
-<li>Sustituye un conteo exacto por uno aproximado, mide el error real y decide si es aceptable.</li>
+<li>Amplía el archivo de casos con cinco divergencias que afecten a tu dominio.</li>
+<li>Ejecútalo en dos motores del <code>docker-compose</code> y guarda ambas salidas.</li>
+<li>Escribe un comparador que falle si difieren y añádelo a la integración continua.</li>
+<li>Documenta, por cada divergencia, la corrección adoptada.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Calcula la E/S de una consulta tuya en ambos formatos, con cifras reales.</li>
-<li>¿Por qué ordenar por una columna de baja cardinalidad reduce el tamaño total?</li>
-<li>Explica por qué la ejecución vectorizada ayuda incluso con todos los datos en memoria.</li>
-<li>Da una métrica de tu negocio donde el error del 1 % de HyperLogLog sea inaceptable.</li>
+<li>¿Por qué <code>ONLY_FULL_GROUP_BY</code> desactivado produce informes erróneos y no errores?</li>
+<li>Explica qué código de tu dominio se rompería al migrar a Oracle por el tratamiento de la cadena vacía.</li>
+<li>¿Qué implica que SQL Server use bloqueo en <code>READ COMMITTED</code> para una consulta de informe larga?</li>
+<li>Escribe un <code>ORDER BY</code> con posición de nulos fijada que funcione en los cinco motores de la tabla.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Sumar una columna de mil filas y entender por qué el formato decide el tiempo</p>
-<p>La consulta analítica típica toca <strong>pocas columnas de muchísimas filas</strong>. La
-transaccional toca <strong>todas las columnas de pocas filas</strong>. Esa diferencia, y
-no el lenguaje, es la que separa a los dos mundos: un almacén orientado a
-filas guarda la fila entera junta, así que para sumar una columna tiene que
-leer también todas las demás.</p>
-<p>El caso genera mil filas repartidas en dos categorías y suma el importe de
-cada una. Con mil filas, todos los motores tardan lo mismo: eso es
-deliberado, porque lo que se compara aquí es <strong>cómo</strong> llegan al mismo
-número. El «por qué no» de cada motor dice a partir de qué volumen ese cómo
-empieza a decidir si la consulta tarda un segundo o un minuto.</p>
+<p><strong>Caso:</strong> Cuántos nombres distintos hay, cuando el motor decide si «Ada» y «ada» son el mismo</p>
+<p>Una tabla con cuatro filas: <code>Ada</code>, <code>ada</code>, <code>ADA</code> y <code>Linus</code>. La pregunta es
+cuántos nombres distintos hay, y la respuesta correcta —cuatro— no depende
+de la consulta: depende de la <strong>intercalación</strong> de la columna, que no está
+escrita en ninguna parte de la consulta.</p>
+<p>Con la configuración por omisión, MySQL responde <strong>2</strong>: su intercalación
+<code>utf8mb4_0900_ai_ci</code> ignora mayúsculas y acentos, así que las tres primeras
+filas son el mismo valor. SQL Server responde lo que diga la intercalación
+de la instancia, que se eligió al instalarla y que casi nadie recuerda.
+PostgreSQL, SQLite y DuckDB responden 4, porque comparan byte a byte.</p>
+<p>Esta es la divergencia que rompe migraciones sin dar un solo error: los
+recuentos cambian, los <code>UNIQUE</code> aceptan o rechazan cosas distintas, y el
+<code>ORDER BY</code> devuelve otro orden. El caso obliga a escribir en cada motor la
+versión que responde 4.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>categoria</th>
-<th>importe</th>
+<th>distintos</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>c0</code></td>
-<td><code>250500</code></td>
-</tr>
-<tr>
-<td><code>c1</code></td>
-<td><code>250000</code></td>
+<td><code>4</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 032</code>: 3 de
-las 6 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 032</code>: 4 de
+las 7 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -337,281 +387,248 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
-<td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/clickhouse/consulta.sql">código</a></td>
-<td><a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">doc oficial</a></td>
-</tr>
-<tr>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/fileformat.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/datatype3.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/expressions/collations.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/parallel-query.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/collation.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Google BigQuery</td>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MariaDB</td>
 <td>sí</td>
 <td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/bigquery/consulta.sql">código</a></td>
-<td><a href="https://cloud.google.com/bigquery/docs/best-practices-costs">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/mariadb/consulta.sql">código</a></td>
+<td><a href="https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets">doc oficial</a></td>
 </tr>
 <tr>
-<td>Snowflake</td>
+<td>Microsoft SQL Server</td>
 <td>sí</td>
 <td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/snowflake/consulta.sql">código</a></td>
-<td><a href="https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/sql-server/consulta.sql">código</a></td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support">doc oficial</a></td>
 </tr>
 <tr>
-<td>MongoDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc oficial</a></td>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/oracle-database/consulta.sql">código</a></td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/internals/storage.html
--- nota: aqui la suma lee DOS columnas y ninguna mas, ya comprimidas, en lotes
---       de miles de valores por operacion en vez de una llamada por fila. Es la
---       misma consulta y una arquitectura distinta.
---       Para verlo: EXPLAIN ANALYZE delante de la consulta.
-
--- === preparacion ===
-CREATE TABLE hechos (
-    id        INTEGER PRIMARY KEY,
-    categoria VARCHAR NOT NULL,
-    importe   INTEGER NOT NULL
-);
-
-INSERT INTO hechos
-SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
-
--- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM hechos
-GROUP BY categoria
-ORDER BY categoria;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Almacenamiento columnar, ejecución vectorizada por lotes de miles de valores y paralelismo por trozos: la suma lee solo las dos columnas que necesita, ya comprimidas, y sin una llamada de función por fila. Es la arquitectura analítica completa dentro de un proceso.</li>
-<li><strong>Por qué no:</strong> Esa arquitectura es pésima para lo contrario: leer una fila entera por su clave obliga a tocar todos los bloques de columna, y modificar filas sueltas reescribe bloques enteros.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/internals/storage.html">https://duckdb.org/docs/stable/internals/storage.html</a></li>
-</ul>
-<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: clickhouse
--- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
--- nota: implementacion declarada. La clausula ORDER BY del motor MergeTree no
---       es un orden de presentacion: es el ORDEN FISICO de los datos, y de el
---       dependen la compresion y los indices de salto, que descartan bloques
---       enteros sin leerlos.
---       Lo que este motor NO tiene: transacciones. No hay BEGIN, y corregir
---       filas es una mutacion asincrona que reescribe partes.
-
--- === preparacion ===
-CREATE TABLE hechos (
-    id        UInt32,
-    categoria LowCardinality(String),
-    importe   UInt32
-) ENGINE = MergeTree ORDER BY (categoria, id);
-
-INSERT INTO hechos
-SELECT number + 1, concat('c', toString((number + 1) % 2)), number + 1
-FROM numbers(1000);
-
--- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM hechos
-GROUP BY categoria
-ORDER BY categoria;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Lleva la misma idea a escala distribuida: <code>MergeTree</code> ordena y comprime por partes, los índices de salto descartan bloques enteros sin leerlos, y la ejecución es masivamente paralela. Es lo que se usa cuando la tabla tiene miles de millones de filas.</li>
-<li><strong>Por qué no:</strong> No es transaccional: no hay <code>BEGIN</code>, las actualizaciones y borrados son mutaciones asíncronas que reescriben partes, y las reuniones entre tablas grandes son su punto débil. Es un almacén de hechos, no un sistema operacional.</li>
-<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree</a></li>
-</ul>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/fileformat.html
--- nota: SQLite guarda la FILA entera junta en la pagina. Para sumar `importe`
---       tiene que leer tambien `id` y `categoria` de cada una de las mil filas.
---       Con mil no se nota. Con cien millones, es el problema entero, y ningun
---       indice lo arregla: no se trata de encontrar las filas, se trata de
---       leerlas todas.
+-- doc: https://sqlite.org/datatype3.html
+-- nota: la intercalacion por omision es BINARY: compara byte a byte. Cambiar
+--       la columna a `TEXT COLLATE NOCASE` haria que esta consulta devolviera 2.
 
 -- === preparacion ===
-CREATE TABLE hechos (
-    id        INTEGER PRIMARY KEY,
-    categoria TEXT NOT NULL,
-    importe   INTEGER NOT NULL
+CREATE TABLE registros (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
 );
-
-WITH RECURSIVE serie(n) AS (
-    SELECT 1
-    UNION ALL
-    SELECT n + 1 FROM serie WHERE n &lt; 1000
-)
-INSERT INTO hechos (id, categoria, importe)
-SELECT n, 'c' || (n % 2), n FROM serie;
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
 
 -- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM hechos
-GROUP BY categoria
-ORDER BY categoria;
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Está aquí para mostrar el contraste desde el otro lado: el mismo SQL, el mismo resultado, y un almacenamiento por filas que obliga a leer cada registro entero para sumar una columna.</li>
-<li><strong>Por qué no:</strong> Con mil filas no se nota; con cien millones, la diferencia es de órdenes de magnitud, y no hay índice que la arregle porque el problema no es encontrar las filas, es leerlas todas.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/fileformat.html">https://sqlite.org/fileformat.html</a></li>
+<li><strong>Por qué sí:</strong> Su intercalación por omisión es <code>BINARY</code>: compara byte a byte y responde 4 sin configurar nada. Para comparar sin mayúsculas hay que pedirlo expresamente con <code>COLLATE NOCASE</code>.</li>
+<li><strong>Por qué no:</strong> <code>NOCASE</code> solo ignora mayúsculas en el alfabeto ASCII: <code>Á</code> y <code>á</code> siguen siendo distintas. Cualquier aplicación con texto en español necesita algo más que la intercalación integrada.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/datatype3.html">https://sqlite.org/datatype3.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/expressions/collations.html
+-- nota: al analizar un volcado que viene de MySQL, este recuento NO coincide
+--       con el del origen. No es un fallo: es la intercalacion.
+
+-- === preparacion ===
+CREATE TABLE registros (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+
+-- === consulta ===
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Compara respetando mayúsculas por omisión y ofrece intercalaciones ICU como extensión cuando hace falta ordenar por idioma.</li>
+<li><strong>Por qué no:</strong> Al analizar datos que vienen de MySQL, el recuento distinto que devuelve DuckDB <strong>no coincide</strong> con el del origen: no es un fallo, es la intercalación, y descubrirlo tarde invalida el informe entero.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/expressions/collations.html">https://duckdb.org/docs/stable/sql/expressions/collations.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/parallel-query.html
--- nota: el punto intermedio. Filas en disco, pero con agregacion en paralelo
---       (Parallel Seq Scan + Partial Aggregate + Gather) cuando la tabla es lo
---       bastante grande. Para verlo hacen falta mas de mil filas y
---         SET max_parallel_workers_per_gather = 4;
---         EXPLAIN (ANALYZE) SELECT ...
+-- doc: https://www.postgresql.org/docs/current/collation.html
+-- nota: la comparacion por omision distingue mayusculas. Lo que hay que vigilar
+--       aqui es otra cosa: la intercalacion viene de la biblioteca del sistema,
+--       y una actualizacion de glibc puede cambiar el orden y dejar los indices
+--       B-Tree de texto en un estado incoherente. De ahi el proveedor `icu`.
 
 -- === preparacion ===
-DROP TABLE IF EXISTS hechos;
+DROP TABLE IF EXISTS registros;
 
-CREATE TABLE hechos (
-    id        integer PRIMARY KEY,
-    categoria text NOT NULL,
-    importe   integer NOT NULL
+CREATE TABLE registros (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
 );
-
-INSERT INTO hechos (id, categoria, importe)
-SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
 
 -- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM hechos
-GROUP BY categoria
-ORDER BY categoria;
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es el punto intermedio honesto: filas en disco, pero con ejecución paralela, agregación en paralelo y <code>BRIN</code> para tablas ordenadas. Para analítica de tamaño medio sobre los datos operativos, evita montar un almacén aparte.</li>
-<li><strong>Por qué no:</strong> Sigue leyendo filas completas y usando una versión por fila para el control de concurrencia: por mucho paralelismo, no compite con un formato columnar cuando la consulta toca dos columnas de una tabla de cien.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/parallel-query.html">https://www.postgresql.org/docs/current/parallel-query.html</a></li>
+<li><strong>Por qué sí:</strong> La intercalación es explícita y se puede fijar por columna o por expresión; el comportamiento por omisión distingue mayúsculas, que es lo que casi siempre se quiere para una identidad.</li>
+<li><strong>Por qué no:</strong> La intercalación depende de la biblioteca del sistema operativo: una actualización de <code>glibc</code> puede cambiar el orden y <strong>corromper los índices B-Tree</strong> sobre columnas de texto. Por eso existe el proveedor <code>icu</code> y por eso hay que declararlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/collation.html">https://www.postgresql.org/docs/current/collation.html</a></li>
 </ul>
-<h4 id="google-bigquery--implementacionesbigqueryconsultasql">Google BigQuery · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/bigquery/consulta.sql"><code>implementaciones/bigquery/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: bigquery
--- doc: https://cloud.google.com/bigquery/docs/best-practices-costs
--- nota: implementacion declarada. Aqui la optimizacion no es de tiempo: es de
---       FACTURA. Se paga por bytes LEIDOS, y al ser columnar, leer dos columnas
---       cuesta dos columnas. La misma consulta con SELECT * sobre una tabla de
---       cien columnas cuesta cincuenta veces mas y devuelve lo mismo.
---       Antes de lanzarla en serio:
---         bq query --dry_run   -&gt; dice cuantos bytes se van a leer, sin cobrar.
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html
+-- nota: SIN el COLLATE utf8mb4_bin de abajo, esta consulta devuelve 2, no 4:
+--       la intercalacion por omision utf8mb4_0900_ai_ci ignora mayusculas y
+--       acentos. Es la divergencia mas cara de las migraciones a y desde MySQL.
 
 -- === preparacion ===
-CREATE OR REPLACE TABLE analitica.hechos
-PARTITION BY RANGE_BUCKET(id, GENERATE_ARRAY(0, 1000000, 100000))
-CLUSTER BY categoria
-AS
-SELECT n AS id,
-       CONCAT('c', CAST(MOD(n, 2) AS STRING)) AS categoria,
-       n AS importe
-FROM UNNEST(GENERATE_ARRAY(1, 1000)) AS n;
+DROP TABLE IF EXISTS registros;
+
+CREATE TABLE registros (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
 
 -- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM analitica.hechos
-GROUP BY categoria
-ORDER BY categoria;
+-- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
+-- esta en la consulta: la intercalacion de la columna.
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Separa por completo almacenamiento y cómputo: el mismo formato columnar, con miles de nodos efímeros que se asignan por consulta y sin nada que administrar. Para un agregado sobre petabytes ocasional, es la opción con menos operación.</li>
-<li><strong>Por qué no:</strong> Se paga por bytes leídos: la misma consulta escrita con <code>SELECT *</code> en vez de dos columnas cuesta dinero de verdad, y una consulta mal filtrada puede costar más que el análisis que la motivó. Aquí la optimización no es de tiempo, es de factura.</li>
-<li>📄 Documentación oficial: <a href="https://cloud.google.com/bigquery/docs/best-practices-costs">https://cloud.google.com/bigquery/docs/best-practices-costs</a></li>
+<li><strong>Por qué sí:</strong> Se puede pedir la comparación exacta con <code>COLLATE utf8mb4_bin</code> en la columna o en la propia consulta, sin cambiar la configuración del servidor.</li>
+<li><strong>Por qué no:</strong> Por omisión hace justo lo contrario, y en silencio: <code>utf8mb4_0900_ai_ci</code> ignora mayúsculas y acentos. Un <code>UNIQUE</code> sobre un correo acepta <code>Ada@x.org</code> <strong>o</strong> <code>ada@x.org</code>, pero no las dos, y eso es una decisión de producto que nadie tomó.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html">https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html</a></li>
 </ul>
-<h4 id="snowflake--implementacionessnowflakeconsultasql">Snowflake · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/implementaciones/snowflake/consulta.sql"><code>implementaciones/snowflake/consulta.sql</code></a></h4>
+<h4 id="mariadb--implementacionesmariadbconsultasql">MariaDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/mariadb/consulta.sql"><code>implementaciones/mariadb/consulta.sql</code></a></h4>
 <p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: snowflake
--- doc: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
--- nota: implementacion declarada. Snowflake divide la tabla en micro-particiones
---       columnares de 50-500 MB y guarda metadatos de cada una —minimo, maximo,
---       numero de valores distintos—, de modo que una consulta filtrada puede
---       descartar particiones enteras sin leerlas. Ese es todo el secreto, y
---       depende de que los datos esten agrupados por la columna que se filtra.
---       El computo se factura por TIEMPO ENCENDIDO: dimensionar y suspender el
---       almacen es parte del diseno, no una tarea de operacion posterior.
+<pre><code class="language-sql">-- motor: mariadb
+-- doc: https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets
+-- nota: implementacion declarada. La sintaxis es la de MySQL, pero la
+--       intercalacion por omision NO es la misma (utf8mb4_general_ci frente a
+--       utf8mb4_0900_ai_ci): dos motores que se anuncian compatibles ordenan
+--       distinto. Por eso el COLLATE explicito no es opcional al migrar.
 
 -- === preparacion ===
-CREATE OR REPLACE TABLE hechos (
-    id        NUMBER,
-    categoria STRING,
-    importe   NUMBER
-) CLUSTER BY (categoria);
+DROP TABLE IF EXISTS registros;
 
-INSERT INTO hechos (id, categoria, importe)
-SELECT SEQ4() + 1,
-       'c' || TO_VARCHAR(MOD(SEQ4() + 1, 2)),
-       SEQ4() + 1
-FROM TABLE(GENERATOR(ROWCOUNT =&gt; 1000));
+CREATE TABLE registros (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
 
 -- === consulta ===
-SELECT categoria, SUM(importe) AS importe
-FROM hechos
-GROUP BY categoria
-ORDER BY categoria;
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Micro-particiones columnares con metadatos por partición que permiten descartar bloques sin leerlos, y almacenes de cómputo independientes que se dimensionan por carga: el equipo de análisis no compite con el de ingesta.</li>
-<li><strong>Por qué no:</strong> El cómputo se factura por tiempo encendido, así que la disciplina de apagar y dimensionar es parte del diseño; y su rendimiento depende del orden de agrupamiento, que hay que mantener con <code>CLUSTER BY</code> en tablas grandes.</li>
-<li>📄 Documentación oficial: <a href="https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions">https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions</a></li>
+<li><strong>Por qué sí:</strong> Comparte la sintaxis de MySQL, así que la corrección con <code>COLLATE</code> es la misma y el código migra sin cambios.</li>
+<li><strong>Por qué no:</strong> Sus intercalaciones por omisión <strong>no son las mismas</strong> que las de MySQL 8 (<code>utf8mb4_general_ci</code> frente a <code>utf8mb4_0900_ai_ci</code>), y ordenan distinto: dos motores que se anuncian compatibles devuelven listas en otro orden.</li>
+<li>📄 Documentación oficial: <a href="https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets">https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets</a></li>
 </ul>
-<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
-<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Por qué no</th>
-<th>Qué se hace en su lugar</th>
-<th>Fuente</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MongoDB</td>
-<td>Su almacenamiento es orientado a documentos: sumar un campo de un millón de documentos obliga a leer un millón de documentos completos. La tubería de agregación es expresiva, pero el formato no ayuda.</td>
-<td>Exportar a Parquet y analizar con DuckDB o ClickHouse, que es lo que hace en la práctica casi todo el que tiene datos operativos en MongoDB y preguntas analíticas sobre ellos.</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc</a></td>
-</tr>
-</tbody>
-</table></div>
+<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support
+-- nota: implementacion declarada. La intercalacion por omision se elige AL
+--       INSTALAR la instancia y afecta tambien a los nombres de objetos y a
+--       tempdb. Fijarla en la columna, como aqui, es la unica forma de que el
+--       resultado no dependa de la maquina.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.registros;
+
+CREATE TABLE dbo.registros (
+    id     INT PRIMARY KEY,
+    nombre NVARCHAR(50) COLLATE Latin1_General_BIN2 NOT NULL
+);
+INSERT INTO dbo.registros (id, nombre) VALUES
+    (1, N'Ada'), (2, N'ada'), (3, N'ADA'), (4, N'Linus');
+
+-- === consulta ===
+SELECT COUNT(DISTINCT nombre) AS distintos FROM dbo.registros;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La intercalación se puede fijar en la propia consulta con <code>COLLATE Latin1_General_BIN2</code>, sin tocar la base ni la instancia.</li>
+<li><strong>Por qué no:</strong> La intercalación por omisión se elige <strong>al instalar la instancia</strong> y afecta también a los nombres de objetos y a las tablas temporales: mezclar dos bases con intercalaciones distintas produce errores al reunir columnas de texto que no se pueden resolver sin conversiones explícitas.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support">https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support</a></li>
+</ul>
+<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html
+-- nota: implementacion declarada. Aqui el comportamiento se controla POR SESION
+--       con NLS_SORT y NLS_COMP: la misma consulta puede devolver 2 o 4 segun
+--       quien la lance. Dejarlo en BINARY es la unica forma de que el resultado
+--       sea el mismo para todos.
+
+-- === preparacion ===
+ALTER SESSION SET NLS_SORT = 'BINARY';
+ALTER SESSION SET NLS_COMP = 'BINARY';
+
+CREATE TABLE registros (
+    id     NUMBER PRIMARY KEY,
+    nombre VARCHAR2(50) NOT NULL
+);
+INSERT INTO registros (id, nombre) VALUES (1, 'Ada');
+INSERT INTO registros (id, nombre) VALUES (2, 'ada');
+INSERT INTO registros (id, nombre) VALUES (3, 'ADA');
+INSERT INTO registros (id, nombre) VALUES (4, 'Linus');
+COMMIT;
+
+-- === consulta ===
+SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>NLS_SORT</code> y <code>NLS_COMP</code> se controla el mismo comportamiento por sesión, lo que permite ajustar la comparación sin cambiar el esquema.</li>
+<li><strong>Por qué no:</strong> Que sea por sesión es también el problema: la misma consulta devuelve resultados distintos según quién la lance. Y la cadena vacía sigue siendo <code>NULL</code>, lo que suma una divergencia más al recuento.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html</a></li>
+</ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/04-indexing/run_indexing_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -655,24 +672,24 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>ClickHouse, Inc.</strong> (2026). <a href="https://clickhouse.com/docs/">ClickHouse Documentation</a>.<br />
-  Motores de tabla, claves de ordenamiento y vistas materializadas.</li>
-<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
-  Motor analítico embebido: OLAP columnar sin servidor.</li>
-<li><strong>Michael Stonebraker, Samuel Madden, Daniel J. Abadi, Stavros Harizopoulos, Nabil Hachem, Pat Helland</strong> (2007). <a href="https://cs.brown.edu/courses/cs227/archives/2008/Papers/OLTP/hstore.pdf">The End of an Architectural Era (It's Time for a Complete Rewrite)</a>. VLDB.<br />
-  Mide en qué gasta el tiempo realmente un motor OLTP tradicional.</li>
-<li><strong>Philippe Flajolet, Eric Fusy, Olivier Gandouet, Frederic Meunier</strong> (2007). <a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf">HyperLogLog: The Analysis of a Near-Optimal Cardinality Estimation Algorithm</a>. Analysis of Algorithms (AofA).<br />
-  Conteo aproximado de distintos con memoria prácticamente constante.</li>
+<li><strong>Oracle</strong> (2026). <a href="https://dev.mysql.com/doc/">MySQL Reference Manual</a>.<br />
+  Dialecto y comportamiento del motor InnoDB.</li>
+<li><strong>MariaDB Foundation</strong> (2026). <a href="https://mariadb.com/docs/">MariaDB Documentation</a>.<br />
+  Divergencias respecto de MySQL relevantes para la portabilidad.</li>
+<li><strong>Microsoft</strong> (2026). <a href="https://learn.microsoft.com/sql/sql-server/">SQL Server Documentation</a>.<br />
+  T-SQL, niveles de aislamiento y almacen de consultas.</li>
+<li><strong>Oracle</strong> (2026). <a href="https://docs.oracle.com/en/database/">Oracle Database Documentation</a>.<br />
+  PL/SQL y modelo de consistencia de lectura de Oracle.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="031.html">← Anterior</a> · <a href="033.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="032">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="031.html"><span class="sentido">← Anterior · 031</span>Búsqueda de texto: índice invertido, análisis y relevancia</a>
-<a class="siguiente" href="033.html"><span class="sentido">Siguiente · 033 →</span>ACID: qué garantiza cada letra y quién la implementa</a>
+<a class="anterior" href="031.html"><span class="sentido">← Anterior · 031</span>PostgreSQL: tipos, extensiones y modelo de procesos</a>
+<a class="siguiente" href="033.html"><span class="sentido">Siguiente · 033 →</span>SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a>
 </nav>
 </main>
 <footer>

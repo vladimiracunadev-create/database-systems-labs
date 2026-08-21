@@ -4,7 +4,9 @@
 
 # 🗄️ Database Systems Labs
 
-## **14 partes · 64 clases · 210 horas · 120 fuentes verificables**
+## **15 partes · 74 clases · 230 horas · 120 fuentes verificables**
+
+### **408 implementaciones en 27 motores · 267 ejecutadas contra el motor real**
 
 **Programa abierto de ingeniería de bases de datos, del modelado conceptual a la
 arquitectura distribuida, la operación y los sistemas de recuperación para
@@ -17,7 +19,7 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 [![CodeQL](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml)
 
 [![Versión](https://img.shields.io/badge/versión-2.0.0-orange?style=for-the-badge)](CHANGELOG.md)
-[![Clases](https://img.shields.io/badge/clases-64%20·%2014%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
+[![Clases](https://img.shields.io/badge/clases-74%20·%2015%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
 [![Fuentes](https://img.shields.io/badge/fuentes-120%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
 [![Laboratorios](https://img.shields.io/badge/laboratorios-7%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-3fb950?style=for-the-badge)](LICENSE)
@@ -29,7 +31,7 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
 [🌐 **Sitio de estudio**](https://vladimiracunadev-create.github.io/database-systems-labs/) ·
-[▶️ **Empezar por la clase 001**](classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/README.md) ·
+[▶️ **Empezar por la clase 001**](classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md) ·
 [🧪 **Laboratorios**](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html) ·
 [📝 **Autoevaluación**](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html) ·
 [📚 **Bibliografía**](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html) ·
@@ -64,7 +66,7 @@ La segunda regla, la que cambia la forma de estudiar: **una clase no explica un
 concepto, lo pone a competir**.
 
 Cada clase declara un caso con su salida esperada en
-[`motores.yaml`](classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/motores.yaml),
+[`motores.yaml`](classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/motores.yaml),
 lo resuelve en varios motores dentro de `implementaciones/`, y por cada motor
 escribe dos cosas que pesan lo mismo:
 
@@ -123,27 +125,28 @@ explicación no demuestra transferencia**.
 
 | Parte | Tema | Clases | Horas |
 |---|---|---:|---:|
-| [00](classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | 4 | 12 |
-| [01](classes/part-01-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | 5 | 16 |
-| [02](classes/part-02-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | 4 | 13 |
-| [03](classes/part-03-sql-en-profundidad/README.md) | SQL en profundidad | 6 | 20 |
-| [04](classes/part-04-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | 4 | 12 |
-| [05](classes/part-05-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
-| [06](classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
-| [07](classes/part-07-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
-| [08](classes/part-08-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
-| [09](classes/part-09-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
-| [10](classes/part-10-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
-| [11](classes/part-11-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
-| [12](classes/part-12-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
-| [13](classes/part-13-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
+| [00](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | 10 | 20 |
+| [01](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | 4 | 12 |
+| [02](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | 5 | 16 |
+| [03](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | 4 | 13 |
+| [04](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | 6 | 20 |
+| [05](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | 4 | 12 |
+| [06](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
+| [07](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
+| [08](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
+| [09](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
+| [10](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
+| [11](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
+| [12](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
+| [13](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
+| [14](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
 
 El índice completo está en [`classes/README.md`](classes/README.md) y el
 currículo canónico, en [`curriculum.yaml`](curriculum.yaml).
 
 ## Rutas por rol
 
-Las 64 clases no son para todos a la vez. Siete recorridos ordenan el programa
+Las 74 clases no son para todos a la vez. Siete recorridos ordenan el programa
 según el cargo al que apuntas, y cada uno tiene su **guía de carrera**: qué es
 el puesto, cómo es un día de trabajo, qué necesitas saber, qué partes hacer y
 en qué orden, qué tienes que poder demostrar al terminar, qué credenciales
@@ -151,13 +154,13 @@ existen, cómo progresa la carrera y qué mitos conviene desmontar.
 
 | Ruta | Partes | Nivel | Horas | Guía |
 |---|---|---|---:|---|
-| Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 07 · 08 · 10 · 13 | entrada | 152 | [guía](rutas/desarrollo-de-aplicaciones.md) |
-| Ingeniero de datos | 00 · 01 · 02 · 03 · 06 · 09 · 11 · 12 · 13 | intermedio | 131 | [guía](rutas/ingenieria-de-datos.md) |
-| DBA / SRE de datos | 00 · 01 · 03 · 04 · 07 · 08 · 09 · 10 · 13 | intermedio | 143 | [guía](rutas/fiabilidad-y-operacion.md) |
-| Arquitecto de datos | todas | avanzado | 210 | [guía](rutas/arquitectura.md) |
-| Analytics engineer / BI | 00 · 01 · 02 · 03 · 04 · 08 · 11 · 13 | intermedio | 115 | [guía](rutas/analitica-y-bi.md) |
-| Ingeniero de IA aplicada y recuperación | 00 · 01 · 02 · 03 · 05 · 06 · 08 · 12 · 13 | avanzado | 131 | [guía](rutas/ia-y-recuperacion.md) |
-| Gobierno y privacidad del dato | 00 · 01 · 03 · 07 · 09 · 10 · 11 · 13 | intermedio | 127 | [guía](rutas/gobierno-y-privacidad.md) |
+| Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 06 · 08 · 09 · 11 · 14 | entrada | 172 | [guía](rutas/desarrollo-de-aplicaciones.md) |
+| Ingeniero de datos | 00 · 01 · 02 · 03 · 04 · 07 · 10 · 12 · 13 · 14 | intermedio | 151 | [guía](rutas/ingenieria-de-datos.md) |
+| DBA / SRE de datos | 00 · 01 · 02 · 04 · 05 · 08 · 09 · 10 · 11 · 14 | intermedio | 163 | [guía](rutas/fiabilidad-y-operacion.md) |
+| Arquitecto de datos | todas | avanzado | 230 | [guía](rutas/arquitectura.md) |
+| Analytics engineer / BI | 00 · 01 · 02 · 03 · 04 · 05 · 09 · 12 · 14 | intermedio | 135 | [guía](rutas/analitica-y-bi.md) |
+| Ingeniero de IA aplicada y recuperación | 00 · 01 · 02 · 03 · 04 · 06 · 07 · 09 · 13 · 14 | avanzado | 151 | [guía](rutas/ia-y-recuperacion.md) |
+| Gobierno y privacidad del dato | 00 · 01 · 02 · 04 · 08 · 10 · 11 · 12 · 14 | intermedio | 147 | [guía](rutas/gobierno-y-privacidad.md) |
 
 El índice está en [`rutas/README.md`](rutas/README.md), y las rutas viven como
 datos en [`curriculum.yaml`](curriculum.yaml): la validación comprueba que cada

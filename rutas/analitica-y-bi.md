@@ -75,30 +75,30 @@ usar, cómo contar una historia con datos— ni la herramienta de BI concreta de
 
 ## 📚 Tu ruta en el programa
 
-8 partes, 115 horas estimadas.
+8 partes, 135 horas estimadas.
 
-1. 📚 [**Parte 00 — Fundamentos**](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 01 — Modelado conceptual y requisitos**](../classes/part-01-modelado-conceptual-y-requisitos/README.md)
+2. 📚 [**Parte 02 — Modelado conceptual y requisitos**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). Aquí se aprende a convertir una frase de negocio en entidades.
-3. 📚 [**Parte 02 — Modelo relacional y álgebra**](../classes/part-02-modelo-relacional-y-algebra/README.md)
+3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h).
-4. 📚 [**Parte 03 — SQL en profundidad**](../classes/part-03-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Imprescindibles:
-   [017 — Agregación, GROUP BY y HAVING sin duplicar filas](../classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/README.md)
-   y [018 — CTE, subconsultas y funciones de ventana](../classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/README.md).
-5. 📚 [**Parte 04 — Motores relacionales y dialectos**](../classes/part-04-motores-relacionales-y-dialectos/README.md)
+   [017 — Agregación, GROUP BY y HAVING sin duplicar filas](../classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/README.md)
+   y [018 — CTE, subconsultas y funciones de ventana](../classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/README.md).
+5. 📚 [**Parte 05 — Motores relacionales y dialectos**](../classes/part-05-motores-relacionales-y-dialectos/README.md)
    (4 clases · 12 h). Incluye los motores embebidos y analíticos que usarás en local.
-6. 📚 [**Parte 08 — Almacenamiento, índices y planes**](../classes/part-08-almacenamiento-indices-y-planes/README.md)
+6. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
    (5 clases · 17 h). Lo justo para diagnosticar en vez de suponer.
-7. 📚 [**Parte 11 — Analítica, integración y streaming**](../classes/part-11-analitica-integracion-y-streaming/README.md)
+7. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
    (4 clases · 13 h). El núcleo del rol:
-   [054 — OLTP frente a OLAP](../classes/part-11-analitica-integracion-y-streaming/054-oltp-frente-a-olap/README.md),
-   [055 — Modelado dimensional](../classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/README.md)
-   y [056 — Integración: ETL, ELT y captura de cambios](../classes/part-11-analitica-integracion-y-streaming/056-integracion-etl-elt-y-captura-de-cambios/README.md).
+   [054 — OLTP frente a OLAP](../classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md),
+   [055 — Modelado dimensional](../classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md)
+   y [056 — Integración: ETL, ELT y captura de cambios](../classes/part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md).
    Complétalo con
-   [032 — Analítica columnar y vectorización](../classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/README.md).
-8. 📚 [**Parte 13 — Arquitectura y proyecto final**](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+   [032 — Analítica columnar y vectorización](../classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md).
+8. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:

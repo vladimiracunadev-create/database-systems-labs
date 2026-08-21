@@ -29,25 +29,25 @@ Temario vigente comprobado el **2026-08-20**.
 
 **Cobertura estimada: 60 %.** El programa cubre ETL/ELT, captura de cambios, streaming con tiempo de evento y transformación en SQL. No cubre los servicios de AWS (Glue, Kinesis, EMR, Lambda) que el examen evalúa por nombre.
 
-Clases que la sostienen: [056](../classes/part-11-analitica-integracion-y-streaming/056-integracion-etl-elt-y-captura-de-cambios/README.md) [057](../classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/README.md) [030](../classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/README.md) [018](../classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/README.md)
+Clases que la sostienen: [066](../classes/part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md) [067](../classes/part-12-analitica-integracion-y-streaming/067-streaming-tiempo-de-evento-y-ventanas/README.md) [040](../classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/README.md) [028](../classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/README.md)
 
 ### Data Store Management · 26%
 
 **Cobertura estimada: 70 %.** Elección de almacén por carga, formato columnar, particionado, modelado y ciclo de vida del dato están cubiertos como mecanismo; el catálogo de servicios de AWS, no.
 
-Clases que la sostienen: [020](../classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/README.md) [023](../classes/part-04-motores-relacionales-y-dialectos/023-sqlite-y-duckdb-motores-embebidos/README.md) [032](../classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/README.md) [038](../classes/part-08-almacenamiento-indices-y-planes/038-paginas-filas-y-buffer-pool/README.md) [055](../classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/README.md)
+Clases que la sostienen: [030](../classes/part-05-motores-relacionales-y-dialectos/030-portabilidad-y-matriz-de-dialectos/README.md) [033](../classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/README.md) [042](../classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md) [048](../classes/part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md) [065](../classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md)
 
 ### Data Operations and Support · 22%
 
 **Cobertura estimada: 55 %.** SQL analítico, planes y observabilidad sí; la automatización con servicios de AWS y sus herramientas de calidad de datos, no.
 
-Clases que la sostienen: [017](../classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/README.md) [018](../classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/README.md) [042](../classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/README.md) [052](../classes/part-10-operacion-seguridad-y-gobierno/052-observabilidad-slo-y-capacidad/README.md)
+Clases que la sostienen: [027](../classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/README.md) [028](../classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/README.md) [052](../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md) [062](../classes/part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md)
 
 ### Data Security and Governance · 18%
 
 **Cobertura estimada: 65 %.** Autenticación, autorización, privilegio mínimo, privacidad y retención están cubiertos; el cifrado gestionado y la auditoría específicos de AWS, no.
 
-Clases que la sostienen: [050](../classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/README.md) [051](../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md) [053](../classes/part-10-operacion-seguridad-y-gobierno/053-privacidad-retencion-y-gobierno-del-dato/README.md) [013](../classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/README.md)
+Clases que la sostienen: [060](../classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md) [061](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md) [063](../classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md) [023](../classes/part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md)
 
 ## 🎯 La brecha, y cómo cerrarla
 

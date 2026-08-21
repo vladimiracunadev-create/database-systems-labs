@@ -5,10 +5,10 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ (SQLite en memoria)
 · **Marca de éxito:** `LAB_OK`
-· **Partes:** [00](../../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md) ·
-[01](../../classes/part-01-modelado-conceptual-y-requisitos/README.md) ·
-[02](../../classes/part-02-modelo-relacional-y-algebra/README.md) ·
-[03](../../classes/part-03-sql-en-profundidad/README.md)
+· **Partes:** [00](../../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) ·
+[01](../../classes/part-02-modelado-conceptual-y-requisitos/README.md) ·
+[02](../../classes/part-03-modelo-relacional-y-algebra/README.md) ·
+[03](../../classes/part-04-sql-en-profundidad/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -81,9 +81,9 @@ correcto o injusto.
 
 ## 🎓 Dónde encaja
 
-- **Clases:** de la [001](../../classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/README.md)
-  a la [019](../../classes/part-03-sql-en-profundidad/019-nulos-y-logica-de-tres-valores/README.md), y
-  [051 — Inyección SQL](../../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md).
+- **Clases:** de la [001](../../classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md)
+  a la [019](../../classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/README.md), y
+  [051 — Inyección SQL](../../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md).
 - **Rutas:** todas. Es el único laboratorio que aparece en las siete.
 - **Certificaciones:** el dominio de conceptos relacionales del
   [DP-900](../../certificaciones/dp-900.md) se cubre entero aquí.

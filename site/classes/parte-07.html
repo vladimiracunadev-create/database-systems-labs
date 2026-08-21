@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.">
+<meta name="description" content="Modelos especializados y el criterio para saber cuando la carga de trabajo justifica salir del relacional.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-07.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="Parte 07 — Transacciones, concurrencia y recuperación · Database Systems Labs">
-<meta property="og:description" content="Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.">
+<meta property="og:title" content="Parte 07 — Grafos, columnas, tiempo y búsqueda · Database Systems Labs">
+<meta property="og:description" content="Modelos especializados y el criterio para saber cuando la carga de trabajo justifica salir del relacional.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-07.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<title>Parte 07 — Transacciones, concurrencia y recuperación · Database Systems Labs</title>
+<title>Parte 07 — Grafos, columnas, tiempo y búsqueda · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -50,33 +50,34 @@
   <span>Parte 07</span>
 </nav>
 <main class="content" id="principal">
-<h1>Parte 07 — Transacciones, concurrencia y recuperación</h1>
-<p class="lead">Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.</p>
-<p><strong>5 clases · 18 horas</strong></p>
+<h1>Parte 07 — Grafos, columnas, tiempo y búsqueda</h1>
+<p class="lead">Modelos especializados y el criterio para saber cuando la carga de trabajo justifica salir del relacional.</p>
+<p><strong>5 clases · 15 horas</strong></p>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
-<tr><td><a href="033.html">033</a></td><td><a href="033.html">ACID: qué garantiza cada letra y quién la implementa</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
-<tr><td><a href="034.html">034</a></td><td><a href="034.html">Anomalías de aislamiento y la crítica a los niveles ANSI</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>5</td></tr>
-<tr><td><a href="035.html">035</a></td><td><a href="035.html">Bloqueo en dos fases, MVCC e instantáneas</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
-<tr><td><a href="036.html">036</a></td><td><a href="036.html">Registro anticipado y recuperación: WAL y ARIES</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
-<tr><td><a href="037.html">037</a></td><td><a href="037.html">Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
+<tr><td><a href="038.html">038</a></td><td><a href="038.html">Grafos de propiedades y los recorridos que SQL hace mal</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="039.html">039</a></td><td><a href="039.html">Columnas anchas: modelar desde la consulta</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
+<tr><td><a href="040.html">040</a></td><td><a href="040.html">Series temporales: cardinalidad, retención y agregados continuos</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="041.html">041</a></td><td><a href="041.html">Búsqueda de texto: índice invertido, análisis y relevancia</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="042.html">042</a></td><td><a href="042.html">Analítica columnar: por qué el formato cambia el orden de magnitud</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>4</td></tr>
 </tbody></table></div>
 <h2>Otras partes</h2>
 <ul>
-<li><a href="parte-00.html">Parte 00 — Fundamentos, sistemas y método</a></li>
-<li><a href="parte-01.html">Parte 01 — Modelado conceptual y requisitos</a></li>
-<li><a href="parte-02.html">Parte 02 — Modelo relacional y álgebra</a></li>
-<li><a href="parte-03.html">Parte 03 — SQL en profundidad</a></li>
-<li><a href="parte-04.html">Parte 04 — Motores relacionales y dialectos</a></li>
-<li><a href="parte-05.html">Parte 05 — Documentos y clave-valor</a></li>
-<li><a href="parte-06.html">Parte 06 — Grafos, columnas, tiempo y búsqueda</a></li>
-<li><a href="parte-08.html">Parte 08 — Almacenamiento, índices y planes</a></li>
-<li><a href="parte-09.html">Parte 09 — Distribución, réplica y consistencia</a></li>
-<li><a href="parte-10.html">Parte 10 — Operación, seguridad y gobierno</a></li>
-<li><a href="parte-11.html">Parte 11 — Analítica, integración y streaming</a></li>
-<li><a href="parte-12.html">Parte 12 — Vectores, recuperación y RAG</a></li>
-<li><a href="parte-13.html">Parte 13 — Arquitectura y proyecto final</a></li>
+<li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>
+<li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li>
+<li><a href="parte-02.html">Parte 02 — Modelado conceptual y requisitos</a></li>
+<li><a href="parte-03.html">Parte 03 — Modelo relacional y álgebra</a></li>
+<li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li>
+<li><a href="parte-05.html">Parte 05 — Motores relacionales y dialectos</a></li>
+<li><a href="parte-06.html">Parte 06 — Documentos y clave-valor</a></li>
+<li><a href="parte-08.html">Parte 08 — Transacciones, concurrencia y recuperación</a></li>
+<li><a href="parte-09.html">Parte 09 — Almacenamiento, índices y planes</a></li>
+<li><a href="parte-10.html">Parte 10 — Distribución, réplica y consistencia</a></li>
+<li><a href="parte-11.html">Parte 11 — Operación, seguridad y gobierno</a></li>
+<li><a href="parte-12.html">Parte 12 — Analítica, integración y streaming</a></li>
+<li><a href="parte-13.html">Parte 13 — Vectores, recuperación y RAG</a></li>
+<li><a href="parte-14.html">Parte 14 — Arquitectura y proyecto final</a></li>
 </ul>
 </main>
 <footer>

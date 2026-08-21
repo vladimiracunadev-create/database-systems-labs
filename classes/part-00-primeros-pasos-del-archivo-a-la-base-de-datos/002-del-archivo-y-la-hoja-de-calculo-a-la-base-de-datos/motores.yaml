@@ -1,0 +1,99 @@
+---
+caso:
+  titulo: La nota imposible que el archivo acepta y la base de datos rechaza
+  contrato: |
+    Un examen se califica sobre 100. Alguien escribe 130. En una hoja de cálculo
+    o en un CSV, ese valor entra sin protestar y se descubre meses después,
+    cuando un estudiante reclama.
+
+    El caso intenta guardar cuatro notas, y una de ellas es 130. El programa **no
+    comprueba nada**: la comprobación tiene que hacerla el sistema de datos. Al
+    terminar, la consulta devuelve las notas guardadas ordenadas por estudiante,
+    y la imposible no está.
+
+    Es la primera de las cuatro cosas que una base de datos hace y un archivo no:
+    **impedir un dato imposible**. Las otras tres —concurrencia, consultas no
+    previstas y recuperación ante fallos— tienen sus propias clases.
+  columnas: [estudiante, nota]
+  esperado:
+    - [Ada, "90"]
+    - [Grace, "72"]
+    - [Linus, "58"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `CHECK` es parte de la definición de la tabla: la regla vive con el dato y
+      se aplica a quien escriba, venga de donde venga. Eso es exactamente lo que
+      un archivo no puede hacer.
+    porque_no: >-
+      Su tipado por afinidad deja pasar un texto en una columna numérica si no lo
+      puede convertir: la regla de rango se cumple, la de tipo no, salvo que la
+      tabla se declare `STRICT`.
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Aquí el tipo **sí** se comprueba siempre: una nota escrita como texto falla
+      al insertar. Sirve para ver que «impedir un dato imposible» tiene dos
+      niveles: el tipo y la regla.
+    porque_no: >-
+      No tiene forma de saltarse la fila inválida sin abortar la sentencia, así
+      que cargar datos sucios exige limpiarlos antes: es un almacén para analizar
+      lo que otro ya validó.
+    doc: https://duckdb.org/docs/stable/sql/constraints.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Además de `CHECK` permite dar nombre a la regla con un dominio y
+      reutilizarla en cuantas tablas haga falta, de modo que «una nota válida» se
+      define una vez para todo el sistema.
+    porque_no: >-
+      Añadir la regla a una tabla que ya tiene millones de filas la bloquea
+      mientras las valida: endurecer un esquema existente es una operación
+      planificada, no un despliegue más.
+    doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Con `$jsonSchema` se consigue lo mismo sin renunciar a la flexibilidad: se
+      puede empezar sin esquema y endurecerlo cuando el dominio se entiende, que
+      es como suelen ocurrir los proyectos de verdad.
+    porque_no: >-
+      La validación es **opcional** y solo se aplica a las escrituras
+      posteriores: los documentos que ya estaban mal siguen estando mal, y nada
+      en el documento delata que hay una regla detrás.
+    doc: https://www.mongodb.com/docs/manual/core/schema-validation/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay esquema ni validación: cualquier clave admite cualquier valor. La
+      nota 130 se guarda igual que la 90, y el sistema no tiene forma de opinar.
+    alternativa: >-
+      Validar en el código antes de escribir, sabiendo que la regla vive en la
+      aplicación: si alguien escribe desde otra herramienta, no hay red.
+    doc: https://redis.io/docs/latest/develop/data-types/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      CQL declara tipos, pero no tiene `CHECK` ni restricciones de dominio: no
+      hay forma de decir «entre 0 y 100». Comprobarlo exigiría leer antes de
+      escribir, que es justo lo que su diseño evita.
+    alternativa: >-
+      Validar en la capa de servicio que está delante del clúster, y aceptar que
+      quien escriba con `cqlsh` se salta la regla.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html

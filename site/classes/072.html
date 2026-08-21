@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Persistencia políglota: decidir por evidencia y no por moda. Parte 14: Arquitectura y proyecto final.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/072.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="072 — Persistencia políglota: decidir por evidencia y no por moda · Database Systems Labs">
+<meta property="og:description" content="Persistencia políglota: decidir por evidencia y no por moda. Parte 14: Arquitectura y proyecto final.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/072.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "072 — Persistencia políglota: decidir por evidencia y no por moda", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["carga de trabajo", "criterio de selección", "costo de operación", "complejidad añadida"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>072 — Persistencia políglota: decidir por evidencia y no por moda · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html" aria-current="page">Clases</a>
+    <a href="../rutas/index.html">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="parte-14.html">Parte 14 · Arquitectura y proyecto final</a>
+  <span aria-hidden="true">/</span><span>Clase 072</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="072--persistencia-políglota-decidir-por-evidencia-y-no-por-moda">072 — Persistencia políglota: decidir por evidencia y no por moda</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 14</a> · <a href="071.html">← Anterior</a> · <a href="073.html">Siguiente →</a></p>
+</blockquote>
+<p>Parte 14 — Arquitectura y proyecto final · Avanzado ·
+3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code>, <code>redis</code>, <code>qdrant</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>carga de trabajo</code> · <code>criterio de selección</code> · <code>costo de operación</code> · <code>complejidad añadida</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Decidir cuántos almacenes de datos usar. Cada motor añadido resuelve un problema y crea varios permanentes; el criterio debe ser una medición, no una tendencia.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Caracterizar una carga de trabajo con números antes de elegir motor.</li>
+<li>Enumerar el costo permanente de añadir un almacén.</li>
+<li>Aplicar la regla de agotar primero las capacidades del motor existente.</li>
+<li>Diseñar la sincronización entre almacenes y su verificación.</li>
+<li>Defender una arquitectura de un solo motor cuando corresponda.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="caracterizar-antes-de-elegir">Caracterizar antes de elegir</h3>
+<p>Sadalage y Fowler acuñaron «persistencia poliglota»: usar el almacén adecuado a cada carga. La parte que se cita menos es que <strong>cada almacén adicional es un sistema completo que operar</strong>.</p>
+<p>La caracterización necesaria, con números reales:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Pregunta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Volumen</td>
+<td>¿Cuántos datos hoy y en 3 años?</td>
+</tr>
+<tr>
+<td>Caudal</td>
+<td>Lecturas/s y escrituras/s, con su pico</td>
+</tr>
+<tr>
+<td>Patrón de acceso</td>
+<td>¿Por clave, por rango, agregado, recorrido, similitud?</td>
+</tr>
+<tr>
+<td>Latencia exigida</td>
+<td>p50 y p99, por operación</td>
+</tr>
+<tr>
+<td>Consistencia</td>
+<td>¿Qué invariantes deben ser atómicas?</td>
+</tr>
+<tr>
+<td>Ciclo de vida</td>
+<td>¿Retención, expiración, histórico?</td>
+</tr>
+<tr>
+<td>Consultas no previstas</td>
+<td>¿Con qué frecuencia aparecen?</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sin estas cifras, la elección de motor es una preferencia.</p>
+<h3 id="el-costo-permanente">El costo permanente</h3>
+<p>Añadir un almacén cuesta, para siempre:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Costo</th>
+<th>Detalle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Operación</td>
+<td>Actualizar, parchear, dimensionar, vigilar</td>
+</tr>
+<tr>
+<td>Copias</td>
+<td>Otro plan de respaldo y <strong>otra prueba de restauración</strong> (clase 048)</td>
+</tr>
+<tr>
+<td>Seguridad</td>
+<td>Otro modelo de control de acceso, otras credenciales</td>
+</tr>
+<tr>
+<td>Sincronización</td>
+<td>Un canal que puede desincronizarse (clase 056)</td>
+</tr>
+<tr>
+<td>Consistencia</td>
+<td>Invariantes que cruzan almacenes y ya no son atómicas (clase 047)</td>
+</tr>
+<tr>
+<td>Conocimiento</td>
+<td>Alguien debe saber operarlo; y su suplente también</td>
+</tr>
+<tr>
+<td>Guardia</td>
+<td>Otra fuente de incidentes de madrugada</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla del programa: <strong>un almacén nuevo debe resolver un problema medido que el actual no puede resolver</strong>, no un problema anticipado.</p>
+<h3 id="agotar-primero-lo-que-ya-se-tiene">Agotar primero lo que ya se tiene</h3>
+<p>PostgreSQL cubre por sí solo una superficie sorprendente:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Necesidad</th>
+<th>Motor «natural»</th>
+<th>PostgreSQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Documentos</td>
+<td>MongoDB</td>
+<td><code>jsonb</code> + GIN (clase 021)</td>
+</tr>
+<tr>
+<td>Clave-valor</td>
+<td>Redis</td>
+<td><code>UNLOGGED</code> + índice hash</td>
+</tr>
+<tr>
+<td>Búsqueda de texto</td>
+<td>OpenSearch</td>
+<td><code>tsvector</code> + GIN (clase 031)</td>
+</tr>
+<tr>
+<td>Vectores</td>
+<td>Qdrant</td>
+<td><code>pgvector</code> (clase 059)</td>
+</tr>
+<tr>
+<td>Series temporales</td>
+<td>InfluxDB</td>
+<td>TimescaleDB (clase 030)</td>
+</tr>
+<tr>
+<td>Cola de trabajos</td>
+<td>RabbitMQ</td>
+<td><code>SELECT ... FOR UPDATE SKIP LOCKED</code></td>
+</tr>
+<tr>
+<td>Analítica</td>
+<td>ClickHouse</td>
+<td>Réplica + agregados, o Parquet + DuckDB</td>
+</tr>
+<tr>
+<td>Grafos</td>
+<td>Neo4j</td>
+<td>CTE recursiva (clase 028)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ninguna de estas alternativas es la mejor <strong>en su especialidad</strong>. Todas son suficientes hasta cierto punto, y ese punto está mucho más lejos de lo que se supone. La pregunta correcta no es «¿cuál es el mejor motor para X?», sino <strong>«¿ha dejado de bastarme el que ya opero?»</strong>.</p>
+<pre><code class="language-mermaid">flowchart TD
+    C[&quot;Carga caracterizada&lt;br/&gt;con números&quot;] --&gt; A{&quot;¿El motor actual&lt;br/&gt;la sostiene?&quot;}
+    A -- &quot;Sí&quot; --&gt; OK[&quot;No añadir nada&quot;]
+    A -- &quot;No&quot; --&gt; B{&quot;¿Con una extensión&lt;br/&gt;o un cambio de diseño?&quot;}
+    B -- &quot;Sí&quot; --&gt; EXT[&quot;Extensión · índice ·&lt;br/&gt;modelo (medir de nuevo)&quot;]
+    B -- &quot;No&quot; --&gt; D{&quot;¿El costo permanente&lt;br/&gt;es menor que la ganancia&lt;br/&gt;MEDIDA?&quot;}
+    D -- &quot;No&quot; --&gt; OK
+    D -- &quot;Sí&quot; --&gt; E[&quot;Añadir almacén&lt;br/&gt;+ canal + verificación&lt;br/&gt;+ copias + guardia&quot;]
+    E --&gt; F[&quot;Registrar la decisión&lt;br/&gt;y su criterio de reversión&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Plataforma educativa. Caracterización real de sus cinco cargas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Carga</th>
+<th>Volumen</th>
+<th>Caudal</th>
+<th>Patrón</th>
+<th>Latencia</th>
+<th>Consistencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Inscripciones y notas</td>
+<td>5 M filas</td>
+<td>300 l/s, 5 e/s</td>
+<td>Relacional, reuniones</td>
+<td>p99 &lt; 50 ms</td>
+<td><strong>Transaccional</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Sesiones</td>
+<td>50 k activas</td>
+<td>2 000 l/s, 200 e/s</td>
+<td>Clave-valor, TTL</td>
+<td>p99 &lt; 5 ms</td>
+<td>Se puede perder</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Búsqueda de contenido</td>
+<td>200 k fragmentos</td>
+<td>50 c/s</td>
+<td>Léxica + semántica</td>
+<td>p99 &lt; 200 ms</td>
+<td>Desfase de minutos</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Panel de dirección</td>
+<td>5 M filas</td>
+<td>12 c/día</td>
+<td>Agregación completa</td>
+<td>&lt; 30 s</td>
+<td>Desfase de horas</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Telemetría de uso</td>
+<td>200 M eventos/año</td>
+<td>3 000 e/s</td>
+<td>Escritura, ventanas</td>
+<td>escritura &lt; 10 ms</td>
+<td>Se puede perder</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Análisis carga por carga:</strong></p>
+<p><strong>1. PostgreSQL.</strong> No hay discusión: transacciones, integridad, reuniones.</p>
+<p><strong>2. Sesiones.</strong> ¿Redis? Primero la medición sobre PostgreSQL:</p>
+<pre><code class="language-sql">CREATE UNLOGGED TABLE sesiones (   -- UNLOGGED: sin WAL, mucho más rápido, se pierde al caer
+  token      TEXT PRIMARY KEY,
+  student_id INTEGER NOT NULL,
+  expira_en  TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX ON sesiones (expira_en);
+</code></pre>
+<pre><code class="language-text">Medición: 2 000 lecturas/s por clave primaria → p99 = 1,8 ms
+Exigencia: p99 &lt; 5 ms  ✔
+Veredicto: NO añadir Redis. PostgreSQL cumple con margen.
+</code></pre>
+<p><code>UNLOGGED</code> es la clave: sin WAL, y perder las sesiones al caer el servidor ya se había declarado aceptable.</p>
+<p><strong>3. Búsqueda.</strong> Léxica con <code>tsvector</code> y semántica con <code>pgvector</code>, sobre 200 000 fragmentos:</p>
+<pre><code class="language-text">Medición: híbrida RRF (clase 060) → p99 = 84 ms, recall@5 = 0,89
+Exigencia: p99 &lt; 200 ms  ✔
+Veredicto: NO añadir OpenSearch ni Qdrant.
+Revisión: si el corpus llega a 5 M de fragmentos, volver a medir.
+</code></pre>
+<p>La última línea es tan importante como el veredicto: <strong>la decisión lleva su condición de revisión escrita</strong>.</p>
+<p><strong>4. Panel.</strong> Ejecutado sobre el primario degradaba el OLTP (clase 054):</p>
+<pre><code class="language-text">Opción A: réplica de solo lectura       → 47 s, sin impacto en OLTP  ✔
+Opción B: exportación a Parquet+DuckDB  → 1,2 s, sin servidor nuevo  ✔✔
+Veredicto: opción B. Coste: un trabajo programado.
+</code></pre>
+<p><strong>5. Telemetría.</strong> 3 000 escrituras/s, 200 M de eventos al año:</p>
+<pre><code class="language-text">Medición sobre PostgreSQL con TimescaleDB:
+  ingesta sostenida: 3 000/s ✔
+  almacenamiento con compresión y retención por niveles (clase 030): 34 GB/año ✔
+  consulta de ventana con agregado continuo: 180 ms ✔
+Veredicto: TimescaleDB, que es una extensión del motor que YA se opera.
+Coste marginal: una extensión, no un sistema.
+</code></pre>
+<p><strong>Arquitectura resultante:</strong></p>
+<pre><code class="language-text">PostgreSQL 16
+  + TimescaleDB      (telemetría)
+  + pgvector         (búsqueda semántica)
+  + tsvector/GIN     (búsqueda léxica)
+  + tabla UNLOGGED   (sesiones)
+  + réplica de solo lectura
+  + exportación nocturna a Parquet, consultada con DuckDB
+
+Almacenes que operar: UNO.
+</code></pre>
+<p>Frente a la arquitectura «de manual» —PostgreSQL + Redis + OpenSearch + Qdrant + ClickHouse + InfluxDB, seis sistemas—, esta cumple <strong>todas</strong> las exigencias medidas con uno.</p>
+<p><strong>Y cuándo dejaría de bastar</strong>, escrito por adelantado:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Umbral</th>
+<th>Motor a añadir</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sesiones &gt; 20 000 lecturas/s</td>
+<td>Redis</td>
+</tr>
+<tr>
+<td>Corpus &gt; 5 M fragmentos o recall &lt; 0,85</td>
+<td>Qdrant</td>
+</tr>
+<tr>
+<td>Telemetría &gt; 50 000 escrituras/s</td>
+<td>ClickHouse</td>
+</tr>
+<tr>
+<td>Panel sobre &gt; 500 GB o varias fuentes</td>
+<td>Almacén columnar</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Este es el entregable de la clase</strong>: no una arquitectura, sino una arquitectura <strong>con sus condiciones de cambio</strong>. Cada umbral es medible y cada uno tiene una alerta.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Enfoque</th>
+<th>Sistemas</th>
+<th>Coste operativo</th>
+<th>Rendimiento por carga</th>
+<th>Riesgo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un motor con extensiones</td>
+<td>1</td>
+<td>Bajo</td>
+<td>Bueno en todo, óptimo en nada</td>
+<td>Techo por carga</td>
+</tr>
+<tr>
+<td>Poliglota por evidencia</td>
+<td>2–3</td>
+<td>Medio</td>
+<td>Óptimo donde se midió</td>
+<td>Sincronización</td>
+</tr>
+<tr>
+<td>Poliglota por tendencia</td>
+<td>5+</td>
+<td><strong>Alto</strong></td>
+<td>Óptimo y desaprovechado</td>
+<td>Divergencia, guardia, conocimiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Elegir motor por la arquitectura de otra empresa.</strong> Sus cifras no son las tuyas.</li>
+<li><strong>No caracterizar la carga.</strong> Sin números, la elección es estética.</li>
+<li><strong>Ignorar el costo permanente.</strong> Se contabiliza el desarrollo y no la operación.</li>
+<li><strong>Añadir un almacén sin canal verificado.</strong> Divergencia silenciosa.</li>
+<li><strong>Suponer que PostgreSQL no sirve.</strong> Suele servir mucho más allá de lo que se cree.</li>
+<li><strong>No escribir la condición de revisión.</strong> La decisión se vuelve dogma.</li>
+<li><strong>Optimizar para un volumen que no se tiene.</strong> Complejidad hoy por un problema hipotético.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Cada almacén añadido multiplica los estados posibles del sistema, y por tanto los modos de fallo. Un equipo pequeño con seis almacenes no los opera bien: los tiene. La arquitectura defendible es la que el equipo puede sostener a las tres de la mañana.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Caracteriza las cinco cargas principales de tu sistema con números reales.</li>
+<li>Mide cada una contra tu motor actual, con las extensiones disponibles.</li>
+<li>Justifica cada almacén adicional con la medición que lo hace necesario.</li>
+<li>Escribe los umbrales de revisión y configura una alerta para cada uno.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Enumera el costo permanente de añadir un almacén a tu sistema.</li>
+<li>Da una carga tuya que hoy usa un motor especializado y podría volver al principal.</li>
+<li>¿Qué medirías antes de añadir un motor de búsqueda dedicado?</li>
+<li>Escribe el umbral de revisión de una de tus decisiones y cómo lo vigilarías.</li>
+</ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un sistema real con cinco cargas distintas, y la pregunta de si hacen falta cinco motores</p>
+<p>Una plataforma educativa tiene cinco cargas: <strong>inscripciones</strong> (transaccional,
+con invariantes que no se pueden romper), <strong>sesiones</strong> (clave-valor, alta
+frecuencia, desechable), <strong>búsqueda del catálogo</strong> (texto, con relevancia),
+<strong>panel de dirección</strong> (analítico, sobre todo el histórico) y <strong>recomendación
+semántica</strong> (vectorial).</p>
+<p>La respuesta fácil es un motor por carga. Es casi siempre la respuesta
+equivocada, porque el costo de la persistencia políglota no está en licencias
+ni en servidores: está en la <strong>coherencia entre sistemas</strong>, que ninguna
+transacción cubre, y en las cinco formas distintas de respaldar, monitorizar,
+actualizar y contratar personal.</p>
+<p>La regla que esta parte defiende: <strong>un motor entra en la arquitectura cuando
+hay evidencia medida de que el anterior no puede</strong>, y esa evidencia se anota
+en un registro de decisión. Aquí se compara qué carga justifica de verdad a
+cada motor y a partir de qué umbral.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Qdrant</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://qdrant.tech/documentation/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La opción por omisión, y con frecuencia la única necesaria: transaccional para inscripciones, <code>jsonb</code> para lo semiestructurado, búsqueda de texto con <code>tsvector</code>, analítica de tamaño medio con vistas materializadas, y vectorial con pgvector. Cuatro de las cinco cargas, en un sistema, en una transacción.</li>
+<li><strong>Por qué sí:</strong> Cada sistema que <strong>no</strong> entra en la arquitectura ahorra un plan de respaldo, un panel, un ciclo de actualizaciones y una coherencia que mantener. Empezar aquí y salir con evidencia es una decisión defendible; empezar repartido, casi nunca.</li>
+<li><strong>Por qué no:</strong> Ninguna de esas cuatro capacidades es la mejor de su categoría, y llega un punto en que se nota: la búsqueda sin sinónimos ni corrección de errores, el panel compitiendo por la caché con las inscripciones, el índice vectorial con millones de vectores. El error simétrico —quedarse aquí después de que la evidencia diga lo contrario— también existe.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/">https://www.postgresql.org/docs/current/</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La carga de <strong>sesiones</strong>: alta frecuencia, latencia de microsegundos, caducidad automática y datos que se pueden perder sin consecuencias.</li>
+<li><strong>Por qué sí:</strong> Es la separación más fácil de justificar de las cinco, porque el dato es <strong>desechable por naturaleza</strong>: no hay coherencia que mantener con la verdad, solo una caché que se puede reconstruir.</li>
+<li><strong>Por qué no:</strong> La frontera se cruza sola. En cuanto alguien guarda ahí algo que no se puede perder —un carrito, un contador de facturación—, el sistema pasa a tener dos verdades y ninguna transacción que las una.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/">https://redis.io/docs/latest/develop/</a></li>
+</ul>
+<h4 id="opensearch">OpenSearch</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La carga de <strong>búsqueda del catálogo</strong>, cuando el buscador deja de ser una caja de texto y pasa a ser el producto: sinónimos, corrección de errores, facetas, resaltado y relevancia ajustable.</li>
+<li><strong>Por qué sí:</strong> El umbral es claro y medible: cuando <code>ts_rank</code> de PostgreSQL deja de dar resultados aceptables en el conjunto de evaluación, hay evidencia. Y esa medición es la de la clase 061.</li>
+<li><strong>Por qué no:</strong> Es un índice secundario que va por detrás del origen: hay que alimentarlo, reindexarlo cuando cambia el analizador, y aceptar que puede mostrar algo que ya no existe. Añade un sistema entero con su propia operación.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/">https://docs.opensearch.org/latest/</a></li>
+</ul>
+<h4 id="duckdb">DuckDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La carga del <strong>panel de dirección</strong>, sobre una copia exportada del histórico. Sin servidor y sin competir por los recursos del sistema transaccional.</li>
+<li><strong>Por qué sí:</strong> Es la separación más barata que existe: no añade un servicio, solo un fichero y un proceso de exportación. Resuelve el conflicto entre analítica y transaccional sin montar un almacén de datos.</li>
+<li><strong>Por qué no:</strong> El panel va con el retraso de la última exportación, y eso hay que declararlo en el propio panel. Cuando el negocio exige el dato al minuto, esta opción se acaba.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/">https://duckdb.org/docs/stable/</a></li>
+</ul>
+<h4 id="qdrant">Qdrant</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> La carga <strong>vectorial</strong>, cuando el número de vectores o la exigencia de filtrado superan lo que pgvector sostiene con el recall requerido.</li>
+<li><strong>Por qué sí:</strong> El umbral vuelve a ser medible: recall y latencia sobre el mismo conjunto de evaluación, comparados contra pgvector. Si pgvector cumple, no hay decisión que tomar.</li>
+<li><strong>Por qué no:</strong> Los vectores viven separados de los datos de negocio, sin transacción común: un documento borrado puede seguir apareciendo en los resultados hasta que alguien sincronice. Esa incoherencia hay que diseñarla, no descubrirla.</li>
+<li>📄 Documentación oficial: <a href="https://qdrant.tech/documentation/">https://qdrant.tech/documentation/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MongoDB</td>
+<td>En este sistema no hay ninguna carga que lo justifique <strong>frente a PostgreSQL</strong>: lo semiestructurado cabe en <code>jsonb</code> con índices GIN y con las transacciones y las claves foráneas del resto del esquema al lado. Añadirlo sería sumar un sistema sin una carga que solo él resuelva.</td>
+<td>Se justifica cuando el modelo documental <strong>es</strong> el dominio —agregados grandes que se leen y escriben enteros y no se relacionan entre sí— o cuando el esquema tiene que evolucionar sin migraciones coordinadas. Esa es la evidencia que hay que aportar, no la preferencia.</td>
+<td><a href="https://www.mongodb.com/docs/manual/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>Su modelo cuesta lo que cuesta —una tabla por consulta, sin reuniones, sin transacciones, con reparaciones periódicas— y solo se paga cuando el volumen de escritura supera lo que un nodo primario puede absorber. Una plataforma educativa no llega ahí, y adoptarlo «por si crecemos» es pagar el costo sin recibir el beneficio.</td>
+<td>Particionado dentro de PostgreSQL y réplicas de lectura, que cubren un crecimiento de dos órdenes de magnitud sin cambiar de modelo de datos ni de forma de razonar.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
+  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>Peter Bailis, Joseph M. Hellerstein, Michael Stonebraker</strong> (2015). <a href="http://www.redbook.io/">Readings in Database Systems</a>. 5.a ed. MIT Press. ISBN 978-0-262-52964-3.<br />
+  Antologia comentada de acceso libre. Cada capitulo situa los papers en su discusión.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 14</a> · <a href="071.html">← Anterior</a> · <a href="073.html">Siguiente →</a></p>
+</blockquote>
+<button id="completar" class="completar" type="button" aria-pressed="false"
+        data-clase="072">Marcar como completada</button>
+<nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
+<a class="anterior" href="071.html"><span class="sentido">← Anterior · 071</span>RAG evaluable: medir la recuperación antes que la generación</a>
+<a class="siguiente" href="073.html"><span class="sentido">Siguiente · 073 →</span>Registro de decisiones de arquitectura y costo total</a>
+</nav>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

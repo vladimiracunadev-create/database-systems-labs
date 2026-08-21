@@ -81,32 +81,32 @@ trabajo. Convencer a tres equipos con incentivos distintos no se estudia; se pra
 
 ## 📚 Tu ruta en el programa
 
-Las 14 partes, 210 horas. Es la única ruta completa, y con razón: no puedes elegir entre
+Las 14 partes, 230 horas. Es la única ruta completa, y con razón: no puedes elegir entre
 modelos que no conoces.
 
-- 📚 [Parte 00 — Fundamentos](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md) ·
-  [01 — Modelado](../classes/part-01-modelado-conceptual-y-requisitos/README.md) ·
-  [02 — Modelo relacional](../classes/part-02-modelo-relacional-y-algebra/README.md) ·
-  [03 — SQL](../classes/part-03-sql-en-profundidad/README.md) ·
-  [04 — Motores y dialectos](../classes/part-04-motores-relacionales-y-dialectos/README.md).
-- 📚 [05 — Documentos y clave-valor](../classes/part-05-documentos-y-clave-valor/README.md) ·
-  [06 — Grafos, columnas, tiempo y búsqueda](../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md).
+- 📚 [Parte 01 — Fundamentos](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) ·
+  [01 — Modelado](../classes/part-02-modelado-conceptual-y-requisitos/README.md) ·
+  [02 — Modelo relacional](../classes/part-03-modelo-relacional-y-algebra/README.md) ·
+  [03 — SQL](../classes/part-04-sql-en-profundidad/README.md) ·
+  [04 — Motores y dialectos](../classes/part-05-motores-relacionales-y-dialectos/README.md).
+- 📚 [05 — Documentos y clave-valor](../classes/part-06-documentos-y-clave-valor/README.md) ·
+  [06 — Grafos, columnas, tiempo y búsqueda](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md).
   Aquí se construye el criterio para no elegir por moda.
-- 📚 [07 — Transacciones](../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md) ·
-  [08 — Almacenamiento, índices y planes](../classes/part-08-almacenamiento-indices-y-planes/README.md).
-- 📚 [09 — Distribución, réplica y consistencia](../classes/part-09-distribucion-replica-y-consistencia/README.md).
+- 📚 [07 — Transacciones](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) ·
+  [08 — Almacenamiento, índices y planes](../classes/part-09-almacenamiento-indices-y-planes/README.md).
+- 📚 [09 — Distribución, réplica y consistencia](../classes/part-10-distribucion-replica-y-consistencia/README.md).
   El corazón del rol:
-  [045 — CAP, PACELC y lo que realmente se elige](../classes/part-09-distribucion-replica-y-consistencia/045-cap-pacelc-y-lo-que-realmente-se-elige/README.md),
-  [046 — Modelos de consistencia y garantías de sesión](../classes/part-09-distribucion-replica-y-consistencia/046-modelos-de-consistencia-y-garantias-de-sesion/README.md)
-  y [047 — Consenso y transacciones distribuidas](../classes/part-09-distribucion-replica-y-consistencia/047-consenso-y-transacciones-distribuidas/README.md).
-- 📚 [10 — Operación, seguridad y gobierno](../classes/part-10-operacion-seguridad-y-gobierno/README.md) ·
-  [11 — Analítica, integración y streaming](../classes/part-11-analitica-integracion-y-streaming/README.md) ·
-  [12 — Vectores, recuperación y RAG](../classes/part-12-vectores-recuperacion-y-rag/README.md).
-- 📚 [13 — Arquitectura y proyecto final](../classes/part-13-arquitectura-y-proyecto-final/README.md).
+  [045 — CAP, PACELC y lo que realmente se elige](../classes/part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md),
+  [046 — Modelos de consistencia y garantías de sesión](../classes/part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md)
+  y [047 — Consenso y transacciones distribuidas](../classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/README.md).
+- 📚 [10 — Operación, seguridad y gobierno](../classes/part-11-operacion-seguridad-y-gobierno/README.md) ·
+  [11 — Analítica, integración y streaming](../classes/part-12-analitica-integracion-y-streaming/README.md) ·
+  [12 — Vectores, recuperación y RAG](../classes/part-13-vectores-recuperacion-y-rag/README.md).
+- 📚 [13 — Arquitectura y proyecto final](../classes/part-14-arquitectura-y-proyecto-final/README.md).
   Donde se cierra todo:
-  [062 — Persistencia políglota por evidencia](../classes/part-13-arquitectura-y-proyecto-final/062-persistencia-poliglota-por-evidencia/README.md),
-  [063 — Registro de decisiones y costo total](../classes/part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md)
-  y [064 — Proyecto final: diseñar, medir y defender](../classes/part-13-arquitectura-y-proyecto-final/064-proyecto-final-disenar-medir-y-defender/README.md).
+  [062 — Persistencia políglota por evidencia](../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md),
+  [063 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md)
+  y [064 — Proyecto final: diseñar, medir y defender](../classes/part-14-arquitectura-y-proyecto-final/074-proyecto-final-disenar-medir-y-defender/README.md).
 
 Laboratorios de la ruta:
 
@@ -135,7 +135,7 @@ que hay son de proveedor —de nube, sobre todo— y validan su catálogo, no el
 para pasar filtros, no para demostrar arquitectura.
 
 Lo que sí se reconoce en este rol: decisiones documentadas que otros pueden auditar. El
-[registro de decisiones](../classes/part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md)
+[registro de decisiones](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md)
 y el [proyecto final](../projects/capstone.md) de este programa producen justamente ese
 material.
 
@@ -182,7 +182,7 @@ para el rol; para tu mercado, contrasta ofertas reales.
 
 1. Recorre las 14 partes; si vienes con experiencia, no te saltes la 05 y la 06: son las que
    evitan el sesgo relacional.
-2. Haz la Parte 09 con lápiz y papel: escribe qué garantía necesita cada caso de uso que
+2. Haz la Parte 10 con lápiz y papel: escribe qué garantía necesita cada caso de uso que
    conoces.
 3. Ejecuta [`02-polyglot-modeling`](../labs/02-polyglot-modeling/README.md) sobre un dominio de
    tu trabajo, no sobre el del ejemplo.

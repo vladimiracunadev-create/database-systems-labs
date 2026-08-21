@@ -4,7 +4,7 @@
 > recuperados, ningún prompt lo va a arreglar.
 
 **Duración:** 60 minutos · **Dependencias:** Python 3.11+ · **Marca de éxito:** `VECTOR_LAB_OK`
-· **Parte:** [12 — Vectores, recuperación y RAG](../../classes/part-12-vectores-recuperacion-y-rag/README.md)
+· **Parte:** [12 — Vectores, recuperación y RAG](../../classes/part-13-vectores-recuperacion-y-rag/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -55,7 +55,7 @@ con datos, no por costumbre.
 - No usa embeddings reales ni mide su calidad semántica.
 - No implementa un índice aproximado (HNSW o IVF): con cuatro documentos, la búsqueda exacta es
   trivial. El compromiso entre recall y latencia se estudia en la
-  [clase 059](../../classes/part-12-vectores-recuperacion-y-rag/059-indices-vectoriales-aproximados/README.md).
+  [clase 059](../../classes/part-13-vectores-recuperacion-y-rag/069-indices-vectoriales-aproximados/README.md).
 - No cubre el filtrado por permisos ni la búsqueda híbrida, que son las dos causas más
   frecuentes de fallo en producción.
 - No evalúa la generación: solo la recuperación, que es lo que la acota.
@@ -80,8 +80,8 @@ producción.
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [058–061](../../classes/part-12-vectores-recuperacion-y-rag/README.md), en especial
-  [061 — RAG evaluable](../../classes/part-12-vectores-recuperacion-y-rag/061-rag-evaluable/README.md).
+- **Clases:** [058–061](../../classes/part-13-vectores-recuperacion-y-rag/README.md), en especial
+  [061 — RAG evaluable](../../classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/README.md).
 - **Rutas:** [Ingeniero de IA aplicada y recuperación](../../rutas/ia-y-recuperacion.md),
   [Arquitecto de datos](../../rutas/arquitectura.md).
 - **Certificaciones:** ninguna de las mapeadas evalúa recuperación vectorial todavía; es un área

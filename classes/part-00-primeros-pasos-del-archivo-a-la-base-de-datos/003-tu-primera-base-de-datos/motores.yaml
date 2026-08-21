@@ -1,0 +1,85 @@
+---
+caso:
+  titulo: Crear una tabla, guardar tres filas y leerlas
+  contrato: |
+    Las tres órdenes que sostienen todo lo demás, en su forma mínima: crear la
+    tabla, insertar filas y leerlas. Tres estudiantes, uno de ellos sin correo
+    —porque la ausencia de dato es un caso normal y hay que saber escribirla— y
+    la lista devuelta **ordenada por nombre**, que es una decisión que hay que
+    pedir explícitamente.
+
+    Que el resultado salga en orden alfabético y no en el de inserción es lo
+    único sorprendente del caso, y es deliberado: una tabla no tiene orden, y
+    creer lo contrario es la primera confusión que hay que quitarse de encima.
+  columnas: [id, nombre]
+  esperado:
+    - ["1", Ada]
+    - ["3", Grace]
+    - ["2", Linus]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Cero instalación: viene con Python y la base de datos puede vivir en
+      memoria. Es donde conviene escribir las primeras cien sentencias, sin que
+      nada más se interponga.
+    porque_no: >-
+      Al no haber servidor tampoco hay usuarios ni permisos, así que la mitad de
+      lo que después importa en producción no se puede ni practicar aquí.
+    doc: https://sqlite.org/lang_insert.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Las mismas tres órdenes con la misma sintaxis: confirma desde el primer día
+      que lo aprendido es transferible.
+    porque_no: >-
+      Insertar filas de una en una es justo lo que peor hace un motor columnar:
+      funciona, y va contra su diseño.
+    doc: https://duckdb.org/docs/stable/sql/statements/insert
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Las mismas tres órdenes contra un servidor real. Y con `GENERATED ALWAYS AS
+      IDENTITY` el identificador lo pone el motor, que es como se hace en cuanto
+      hay más de un cliente escribiendo.
+    porque_no: >-
+      Hay que instalarlo, arrancarlo, crear usuario y base, y conectarse. Nada de
+      eso enseña sobre datos, y en la primera hora solo estorba.
+    doc: https://www.postgresql.org/docs/current/sql-insert.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Es el motor que más aparece en alojamientos compartidos y en tutoriales, así
+      que reconocer su sintaxis —casi idéntica— ahorra confusión al leer código
+      ajeno.
+    porque_no: >-
+      Su comparación de texto ignora mayúsculas por omisión, y ese detalle, que
+      aquí no se nota, cambia resultados en cuanto haya un `UNIQUE` sobre un
+      correo.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/insert.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      No hace falta crear nada: insertar un documento crea la colección. Para
+      empezar a guardar algo sin decidir todavía su forma, es lo más directo que
+      existe.
+    porque_no: >-
+      Ese «no hace falta decidir» se paga después: sin esquema, la forma de los
+      documentos la fija quien escribió el último, y descubrir qué campos existen
+      de verdad exige recorrer la colección.
+    doc: https://www.mongodb.com/docs/manual/reference/method/db.collection.insertMany/

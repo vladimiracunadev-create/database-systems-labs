@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Modelado dimensional: hechos, dimensiones y cambios lentos. Parte 12: Analítica, integración y streaming.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/065.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="065 — Modelado dimensional: hechos, dimensiones y cambios lentos · Database Systems Labs">
+<meta property="og:description" content="Modelado dimensional: hechos, dimensiones y cambios lentos. Parte 12: Analítica, integración y streaming.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/065.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "065 — Modelado dimensional: hechos, dimensiones y cambios lentos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["tabla de hechos", "dimensión", "grano", "dimensión de cambio lento"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>065 — Modelado dimensional: hechos, dimensiones y cambios lentos · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html" aria-current="page">Clases</a>
+    <a href="../rutas/index.html">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="parte-12.html">Parte 12 · Analítica, integración y streaming</a>
+  <span aria-hidden="true">/</span><span>Clase 065</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="065--modelado-dimensional-hechos-dimensiones-y-cambios-lentos">065 — Modelado dimensional: hechos, dimensiones y cambios lentos</h1>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="064.html">← Anterior</a> · <a href="066.html">Siguiente →</a></p>
+</blockquote>
+<p>Parte 12 — Analítica, integración y streaming · Intermedio ·
+4 horas estimadas · motores <code>duckdb</code>, <code>clickhouse</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>tabla de hechos</code> · <code>dimensión</code> · <code>grano</code> · <code>dimensión de cambio lento</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Modelar para el análisis. El modelo dimensional optimiza una cosa —responder preguntas de negocio sobre grandes volúmenes— y renuncia deliberadamente a otras.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Aplicar los cuatro pasos del método de Kimball.</li>
+<li>Declarar el grano de una tabla de hechos y comprobar que se respeta.</li>
+<li>Distinguir hechos aditivos, semiaditivos y no aditivos.</li>
+<li>Implementar dimensiones de cambio lento de tipos 1, 2 y 3.</li>
+<li>Explicar por qué se desnormaliza y qué se pierde.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="los-cuatro-pasos">Los cuatro pasos</h3>
+<p>Kimball y Ross proponen un método en este orden estricto:</p>
+<ol>
+<li><strong>Elegir el proceso de negocio.</strong> No un informe: un proceso («inscripción a cursos»).</li>
+<li><strong>Declarar el grano.</strong> Qué representa exactamente <strong>una fila</strong> de la tabla de hechos.</li>
+<li><strong>Identificar las dimensiones.</strong> Los «por qué, quién, cuándo, dónde» de ese hecho.</li>
+<li><strong>Identificar los hechos.</strong> Las medidas numéricas del proceso.</li>
+</ol>
+<p><strong>El paso 2 es el crítico.</strong> Un grano ambiguo produce dobles conteos, sumas incorrectas y meses de desconfianza en los datos. La formulación debe ser una frase completa: <em>«una fila por estudiante, curso y período»</em>, no «inscripciones».</p>
+<p>Y la regla que se deriva: <strong>nunca mezclar granos en la misma tabla de hechos</strong>. Si un informe necesita otro grano, es otra tabla.</p>
+<h3 id="hechos-y-su-aditividad">Hechos y su aditividad</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Se puede sumar</th>
+<th>Ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Aditivo</strong></td>
+<td>Por todas las dimensiones</td>
+<td>Monto pagado, unidades</td>
+</tr>
+<tr>
+<td><strong>Semiaditivo</strong></td>
+<td>Por todas menos el tiempo</td>
+<td>Saldo, inventario, matriculados</td>
+</tr>
+<tr>
+<td><strong>No aditivo</strong></td>
+<td>Por ninguna</td>
+<td>Porcentajes, ratios, promedios</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla de oro: <strong>guardar los componentes, no el ratio</strong>. En vez de <code>porcentaje_aprobacion</code>, guardar <code>aprobados</code> y <code>evaluados</code>, y calcular el porcentaje al consultar. Sumar porcentajes de distintas filas da un número sin significado; sumar componentes y dividir después, no.</p>
+<p>Los semiaditivos son la trampa silenciosa: sumar los saldos de los doce meses del año da un número que no es el saldo anual de nada.</p>
+<h3 id="dimensiones-de-cambio-lento">Dimensiones de cambio lento</h3>
+<p>¿Qué pasa cuando un atributo de dimensión cambia? Una estudiante cambia de programa en 2026. ¿Sus inscripciones de 2025 pertenecen al programa antiguo o al nuevo?</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Qué hace</th>
+<th>Historia</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td>Sobrescribe</td>
+<td>Se pierde</td>
+<td>Corrección de errores</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Nueva fila con vigencia</td>
+<td><strong>Se conserva</strong></td>
+<td>El cambio importa históricamente</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>Columna «valor anterior»</td>
+<td>Solo el cambio previo</td>
+<td>Comparar dos versiones</td>
+</tr>
+</tbody>
+</table></div>
+<p>El tipo 2 es el habitual para atributos con significado histórico:</p>
+<pre><code class="language-sql">CREATE TABLE dim_estudiante (
+  sk_estudiante SERIAL PRIMARY KEY,       -- clave sustituta del almacén
+  nk_student_id INTEGER NOT NULL,         -- clave natural del origen
+  nombre        TEXT NOT NULL,
+  programa      TEXT NOT NULL,
+  comuna        TEXT,
+  valido_desde  DATE NOT NULL,
+  valido_hasta  DATE NOT NULL DEFAULT '9999-12-31',
+  es_actual     BOOLEAN NOT NULL DEFAULT true
+);
+CREATE UNIQUE INDEX ON dim_estudiante (nk_student_id) WHERE es_actual;
+</code></pre>
+<p>La clave que la tabla de hechos guarda es <code>sk_estudiante</code>, <strong>no</strong> <code>nk_student_id</code>. Así cada hecho queda ligado a la versión de la dimensión vigente en su momento, y un informe de 2025 sigue mostrando el programa de 2025 aunque hoy sea otro.</p>
+<p>Es la diferencia entre «cómo era» y «cómo es», y las dos preguntas son legítimas: la primera se responde uniendo por <code>sk</code>, la segunda uniendo por <code>nk</code> con <code>es_actual</code>.</p>
+<pre><code class="language-mermaid">erDiagram
+    DIM_TIEMPO      ||--o{ HECHO_INSCRIPCION : &quot;cuándo&quot;
+    DIM_ESTUDIANTE  ||--o{ HECHO_INSCRIPCION : &quot;quién&quot;
+    DIM_CURSO       ||--o{ HECHO_INSCRIPCION : &quot;qué&quot;
+    DIM_DOCENTE     ||--o{ HECHO_INSCRIPCION : &quot;con quién&quot;
+    HECHO_INSCRIPCION {
+        int sk_tiempo FK
+        int sk_estudiante FK
+        int sk_curso FK
+        int sk_docente FK
+        numeric nota
+        int aprobado
+        int evaluado
+        int creditos
+    }
+    DIM_ESTUDIANTE {
+        int sk_estudiante PK
+        int nk_student_id
+        text programa
+        date valido_desde
+        date valido_hasta
+        bool es_actual
+    }
+</code></pre>
+<h3 id="por-qué-desnormalizar">Por qué desnormalizar</h3>
+<p>Las dimensiones se desnormalizan deliberadamente (esquema en estrella) en vez de normalizarse (copo de nieve):</p>
+<ul>
+<li>Menos reuniones en cada consulta analítica.</li>
+<li>Las dimensiones son pequeñas: la redundancia cuesta poco.</li>
+<li>Las herramientas de análisis y los usuarios entienden mejor un esquema plano.</li>
+</ul>
+<p>Lo que se pierde —anomalías de actualización— importa poco en un almacén, porque las escrituras son controladas y por lotes, no concurrentes desde una aplicación. <strong>Es la aplicación consciente de lo contrario a la clase 008</strong>, y por eso es legítima.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p><strong>Paso 1 — proceso:</strong> inscripción y evaluación académica.</p>
+<p><strong>Paso 2 — grano:</strong> <em>«una fila por estudiante, curso y período académico»</em>.</p>
+<p><strong>Paso 3 — dimensiones:</strong> tiempo (período), estudiante, curso, docente.</p>
+<p><strong>Paso 4 — hechos:</strong> nota, aprobado (0/1), evaluado (0/1), créditos.</p>
+<pre><code class="language-sql">CREATE TABLE hecho_inscripcion (
+  sk_tiempo     INTEGER NOT NULL REFERENCES dim_tiempo(sk_tiempo),
+  sk_estudiante INTEGER NOT NULL REFERENCES dim_estudiante(sk_estudiante),
+  sk_curso      INTEGER NOT NULL REFERENCES dim_curso(sk_curso),
+  sk_docente    INTEGER          REFERENCES dim_docente(sk_docente),
+  nota          NUMERIC(2,1),
+  aprobado      SMALLINT NOT NULL DEFAULT 0,
+  evaluado      SMALLINT NOT NULL DEFAULT 0,
+  creditos      SMALLINT NOT NULL,
+  PRIMARY KEY (sk_tiempo, sk_estudiante, sk_curso)
+);
+</code></pre>
+<p>La clave primaria <strong>es</strong> la declaración del grano, hecha cumplir por el motor. Insertar dos filas para el mismo estudiante, curso y período es ahora imposible: el doble conteo queda excluido por construcción.</p>
+<p><strong>Los hechos elegidos, y por qué:</strong></p>
+<ul>
+<li><code>aprobado</code> y <code>evaluado</code> como enteros 0/1 en vez de un porcentaje. Son aditivos: <code>SUM(aprobado) / SUM(evaluado)</code> da el porcentaje correcto en <strong>cualquier</strong> agregación. Un <code>porcentaje_aprobacion</code> por fila no se puede promediar sin ponderar.</li>
+<li><code>nota</code> es <strong>no aditiva</strong>: <code>AVG(nota)</code> es válido, <code>SUM(nota)</code> no significa nada. Se documenta.</li>
+</ul>
+<p><strong>Consulta típica, sin ninguna reunión compleja:</strong></p>
+<pre><code class="language-sql">SELECT t.anio, t.semestre, c.facultad,
+       count(*)                                          AS inscripciones,
+       sum(f.evaluado)                                   AS evaluados,
+       sum(f.aprobado)                                   AS aprobados,
+       round(100.0 * sum(f.aprobado) / NULLIF(sum(f.evaluado),0), 1) AS pct_aprobacion,
+       round(avg(f.nota) FILTER (WHERE f.nota IS NOT NULL), 2)       AS nota_media
+FROM hecho_inscripcion f
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+JOIN dim_curso  c ON c.sk_curso  = f.sk_curso
+GROUP BY t.anio, t.semestre, c.facultad
+ORDER BY t.anio, t.semestre, c.facultad;
+</code></pre>
+<p>Cuatro reuniones como máximo, todas por clave sustituta entera, todas hacia tablas pequeñas. Comparado con el esquema normalizado del OLTP, que exigiría recorrer <code>students</code>, <code>enrollments</code>, <code>courses</code>, <code>teaching</code> y <code>teachers</code>.</p>
+<p><strong>El cambio lento en acción.</strong> Ana pasa de «Ingeniería» a «Ciencias» el 2026-03-01:</p>
+<pre><code class="language-sql">UPDATE dim_estudiante
+   SET valido_hasta = DATE '2026-02-28', es_actual = false
+ WHERE nk_student_id = 11 AND es_actual;
+
+INSERT INTO dim_estudiante (nk_student_id, nombre, programa, valido_desde)
+VALUES (11, 'Ana Pérez', 'Ciencias', DATE '2026-03-01');
+</code></pre>
+<p>Ahora:</p>
+<pre><code class="language-sql">-- &quot;Como era entonces&quot;: las inscripciones de 2025 cuentan en Ingeniería
+SELECT d.programa, count(*) FROM hecho_inscripcion f
+JOIN dim_estudiante d ON d.sk_estudiante = f.sk_estudiante
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+WHERE t.anio = 2025 GROUP BY d.programa;
+
+-- &quot;Como es ahora&quot;: las mismas inscripciones cuentan en Ciencias
+SELECT d.programa, count(*) FROM hecho_inscripcion f
+JOIN dim_estudiante h ON h.sk_estudiante = f.sk_estudiante
+JOIN dim_estudiante d ON d.nk_student_id = h.nk_student_id AND d.es_actual
+JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
+WHERE t.anio = 2025 GROUP BY d.programa;
+</code></pre>
+<p><strong>Dos cifras distintas, ambas correctas.</strong> Sin cambio lento de tipo 2 solo se puede responder una de las dos preguntas, y normalmente se descubre cuando alguien pregunta la otra.</p>
+<p><strong>La dimensión de tiempo, siempre poblada de antemano:</strong></p>
+<pre><code class="language-sql">CREATE TABLE dim_tiempo (
+  sk_tiempo  INTEGER PRIMARY KEY,     -- p. ej. 20260301
+  fecha      DATE NOT NULL UNIQUE,
+  anio       SMALLINT NOT NULL,
+  semestre   SMALLINT NOT NULL,
+  mes        SMALLINT NOT NULL,
+  periodo_academico TEXT NOT NULL,
+  es_habil   BOOLEAN NOT NULL
+);
+</code></pre>
+<p>Tener el calendario como tabla evita repetir lógica de fechas en cada consulta y permite atributos que ninguna función de fecha conoce: períodos académicos, feriados locales, semanas de exámenes.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Modelo normalizado (OLTP)</th>
+<th>Modelo dimensional (OLAP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Objetivo</td>
+<td>Evitar anomalías</td>
+<td>Responder preguntas rápido</td>
+</tr>
+<tr>
+<td>Redundancia</td>
+<td>Mínima</td>
+<td>Aceptada en dimensiones</td>
+</tr>
+<tr>
+<td>Reuniones por consulta</td>
+<td>Muchas</td>
+<td>Pocas, en estrella</td>
+</tr>
+<tr>
+<td>Escrituras</td>
+<td>Concurrentes</td>
+<td>Por lotes, controladas</td>
+</tr>
+<tr>
+<td>Historia</td>
+<td>Presente</td>
+<td>Conservada (tipo 2)</td>
+</tr>
+<tr>
+<td>Comprensible para el negocio</td>
+<td>Poco</td>
+<td><strong>Mucho</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>No declarar el grano.</strong> Origen de todos los dobles conteos.</li>
+<li><strong>Mezclar granos en una tabla de hechos.</strong> Las sumas dejan de tener sentido.</li>
+<li><strong>Guardar ratios en vez de componentes.</strong> No se pueden reagregar.</li>
+<li><strong>Sumar hechos semiaditivos por el tiempo.</strong> Un saldo anual que no es de nadie.</li>
+<li><strong>Tipo 1 donde hacía falta tipo 2.</strong> La historia se pierde y no se recupera.</li>
+<li><strong>Usar la clave natural en los hechos.</strong> Rompe el cambio lento de tipo 2.</li>
+<li><strong>Calcular fechas en cada consulta.</strong> Falta la dimensión de tiempo.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>La causa más frecuente de «los informes no cuadran» no está en los datos: está en dos tablas de hechos con granos distintos que alguien sumó. Declarar el grano en la clave primaria lo convierte en un error de inserción en vez de en un número equivocado.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Elige un proceso de negocio tuyo y aplica los cuatro pasos.</li>
+<li>Declara el grano como frase completa y hazlo cumplir con la clave primaria.</li>
+<li>Clasifica cada hecho como aditivo, semiaditivo o no aditivo, y documéntalo.</li>
+<li>Implementa un cambio lento de tipo 2 y responde la misma pregunta «como era» y «como es».</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>Escribe el grano de una tabla de hechos tuya como frase completa.</li>
+<li>¿Por qué se guardan <code>aprobados</code> y <code>evaluados</code> en vez del porcentaje?</li>
+<li>Da un hecho semiaditivo de tu dominio y la agregación que sería incorrecta.</li>
+<li>Explica qué se rompe si la tabla de hechos guarda la clave natural.</li>
+</ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Atribuir cada venta a la ciudad que el cliente tenía entonces, no a la que tiene ahora</p>
+<p>El modelado dimensional separa <strong>hechos</strong> —lo que pasó, medible y
+numeroso— de <strong>dimensiones</strong> —el contexto por el que se filtra y se agrupa—.
+Y la pregunta que decide si el modelo sirve es una sola: ¿qué pasa cuando una
+dimensión cambia?</p>
+<p>El cliente A vendió por 100 cuando vivía en Santiago y por 200 después de
+mudarse a Valdivia. Con una dimensión de <strong>tipo 1</strong> —sobrescribir la
+ciudad— las dos ventas aparecen en Valdivia, y el informe del primer
+trimestre <strong>cambia retroactivamente</strong> cada vez que alguien se muda. Con una
+de <strong>tipo 2</strong> —una fila por versión, con su periodo de validez y su clave
+sustituta— cada venta queda atribuida a la ciudad de su momento, y el
+histórico deja de moverse.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>ciudad</th>
+<th>importe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Santiago</code></td>
+<td><code>100</code></td>
+</tr>
+<tr>
+<td><code>Valdivia</code></td>
+<td><code>200</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 065</code>: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/from.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/rangetypes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/dictionaries">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Snowflake</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/snowflake/consulta.sql">código</a></td>
+<td><a href="https://docs.snowflake.com/en/sql-reference/sql/merge">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/from.html
+-- nota: el esquema en estrella es lo que mejor se le da: hechos grandes
+--       reunidos con dimensiones pequenas que caben en memoria. Lo que NO tiene
+--       es forma de mantener la dimension: cerrar la version vigente y abrir la
+--       nueva hay que escribirlo, y nada impide dos vigentes a la vez.
+
+-- === preparacion ===
+-- La dimension con historia: una fila por VERSION del cliente, con su
+-- periodo de validez y una clave sustituta propia. La clave de negocio
+-- («A») se repite; la sustituta, no.
+CREATE TABLE dim_cliente (
+    sk       INTEGER PRIMARY KEY,
+    cliente  VARCHAR NOT NULL,
+    ciudad   VARCHAR NOT NULL,
+    desde    VARCHAR NOT NULL,
+    hasta    VARCHAR NOT NULL,
+    vigente  INTEGER NOT NULL
+);
+INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
+
+-- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
+CREATE TABLE hechos_venta (
+    id         INTEGER PRIMARY KEY,
+    cliente_sk INTEGER NOT NULL,
+    fecha      VARCHAR NOT NULL,
+    importe    INTEGER NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
+    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
+
+-- === consulta ===
+-- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
+-- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
+-- las dos ventas apareceran en Valdivia y el informe del primer trimestre
+-- CAMBIARIA retroactivamente cada vez que alguien se muda.
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El esquema en estrella es exactamente lo que su ejecutor hace mejor: una tabla de hechos grande reunida con dimensiones pequeñas, que caben en memoria y se resuelven con reunión hash sobre columnas comprimidas.</li>
+<li><strong>Por qué no:</strong> No tiene nada que ayude a <strong>mantener</strong> la dimensión: cerrar la versión vigente y abrir la nueva hay que escribirlo, y sin restricciones que lo impidan es fácil acabar con dos filas vigentes para el mismo cliente.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/from.html">https://duckdb.org/docs/stable/sql/query_syntax/from.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/rangetypes.html
+-- nota: aqui los dos invariantes del tipo 2 se pueden IMPONER:
+--         1) una sola version vigente  -&gt; indice unico parcial
+--         2) periodos que no se solapan -&gt; restriccion de exclusion con daterange
+--       Sin ellos, el tipo 2 es una convencion que alguien acabara rompiendo, y
+--       el sintoma sera un informe con ventas duplicadas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS hechos_venta, dim_cliente;
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE dim_cliente (
+    sk      integer PRIMARY KEY,
+    cliente text NOT NULL,
+    ciudad  text NOT NULL,
+    validez daterange NOT NULL,
+    vigente boolean NOT NULL,
+    EXCLUDE USING gist (cliente WITH =, validez WITH &amp;&amp;)
+);
+CREATE UNIQUE INDEX una_version_vigente ON dim_cliente (cliente) WHERE vigente;
+
+INSERT INTO dim_cliente (sk, cliente, ciudad, validez, vigente) VALUES
+    (1, 'A', 'Santiago', daterange('2026-01-01', '2026-07-01', '[)'), false),
+    (2, 'A', 'Valdivia', daterange('2026-07-01', 'infinity', '[)'), true);
+
+CREATE TABLE hechos_venta (
+    id         integer PRIMARY KEY,
+    cliente_sk integer NOT NULL REFERENCES dim_cliente(sk),
+    fecha      date NOT NULL,
+    importe    integer NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, DATE '2026-03-15', 100),
+    (2, 2, DATE '2026-08-15', 200);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Puede <strong>imponer</strong> el invariante que hace correcto al tipo 2: un índice único parcial sobre <code>(cliente) WHERE vigente</code> garantiza que nunca haya dos versiones vigentes, y los tipos de rango con restricción de exclusión impiden que dos periodos se solapen.</li>
+<li><strong>Por qué no:</strong> Esas garantías cuestan escrituras en cada cambio de dimensión, y el esquema en estrella sobre un motor de filas paga la reunión con la tabla de hechos en cada consulta: correcto, y no es donde va a ser rápido.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/rangetypes.html">https://www.postgresql.org/docs/current/rangetypes.html</a></li>
+</ul>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/sql-reference/dictionaries
+-- nota: implementacion declarada, y con una advertencia importante. Los
+--       DICCIONARIOS de ClickHouse resuelven la dimension sin reunion, con una
+--       busqueda en memoria por clave... y devuelven el valor ACTUAL. Usarlos
+--       con una dimension de tipo 2 reintroduce exactamente el error que el
+--       tipo 2 existia para evitar: las ventas viejas se atribuyen a la ciudad
+--       nueva.
+--       La atribucion historica exige la reunion por rango de fechas de abajo,
+--       que es justo lo que peor se le da a un motor columnar distribuido.
+
+-- === preparacion ===
+CREATE TABLE dim_cliente (
+    sk      UInt32,
+    cliente String,
+    ciudad  String,
+    desde   Date,
+    hasta   Date,
+    vigente UInt8
+) ENGINE = MergeTree ORDER BY (cliente, desde);
+
+CREATE TABLE hechos_venta (
+    id         UInt32,
+    cliente_sk UInt32,
+    fecha      Date,
+    importe    UInt32
+) ENGINE = MergeTree ORDER BY (fecha, id);
+
+INSERT INTO dim_cliente VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '2106-02-07', 1);
+INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta AS h
+INNER JOIN dim_cliente AS d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Para hechos con miles de millones de filas no hay comparación, y sus diccionarios permiten resolver la dimensión sin reunión, con una búsqueda en memoria por clave.</li>
+<li><strong>Por qué no:</strong> Los diccionarios devuelven el valor <strong>actual</strong>, no el histórico: usarlos con una dimensión de tipo 2 vuelve a producir el error que el tipo 2 existía para evitar. La historia hay que resolverla con reunión por rango de fechas, que es justo lo que peor se le da.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/sql-reference/dictionaries">https://clickhouse.com/docs/en/sql-reference/dictionaries</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+-- nota: el invariante que hace correcto al tipo 2 —una sola version vigente por
+--       cliente— se puede IMPONER, no solo desear:
+--         CREATE UNIQUE INDEX una_vigente ON dim_cliente (cliente)
+--           WHERE vigente = 1;
+
+-- === preparacion ===
+-- La dimension con historia: una fila por VERSION del cliente, con su
+-- periodo de validez y una clave sustituta propia. La clave de negocio
+-- («A») se repite; la sustituta, no.
+CREATE TABLE dim_cliente (
+    sk       INTEGER PRIMARY KEY,
+    cliente  TEXT NOT NULL,
+    ciudad   TEXT NOT NULL,
+    desde    TEXT NOT NULL,
+    hasta    TEXT NOT NULL,
+    vigente  INTEGER NOT NULL
+);
+INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
+
+-- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
+CREATE TABLE hechos_venta (
+    id         INTEGER PRIMARY KEY,
+    cliente_sk INTEGER NOT NULL,
+    fecha      TEXT NOT NULL,
+    importe    INTEGER NOT NULL
+);
+INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
+    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
+    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
+
+-- === consulta ===
+-- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
+-- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
+-- las dos ventas apareceran en Valdivia y el informe del primer trimestre
+-- CAMBIARIA retroactivamente cada vez que alguien se muda.
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El modelo dimensional es un modelo, no una tecnología: se puede estudiar entero aquí, y el índice único parcial permite imponer también el invariante de la versión vigente.</li>
+<li><strong>Por qué no:</strong> No es un almacén analítico: sirve para entender el modelo y para prototipar la transformación, no para ejecutarla sobre volúmenes reales.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+</ul>
+<h4 id="snowflake--implementacionessnowflakeconsultasql">Snowflake · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/implementaciones/snowflake/consulta.sql"><code>implementaciones/snowflake/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: snowflake
+-- doc: https://docs.snowflake.com/en/sql-reference/sql/merge
+-- nota: implementacion declarada. MERGE mantiene la dimension de tipo 2 en una
+--       sola sentencia: cierra la version vigente e inserta la nueva.
+--       Y una confusion frecuente que conviene deshacer: el VIAJE EN EL TIEMPO
+--       de Snowflake permite consultar la tabla como estaba hace dias, pero NO
+--       sustituye a la dimension de tipo 2. Sirve para recuperarse de un error,
+--       no para atribuir hechos historicos: el viaje en el tiempo caduca, y la
+--       historia del negocio no.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE dim_cliente (
+    sk      NUMBER,
+    cliente STRING,
+    ciudad  STRING,
+    desde   DATE,
+    hasta   DATE,
+    vigente BOOLEAN
+);
+CREATE OR REPLACE TABLE hechos_venta (
+    id         NUMBER,
+    cliente_sk NUMBER,
+    fecha      DATE,
+    importe    NUMBER
+);
+
+INSERT INTO dim_cliente VALUES
+    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', FALSE),
+    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', TRUE);
+INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
+
+-- El mantenimiento de la dimension, en una sentencia:
+--   MERGE INTO dim_cliente d
+--   USING nuevos_clientes n ON d.cliente = n.cliente AND d.vigente
+--   WHEN MATCHED AND d.ciudad &lt;&gt; n.ciudad
+--     THEN UPDATE SET d.vigente = FALSE, d.hasta = CURRENT_DATE()
+--   WHEN NOT MATCHED
+--     THEN INSERT (...) VALUES (...);
+
+-- === consulta ===
+SELECT d.ciudad, SUM(h.importe) AS importe
+FROM hechos_venta h
+JOIN dim_cliente d ON d.sk = h.cliente_sk
+GROUP BY d.ciudad
+ORDER BY d.ciudad;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene <code>MERGE</code> para mantener la dimensión de tipo 2 en una sola sentencia —cerrar la versión vigente e insertar la nueva— y viaje en el tiempo, que permite consultar la tabla tal como estaba hace días sin haber guardado nada.</li>
+<li><strong>Por qué no:</strong> El viaje en el tiempo <strong>no</strong> sustituye a la dimensión de tipo 2: sirve para recuperarse de un error, no para atribuir hechos históricos. Confundir las dos cosas es un error de diseño frecuente y caro.</li>
+<li>📄 Documentación oficial: <a href="https://docs.snowflake.com/en/sql-reference/sql/merge">https://docs.snowflake.com/en/sql-reference/sql/merge</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MongoDB</td>
+<td>El modelo dimensional necesita reunir una tabla de hechos grande con dimensiones pequeñas, muchas veces y de muchas formas distintas; <code>$lookup</code> hace eso peor que cualquier motor relacional, y el modelo documental empuja a incrustar la dimensión, que es exactamente la desnormalización de tipo 1 con sus anomalías.</td>
+<td>Dejar MongoDB en el lado operativo y llevar los hechos a un almacén columnar donde el esquema en estrella tenga sentido.</td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay reuniones ni consultas por rango de fechas sobre versiones: la atribución histórica no se puede expresar.</td>
+<td>Servir desde Redis el resultado <strong>ya agregado</strong> del informe, calculado en el almacén analítico: es una caché del informe, no un modelo dimensional.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/04-indexing/run_indexing_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Ralph Kimball, Margy Ross</strong> (2013). <a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/">The Data Warehouse Toolkit</a>. 3.a ed. Wiley. ISBN 978-1-118-53080-1.<br />
+  Modelado dimensional, tablas de hechos y dimensiones de cambio lento.</li>
+<li><strong>Joe Reis, Matt Housley</strong> (2022). <a href="https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/">Fundamentals of Data Engineering</a>. O'Reilly. ISBN 978-1-0981-0830-4.<br />
+  Ciclo de vida de la ingenieria de datos e integración entre sistemas.</li>
+<li><strong>dbt Labs</strong> (2026). <a href="https://docs.getdbt.com/">dbt Documentation</a>.<br />
+  Transformaciones versionadas y pruebas de datos en el almacen.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="064.html">← Anterior</a> · <a href="066.html">Siguiente →</a></p>
+</blockquote>
+<button id="completar" class="completar" type="button" aria-pressed="false"
+        data-clase="065">Marcar como completada</button>
+<nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
+<a class="anterior" href="064.html"><span class="sentido">← Anterior · 064</span>OLTP frente a OLAP: por qué se separan</a>
+<a class="siguiente" href="066.html"><span class="sentido">Siguiente · 066 →</span>Integración: ETL, ELT, captura de cambios y el registro como nexo</a>
+</nav>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
+  licencia MIT · actualizado el 2026-08-19.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

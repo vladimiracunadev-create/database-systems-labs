@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="SELECT: filtrado, proyección y orden con semántica precisa. Parte 03: SQL en profundidad.">
+<meta name="description" content="De requisitos ambiguos a entidades defendibles. Parte 02: Modelado conceptual y requisitos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/015.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="015 — SELECT: filtrado, proyección y orden con semántica precisa · Database Systems Labs">
-<meta property="og:description" content="SELECT: filtrado, proyección y orden con semántica precisa. Parte 03: SQL en profundidad.">
+<meta property="og:title" content="015 — De requisitos ambiguos a entidades defendibles · Database Systems Labs">
+<meta property="og:description" content="De requisitos ambiguos a entidades defendibles. Parte 02: Modelado conceptual y requisitos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/015.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "015 — SELECT: filtrado, proyección y orden con semántica precisa", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["predicado", "orden de evaluación", "colación", "determinismo de orden"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>015 — SELECT: filtrado, proyección y orden con semántica precisa · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "015 — De requisitos ambiguos a entidades defendibles", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["regla de negocio", "diccionario de datos", "alcance", "patrón de acceso"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>015 — De requisitos ambiguos a entidades defendibles · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,238 +49,293 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-03.html">Parte 03 · SQL en profundidad</a>
+  <a href="parte-02.html">Parte 02 · Modelado conceptual y requisitos</a>
   <span aria-hidden="true">/</span><span>Clase 015</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="015--select-filtrado-proyección-y-orden-con-semántica-precisa">015 — SELECT: filtrado, proyección y orden con semántica precisa</h1>
+<h1 id="015--de-requisitos-ambiguos-a-entidades-defendibles">015 — De requisitos ambiguos a entidades defendibles</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 03 — SQL en profundidad · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<p>Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>predicado</code> · <code>orden de evaluación</code> · <code>colación</code> · <code>determinismo de orden</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>regla de negocio</code> · <code>diccionario de datos</code> · <code>alcance</code> · <code>patrón de acceso</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Escribir <code>SELECT</code> sabiendo exactamente qué devuelve. La mayoría de los errores de consulta no son de sintaxis: son de semántica, y aparecen cuando los datos cambian.</p>
+<p>Convertir un enunciado en prosa —ambiguo, incompleto y contradictorio, como todos— en una lista de entidades, atributos y reglas que se pueda defender frente a quien encargó el sistema.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Enunciar el orden lógico de evaluación de una consulta y usarlo para explicar errores.</li>
-<li>Distinguir orden lógico de orden físico de ejecución.</li>
-<li>Escribir un <code>ORDER BY</code> determinista y explicar por qué hace falta.</li>
-<li>Prever el efecto de la colación en comparaciones y ordenaciones.</li>
-<li>Paginar sin saltarse ni repetir filas.</li>
+<li>Extraer entidades candidatas de un texto con un procedimiento repetible.</li>
+<li>Separar hechos del dominio de decisiones de implementación.</li>
+<li>Escribir un diccionario de datos con tipo, obligatoriedad, dominio y origen.</li>
+<li>Detectar las tres ambigüedades que más caro salen: identidad, temporalidad y alcance.</li>
+<li>Justificar qué queda <strong>fuera</strong> del modelo y por qué.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-orden-lógico">El orden lógico</h3>
-<p>SQL se escribe en un orden y se evalúa en otro. El orden lógico definido por la norma es:</p>
-<pre><code class="language-text">1. FROM      (y los JOIN)
-2. WHERE
-3. GROUP BY
-4. HAVING
-5. SELECT    (incluidas las funciones de ventana)
-6. DISTINCT
-7. ORDER BY
-8. LIMIT / OFFSET
-</code></pre>
-<p>De aquí salen, sin más teoría, tres reglas que suelen memorizarse mal:</p>
-<ul>
-<li><strong>No se puede usar un alias de <code>SELECT</code> en <code>WHERE</code>.</strong> En el paso 2 ese alias todavía no existe. Sí se puede en <code>ORDER BY</code>, porque es posterior.</li>
-<li><strong><code>WHERE</code> filtra filas; <code>HAVING</code> filtra grupos.</strong> Poner una condición de fila en <code>HAVING</code> funciona pero agrupa de más y es más lento.</li>
-<li><strong>Las funciones de ventana no se pueden filtrar en <code>WHERE</code>.</strong> Se calculan en el paso 5. Para filtrarlas hace falta una subconsulta o una CTE (clase 018).</li>
-</ul>
-<p>El orden <strong>físico</strong> es otro: el motor aplica las equivalencias de la clase 011 y puede filtrar antes de reunir. Ambas cosas conviven porque el resultado es el mismo.</p>
-<h3 id="el-orden-de-las-filas-no-existe">El orden de las filas no existe</h3>
-<p>Sin <code>ORDER BY</code>, el orden de salida es un accidente del plan. Con <code>ORDER BY</code> sobre una columna con valores repetidos, el orden entre las filas empatadas <strong>tampoco</strong> está definido.</p>
-<p>Esto rompe la paginación por desplazamiento:</p>
-<pre><code class="language-sql">SELECT * FROM students ORDER BY nombre LIMIT 20 OFFSET 0;   -- página 1
-SELECT * FROM students ORDER BY nombre LIMIT 20 OFFSET 20;  -- página 2
-</code></pre>
-<p>Con dos estudiantes llamados «Ana Pérez», su orden relativo puede cambiar entre las dos consultas: uno aparece en ambas páginas y otro en ninguna. La solución es un <strong>orden total</strong>, añadiendo una columna única como desempate:</p>
-<pre><code class="language-sql">SELECT * FROM students ORDER BY nombre, id LIMIT 20 OFFSET 20;
-</code></pre>
-<h3 id="paginación-por-clave">Paginación por clave</h3>
-<p><code>OFFSET</code> tiene además un problema de costo: para saltar 100 000 filas, el motor las produce y las descarta. El costo crece con el número de página. La alternativa es la paginación por clave (<em>keyset</em>), que recuerda dónde se quedó:</p>
-<pre><code class="language-sql">-- primera página
-SELECT id, nombre FROM students ORDER BY nombre, id LIMIT 20;
--- siguiente, con el último par visto
-SELECT id, nombre FROM students
-WHERE (nombre, id) &gt; ('Ana Pérez', 412)
-ORDER BY nombre, id LIMIT 20;
-</code></pre>
-<p>La comparación de tuplas <code>(a, b) &gt; (x, y)</code> es la forma correcta y está en la norma. Con un índice sobre <code>(nombre, id)</code>, el costo es constante por página, no creciente. Winand desarrolla este punto como uno de los usos canónicos del índice compuesto.</p>
-<h3 id="colación">Colación</h3>
-<p>La colación decide cómo se comparan y ordenan los textos: si <code>'a' = 'A'</code>, dónde va la «ñ», si los acentos importan.</p>
+<h3 id="el-método-no-la-inspiración">El método, no la inspiración</h3>
+<p>Hernández propone un procedimiento que funciona porque es aburrido y se puede auditar. Adaptado a este programa:</p>
+<ol>
+<li><strong>Recoger el enunciado literal</strong>, sin reescribirlo todavía.</li>
+<li><strong>Subrayar sustantivos</strong> → entidades candidatas. <strong>Subrayar verbos</strong> → relaciones candidatas. <strong>Subrayar adjetivos y medidas</strong> → atributos candidatos.</li>
+<li><strong>Descartar sinónimos</strong> («alumno», «estudiante», «matriculado» suelen ser lo mismo; a veces no, y eso hay que preguntarlo).</li>
+<li><strong>Preguntar por la identidad</strong> de cada entidad: ¿qué hace que dos ejemplares sean el mismo?</li>
+<li><strong>Preguntar por la temporalidad</strong>: ¿el valor cambia? ¿hace falta el histórico?</li>
+<li><strong>Escribir el diccionario de datos</strong> con el origen de cada regla.</li>
+<li><strong>Escribir la lista de exclusiones</strong>: lo que el sistema no modelará.</li>
+</ol>
+<p>El paso 7 es el que casi nadie hace y el que evita la mitad de los conflictos. Kent lo argumenta en <em>Data and Reality</em>: no existe un modelo «correcto» del mundo, solo un recorte útil para un propósito. Si el recorte no está escrito, cada persona supondrá uno distinto.</p>
+<h3 id="las-tres-ambigüedades-caras">Las tres ambigüedades caras</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Motor</th>
-<th>Comportamiento por defecto</th>
+<th>Ambigüedad</th>
+<th>Pregunta que la resuelve</th>
+<th>Qué pasa si no se pregunta</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
-<td>Sensible a mayúsculas; colación del <code>initdb</code> (a menudo del sistema)</td>
+<td><strong>Identidad</strong></td>
+<td>¿Dos filas con los mismos datos son la misma cosa?</td>
+<td>Duplicados imposibles de limpiar después</td>
 </tr>
 <tr>
-<td>MySQL</td>
-<td>Históricamente <strong>insensible</strong> a mayúsculas (<code>utf8mb4_0900_ai_ci</code>)</td>
+<td><strong>Temporalidad</strong></td>
+<td>¿Necesitamos saber cómo era antes?</td>
+<td>Se sobrescribe el pasado y no hay vuelta atrás</td>
 </tr>
 <tr>
-<td>SQLite</td>
-<td><code>BINARY</code>: sensible a mayúsculas y solo ASCII en <code>NOCASE</code></td>
-</tr>
-<tr>
-<td>SQL Server</td>
-<td>Depende de la instalación; suele ser insensible</td>
+<td><strong>Alcance</strong></td>
+<td>¿Esto lo gestiona nuestro sistema o solo lo referencia?</td>
+<td>Se modela medio mundo y no se termina nunca</td>
 </tr>
 </tbody>
 </table></div>
-<p>Esa diferencia hace que <code>WHERE email = 'ANA@X.CL'</code> encuentre la fila en MySQL y no en PostgreSQL. Es la causa de portabilidad más subestimada (clase 022). La defensa es normalizar explícitamente al escribir —guardar el correo en minúsculas— en vez de depender de la colación.</p>
+<h3 id="hechos-frente-a-decisiones">Hechos frente a decisiones</h3>
+<p>Elmasri y Navathe separan el <strong>modelo conceptual</strong> (qué existe en el dominio) del <strong>modelo lógico</strong> (cómo se representa en un modelo de datos concreto). Mezclarlos es el error de principiante más costoso, porque congela decisiones antes de entender el problema.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Es un hecho del dominio</th>
+<th>Es una decisión de implementación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Un estudiante puede inscribir varios cursos»</td>
+<td>«Usaremos una tabla puente»</td>
+</tr>
+<tr>
+<td>«El correo identifica a la persona en el sistema»</td>
+<td>«El correo será la clave primaria»</td>
+</tr>
+<tr>
+<td>«La nota va de 1,0 a 7,0»</td>
+<td>«Será <code>NUMERIC(2,1)</code> con un <code>CHECK</code>»</td>
+</tr>
+<tr>
+<td>«Necesitamos saber quién cambió una nota»</td>
+<td>«Habrá una tabla de auditoría con disparadores»</td>
+</tr>
+</tbody>
+</table></div>
+<p>La columna izquierda se negocia con el cliente. La derecha se negocia con el equipo, y puede cambiar sin volver a reunirse con nadie.</p>
+<pre><code class="language-mermaid">flowchart TD
+    E[&quot;Enunciado en prosa&quot;] --&gt; S[&quot;Sustantivos → entidades&lt;br/&gt;Verbos → relaciones&lt;br/&gt;Medidas → atributos&quot;]
+    S --&gt; P[&quot;Preguntas obligatorias:&lt;br/&gt;identidad · temporalidad · alcance&quot;]
+    P --&gt; D[&quot;Diccionario de datos&lt;br/&gt;tipo · obligatoriedad · dominio · origen&quot;]
+    P --&gt; X[&quot;Lista de exclusiones&lt;br/&gt;lo que NO se modela&quot;]
+    D --&gt; M[&quot;Modelo conceptual&quot;]
+    X --&gt; M
+    M --&gt; L[&quot;Modelo lógico&lt;br/&gt;(clases 006-008)&quot;]
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<pre><code class="language-sql">SELECT s.nombre,
-       AVG(e.nota) AS promedio
-FROM students s
-JOIN enrollments e ON e.student_id = s.id
-WHERE promedio &gt; 5.0            -- ERROR
-GROUP BY s.nombre;
-</code></pre>
-<p>Falla porque en el paso 2 (<code>WHERE</code>) el alias <code>promedio</code> no existe y la agregación aún no se ha hecho. La forma correcta usa <code>HAVING</code>:</p>
-<pre><code class="language-sql">SELECT s.id, s.nombre, AVG(e.nota) AS promedio
-FROM students s
-JOIN enrollments e ON e.student_id = s.id
-GROUP BY s.id, s.nombre
-HAVING AVG(e.nota) &gt; 5.0
-ORDER BY promedio DESC, s.id;
-</code></pre>
-<p>Detalles que no son adorno:</p>
+<p>Enunciado recibido:</p>
+<blockquote>
+<p>«Necesitamos registrar los cursos que dicta cada profesor y las notas de los estudiantes. Un curso lo puede dictar más de un profesor. Queremos saber el promedio del curso.»</p>
+</blockquote>
+<p><strong>Paso 2.</strong> Sustantivos: <em>curso, profesor, estudiante, nota, promedio</em>. Verbos: <em>dictar, registrar</em>.</p>
+<p><strong>Paso 3.</strong> <code>promedio</code> no es una entidad ni un atributo almacenado: es un <strong>cálculo</strong> sobre notas. Guardarlo introduce redundancia que hay que mantener (clase 009 discute cuándo sí conviene).</p>
+<p><strong>Paso 4 — identidad.</strong> ¿Dos profesores con el mismo nombre son la misma persona? No. Hace falta un identificador. ¿Y dos cursos llamados «Bases de datos»? Tampoco: se distinguen por período. El enunciado no lo dice, así que <strong>es una pregunta al cliente</strong>, no una suposición.</p>
+<p><strong>Paso 5 — temporalidad.</strong> «Las notas de los estudiantes»: ¿se corrigen? Si una nota se puede rectificar y alguien puede reclamar, hace falta histórico. El enunciado calla. Segunda pregunta al cliente.</p>
+<p><strong>Paso 6 — diccionario de datos:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Entidad</th>
+<th>Atributo</th>
+<th>Tipo</th>
+<th>Obligatorio</th>
+<th>Dominio</th>
+<th>Origen de la regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>student</td>
+<td>id</td>
+<td>entero</td>
+<td>sí</td>
+<td>&gt; 0</td>
+<td>decisión de diseño</td>
+</tr>
+<tr>
+<td>student</td>
+<td>nombre</td>
+<td>texto</td>
+<td>sí</td>
+<td>≤ 120 caracteres</td>
+<td>enunciado</td>
+</tr>
+<tr>
+<td>course</td>
+<td>id</td>
+<td>entero</td>
+<td>sí</td>
+<td>&gt; 0</td>
+<td>decisión de diseño</td>
+</tr>
+<tr>
+<td>course</td>
+<td>nombre</td>
+<td>texto</td>
+<td>sí</td>
+<td>≤ 120 caracteres</td>
+<td>enunciado</td>
+</tr>
+<tr>
+<td>course</td>
+<td>periodo</td>
+<td>texto</td>
+<td>sí</td>
+<td><code>AAAA-S</code></td>
+<td><strong>pregunta pendiente</strong></td>
+</tr>
+<tr>
+<td>enrollment</td>
+<td>nota</td>
+<td>decimal(2,1)</td>
+<td>no</td>
+<td>1,0 – 7,0</td>
+<td>escala chilena, confirmar</td>
+</tr>
+<tr>
+<td>enrollment</td>
+<td>registrada_en</td>
+<td>marca de tiempo</td>
+<td>sí</td>
+<td>pasado</td>
+<td>necesaria para auditoría</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Paso 7 — exclusiones declaradas:</strong></p>
 <ul>
-<li>Se agrupa por <code>s.id</code> además de <code>s.nombre</code>: dos estudiantes homónimos se contarían como uno solo al agrupar solo por nombre. Un error de resultado, no de estilo.</li>
-<li><code>ORDER BY promedio DESC, s.id</code> usa el alias (permitido en el paso 7) y desempata con la clave.</li>
+<li>No se modela la asistencia.</li>
+<li>No se modela el pago de aranceles.</li>
+<li>Los profesores se referencian, pero la nómina la gestiona otro sistema.</li>
+<li>No se guarda el promedio: se calcula.</li>
 </ul>
-<p><strong>Filtro de fila frente a filtro de grupo.</strong> Comparemos:</p>
-<pre><code class="language-sql">-- A: filtra filas antes de agrupar
-SELECT e.course_id, AVG(e.nota)
-FROM enrollments e
-WHERE e.estado = 'activa'
-GROUP BY e.course_id;
-
--- B: filtra grupos después
-SELECT e.course_id, AVG(e.nota)
-FROM enrollments e
-GROUP BY e.course_id
-HAVING MIN(e.estado) = 'activa';
-</code></pre>
-<p>No son equivalentes ni en resultado ni en costo. A calcula el promedio <strong>solo</strong> de las activas; B calcula el promedio de todas y luego descarta grupos. Con 240 000 inscripciones de las que 200 000 están activas, A agrega 200 000 filas y B agrega 240 000 para descartar después. La regla: <strong>filtrar lo antes posible</strong>, que es la equivalencia E2 de la clase 011 aplicada a mano.</p>
-<p><strong>Paginación, medición.</strong> Sobre 5 millones de filas con índice en <code>(nombre, id)</code>:</p>
-<pre><code class="language-text">OFFSET 0        →  20 filas producidas
-OFFSET 100 000  →  100 020 filas producidas, 100 000 descartadas
-keyset          →  20 filas producidas, siempre
-</code></pre>
+<p>Resultado: cuatro entidades (<code>student</code>, <code>course</code>, <code>teacher</code>, <code>enrollment</code>), dos preguntas abiertas explícitas y una lista de exclusiones. Nada de esto exige haber elegido todavía un motor.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Necesidad</th>
-<th>Construcción correcta</th>
-<th>Trampa habitual</th>
+<th>Enfoque de partida</th>
+<th>Ventaja</th>
+<th>Riesgo dominante</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Filtrar filas</td>
-<td><code>WHERE</code></td>
-<td>Hacerlo en <code>HAVING</code></td>
+<td>Desde el enunciado (este método)</td>
+<td>Trazabilidad a la regla de negocio</td>
+<td>Lento si el enunciado es pobre</td>
 </tr>
 <tr>
-<td>Filtrar agregados</td>
-<td><code>HAVING</code></td>
-<td>Intentarlo en <code>WHERE</code></td>
+<td>Desde las pantallas de la aplicación</td>
+<td>Rápido, muy concreto</td>
+<td>Modela la interfaz, no el dominio; cambia con el diseño</td>
 </tr>
 <tr>
-<td>Filtrar ventanas</td>
-<td>Subconsulta o CTE</td>
-<td>Intentarlo en <code>WHERE</code></td>
+<td>Desde un esquema heredado</td>
+<td>Conserva compatibilidad</td>
+<td>Hereda los errores y los normaliza como verdad</td>
 </tr>
 <tr>
-<td>Orden estable</td>
-<td><code>ORDER BY</code> con columna única final</td>
-<td>Confiar en el orden natural</td>
-</tr>
-<tr>
-<td>Paginar mucho</td>
-<td>Paginación por clave</td>
-<td><code>OFFSET</code> creciente</td>
-</tr>
-<tr>
-<td>Comparar texto</td>
-<td>Normalizar al escribir</td>
-<td>Depender de la colación</td>
+<td>Desde un modelo de referencia del sector</td>
+<td>Vocabulario común</td>
+<td>Trae entidades que nadie necesita</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Paginar con <code>OFFSET</code> sobre un orden no total.</strong> Filas repetidas y filas perdidas, sin ningún error visible.</li>
-<li><strong>Agrupar por el nombre y no por la clave.</strong> Fusiona homónimos en silencio.</li>
-<li><strong><code>SELECT *</code> con <code>JOIN</code>.</strong> Trae columnas duplicadas y ata el cliente al esquema.</li>
-<li><strong>Suponer que <code>WHERE</code> y <code>HAVING</code> son intercambiables.</strong> Cambian el resultado cuando hay agregados.</li>
-<li><strong>Confiar en la insensibilidad a mayúsculas.</strong> Funciona en MySQL y falla al migrar a PostgreSQL.</li>
-<li><strong><code>LIMIT</code> sin <code>ORDER BY</code>.</strong> Devuelve «20 filas cualesquiera», que pueden ser otras 20 en la siguiente ejecución.</li>
+<li><strong>Modelar la pantalla.</strong> Si la entidad se llama <code>FormularioInscripcion</code>, el modelo caducará con el próximo rediseño de la interfaz.</li>
+<li><strong>Guardar valores calculados sin decidirlo.</strong> El promedio almacenado se desincroniza en cuanto alguien corrige una nota por fuera.</li>
+<li><strong>Resolver las ambigüedades por cuenta propia.</strong> Suponer que los cursos no se repiten entre períodos es una decisión de negocio disfrazada de detalle técnico.</li>
+<li><strong>Confundir el nombre con la identidad.</strong> «Nombre único» casi nunca es cierto y siempre se descubre en producción.</li>
+<li><strong>No escribir las exclusiones.</strong> Sin ellas, el alcance crece en cada reunión y nadie puede señalar cuándo cambió.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las listas paginadas con elementos que se repiten o desaparecen son un clásico de los informes de error de usuario, y casi siempre se atribuyen al <em>frontend</em>. Casi siempre son un <code>ORDER BY</code> sin desempate.</p>
+<p>Los cambios de esquema más caros no vienen de requisitos nuevos: vienen de ambigüedades no resueltas al principio. Añadir histórico a una tabla que lleva tres años sobrescribiendo significa que ese pasado ya no existe: ninguna migración lo recupera.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Toma un requisito real de un proyecto tuyo y produce:</p>
 <ol>
-<li>Encuentra una consulta paginada real y demuestra con datos que su orden no es total.</li>
-<li>Conviértela a paginación por clave y mide el costo en la página 1 y en la 5 000.</li>
-<li>Reescribe una consulta que use <code>HAVING</code> para filtrar filas y compara los planes.</li>
-<li>Documenta la colación por defecto de tu motor y una consulta cuyo resultado cambiaría al migrar.</li>
+<li>La lista de entidades, relaciones y atributos candidatos, con el subrayado que la originó.</li>
+<li>Las tres preguntas de identidad, temporalidad y alcance, formuladas para hacérselas a una persona no técnica.</li>
+<li>El diccionario de datos con la columna «origen de la regla» completa.</li>
+<li>La lista de exclusiones, con una frase de justificación por cada una.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Explica con el orden lógico por qué un alias funciona en <code>ORDER BY</code> y no en <code>WHERE</code>.</li>
-<li>Da un caso donde <code>WHERE</code> y <code>HAVING</code> produzcan resultados distintos, con datos.</li>
-<li>¿Por qué la paginación por clave necesita un índice sobre exactamente las columnas del <code>ORDER BY</code>?</li>
-<li>Tu aplicación funciona en MySQL y falla en PostgreSQL al buscar correos. Diagnostica y propón la corrección definitiva.</li>
+<li>Da un atributo de tu dominio que parezca un hecho y sea en realidad una decisión de implementación.</li>
+<li>¿Qué pierdes exactamente si no preguntas por la temporalidad de un atributo que sí cambia?</li>
+<li>Un cliente afirma que el correo identifica a la persona. Da dos casos reales que rompan esa afirmación.</li>
+<li>¿Por qué la lista de exclusiones es parte del modelo y no del acta de la reunión?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Los dos mejores de DB-101 con al menos 60</p>
-<p>Un <code>SELECT</code> toma cinco decisiones y conviene no mezclarlas: de dónde salen
-las filas, cuáles sobreviven al filtro, qué columnas se ven, en qué orden se
-leen y cuántas se devuelven.</p>
-<p>El caso pide los dos mejores resultados de DB-101 con nota igual o superior
-a 60, con su nota, de mayor a menor. La trampa que esta clase entrena está en
-la última decisión: <strong><code>LIMIT</code> sin <code>ORDER BY</code> devuelve dos filas
-cualesquiera</strong>, y como suelen ser las «correctas» en pruebas pequeñas, el
-error sobrevive hasta producción.</p>
+<p><strong>Caso:</strong> «Un cliente tiene una dirección»: convertir una frase ambigua en una regla que el sistema comprueba</p>
+<p>El requisito llegó escrito así: «un cliente tiene una dirección». La frase
+admite tres modelos distintos —exactamente una, como mucho una, o varias con
+una principal— y solo el tercero sobrevive al primer cliente que se muda sin
+perder el historial.</p>
+<p>El caso implementa el tercero: un cliente puede tener varias direcciones,
+<strong>como mucho una marcada como principal</strong>, y esa regla la impone el sistema,
+no el formulario. Ada tiene dos direcciones (una principal), Linus una
+principal y Grace ninguna. La consulta devuelve, por cliente ordenado
+alfabéticamente, cuántas direcciones principales tiene: solo puede salir 0 o
+1, y que salga 2 sería la prueba de que la regla no existe.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>estudiante</th>
-<th>nota</th>
+<th>cliente</th>
+<th>principales</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>Ada</code></td>
-<td><code>90</code></td>
+<td><code>1</code></td>
 </tr>
 <tr>
 <td><code>Grace</code></td>
-<td><code>72</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>1</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 015</code>: 6 de
-las 7 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 015</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -298,311 +353,312 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>DuckDB</td>
-<td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/partialindex.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/queries-limit.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-partial.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-partial/">doc oficial</a></td>
 </tr>
 <tr>
-<td>Redis</td>
+<td>DuckDB</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/redis/consulta.txt">código</a></td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/indexes.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/cassandra/consulta.cql">código</a></td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_select.html
+-- doc: https://sqlite.org/partialindex.html
+-- nota: el indice unico parcial es la traduccion exacta de «como mucho una
+--       principal por cliente». Sin el WHERE, la regla seria «como mucho una
+--       direccion por cliente», que es otro requisito.
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+CREATE TABLE clientes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+CREATE TABLE direcciones (
+    id         INTEGER PRIMARY KEY,
+    cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+    ciudad     TEXT NOT NULL,
+    principal  INTEGER NOT NULL DEFAULT 0 CHECK (principal IN (0, 1))
+);
+CREATE UNIQUE INDEX una_principal_por_cliente
+    ON direcciones (cliente_id) WHERE principal = 1;
+
+INSERT INTO clientes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO direcciones (cliente_id, ciudad, principal) VALUES
+    (1, 'Santiago',   1),
+    (1, 'Valdivia',   0),   -- se mudo: la anterior se conserva
+    (2, 'Valparaiso', 1);
+-- Este intento viola la regla y el motor lo rechaza; sin el indice, pasaria.
+INSERT OR IGNORE INTO direcciones (cliente_id, ciudad, principal) VALUES (1, 'Arica', 1);
 
 -- === consulta ===
--- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
---   FROM      de donde salen las filas
---   WHERE     cuales sobreviven      (seleccion)
---   SELECT    que columnas se ven    (proyeccion)
---   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
---   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
-SELECT estudiante, nota
-FROM notas
-WHERE curso = 'DB-101' AND nota &gt;= 60
-ORDER BY nota DESC
-LIMIT 2;
+SELECT c.nombre AS cliente,
+       COUNT(d.id) AS principales
+FROM clientes c
+LEFT JOIN direcciones d ON d.cliente_id = c.id AND d.principal = 1
+GROUP BY c.id, c.nombre
+ORDER BY c.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Implementa <code>WHERE</code>, <code>ORDER BY</code> y <code>LIMIT</code> con la sintaxis del estándar de facto, la misma de PostgreSQL y MySQL.</li>
-<li><strong>Por qué no:</strong> <code>LIMIT</code> sin <code>ORDER BY</code> devuelve aquí un orden estable en la práctica, que es la peor forma de aprender: el mismo código en otro motor devuelve otra cosa y nadie entiende por qué.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+<li><strong>Por qué sí:</strong> Tiene índices únicos parciales (<code>CREATE UNIQUE INDEX ... WHERE</code>), que es exactamente la herramienta para «como mucho una principal por cliente»: la unicidad se aplica solo a las filas que cumplen la condición.</li>
+<li><strong>Por qué no:</strong> No comprueba tipos: nada impide guardar <code>'sí'</code> en la columna que marca la dirección principal, así que la regla protege la cardinalidad pero no el dominio del valor.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/partialindex.html">https://sqlite.org/partialindex.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/query_syntax/select.html
--- nota: quitar el ORDER BY aqui devuelve dos filas distintas entre ejecuciones,
---       porque el motor lee en paralelo por trozos. Es la demostracion mas
---       clara de que LIMIT sin ORDER BY no significa nada.
-
--- === preparacion ===
-CREATE TABLE notas (
-    estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
-
--- === consulta ===
--- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
---   FROM      de donde salen las filas
---   WHERE     cuales sobreviven      (seleccion)
---   SELECT    que columnas se ven    (proyeccion)
---   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
---   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
-SELECT estudiante, nota
-FROM notas
-WHERE curso = 'DB-101' AND nota &gt;= 60
-ORDER BY nota DESC
-LIMIT 2;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Añade atajos que ahorran errores reales —<code>SELECT * EXCLUDE (columna)</code>, <code>GROUP BY ALL</code>— y su ejecución en paralelo hace evidente que sin <code>ORDER BY</code> no hay orden.</li>
-<li><strong>Por qué no:</strong> Esos atajos no son estándar: la consulta cómoda que se escribe aquí no se puede pegar en el motor transaccional de al lado.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">https://duckdb.org/docs/stable/sql/query_syntax/select.html</a></li>
-</ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/queries-limit.html
--- nota: con el indice de abajo, EXPLAIN muestra «Index Scan» sin nodo «Sort»:
---       el motor lee las dos primeras entradas y para. El orden pedido y el
---       orden almacenado son el mismo.
-
-DROP TABLE IF EXISTS notas;
+-- doc: https://www.postgresql.org/docs/current/indexes-partial.html
+-- nota: la documentacion oficial presenta el indice unico parcial como la
+--       forma canonica de «como mucho uno que cumpla la condicion».
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante text NOT NULL,
-    curso      text NOT NULL,
-    nota       integer NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+DROP TABLE IF EXISTS direcciones, clientes;
 
-CREATE INDEX notas_por_curso_y_nota ON notas (curso, nota DESC);
+CREATE TABLE clientes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE direcciones (
+    id         serial PRIMARY KEY,
+    cliente_id integer NOT NULL REFERENCES clientes(id),
+    ciudad     text NOT NULL,
+    principal  boolean NOT NULL DEFAULT false
+);
+CREATE UNIQUE INDEX una_principal_por_cliente
+    ON direcciones (cliente_id) WHERE principal;
+
+INSERT INTO clientes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO direcciones (cliente_id, ciudad, principal) VALUES
+    (1, 'Santiago',   true),
+    (1, 'Valdivia',   false),
+    (2, 'Valparaiso', true);
+INSERT INTO direcciones (cliente_id, ciudad, principal) VALUES (1, 'Arica', true)
+    ON CONFLICT DO NOTHING;
 
 -- === consulta ===
--- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
---   FROM      de donde salen las filas
---   WHERE     cuales sobreviven      (seleccion)
---   SELECT    que columnas se ven    (proyeccion)
---   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
---   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
-SELECT estudiante, nota
-FROM notas
-WHERE curso = 'DB-101' AND nota &gt;= 60
-ORDER BY nota DESC
-LIMIT 2;
+SELECT c.nombre AS cliente,
+       COUNT(d.id) AS principales
+FROM clientes c
+LEFT JOIN direcciones d ON d.cliente_id = c.id AND d.principal
+GROUP BY c.id, c.nombre
+ORDER BY c.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Con un índice sobre <code>(curso, nota DESC)</code> este <code>LIMIT 2</code> no ordena nada: lee las dos primeras entradas del índice y para. Es el ejemplo canónico de que el orden pedido y el orden almacenado pueden ser el mismo.</li>
-<li><strong>Por qué no:</strong> La paginación con <code>OFFSET</code> grande obliga a leer y descartar todas las filas anteriores: la página 1000 cuesta mil veces la primera, y hay que sustituirla por paginación por clave.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-limit.html">https://www.postgresql.org/docs/current/queries-limit.html</a></li>
+<li><strong>Por qué sí:</strong> Es donde el índice único parcial es idiomático y está documentado como la forma canónica de expresar «como mucho uno»; además ofrece <code>EXCLUDE</code> para reglas de solapamiento que ningún índice único cubre.</li>
+<li><strong>Por qué no:</strong> La regla se vuelve invisible en el diagrama de entidades: quien lea solo las tablas verá una columna booleana y no sabrá que hay una restricción detrás, salvo que lea los índices.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-partial.html">https://www.postgresql.org/docs/current/indexes-partial.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html
-
-DROP TABLE IF EXISTS notas;
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html
+-- nota: sin indices parciales, el rodeo estandar es una columna generada que
+--       vale el id del cliente solo cuando la direccion es principal y NULL en
+--       el resto. Como los NULL no colisionan en un indice unico, la regla
+--       queda igual de firme.
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    nota       INT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+DROP TABLE IF EXISTS direcciones;
+DROP TABLE IF EXISTS clientes;
+
+CREATE TABLE clientes (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE direcciones (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    ciudad     VARCHAR(50) NOT NULL,
+    principal  TINYINT(1) NOT NULL DEFAULT 0,
+    cliente_principal INT AS (IF(principal = 1, cliente_id, NULL)) STORED,
+    UNIQUE KEY una_principal_por_cliente (cliente_principal),
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+) ENGINE=InnoDB;
+
+INSERT INTO clientes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO direcciones (cliente_id, ciudad, principal) VALUES
+    (1, 'Santiago',   1),
+    (1, 'Valdivia',   0),
+    (2, 'Valparaiso', 1);
+INSERT IGNORE INTO direcciones (cliente_id, ciudad, principal) VALUES (1, 'Arica', 1);
 
 -- === consulta ===
--- Las cuatro decisiones de un SELECT, en el orden en que el motor las aplica:
---   FROM      de donde salen las filas
---   WHERE     cuales sobreviven      (seleccion)
---   SELECT    que columnas se ven    (proyeccion)
---   ORDER BY  en que orden se leen   (presentacion, NO parte de la relacion)
---   LIMIT     cuantas se devuelven   (sin ORDER BY, LIMIT devuelve CUALQUIERA)
-SELECT estudiante, nota
-FROM notas
-WHERE curso = 'DB-101' AND nota &gt;= 60
-ORDER BY nota DESC
-LIMIT 2;
+SELECT c.nombre AS cliente,
+       COUNT(d.id) AS principales
+FROM clientes c
+LEFT JOIN direcciones d ON d.cliente_id = c.id AND d.principal = 1
+GROUP BY c.id, c.nombre
+ORDER BY c.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Misma sintaxis y misma optimización de <code>ORDER BY ... LIMIT</code> cuando el índice cubre el orden.</li>
-<li><strong>Por qué no:</strong> Cuando no lo cubre, aplica un ordenamiento en memoria limitado por <code>sort_buffer_size</code> y puede caer a archivos temporales en disco sin avisar: la misma consulta pasa de milisegundos a segundos por un cambio de datos.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html</a></li>
+<li><strong>Por qué sí:</strong> Aunque no tiene índices parciales, la misma regla se consigue con una columna generada que vale el identificador del cliente cuando la dirección es principal y <code>NULL</code> en el resto: como los nulos no colisionan en un índice único, la restricción queda igual de firme.</li>
+<li><strong>Por qué no:</strong> El rodeo hay que explicarlo en cada revisión de código: la columna generada existe solo para sostener la regla y nadie la consulta jamás.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/method/cursor.sort/
-// nota: el indice compuesto { curso: 1, nota: -1 } cubre el filtro Y el orden,
-//       asi que el motor recorre el indice y se detiene en el segundo. Sin el,
-//       la ordenacion en memoria esta limitada a 32 MB y la consulta falla.
+// doc: https://www.mongodb.com/docs/manual/core/index-partial/
+// nota: partialFilterExpression es el equivalente exacto del indice unico
+//       parcial: el indice solo cubre los documentos que cumplen el filtro.
 
 // === preparacion ===
-db.notas.drop();
-db.notas.insertMany([
-  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
-  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
-  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
-  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
-  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot;, nota: 78 },
+db.clientes.drop();
+db.direcciones.drop();
+
+db.clientes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot; },
+  { _id: 2, nombre: &quot;Linus&quot; },
+  { _id: 3, nombre: &quot;Grace&quot; },
 ]);
-db.notas.createIndex({ curso: 1, nota: -1 });
+
+db.direcciones.createIndex(
+  { cliente_id: 1 },
+  { unique: true, partialFilterExpression: { principal: true } },
+);
+
+db.direcciones.insertMany([
+  { cliente_id: 1, ciudad: &quot;Santiago&quot;, principal: true },
+  { cliente_id: 1, ciudad: &quot;Valdivia&quot;, principal: false },
+  { cliente_id: 2, ciudad: &quot;Valparaiso&quot;, principal: true },
+]);
+
+try {
+  db.direcciones.insertOne({ cliente_id: 1, ciudad: &quot;Arica&quot;, principal: true });
+} catch (e) {
+  if (!String(e).includes(&quot;11000&quot;)) throw e;
+}
 
 // === consulta ===
-db.notas
-  .find({ curso: &quot;DB-101&quot;, nota: { $gte: 60 } }, { _id: 0, estudiante: 1, nota: 1 })
-  .sort({ nota: -1 })
-  .limit(2)
-  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+db.clientes
+  .aggregate([
+    { $lookup: {
+        from: &quot;direcciones&quot;, let: { c: &quot;$_id&quot; },
+        pipeline: [
+          { $match: { $expr: { $and: [
+            { $eq: [&quot;$cliente_id&quot;, &quot;$$c&quot;] },
+            { $eq: [&quot;$principal&quot;, true] },
+          ] } } },
+        ],
+        as: &quot;principales&quot; } },
+    { $project: { _id: 0, cliente: &quot;$nombre&quot;,
+                  principales: { $size: &quot;$principales&quot; } } },
+    { $sort: { cliente: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.cliente + &quot;|&quot; + d.principales));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>find().sort().limit()</code> es la traducción directa, y con un índice compuesto el motor aplica el mismo atajo: recorre el índice y se detiene.</li>
-<li><strong>Por qué no:</strong> Sin índice que cubra el <code>sort</code>, la ordenación en memoria está limitada a 32 MB y la consulta <strong>falla</strong> en vez de ir lenta. Es un fallo mejor que un cuelgue, pero sorprende en producción.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">https://www.mongodb.com/docs/manual/reference/method/cursor.sort/</a></li>
+<li><strong>Por qué sí:</strong> Tiene índices únicos parciales con <code>partialFilterExpression</code>, que expresan la misma regla; y como las direcciones caben dentro del documento del cliente, la alternativa de incrustarlas hace la regla casi trivial.</li>
+<li><strong>Por qué no:</strong> Con las direcciones incrustadas, ningún índice impide que el arreglo contenga dos elementos marcados como principales: esa variante exige un esquema de validación (<code>$jsonSchema</code>) o comprobarlo en la aplicación.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-partial/">https://www.mongodb.com/docs/manual/core/index-partial/</a></li>
 </ul>
-<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-text"># motor: redis
-# doc: https://redis.io/docs/latest/develop/data-types/sorted-sets/
-# nota: el orden se paga en la ESCRITURA. ZADD mantiene el conjunto ordenado
-#       por puntuacion, asi que «los dos mejores» es leer dos elementos del
-#       extremo: O(log N) para llegar y O(1) por elemento. El precio es que el
-#       filtro por curso obliga a un conjunto por curso.
-
-# === preparacion ===
-FLUSHDB
-ZADD notas:DB-101 90 Ada
-ZADD notas:DB-101 58 Linus
-ZADD notas:DB-101 72 Grace
-ZADD notas:SE-201 66 Ada
-ZADD notas:SE-201 78 Grace
-
-# === consulta ===
-EVAL &quot;local t=redis.call('ZREVRANGEBYSCORE','notas:DB-101','+inf','60','WITHSCORES','LIMIT',0,2) local r={} for i=1,#t,2 do r[#r+1]=t[i]..'|'..t[i+1] end return r&quot; 0
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Un conjunto ordenado mantiene el orden <strong>en la escritura</strong>: pedir los dos mejores es leer dos elementos del extremo, sin ordenar nada. Para un marcador que se consulta miles de veces por segundo, no hay estructura más barata.</li>
-<li><strong>Por qué no:</strong> Solo ordena por una puntuación numérica y el filtro por curso obliga a tener un conjunto por curso: cada criterio de orden nuevo es una estructura nueva que hay que mantener al escribir.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></li>
-</ul>
-<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/015-select-filtrado-proyeccion-y-orden/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: cassandra
--- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
--- nota: implementacion declarada. Aqui el ORDER BY no ordena: DESCRIBE el orden
---       que ya tienen las filas en el disco dentro de la particion. Por eso
---       LIMIT 2 lee dos celdas contiguas y nada mas.
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/indexes.html
+-- nota: DuckDB no tiene indices unicos parciales, asi que aqui la regla se
+--       AUDITA en vez de imponerse: la fila que sobra no se inserta porque el
+--       guion no la inserta, no porque el motor la rechace. Es la diferencia
+--       entre un almacen analitico y el sistema que custodia la verdad.
 
 -- === preparacion ===
-CREATE KEYSPACE IF NOT EXISTS escuela
-  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE TABLE clientes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE direcciones (
+    id         INTEGER PRIMARY KEY,
+    cliente_id INTEGER NOT NULL,
+    ciudad     VARCHAR NOT NULL,
+    principal  BOOLEAN NOT NULL DEFAULT false
+);
 
-DROP TABLE IF EXISTS escuela.notas_por_curso;
-
-CREATE TABLE escuela.notas_por_curso (
-    curso      text,
-    nota       int,
-    estudiante text,
-    PRIMARY KEY (curso, nota, estudiante)
-) WITH CLUSTERING ORDER BY (nota DESC, estudiante ASC);
-
-INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 90, 'Ada');
-INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 58, 'Linus');
-INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('DB-101', 72, 'Grace');
-INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('SE-201', 66, 'Ada');
-INSERT INTO escuela.notas_por_curso (curso, nota, estudiante) VALUES ('SE-201', 78, 'Grace');
+INSERT INTO clientes VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO direcciones VALUES
+    (1, 1, 'Santiago',   true),
+    (2, 1, 'Valdivia',   false),
+    (3, 2, 'Valparaiso', true);
 
 -- === consulta ===
--- El filtro por `nota` es legal porque `nota` es columna de agrupamiento. Si
--- se filtrara por `estudiante`, haria falta ALLOW FILTERING: la forma que tiene
--- Cassandra de avisar de que va a escanear la particion entera.
-SELECT estudiante, nota
-FROM escuela.notas_por_curso
-WHERE curso = 'DB-101' AND nota &gt;= 60
-LIMIT 2;
+SELECT c.nombre AS cliente,
+       COUNT(d.id) AS principales
+FROM clientes c
+LEFT JOIN direcciones d ON d.cliente_id = c.id AND d.principal
+GROUP BY c.id, c.nombre
+ORDER BY c.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Si la tabla se modela con el curso como partición y la nota como columna de agrupamiento descendente, el orden está en el disco y <code>LIMIT 2</code> lee dos celdas contiguas: la consulta más barata posible.</li>
-<li><strong>Por qué no:</strong> Ese orden es el único disponible: pedir «los dos mejores por estudiante» exige otra tabla. Y el filtro <code>nota &gt;= 60</code> solo funciona sobre la columna de agrupamiento; sobre cualquier otra hace falta <code>ALLOW FILTERING</code>, que es la forma que tiene Cassandra de decir «esto va a escanear».</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+<li><strong>Por qué sí:</strong> Responde la pregunta del caso con el mismo SQL, y sirve para auditar un volcado de datos existente: contar cuántos clientes violan la regla es lo primero que hay que saber antes de imponerla.</li>
+<li><strong>Por qué no:</strong> No tiene índices únicos parciales, así que aquí la regla se <strong>comprueba</strong> pero no se <strong>impone</strong>: sirve para auditar, no para custodiar.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/indexes.html">https://duckdb.org/docs/stable/sql/indexes.html</a></li>
 </ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay restricciones de unicidad fuera de la clave primaria ni índices parciales; una regla como «como mucho una principal» exigiría leer antes de escribir, y leer antes de escribir es justo lo que su modelo evita.</td>
+<td>Hacer que la dirección principal sea una columna del propio cliente (<code>direccion_principal</code>) en vez de una fila marcada: si solo puede haber una, no hace falta ninguna regla para impedir dos.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay forma de expresar una restricción sobre un conjunto de registros relacionados: cada clave se valida sola.</td>
+<td>Guardar la dirección principal en una clave distinta (<code>cliente:1:principal</code>), con lo que la regla se cumple por construcción —solo hay un sitio donde ponerla— a cambio de duplicar el dato.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
@@ -650,22 +706,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
-  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
-<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
-  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
-<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
-  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>Michael J. Hernandez</strong> (2020). <a href="https://www.informit.com/store/database-design-for-mere-mortals-a-hands-on-guide-to-9780136788041">Database Design for Mere Mortals</a>. 4.a ed. Addison-Wesley. ISBN 978-0-13-678804-1.<br />
+  Método de diseño paso a paso, independiente de producto.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
+<li><strong>William Kent</strong> (2012). <a href="https://technicspub.com/data-and-reality/">Data and Reality</a>. 3.a ed. Technics Publications. ISBN 978-1-935504-21-4.<br />
+  Por qué ningún modelo captura el mundo: fuente del criterio de alcance del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="014.html">← Anterior</a> · <a href="016.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="015">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="014.html"><span class="sentido">← Anterior · 014</span>DDL: el esquema como contrato ejecutable</a>
-<a class="siguiente" href="016.html"><span class="sentido">Siguiente · 016 →</span>Reuniones: interna, externa, semi y anti</a>
+<a class="anterior" href="014.html"><span class="sentido">← Anterior · 014</span>Entorno reproducible y evidencia comprobable</a>
+<a class="siguiente" href="016.html"><span class="sentido">Siguiente · 016 →</span>Entidad-relación, cardinalidad y participación</a>
 </nav>
 </main>
 <footer>

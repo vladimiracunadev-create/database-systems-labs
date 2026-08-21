@@ -1,0 +1,101 @@
+---
+caso:
+  titulo: Ordenar tres precios y que el más barato salga primero
+  contrato: |
+    Tres productos con sus precios, ordenados de menor a mayor. Parece que no
+    hay nada que aprender, y lo hay: **si esos precios estuvieran guardados como
+    texto**, el orden sería 100, 120, 80. El texto se compara carácter a
+    carácter y `'1'` es menor que `'8'`, así que el producto más barato saldría
+    el último.
+
+    Nadie escribe un informe pensando en eso. Simplemente el informe sale mal
+    ordenado y alguien concluye que la base de datos está rara. El caso guarda
+    el precio como número —y sin el símbolo de moneda, que es presentación y no
+    dato— para que el orden sea el que cualquiera espera.
+  columnas: [producto, precio]
+  esperado:
+    - [raton, "80"]
+    - [cable, "100"]
+    - [teclado, "120"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Permite comprobar el efecto en un minuto: crear la misma tabla con el
+      precio como texto y ver el orden cambiar.
+    porque_no: >-
+      Es el peor motor para confiarse: su tipado por **afinidad** acepta un texto
+      en una columna declarada numérica si no puede convertirlo, así que una
+      columna «entera» puede acabar con valores de texto y ordenar de forma
+      inconsistente. Las tablas `STRICT` lo arreglan y no son las de por omisión.
+    doc: https://sqlite.org/datatype3.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      El tipado es estricto: insertar `'alto'` en una columna entera falla. Y
+      tiene `DECIMAL` exacto, que es el tipo correcto para dinero cuando hay
+      céntimos de por medio.
+    porque_no: >-
+      Al leer ficheros CSV infiere los tipos por muestreo: si las primeras mil
+      filas parecen números y la fila cien mil trae un guion, la carga falla o
+      convierte la columna entera a texto sin avisar.
+    doc: https://duckdb.org/docs/stable/sql/data_types/numeric
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Tiene el sistema de tipos más estricto y más rico de esta lista: `numeric`
+      de precisión arbitraria para dinero, tipos de fecha con zona horaria, y se
+      niega a comparar un texto con un número en vez de convertir por su cuenta.
+    porque_no: >-
+      Esa severidad obliga a convertir explícitamente más a menudo, y quien viene
+      de MySQL lo vive como fricción hasta que descubre qué errores le está
+      evitando.
+    doc: https://www.postgresql.org/docs/current/datatype.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Con el modo estricto activo —que es el valor por omisión desde 5.7— rechaza
+      los valores fuera de rango en vez de recortarlos en silencio.
+    porque_no: >-
+      Sin ese modo, y hay instalaciones que lo desactivan, insertar `'alto'` en
+      una columna entera guardaba `0` y emitía un aviso. Hay tablas heredadas
+      llenas de ceros que en realidad significan «no se pudo convertir».
+    doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      BSON distingue tipos numéricos —`int`, `long`, `double`, `decimal`— y el
+      ordenamiento respeta el valor numérico, no el texto.
+    porque_no: >-
+      El tipo lo decide **cada documento**: la misma clave puede ser número en
+      uno y texto en otro, y entonces el orden mezcla dos criterios según una
+      precedencia de tipos que casi nadie conoce. Y los números de `mongosh` son
+      dobles salvo que se escriba `NumberInt` o `NumberDecimal`.
+    doc: https://www.mongodb.com/docs/manual/reference/bson-type-comparison-order/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay tipos de dato en el sentido de esta clase: todo valor es una cadena
+      de bytes. `INCR` funciona porque interpreta la cadena como número en el
+      momento, no porque la columna sea numérica.
+    alternativa: >-
+      Un conjunto ordenado, donde la puntuación **sí** es un número de coma
+      flotante de doble precisión: es la única estructura de Redis con orden
+      numérico, y por eso es la que se usa para marcadores y rangos.
+    doc: https://redis.io/docs/latest/develop/data-types/sorted-sets/

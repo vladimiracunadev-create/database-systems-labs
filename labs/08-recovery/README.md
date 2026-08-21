@@ -5,7 +5,7 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ (SQLite de la biblioteca estándar)
 · **Marca de éxito:** `RECOVERY_LAB_OK`
-· **Parte:** [10 — Operación, seguridad y gobierno](../../classes/part-10-operacion-seguridad-y-gobierno/README.md)
+· **Parte:** [10 — Operación, seguridad y gobierno](../../classes/part-11-operacion-seguridad-y-gobierno/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -89,8 +89,8 @@ binarios con `--stop-datetime`.
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [048 — Respaldo y restauración probada](../../classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/README.md)
-  y [036 — Registro anticipado y recuperación (WAL y ARIES)](../../classes/part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md).
+- **Clases:** [048 — Respaldo y restauración probada](../../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md)
+  y [036 — Registro anticipado y recuperación (WAL y ARIES)](../../classes/part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md).
 - **Rutas:** [DBA / SRE de datos](../../rutas/fiabilidad-y-operacion.md),
   [Gobierno y privacidad del dato](../../rutas/gobierno-y-privacidad.md).
 - **Certificaciones:** cubre de lleno el dominio de alta disponibilidad y recuperación del

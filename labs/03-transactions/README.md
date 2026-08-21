@@ -5,7 +5,7 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ (SQLite). PostgreSQL, opcional
 · **Marca de éxito:** `TRANSACTIONS_LAB_OK`
-· **Parte:** [07 — Transacciones, concurrencia y recuperación](../../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md)
+· **Parte:** [07 — Transacciones, concurrencia y recuperación](../../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -98,9 +98,9 @@ del driver, no concatenación.
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [033–037](../../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md),
-  en especial [034 — Anomalías de aislamiento](../../classes/part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md)
-  y [037 — Concurrencia en la aplicación](../../classes/part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md).
+- **Clases:** [033–037](../../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md),
+  en especial [034 — Anomalías de aislamiento](../../classes/part-08-transacciones-concurrencia-y-recuperacion/044-anomalias-de-aislamiento-y-la-critica-ansi/README.md)
+  y [037 — Concurrencia en la aplicación](../../classes/part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md).
 - **Rutas:** [Desarrollador de aplicaciones](../../rutas/desarrollo-de-aplicaciones.md),
   [DBA / SRE de datos](../../rutas/fiabilidad-y-operacion.md),
   [Gobierno y privacidad del dato](../../rutas/gobierno-y-privacidad.md).

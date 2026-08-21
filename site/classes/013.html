@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Integridad: restricciones, claves foraneas y acciones referenciales. Parte 02: Modelo relacional y álgebra.">
+<meta name="description" content="Independencia de datos y los tres niveles de esquema. Parte 01: Fundamentos, sistemas y método.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/013.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="013 — Integridad: restricciones, claves foraneas y acciones referenciales · Database Systems Labs">
-<meta property="og:description" content="Integridad: restricciones, claves foraneas y acciones referenciales. Parte 02: Modelo relacional y álgebra.">
+<meta property="og:title" content="013 — Independencia de datos y los tres niveles de esquema · Database Systems Labs">
+<meta property="og:description" content="Independencia de datos y los tres niveles de esquema. Parte 01: Fundamentos, sistemas y método.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/013.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "013 — Integridad: restricciones, claves foraneas y acciones referenciales", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["integridad de entidad", "integridad referencial", "CHECK", "ON DELETE", "aplazamiento"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>013 — Integridad: restricciones, claves foraneas y acciones referenciales · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "013 — Independencia de datos y los tres niveles de esquema", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["esquema conceptual", "esquema físico", "vista externa", "independencia lógica"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>013 — Independencia de datos y los tres niveles de esquema · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,271 +49,227 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-02.html">Parte 02 · Modelo relacional y álgebra</a>
+  <a href="parte-01.html">Parte 01 · Fundamentos, sistemas y método</a>
   <span aria-hidden="true">/</span><span>Clase 013</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="013--integridad-restricciones-claves-foraneas-y-acciones-referenciales">013 — Integridad: restricciones, claves foraneas y acciones referenciales</h1>
+<h1 id="013--independencia-de-datos-y-los-tres-niveles-de-esquema">013 — Independencia de datos y los tres niveles de esquema</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 02 — Modelo relacional y álgebra · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>integridad de entidad</code> · <code>integridad referencial</code> · <code>CHECK</code> · <code>ON DELETE</code> · <code>aplazamiento</code></p>
-<p><strong>En este caso se comparan 6 motores</strong>: 3 lo resuelven (3 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<p>Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>esquema conceptual</code> · <code>esquema físico</code> · <code>vista externa</code> · <code>independencia lógica</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Convertir las reglas del dominio en restricciones que el motor haga cumplir para todos los clientes. Una regla que vive solo en la aplicación es una regla que algún día alguien saltará.</p>
+<p>Entender la idea que hizo posible la industria de las bases de datos: separar <strong>qué</strong> datos existen de <strong>cómo</strong> se almacenan. Sin independencia de datos, cada cambio de índice obligaría a reescribir la aplicación.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Distinguir integridad de entidad, referencial, de dominio y definida por el usuario.</li>
-<li>Elegir la acción referencial correcta y justificar su efecto sobre los datos.</li>
-<li>Usar restricciones diferidas y saber qué motores las soportan.</li>
-<li>Reconocer qué reglas <strong>no</strong> puede expresar una restricción declarativa.</li>
-<li>Escribir la invariante que audita lo que el motor no puede garantizar.</li>
+<li>Describir los tres niveles de esquema y qué se declara en cada uno.</li>
+<li>Distinguir independencia física de independencia lógica con ejemplos propios.</li>
+<li>Explicar qué aportó exactamente Codd (1970) frente a los sistemas jerárquicos y de red.</li>
+<li>Identificar en tu propio código las fugas de independencia más comunes.</li>
+<li>Usar vistas como capa externa y conocer sus límites.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-cuatro-tipos">Los cuatro tipos</h3>
+<h3 id="el-argumento-de-codd">El argumento de Codd</h3>
+<p>Antes de 1970, los sistemas de gestión exponían al programador la estructura física: para recorrer datos había que seguir punteros entre registros en el orden en que estaban guardados. Cambiar el almacenamiento significaba reescribir programas.</p>
+<p>Codd propuso exponer los datos como <strong>relaciones</strong> —conjuntos de tuplas— y acceder a ellos <strong>por valor</strong>, nunca por posición ni por puntero. La consecuencia práctica está en el propio título del artículo: <em>large shared data banks</em>. Compartidos significa que muchos programas distintos, escritos en momentos distintos, usan los mismos datos; si cada uno dependiera de la disposición física, ninguno podría evolucionar.</p>
+<blockquote>
+<p>La independencia de datos no es una comodidad: es la condición para que un esquema sobreviva a las aplicaciones que lo usan.</p>
+</blockquote>
+<h3 id="los-tres-niveles">Los tres niveles</h3>
+<p>La arquitectura de tres esquemas (formulada por el comité ANSI/SPARC y recogida en Silberschatz) separa:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Tipo</th>
-<th>Qué garantiza</th>
-<th>Mecanismo</th>
+<th>Nivel</th>
+<th>Qué describe</th>
+<th>Quién lo define</th>
+<th>Ejemplo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>De entidad</strong></td>
-<td>Toda fila es identificable; la clave no es nula</td>
-<td><code>PRIMARY KEY</code></td>
+<td><strong>Externo</strong> (vistas)</td>
+<td>Lo que ve cada grupo de usuarios</td>
+<td>Diseñador de la aplicación</td>
+<td><code>VIEW notas_publicas</code> sin el RUT</td>
 </tr>
 <tr>
-<td><strong>Referencial</strong></td>
-<td>Toda referencia apunta a algo existente</td>
-<td><code>FOREIGN KEY</code></td>
+<td><strong>Conceptual</strong> (lógico)</td>
+<td>Qué entidades, atributos y reglas existen</td>
+<td>Modelador de datos</td>
+<td>Tablas, claves, restricciones</td>
 </tr>
 <tr>
-<td><strong>De dominio</strong></td>
-<td>Cada valor pertenece a su dominio</td>
-<td>Tipo + <code>CHECK</code> + <code>NOT NULL</code></td>
-</tr>
-<tr>
-<td><strong>Definida por el usuario</strong></td>
-<td>Reglas de negocio arbitrarias</td>
-<td><code>CHECK</code>, restricciones diferidas, disparadores</td>
+<td><strong>Interno</strong> (físico)</td>
+<td>Cómo se guarda y se accede</td>
+<td>Motor y administrador</td>
+<td>Páginas, B-Tree, particiones, compresión</td>
 </tr>
 </tbody>
 </table></div>
-<p>Codd (1979) añadió al modelo original la discusión de los nulos y la integridad de entidad. La regla que de ahí se deriva es tajante: <strong>ningún componente de una clave primaria puede ser nulo</strong>, porque un identificador desconocido no identifica.</p>
-<h3 id="acciones-referenciales">Acciones referenciales</h3>
-<p>Al borrar o actualizar la fila referenciada, el motor puede hacer cinco cosas:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Acción</th>
-<th>Efecto</th>
-<th>Cuándo es correcta</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>NO ACTION</code> / <code>RESTRICT</code></td>
-<td>Impide la operación</td>
-<td>Por defecto sensato: obliga a decidir explícitamente</td>
-</tr>
-<tr>
-<td><code>CASCADE</code></td>
-<td>Propaga el borrado o el cambio</td>
-<td>Composición real: líneas de una factura, tabla puente</td>
-</tr>
-<tr>
-<td><code>SET NULL</code></td>
-<td>Deja la referencia en nulo</td>
-<td>La relación es opcional y su ausencia tiene sentido</td>
-</tr>
-<tr>
-<td><code>SET DEFAULT</code></td>
-<td>Apunta a un valor por defecto</td>
-<td>Existe un «sin asignar» legítimo</td>
-</tr>
-</tbody>
-</table></div>
-<p>La diferencia entre <code>NO ACTION</code> y <code>RESTRICT</code> es sutil y real: <code>RESTRICT</code> comprueba de inmediato; <code>NO ACTION</code> puede diferirse al final de la sentencia o de la transacción, lo que permite reasignar filas dentro de la misma operación.</p>
-<p><strong>Regla de criterio:</strong> <code>CASCADE</code> en datos históricos o contables es casi siempre un error. Borrar un curso no debería borrar el registro de que alguien lo cursó y obtuvo una nota; eso destruye evidencia. La alternativa es el borrado lógico con una marca y una restricción parcial.</p>
-<h3 id="restricciones-diferidas">Restricciones diferidas</h3>
-<p>Algunas reglas son imposibles de satisfacer fila a fila. Un ciclo obligatorio —«todo departamento tiene un jefe, y todo jefe pertenece a un departamento»— no admite una primera inserción válida si las restricciones se comprueban de inmediato.</p>
-<pre><code class="language-sql">ALTER TABLE departments
-  ADD CONSTRAINT dept_jefe_fk FOREIGN KEY (jefe_id) REFERENCES employees(id)
-  DEFERRABLE INITIALLY DEFERRED;
-</code></pre>
-<p>Con esto, la comprobación ocurre en el <code>COMMIT</code>: dentro de la transacción el estado puede ser transitoriamente inconsistente, y al confirmar debe ser válido. Es exactamente la «C» de ACID (clase 033).</p>
-<p>Soporte real: PostgreSQL y Oracle lo ofrecen; MySQL no de esta forma; SQLite solo para claves foráneas declaradas como diferidas y con <code>PRAGMA foreign_keys = ON</code>.</p>
-<h3 id="lo-que-no-se-puede-declarar">Lo que no se puede declarar</h3>
-<pre><code class="language-mermaid">flowchart TD
-    R[&quot;Regla del dominio&quot;] --&gt; A{&quot;¿Afecta a una&lt;br/&gt;sola fila?&quot;}
-    A -- &quot;Sí&quot; --&gt; C[&quot;CHECK&quot;]
-    A -- &quot;No&quot; --&gt; B{&quot;¿Es unicidad o&lt;br/&gt;referencia?&quot;}
-    B -- &quot;Sí&quot; --&gt; U[&quot;UNIQUE / FOREIGN KEY&lt;br/&gt;(incluso parcial)&quot;]
-    B -- &quot;No&quot; --&gt; D{&quot;¿El motor tiene&lt;br/&gt;restricción de exclusión?&quot;}
-    D -- &quot;Sí&quot; --&gt; E[&quot;EXCLUDE USING gist&quot;]
-    D -- &quot;No&quot; --&gt; T{&quot;¿Basta con detectar,&lt;br/&gt;o hay que impedir?&quot;}
-    T -- &quot;Detectar&quot; --&gt; I[&quot;Invariante auditada&lt;br/&gt;+ alerta&quot;]
-    T -- &quot;Impedir&quot; --&gt; G[&quot;Disparador o bloqueo&lt;br/&gt;explícito · documentar el costo&quot;]
-</code></pre>
-<p>Ejemplos de reglas fuera del alcance de un <code>CHECK</code> estándar: «la suma de los porcentajes de un reparto es 100», «no hay dos reservas solapadas en la misma sala», «todo curso tiene al menos un profesor». La primera y la tercera exigen mirar varias filas; la segunda tiene solución declarativa solo en PostgreSQL, con restricciones de exclusión sobre rangos.</p>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Reglas del dominio y su traducción:</p>
-<pre><code class="language-sql">CREATE TABLE courses (
-  id         INTEGER PRIMARY KEY,
-  nombre     TEXT    NOT NULL CHECK (length(trim(nombre)) &gt; 0),
-  periodo    TEXT    NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
-  cupo       INTEGER NOT NULL CHECK (cupo BETWEEN 1 AND 500),
-  UNIQUE (nombre, periodo)
-);
-
-CREATE TABLE enrollments (
-  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-  course_id  INTEGER NOT NULL REFERENCES courses(id)  ON DELETE RESTRICT,
-  nota       NUMERIC(2,1) CHECK (nota IS NULL OR nota BETWEEN 1.0 AND 7.0),
-  estado     TEXT NOT NULL DEFAULT 'activa'
-             CHECK (estado IN ('activa','retirada','anulada')),
-  PRIMARY KEY (student_id, course_id)
-);
-</code></pre>
-<p>Qué garantiza cada línea, sin excepciones y para todo cliente:</p>
+<p>De ahí salen dos independencias distintas, y conviene no confundirlas:</p>
 <ul>
-<li><code>NOT NULL</code> en <code>nombre</code>: no hay cursos anónimos. El <code>CHECK</code> con <code>trim</code> impide además el nombre de solo espacios, que <code>NOT NULL</code> sí permite.</li>
-<li><code>UNIQUE (nombre, periodo)</code>: no hay dos «Bases de datos» en 2026-1. La regla de negocio queda escrita una vez.</li>
-<li><code>nota BETWEEN 1.0 AND 7.0</code> <strong>o nula</strong>: una inscripción sin calificar es válida; una nota de 9,5 no lo es. Sin el <code>OR nota IS NULL</code>, la restricción se evaluaría como <code>UNKNOWN</code> para nulos y <strong>los aceptaría igual</strong> — conviene escribirlo explícito para que el lector no dude.</li>
-<li><code>ON DELETE RESTRICT</code> en ambas: borrar un estudiante con inscripciones falla. Correcto: el historial académico es evidencia.</li>
+<li><strong>Independencia física:</strong> cambiar el nivel interno sin tocar el conceptual. Crear un índice, cambiar el tipo de índice, particionar una tabla o comprimirla no debería alterar ninguna consulta. Los motores relacionales la consiguen casi por completo.</li>
+<li><strong>Independencia lógica:</strong> cambiar el nivel conceptual sin tocar el externo. Dividir una tabla en dos no debería romper a los clientes si existe una vista que reconstruye la forma anterior. Se consigue <strong>parcialmente</strong>: es fácil para lectura y difícil para escritura, porque no toda vista es actualizable.</li>
 </ul>
-<p><strong>Lo que este esquema no garantiza:</strong> el cupo. La regla «no se puede inscribir más gente que el cupo» compara un conteo con un valor de otra tabla, y ningún <code>CHECK</code> estándar lo permite.</p>
-<p>Las tres soluciones, con su precio:</p>
-<pre><code class="language-sql">-- 1. Detección: barata, honesta, deja ventana de incumplimiento
-SELECT c.id, c.cupo, COUNT(e.student_id) AS inscritos
-FROM courses c JOIN enrollments e ON e.course_id = c.id AND e.estado = 'activa'
-GROUP BY c.id, c.cupo
-HAVING COUNT(e.student_id) &gt; c.cupo;
+<pre><code class="language-mermaid">flowchart TD
+    U1[&quot;Aplicación A&quot;] --&gt; V1[&quot;Vista: notas_publicas&quot;]
+    U2[&quot;Aplicación B&quot;] --&gt; V2[&quot;Vista: ficha_docente&quot;]
+    V1 --&gt; C[&quot;Esquema conceptual&lt;br/&gt;students, courses, enrollments&quot;]
+    V2 --&gt; C
+    C --&gt; F[&quot;Esquema interno&lt;br/&gt;páginas, B-Tree, particiones&quot;]
+    F --&gt; D[(&quot;Almacenamiento&quot;)]
+    C -. &quot;independencia lógica&lt;br/&gt;(parcial)&quot; .-&gt; V1
+    F -. &quot;independencia física&lt;br/&gt;(casi total)&quot; .-&gt; C
 </code></pre>
-<pre><code class="language-sql">-- 2. Prevención con bloqueo explícito, dentro de la transacción
-BEGIN;
-SELECT cupo FROM courses WHERE id = :curso FOR UPDATE;      -- serializa los inscritos de ESE curso
-INSERT INTO enrollments (student_id, course_id) VALUES (:est, :curso);
--- comprobar el conteo y abortar si excede
-COMMIT;
+<h3 id="dónde-se-rompe-en-la-práctica">Dónde se rompe en la práctica</h3>
+<p>Date insiste en un punto incómodo: SQL debilita la independencia que el modelo relacional prometía. Las fugas más habituales:</p>
+<ul>
+<li><strong><code>SELECT *</code>.</strong> Fija implícitamente el número y el orden de las columnas. Añadir una columna rompe al cliente que lee por posición.</li>
+<li><strong>Depender del orden sin <code>ORDER BY</code>.</strong> El orden de las filas es una propiedad del plan físico, no del dato. Un índice nuevo cambia el orden observado.</li>
+<li><strong>Consultas que nombran índices o pistas del optimizador.</strong> Atan la aplicación al nivel interno.</li>
+<li><strong>Lógica de negocio en la aplicación en vez de en restricciones.</strong> Cada cliente nuevo debe reimplementarla, y alguno no lo hará.</li>
+<li><strong>Claves primarias con significado de negocio.</strong> Si la clave es el RUT y la ley cambia el formato, cambia el nivel conceptual entero (clase 007).</li>
+</ul>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Partimos de una tabla que mezcla dos conceptos:</p>
+<pre><code class="language-sql">CREATE TABLE students (
+  id       INTEGER PRIMARY KEY,
+  nombre   TEXT NOT NULL,
+  email    TEXT,
+  telefono TEXT
+);
 </code></pre>
-<pre><code class="language-sql">-- 3. Contador desnormalizado con disparador (clase 009), con su invariante
+<p>Un requisito nuevo pide <strong>varios contactos por estudiante</strong>. El cambio conceptual correcto es dividir:</p>
+<pre><code class="language-sql">CREATE TABLE student_contacts (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  tipo       TEXT NOT NULL CHECK (tipo IN ('email','telefono')),
+  valor      TEXT NOT NULL,
+  PRIMARY KEY (student_id, tipo, valor)
+);
 </code></pre>
-<p>La opción 2 es correcta y tiene un costo declarado: todas las inscripciones al mismo curso se serializan. Con un curso muy demandado, eso es una cola. La opción 1 no impide nada pero cuesta cero en el camino de escritura. La decisión depende de si un cupo excedido es un incidente grave o algo que se corrige a mano.</p>
-<p><strong>Nota sobre SQLite:</strong> las claves foráneas no se aplican salvo que se active <code>PRAGMA foreign_keys = ON</code> en <strong>cada conexión</strong>. Es la causa más común de referencias colgantes en proyectos que usan SQLite; el laboratorio del repositorio lo activa explícitamente y comprueba con <code>PRAGMA foreign_key_check</code>.</p>
+<p>Sin capa externa, cada cliente que hacía <code>SELECT id, nombre, email FROM students</code> se rompe. Con capa externa, no:</p>
+<pre><code class="language-sql">CREATE VIEW students_v1 AS
+SELECT s.id,
+       s.nombre,
+       (SELECT c.valor FROM student_contacts c
+         WHERE c.student_id = s.id AND c.tipo = 'email'  LIMIT 1) AS email,
+       (SELECT c.valor FROM student_contacts c
+         WHERE c.student_id = s.id AND c.tipo = 'telefono' LIMIT 1) AS telefono
+FROM students s;
+</code></pre>
+<p>Los clientes antiguos siguen funcionando contra <code>students_v1</code>; los nuevos usan las tablas reales. Aquí está el límite honesto: la vista es <strong>legible pero no escribible</strong> sin ayuda. Un <code>UPDATE students_v1 SET email = ...</code> no tiene traducción única, porque la vista pierde información sobre cuál de los contactos actualizar. Para conseguir independencia lógica también en escritura hace falta un disparador <code>INSTEAD OF</code> que declare esa decisión de forma explícita.</p>
+<p>Traza del efecto: si tres aplicaciones consumían la tabla original, dividir sin vista genera 3 despliegues coordinados; dividir con vista genera 1 despliegue de base de datos y 3 migraciones independientes, cada una a su ritmo. Ese es todo el valor de la capa externa (y el fundamento de las migraciones sin caída de la clase 049).</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Regla</th>
-<th>Declarativa</th>
-<th>Motor</th>
-<th>Costo</th>
+<th>Cambio</th>
+<th>¿Rompe a los clientes sin capa externa?</th>
+<th>¿Con vista de compatibilidad?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Valor en un rango</td>
-<td><code>CHECK</code></td>
-<td>Todos</td>
-<td>Nulo</td>
+<td>Crear un índice</td>
+<td>No</td>
+<td>No</td>
 </tr>
 <tr>
-<td>Unicidad condicional</td>
-<td>Índice único parcial</td>
-<td>PostgreSQL, SQLite</td>
-<td>Nulo</td>
+<td>Particionar una tabla</td>
+<td>No</td>
+<td>No</td>
 </tr>
 <tr>
-<td>Referencia válida</td>
-<td><code>FOREIGN KEY</code></td>
-<td>Todos (SQLite con pragma)</td>
-<td>Índice en el hijo</td>
+<td>Renombrar una columna</td>
+<td>Sí</td>
+<td>No</td>
 </tr>
 <tr>
-<td>Sin solapamiento de rangos</td>
-<td><code>EXCLUDE USING gist</code></td>
-<td>Solo PostgreSQL</td>
-<td>Índice GiST</td>
+<td>Dividir una tabla en dos</td>
+<td>Sí</td>
+<td>No, en lectura</td>
 </tr>
 <tr>
-<td>Ciclo obligatorio</td>
-<td><code>DEFERRABLE</code></td>
-<td>PostgreSQL, Oracle</td>
-<td>Nulo</td>
+<td>Cambiar el tipo de una columna</td>
+<td>Sí</td>
+<td>Depende de la conversión</td>
 </tr>
 <tr>
-<td>Suma de un grupo</td>
-<td>—</td>
-<td>Ninguno</td>
-<td>Disparador o invariante</td>
+<td>Añadir una columna</td>
+<td>Solo si se usa <code>SELECT *</code></td>
+<td>No</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Dejar la validación solo en la aplicación.</strong> El script de migración, la consola y el próximo microservicio no la ejecutarán.</li>
-<li><strong><code>ON DELETE CASCADE</code> por comodidad.</strong> Sobre datos históricos destruye evidencia sin dejar rastro.</li>
-<li><strong>Olvidar <code>PRAGMA foreign_keys = ON</code> en SQLite.</strong> Las claves foráneas quedan como documentación decorativa.</li>
-<li><strong><code>CHECK</code> que ignora los nulos.</strong> Un <code>CHECK (nota BETWEEN 1 AND 7)</code> acepta nulos porque <code>UNKNOWN</code> no es falso.</li>
-<li><strong>No indexar la columna hija de una clave foránea.</strong> Cada borrado en el padre provoca un barrido completo del hijo.</li>
+<li><strong>«La independencia de datos es total.»</strong> La física casi lo es; la lógica solo en lectura y con trabajo explícito.</li>
+<li><strong>«Las vistas son lentas por definición.»</strong> El motor las expande en la fase de reescritura; una vista simple no añade coste. Lo que puede ser lento es la consulta que hay dentro.</li>
+<li><strong>«El orden de las filas se mantiene.»</strong> No existe orden sin <code>ORDER BY</code>. Cualquier código que dependa de él es un fallo latente.</li>
+<li><strong>«El nivel externo es cosmético.»</strong> Es el mecanismo con el que se cambia el esquema sin coordinar despliegues, y la base del control de acceso por columna.</li>
+<li><strong>«Codd inventó SQL.»</strong> Codd definió el modelo relacional; SQL llegó después (System R) y se apartó del modelo en varios puntos, empezando por permitir tablas con filas duplicadas.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los datos sucios llegan por el camino que nadie vigilaba: una carga masiva, un arreglo manual, un servicio nuevo. Las restricciones declaradas son el único control que se aplica a todos los caminos, incluidos los que aún no existen.</p>
+<p>Todo esquema de larga vida termina necesitando cambiar mientras hay clientes conectados. La diferencia entre un cambio de diez minutos y una madrugada completa es si la capa externa existía desde el principio. Es una decisión de diseño barata al inicio y carísima de añadir después.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Sobre el esquema del repositorio:</p>
 <ol>
-<li>Elige tres reglas de negocio reales y decláralas como restricciones.</li>
-<li>Identifica una que el motor no pueda expresar y escribe su invariante.</li>
-<li>Implementa la prevención con bloqueo explícito y mide su efecto en concurrencia.</li>
-<li>Documenta qué acción referencial elegiste en cada clave foránea y por qué.</li>
+<li>Propón un cambio conceptual real (dividir, renombrar o extraer una entidad).</li>
+<li>Escribe la vista que preserva la interfaz anterior y demuestra con una consulta que el cliente antiguo sigue funcionando.</li>
+<li>Documenta qué operación de escritura deja de funcionar y qué haría falta para restaurarla.</li>
+<li>Estima cuántos despliegues coordinados evita la vista.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué un <code>CHECK</code> no rechaza los nulos y qué hay que escribir para que lo haga?</li>
-<li>Da un caso de tu dominio donde <code>CASCADE</code> destruiría información que debe conservarse.</li>
-<li>Explica con una traza por qué el ciclo obligatorio necesita restricciones diferidas.</li>
-<li>Elige entre detectar y prevenir para la regla del cupo, y defiende la elección con el costo de cada una.</li>
+<li>Da un cambio de tu propio código que rompió clientes y clasifícalo: ¿fue una fuga de independencia física o lógica?</li>
+<li>¿Por qué <code>SELECT *</code> es una dependencia del nivel externo respecto del conceptual?</li>
+<li>Una vista con <code>GROUP BY</code> no es actualizable. Explica por qué en términos de información perdida.</li>
+<li>¿Qué garantiza y qué no garantiza la independencia física cuando se cambia un índice B-Tree por uno hash?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Qué le pasa a lo que cuelga de una fila cuando esa fila se borra</p>
-<p>Una clave foránea no solo prohíbe apuntar a lo que no existe: también
-decide qué ocurre cuando lo apuntado desaparece. Y esa decisión —<code>CASCADE</code>,
-<code>RESTRICT</code>, <code>SET NULL</code>— es de diseño, no de implementación: dice si el hijo
-tiene sentido sin el padre.</p>
-<p>El caso lo pone a prueba. Las inscripciones cuelgan del curso con <code>ON DELETE
-CASCADE</code> (una inscripción a un curso que ya no existe no significa nada),
-pero las evaluaciones lo hacen con <code>ON DELETE RESTRICT</code> (son evidencia
-académica y no pueden evaporarse). Se borra SE-201, que solo tiene
-inscripciones: desaparece con ellas. Se intenta borrar DB-101, que tiene
-evaluaciones: el motor lo impide. La consulta devuelve los cursos que
-quedan con sus inscripciones.</p>
+<p><strong>Caso:</strong> Cambiar la forma física de los datos sin tocar la consulta de la aplicación</p>
+<p>La aplicación consulta siempre lo mismo: <code>SELECT ... FROM panel_inscripciones</code>.
+Debajo, la tabla cambia de forma —el estado deja de ser un texto repetido en
+cada fila y pasa a ser un código con su tabla de referencia—, y la vista
+absorbe el cambio. La consulta de la aplicación no se toca y devuelve
+exactamente las mismas filas antes y después.</p>
+<p>Eso es la independencia lógica de datos: la vista es la frontera entre el
+esquema externo que la aplicación ve y el esquema conceptual que el
+administrador puede reorganizar.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>curso</th>
-<th>inscripciones</th>
+<th>estudiante</th>
+<th>estado</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>DB-101</code></td>
-<td><code>2</code></td>
+<td><code>Ada</code></td>
+<td><code>activa</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>retirada</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>completada</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 013</code>: 3 de
-las 3 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 013</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -331,211 +287,335 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/foreignkeys.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-createview.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>DuckDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">doc oficial</a></td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/views/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/foreignkeys.html
--- nota: sin PRAGMA foreign_keys = ON, todo lo de abajo se declara y NADA se
---       comprueba: el borrado de SE-201 dejaria inscripciones huerfanas y el
---       de DB-101 no fallaria. El verificador activa el pragma en cada
---       conexion; una aplicacion real tiene que hacer lo mismo.
+-- doc: https://sqlite.org/lang_createview.html
+-- nota: la vista es el esquema externo; las dos tablas de debajo son el
+--       conceptual. Cambia el segundo sin tocar el primero.
 
 -- === preparacion ===
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE cursos (
-    id     INTEGER PRIMARY KEY,
-    codigo TEXT NOT NULL
-);
--- Una inscripcion a un curso que ya no existe no significa nada: se va con el.
-CREATE TABLE inscripciones (
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
     estudiante TEXT NOT NULL,
-    curso_id   INTEGER NOT NULL REFERENCES cursos(id) ON DELETE CASCADE,
-    PRIMARY KEY (estudiante, curso_id)
+    estado     TEXT NOT NULL
 );
--- Una evaluacion es evidencia academica: NO puede evaporarse por un borrado.
-CREATE TABLE evaluaciones (
-    id       INTEGER PRIMARY KEY,
-    curso_id INTEGER NOT NULL REFERENCES cursos(id) ON DELETE RESTRICT,
-    titulo   TEXT NOT NULL
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
 );
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
 
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-INSERT INTO evaluaciones (id, curso_id, titulo) VALUES (1, 10, 'Examen final');
+CREATE TABLE inscripciones_v2 (
+    estudiante    TEXT NOT NULL,
+    estado_codigo INTEGER NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
 
--- Cae con sus inscripciones.
-DELETE FROM cursos WHERE codigo = 'SE-201';
-
--- Este borrado lo IMPIDE el motor: DB-101 tiene evaluaciones.
--- Descomentar la linea siguiente hace fallar el guion, que es la prueba:
--- DELETE FROM cursos WHERE codigo = 'DB-101';
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Implementa las acciones referenciales del estándar, incluidas <code>CASCADE</code> y <code>RESTRICT</code>, con la misma sintaxis que los motores grandes.</li>
-<li><strong>Por qué no:</strong> Las comprueba <strong>solo si</strong> <code>PRAGMA foreign_keys = ON</code> está activo en esa conexión, y por compatibilidad viene desactivado. Miles de bases SQLite en producción tienen claves foráneas declaradas que nunca se han comprobado.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/foreignkeys.html">https://sqlite.org/foreignkeys.html</a></li>
+<li><strong>Por qué sí:</strong> Las vistas son parte del estándar y SQLite las tiene desde siempre: sirven para enseñar el mecanismo sin ninguna infraestructura.</li>
+<li><strong>Por qué no:</strong> Sus vistas son de solo lectura salvo que se añadan disparadores <code>INSTEAD OF</code>, así que la frontera protege la lectura y no la escritura.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createview.html">https://sqlite.org/lang_createview.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_view.html
+-- nota: la misma frontera sirve para cambiar de tabla a archivo Parquet sin
+--       que la consulta de la aplicacion cambie.
+
+-- === preparacion ===
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
+    estudiante VARCHAR NOT NULL,
+    estado     VARCHAR NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
+
+CREATE TABLE inscripciones_v2 (
+    estudiante    VARCHAR NOT NULL,
+    estado_codigo INTEGER NOT NULL
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
+
+-- === consulta ===
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Misma semántica de vista, y además permite que la vista apunte a un archivo Parquet o CSV: la independencia deja de ser entre tablas y pasa a ser entre formatos de almacenamiento.</li>
+<li><strong>Por qué no:</strong> Sin catálogo compartido ni permisos por usuario, la vista organiza el trabajo de quien la escribe, pero no es una frontera de seguridad frente a nadie.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">https://duckdb.org/docs/stable/sql/statements/create_view.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
--- nota: aqui el intento prohibido SI se ejecuta, dentro de un bloque que
---       captura el error: la prueba de que la restriccion actua queda en el
---       propio guion en vez de en un comentario.
+-- doc: https://www.postgresql.org/docs/current/sql-createview.html
+-- nota: en produccion el paso 4 se hace con CREATE OR REPLACE VIEW, que
+--       sustituye la definicion de forma atomica y sin dejar un instante en
+--       el que la vista no exista.
+
+DROP VIEW IF EXISTS panel_inscripciones;
+DROP TABLE IF EXISTS inscripciones_v1, inscripciones_v2, estados;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS evaluaciones, inscripciones, cursos;
-
-CREATE TABLE cursos (
-    id     integer PRIMARY KEY,
-    codigo text NOT NULL
-);
-CREATE TABLE inscripciones (
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
     estudiante text NOT NULL,
-    curso_id   integer NOT NULL REFERENCES cursos(id) ON DELETE CASCADE,
-    PRIMARY KEY (estudiante, curso_id)
+    estado     text NOT NULL
 );
-CREATE TABLE evaluaciones (
-    id       integer PRIMARY KEY,
-    curso_id integer NOT NULL REFERENCES cursos(id) ON DELETE RESTRICT,
-    titulo   text NOT NULL
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
+
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
+
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo integer PRIMARY KEY,
+    nombre text NOT NULL
 );
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
 
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-INSERT INTO evaluaciones (id, curso_id, titulo) VALUES (1, 10, 'Examen final');
+CREATE TABLE inscripciones_v2 (
+    estudiante    text NOT NULL,
+    estado_codigo integer NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
 
-DELETE FROM cursos WHERE codigo = 'SE-201';
-
-DO $$
-BEGIN
-    DELETE FROM cursos WHERE codigo = 'DB-101';
-    RAISE EXCEPTION 'la restriccion no actuo: DB-101 no deberia poder borrarse';
-EXCEPTION
-    -- RESTRICT levanta restrict_violation (23001), no foreign_key_violation
-    -- (23503): son dos codigos distintos y conviene no confundirlos.
-    WHEN restrict_violation OR foreign_key_violation THEN
-        RAISE NOTICE 'RESTRICT impidio el borrado, como debia';
-END;
-$$;
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene todas las acciones del estándar y distingue <code>RESTRICT</code> de <code>NO ACTION</code>: la primera comprueba de inmediato, la segunda al final de la transacción si es diferible. Esa diferencia es la que permite reordenar datos dentro de una transacción sin desactivar nada.</li>
-<li><strong>Por qué no:</strong> Un <code>DELETE</code> en cascada sobre una jerarquía profunda puede tocar millones de filas en una sola transacción sin que nadie lo haya pedido explícitamente: la cascada es cómoda y silenciosa a la vez.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> La vista es también una frontera de permisos: se puede conceder <code>SELECT</code> sobre la vista y negarlo sobre las tablas de debajo, de modo que la independencia lógica y el control de acceso se apoyan en el mismo objeto. Con <code>CREATE OR REPLACE VIEW</code> el cambio es atómico.</li>
+<li><strong>Por qué no:</strong> Una vista no es un índice: si la consulta de debajo es cara, la vista la hace cómoda pero no rápida, y quien la usa deja de ver ese costo. Para eso están las vistas materializadas, que ya no son transparentes porque hay que refrescarlas.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createview.html">https://www.postgresql.org/docs/current/sql-createview.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html
--- nota: InnoDB comprueba las claves foraneas siempre, sin activar nada. Lo que
---       NO hace es disparar los triggers de las tablas hijas al cascadear: un
---       contador mantenido por trigger se desfasa justo ahi.
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/views.html
+-- nota: esta vista es una simple proyeccion con reunion, asi que MySQL usa el
+--       algoritmo MERGE y no materializa nada. Con agregacion o UNION caeria
+--       en TEMPTABLE y perderia los indices de debajo.
+
+DROP VIEW IF EXISTS panel_inscripciones;
+DROP TABLE IF EXISTS inscripciones_v1;
+DROP TABLE IF EXISTS inscripciones_v2;
+DROP TABLE IF EXISTS estados;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS evaluaciones;
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS cursos;
-
-CREATE TABLE cursos (
-    id     INT PRIMARY KEY,
-    codigo VARCHAR(20) NOT NULL
-) ENGINE=InnoDB;
-CREATE TABLE inscripciones (
+-- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
+CREATE TABLE inscripciones_v1 (
     estudiante VARCHAR(50) NOT NULL,
-    curso_id   INT NOT NULL,
-    PRIMARY KEY (estudiante, curso_id),
-    FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-CREATE TABLE evaluaciones (
-    id       INT PRIMARY KEY,
-    curso_id INT NOT NULL,
-    titulo   VARCHAR(50) NOT NULL,
-    FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+    estado     VARCHAR(50) NOT NULL
+);
+INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
+    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
 
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-INSERT INTO evaluaciones (id, curso_id, titulo) VALUES (1, 10, 'Examen final');
+-- 2. El esquema externo: lo unico que la aplicacion conoce.
+CREATE VIEW panel_inscripciones AS
+    SELECT estudiante, estado FROM inscripciones_v1;
 
-DELETE FROM cursos WHERE codigo = 'SE-201';
+-- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
+CREATE TABLE estados (
+    codigo INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+);
+INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
 
--- El borrado de DB-101 fallaria con el error 1451. Se deja fuera del guion
--- para que el resto se ejecute; probarlo a mano es parte del laboratorio.
+CREATE TABLE inscripciones_v2 (
+    estudiante    VARCHAR(50) NOT NULL,
+    estado_codigo INT NOT NULL REFERENCES estados(codigo)
+);
+INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
+SELECT i.estudiante, e.codigo
+FROM inscripciones_v1 i
+JOIN estados e ON e.nombre = i.estado;
+
+-- 4. La vista absorbe el cambio. La aplicacion no se entera.
+DROP VIEW panel_inscripciones;
+DROP TABLE inscripciones_v1;
+CREATE VIEW panel_inscripciones AS
+    SELECT i.estudiante, e.nombre AS estado
+    FROM inscripciones_v2 i
+    JOIN estados e ON e.codigo = i.estado_codigo;
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
+SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> InnoDB comprueba las claves foráneas siempre, sin activar nada, y admite <code>CASCADE</code>, <code>RESTRICT</code> y <code>SET NULL</code>.</li>
-<li><strong>Por qué no:</strong> Las cascadas de InnoDB <strong>no disparan</strong> los disparadores de las tablas hijas: un contador mantenido por disparador se queda desfasado justo cuando una cascada borra sus filas. Y <code>NO ACTION</code> se trata como <code>RESTRICT</code>: no hay comprobación diferida.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html</a></li>
+<li><strong>Por qué sí:</strong> Ofrece el mismo mecanismo y, con el algoritmo <code>MERGE</code>, la vista se funde con la consulta que la usa y no cuesta nada frente a escribirla a mano.</li>
+<li><strong>Por qué no:</strong> Cuando la vista tiene agregación o <code>UNION</code>, MySQL cae al algoritmo <code>TEMPTABLE</code>: materializa el resultado en una tabla temporal y pierde los índices de debajo. La misma vista puede ser gratis o carísima según lo que contenga.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">https://dev.mysql.com/doc/refman/8.4/en/views.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/views/
+// nota: una vista es una tuberia de agregacion con nombre. Aqui el cambio
+//       fisico es el mismo: el estado deja de ser una cadena repetida y pasa a
+//       ser un codigo con su coleccion de referencia.
+
+// === preparacion ===
+db.panel_inscripciones.drop();
+db.inscripciones_v1.drop();
+db.inscripciones_v2.drop();
+db.estados.drop();
+
+// 1. Esquema de partida.
+db.inscripciones_v1.insertMany([
+  { estudiante: &quot;Ada&quot;, estado: &quot;activa&quot; },
+  { estudiante: &quot;Linus&quot;, estado: &quot;completada&quot; },
+  { estudiante: &quot;Grace&quot;, estado: &quot;retirada&quot; },
+]);
+
+// 2. Esquema externo: lo unico que la aplicacion conoce.
+db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v1&quot;, [
+  { $project: { _id: 0, estudiante: 1, estado: 1 } },
+]);
+
+// 3. Reorganizacion fisica.
+db.estados.insertMany([
+  { _id: 1, nombre: &quot;activa&quot; },
+  { _id: 2, nombre: &quot;completada&quot; },
+  { _id: 3, nombre: &quot;retirada&quot; },
+]);
+db.inscripciones_v2.insertMany([
+  { estudiante: &quot;Ada&quot;, estado_codigo: 1 },
+  { estudiante: &quot;Linus&quot;, estado_codigo: 2 },
+  { estudiante: &quot;Grace&quot;, estado_codigo: 3 },
+]);
+
+// 4. La vista absorbe el cambio.
+db.panel_inscripciones.drop();
+db.inscripciones_v1.drop();
+db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v2&quot;, [
+  { $lookup: { from: &quot;estados&quot;, localField: &quot;estado_codigo&quot;,
+               foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
+  { $unwind: &quot;$e&quot; },
+  { $project: { _id: 0, estudiante: 1, estado: &quot;$e.nombre&quot; } },
+]);
+
+// === consulta ===
+// La misma consulta de siempre, contra el mismo nombre de siempre.
+db.panel_inscripciones
+  .find()
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.estado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una vista de MongoDB es una tubería de agregación con nombre: da la misma frontera entre lo que la aplicación consulta y cómo están guardados los documentos, y permite reorganizar el modelo documental sin cambiar el cliente.</li>
+<li><strong>Por qué no:</strong> Son de solo lectura y no admiten índices propios: cada consulta a la vista ejecuta la tubería entera, así que la frontera se paga en cada lectura.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/views/">https://www.mongodb.com/docs/manual/core/views/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -550,22 +630,16 @@ ORDER BY c.codigo;
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
-<td>Admite declarar claves foráneas, pero no las acciones referenciales de borrado: no hay <code>ON DELETE CASCADE</code> ni <code>RESTRICT</code> que aplicar. Su papel es analizar datos que otro sistema ya validó.</td>
-<td>Borrar padre e hijos con dos sentencias dentro de la misma transacción, o —lo habitual en analítica— reconstruir la tabla completa desde el origen.</td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">doc</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>No hay claves foráneas ni acciones referenciales entre colecciones: si se borra el curso, las inscripciones que lo referencian quedan apuntando al vacío y ninguna consulta avisa.</td>
-<td>Incrustar lo que no tiene sentido sin el padre —las inscripciones dentro del curso— para que borrar el documento las borre con él, y usar referencias solo para lo que sí sobrevive por su cuenta.</td>
-<td><a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">doc</a></td>
-</tr>
-<tr>
 <td>Apache Cassandra</td>
-<td>No hay integridad referencial de ningún tipo: ninguna escritura consulta otra tabla, porque hacerlo obligaría a coordinar nodos en cada operación y eso es justo lo que su diseño evita.</td>
-<td>Borrar en la aplicación todas las tablas afectadas, aceptando que un fallo a mitad deja filas huérfanas, y prever un trabajo de reparación periódico.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+<td>No hay vistas que reescriban una consulta. Existen vistas materializadas, pero mantienen una copia real de los datos y su propia documentación advierte de que se consideran experimentales por los problemas de coherencia entre la tabla base y la vista.</td>
+<td>Escribir a mano la tabla que la consulta necesita y mantenerla desde la aplicación, aceptando que el cambio de forma física obliga a migrar datos, no solo a redefinir un objeto.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No existe una capa lógica sobre los datos: la clave <strong>es</strong> la forma física. Cambiar cómo se guarda algo cambia la clave, y todo cliente que la conocía deja de encontrarla.</td>
+<td>Poner una capa de servicio delante que traduzca nombres estables a claves concretas: la independencia se implementa en el código, no en el almacén.</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -616,24 +690,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>E. F. Codd</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/320107.320109">Extending the Database Relational Model to Capture More Meaning</a>. ACM TODS 4(4). DOI <a href="https://doi.org/10.1145/320107.320109">10.1145/320107.320109</a>.<br />
-  Introduce los valores nulos y la semántica de información faltante.</li>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
 <li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
   Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
-<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
-  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="012.html">← Anterior</a> · <a href="014.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="013">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="012.html"><span class="sentido">← Anterior · 012</span>Cálculo relacional y su equivalencia con el álgebra</a>
-<a class="siguiente" href="014.html"><span class="sentido">Siguiente · 014 →</span>DDL: el esquema como contrato ejecutable</a>
+<a class="anterior" href="012.html"><span class="sentido">← Anterior · 012</span>Arquitectura interna de un gestor, del cliente al disco</a>
+<a class="siguiente" href="014.html"><span class="sentido">Siguiente · 014 →</span>Entorno reproducible y evidencia comprobable</a>
 </nav>
 </main>
 <footer>

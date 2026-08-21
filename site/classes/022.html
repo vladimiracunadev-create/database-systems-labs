@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código. Parte 04: Motores relacionales y dialectos.">
+<meta name="description" content="Cálculo relacional y su equivalencia con el álgebra. Parte 03: Modelo relacional y álgebra.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/022.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código · Database Systems Labs">
-<meta property="og:description" content="MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código. Parte 04: Motores relacionales y dialectos.">
+<meta property="og:title" content="022 — Cálculo relacional y su equivalencia con el álgebra · Database Systems Labs">
+<meta property="og:description" content="Cálculo relacional y su equivalencia con el álgebra. Parte 03: Modelo relacional y álgebra.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/022.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["colación", "modo estricto", "cadena vacia frente a nulo", "identificador citado"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "022 — Cálculo relacional y su equivalencia con el álgebra", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["cálculo de tuplas", "seguridad de expresión", "equivalencia", "declaratividad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>022 — Cálculo relacional y su equivalencia con el álgebra · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,330 +49,230 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-04.html">Parte 04 · Motores relacionales y dialectos</a>
+  <a href="parte-03.html">Parte 03 · Modelo relacional y álgebra</a>
   <span aria-hidden="true">/</span><span>Clase 022</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="022--mysql-mariadb-sql-server-y-oracle-divergencias-que-rompen-código">022 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</h1>
+<h1 id="022--cálculo-relacional-y-su-equivalencia-con-el-álgebra">022 — Cálculo relacional y su equivalencia con el álgebra</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 04 — Motores relacionales y dialectos · Intermedio ·
-3 horas estimadas · motores <code>mysql</code>, <code>mariadb</code>, <code>sql-server</code>, <code>oracle-database</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>colación</code> · <code>modo estricto</code> · <code>cadena vacia frente a nulo</code> · <code>identificador citado</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<p>Parte 03 — Modelo relacional y álgebra · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>cálculo de tuplas</code> · <code>seguridad de expresión</code> · <code>equivalencia</code> · <code>declaratividad</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Conocer las divergencias concretas de MySQL/MariaDB, SQL Server y Oracle que rompen código escrito para otro motor — especialmente las que no producen ningún error.</p>
+<p>Entender por qué SQL es declarativo. El cálculo relacional describe <strong>qué</strong> se quiere sin decir cómo obtenerlo; su equivalencia con el álgebra es el teorema que autoriza a un optimizador a elegir el cómo.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Anticipar el comportamiento de MySQL en modo estricto y fuera de él.</li>
-<li>Explicar el tratamiento de la cadena vacía en Oracle y su efecto.</li>
-<li>Comparar los niveles de aislamiento por defecto de los cuatro motores.</li>
-<li>Identificar las diferencias de identificadores, citas y sensibilidad a mayúsculas.</li>
-<li>Construir una prueba que detecte divergencias semánticas antes de migrar.</li>
+<li>Escribir consultas en cálculo relacional de tuplas.</li>
+<li>Explicar qué es una expresión segura y por qué importa.</li>
+<li>Enunciar la completitud relacional y qué implica para SQL.</li>
+<li>Reconocer los cuantificadores ∃ y ∀ detrás de <code>EXISTS</code> y <code>NOT EXISTS</code>.</li>
+<li>Argumentar qué preguntas quedan fuera del cálculo relacional puro.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="mysql--mariadb">MySQL / MariaDB</h3>
-<p><strong>Modo estricto.</strong> Históricamente MySQL truncaba y convertía en silencio en vez de fallar. Con <code>sql_mode</code> estricto (por defecto desde 5.7) rechaza; con él desactivado, sigue aceptando:</p>
-<pre><code class="language-sql">INSERT INTO t (n) VALUES (300);     -- columna TINYINT
--- estricto: error 1264 out of range
--- no estricto: guarda 127 y emite un aviso
+<h3 id="la-forma-de-una-expresión">La forma de una expresión</h3>
+<p>Una consulta en cálculo de tuplas se escribe:</p>
+<pre><code class="language-text">{ t | P(t) }
 </code></pre>
-<p>Un aviso no detiene un despliegue. Comprobar <code>SELECT @@sql_mode</code> es el primer paso al recibir una base MySQL heredada.</p>
-<p><strong><code>ONLY_FULL_GROUP_BY</code>.</strong> Sin este modo, MySQL permite columnas en <code>SELECT</code> que no están en <code>GROUP BY</code> y devuelve <strong>un valor arbitrario</strong> del grupo. El resultado es plausible y erróneo. Está activo por defecto desde 5.7, pero muchas bases heredadas lo desactivan «porque rompía consultas» — consultas que ya estaban mal.</p>
-<p><strong>Colación.</strong> Por defecto insensible a mayúsculas y acentos (<code>utf8mb4_0900_ai_ci</code>), a diferencia de PostgreSQL. Es la divergencia semántica de la clase 020.</p>
-<p><strong>Motores de almacenamiento.</strong> InnoDB es transaccional; MyISAM no lo es. Una tabla MyISAM ignora las transacciones sin avisar: el <code>ROLLBACK</code> no revierte nada.</p>
-<p><strong>Aislamiento por defecto:</strong> <code>REPEATABLE READ</code>, distinto de casi todos los demás.</p>
-<h3 id="sql-server">SQL Server</h3>
-<p><strong>Aislamiento por defecto: <code>READ COMMITTED</code> con bloqueo</strong>, no con versiones. Los lectores bloquean a los escritores y viceversa, salvo que se active <code>READ_COMMITTED_SNAPSHOT</code>. Es la causa de bloqueos que no aparecen en PostgreSQL ni en Oracle.</p>
-<p><strong>Identificadores</strong> entre corchetes <code>[tabla]</code> además de comillas dobles. <strong>Colación</strong> definida en la instalación, la base y hasta la columna; lo habitual es insensible a mayúsculas.</p>
-<p><strong><code>TOP</code> y <code>OFFSET ... FETCH</code>:</strong> <code>TOP</code> es propietario; <code>OFFSET/FETCH</code> es la norma y exige <code>ORDER BY</code>.</p>
-<p><strong>Concatenación con nulos:</strong> por defecto <code>'a' + NULL</code> es <code>NULL</code>, igual que en la norma, pero el ajuste <code>CONCAT_NULL_YIELDS_NULL</code> podía cambiarlo en versiones antiguas.</p>
-<h3 id="oracle">Oracle</h3>
-<p><strong>La cadena vacía es <code>NULL</code>.</strong> Es la divergencia más severa de todo el ecosistema:</p>
-<pre><code class="language-sql">INSERT INTO t (s) VALUES ('');
-SELECT * FROM t WHERE s IS NULL;   -- devuelve la fila
-SELECT * FROM t WHERE s = '';      -- no devuelve nada
+<p>«el conjunto de tuplas <code>t</code> que cumplen el predicado <code>P</code>». No hay orden de operaciones, no hay reuniones explícitas, no hay decisión sobre índices: solo una condición lógica.</p>
+<p>Ejemplo: estudiantes con nota mayor que 6 en algún curso.</p>
+<pre><code class="language-text">{ s | s ∈ students ∧ ∃e ∈ enrollments ( e.student_id = s.id ∧ e.nota &gt; 6.0 ) }
 </code></pre>
-<p>Código que distingue «vacío» de «desconocido» —lo cual es una distinción legítima del dominio— no se puede portar a Oracle sin reescribir el modelo.</p>
-<p><strong>Identificadores en mayúsculas</strong> salvo que se citen: <code>create table Alumno</code> crea <code>ALUMNO</code>, y <code>"Alumno"</code> es una tabla distinta.</p>
-<p><strong>Consistencia de lectura multiversión</strong> desde siempre, con la particularidad histórica del error «snapshot too old» cuando el segmento de deshacer se recicla durante una consulta larga.</p>
-<p><strong><code>DUAL</code>:</strong> las consultas sin tabla requieren <code>SELECT 1 FROM dual</code>.</p>
-<h3 id="tabla-comparativa">Tabla comparativa</h3>
+<p>El paralelo con SQL es directo, y no por casualidad:</p>
+<pre><code class="language-sql">SELECT * FROM students s
+WHERE EXISTS (SELECT 1 FROM enrollments e
+              WHERE e.student_id = s.id AND e.nota &gt; 6.0);
+</code></pre>
+<p><code>EXISTS</code> <strong>es</strong> el ∃. <code>NOT EXISTS</code> combinado con negación <strong>es</strong> el ∀, porque <code>∀x P(x) ≡ ¬∃x ¬P(x)</code>. De ahí la doble negación de la división relacional de la clase 011: no es un truco, es la traducción literal del cuantificador universal.</p>
+<h3 id="expresiones-seguras">Expresiones seguras</h3>
+<p>El cálculo permite escribir cosas sin sentido computable:</p>
+<pre><code class="language-text">{ t | ¬(t ∈ students) }
+</code></pre>
+<p>«todas las tuplas que no son estudiantes»: un conjunto infinito. Una expresión es <strong>segura</strong> si su resultado está contenido en el dominio de los valores que aparecen en la base de datos. SQL fuerza la seguridad por construcción: toda consulta parte de un <code>FROM</code>, así que el universo siempre está acotado.</p>
+<p>Es la razón por la que no existe en SQL un <code>SELECT</code> sin origen que devuelva «todo lo demás».</p>
+<h3 id="completitud-relacional">Completitud relacional</h3>
+<p><strong>Teorema (Codd).</strong> El cálculo relacional seguro y el álgebra relacional tienen exactamente el mismo poder expresivo: toda consulta escribible en uno lo es en el otro.</p>
+<p>Un lenguaje es <em>relacionalmente completo</em> si expresa todo lo del álgebra. SQL lo es, y además la excede con agregación, ordenación, recursión y funciones de ventana, que <strong>no</strong> forman parte del álgebra relacional original.</p>
+<p>La consecuencia práctica es toda la arquitectura de un motor moderno:</p>
+<pre><code class="language-mermaid">flowchart LR
+    U[&quot;Consulta declarativa&lt;br/&gt;(cálculo / SQL)&quot;] --&gt; T[&quot;Traducción a&lt;br/&gt;álgebra&quot;]
+    T --&gt; E[&quot;Expresiones equivalentes&lt;br/&gt;E1…E6 (clase 011)&quot;]
+    E --&gt; C[&quot;Estimación de costo&lt;br/&gt;con estadísticas&quot;]
+    C --&gt; P[&quot;Plan físico elegido&quot;]
+    P --&gt; R[&quot;Mismas filas,&lt;br/&gt;coste distinto&quot;]
+</code></pre>
+<p>Si el cálculo no fuese equivalente al álgebra, el motor no podría reescribir la consulta: tendría que ejecutar literalmente lo que se escribió, como hacían los sistemas anteriores a 1970.</p>
+<h3 id="lo-que-el-cálculo-relacional-no-expresa">Lo que el cálculo relacional no expresa</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Aspecto</th>
-<th>PostgreSQL</th>
-<th>MySQL 8 (InnoDB)</th>
-<th>SQL Server</th>
-<th>Oracle</th>
-<th>SQLite</th>
+<th>Pregunta</th>
+<th>¿Cálculo relacional puro?</th>
+<th>Cómo se resuelve</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Aislamiento por defecto</td>
-<td><code>READ COMMITTED</code> (MVCC)</td>
-<td><code>REPEATABLE READ</code></td>
-<td><code>READ COMMITTED</code> (bloqueo)</td>
-<td><code>READ COMMITTED</code> (MVCC)</td>
-<td><code>SERIALIZABLE</code> de hecho</td>
+<td>«¿Cuántos estudiantes hay?»</td>
+<td>No: la agregación no es relacional</td>
+<td>Extensión de SQL (<code>COUNT</code>)</td>
 </tr>
 <tr>
-<td><code>''</code> es <code>NULL</code></td>
+<td>«Los 10 mejores promedios»</td>
+<td>No: exige orden</td>
+<td><code>ORDER BY</code> + <code>LIMIT</code></td>
+</tr>
+<tr>
+<td>«Todos los prerrequisitos, a cualquier profundidad»</td>
+<td>No: cierre transitivo</td>
+<td>CTE recursiva (clase 018)</td>
+</tr>
+<tr>
+<td>«El promedio móvil de 3 períodos»</td>
 <td>No</td>
-<td>No</td>
-<td>No</td>
-<td><strong>Sí</strong></td>
-<td>No</td>
+<td>Función de ventana</td>
 </tr>
 <tr>
-<td>Colación por defecto</td>
-<td>Sensible</td>
-<td><strong>Insensible</strong></td>
-<td>Suele ser insensible</td>
-<td>Sensible</td>
-<td><code>BINARY</code></td>
+<td>«¿Está inscrito en algún curso?»</td>
+<td>Sí (∃)</td>
+<td><code>EXISTS</code></td>
 </tr>
 <tr>
-<td>Identificadores sin citar</td>
-<td>minúsculas</td>
-<td>según el sistema de archivos</td>
-<td>insensible</td>
-<td><strong>MAYÚSCULAS</strong></td>
-<td>insensible</td>
-</tr>
-<tr>
-<td>Límite de filas</td>
-<td><code>LIMIT</code></td>
-<td><code>LIMIT</code></td>
-<td><code>TOP</code> / <code>FETCH</code></td>
-<td><code>FETCH FIRST</code></td>
-<td><code>LIMIT</code></td>
-</tr>
-<tr>
-<td>DDL transaccional</td>
-<td>Sí</td>
-<td><strong>No</strong></td>
-<td>Sí</td>
-<td>No</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Autoincremento</td>
-<td><code>GENERATED ... IDENTITY</code></td>
-<td><code>AUTO_INCREMENT</code></td>
-<td><code>IDENTITY</code></td>
-<td>secuencia / <code>IDENTITY</code></td>
-<td><code>AUTOINCREMENT</code></td>
-</tr>
-<tr>
-<td><code>7/2</code></td>
-<td><code>3</code></td>
-<td><code>3.5</code></td>
-<td><code>3</code></td>
-<td><code>3.5</code></td>
-<td><code>3</code></td>
-</tr>
-<tr>
-<td>Índice parcial</td>
-<td>Sí</td>
-<td>No</td>
-<td>Filtrado, sí</td>
-<td>No (índice por función)</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td><code>CHECK</code> aplicado</td>
-<td>Sí</td>
-<td>Desde 8.0.16</td>
-<td>Sí</td>
-<td>Sí</td>
-<td>Sí</td>
+<td>«¿Está en todos los obligatorios?»</td>
+<td>Sí (∀)</td>
+<td>Doble <code>NOT EXISTS</code></td>
 </tr>
 </tbody>
 </table></div>
-<pre><code class="language-mermaid">flowchart TD
-    M[&quot;Migrar entre motores&quot;] --&gt; A[&quot;1. Divergencias sintácticas&lt;br/&gt;fallan al ejecutar: baratas&quot;]
-    M --&gt; B[&quot;2. Divergencias semánticas&lt;br/&gt;NO fallan: caras&quot;]
-    B --&gt; B1[&quot;colación&quot;]
-    B --&gt; B2[&quot;'' frente a NULL&quot;]
-    B --&gt; B3[&quot;división entera&quot;]
-    B --&gt; B4[&quot;aislamiento por defecto&quot;]
-    B --&gt; B5[&quot;ONLY_FULL_GROUP_BY&quot;]
-    B1 --&gt; T[&quot;Prueba de equivalencia:&lt;br/&gt;mismas entradas, comparar salidas&quot;]
-    B2 --&gt; T
-    B3 --&gt; T
-    B4 --&gt; T
-    B5 --&gt; T
-</code></pre>
+<p>El límite del cierre transitivo es históricamente importante: es el motivo por el que las bases de datos de grafos existen (clase 028) y por el que SQL:1999 añadió <code>WITH RECURSIVE</code>.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Prueba de equivalencia que detecta divergencias <strong>antes</strong> de migrar. La idea es ejecutar el mismo conjunto de sentencias en dos motores y comparar las salidas exactas.</p>
-<pre><code class="language-sql">-- casos.sql : cada uno pensado para exponer una divergencia conocida
-SELECT '01-division'        AS caso, CAST(7/2 AS CHAR(10))                        AS valor;
-SELECT '02-colacion'        AS caso, CAST((SELECT COUNT(*) FROM students
-                                           WHERE email='ANA@EJEMPLO.CL') AS CHAR(10));
-SELECT '03-cadena-vacia'    AS caso, CASE WHEN '' IS NULL THEN 'es-null'
-                                          ELSE 'no-es-null' END;
-SELECT '04-concat'          AS caso, CAST(('a' || 'b') AS CHAR(10));
-SELECT '05-orden-nulos'     AS caso, CAST((SELECT nota FROM enrollments
-                                           ORDER BY nota LIMIT 1) AS CHAR(10));
-SELECT '06-redondeo'        AS caso, CAST(ROUND(2.5) AS CHAR(10));
+<p>Pregunta: <em>«estudiantes que no están inscritos en ningún curso del período 2026-1»</em>.</p>
+<p><strong>Cálculo:</strong></p>
+<pre><code class="language-text">{ s | s ∈ students ∧ ¬∃e ∈ enrollments (
+        e.student_id = s.id ∧
+        ∃c ∈ courses ( c.id = e.course_id ∧ c.periodo = '2026-1' ) ) }
 </code></pre>
-<p>Salidas observadas:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Caso</th>
-<th>PostgreSQL</th>
-<th>MySQL 8</th>
-<th>SQLite</th>
-<th>Oracle</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>01 división</td>
-<td><code>3</code></td>
-<td><code>3.5</code></td>
-<td><code>3</code></td>
-<td><code>3.5</code></td>
-</tr>
-<tr>
-<td>02 colación</td>
-<td><code>0</code></td>
-<td><code>1</code></td>
-<td><code>0</code></td>
-<td><code>0</code></td>
-</tr>
-<tr>
-<td>03 cadena vacía</td>
-<td><code>no-es-null</code></td>
-<td><code>no-es-null</code></td>
-<td><code>no-es-null</code></td>
-<td><code>es-null</code></td>
-</tr>
-<tr>
-<td>04 concatenación</td>
-<td><code>ab</code></td>
-<td><code>0</code></td>
-<td><code>ab</code></td>
-<td><code>ab</code></td>
-</tr>
-<tr>
-<td>05 orden de nulos</td>
-<td><code>NULL</code> primero</td>
-<td><code>NULL</code> primero</td>
-<td><code>NULL</code> primero</td>
-<td><code>NULL</code> <strong>último</strong></td>
-</tr>
-<tr>
-<td>06 redondeo de 2,5</td>
-<td><code>2</code> (al par)</td>
-<td><code>3</code></td>
-<td><code>3</code></td>
-<td><code>3</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>Seis líneas de SQL revelan seis formas distintas de obtener resultados incorrectos en silencio. El caso 06 es especialmente traicionero: PostgreSQL aplica redondeo bancario (al par más cercano) para <code>numeric</code>, y eso produce descuadres de céntimos frente a un sistema que redondea siempre hacia arriba.</p>
-<p><strong>Orden de los nulos:</strong> la norma deja la decisión al motor. La forma portable de fijarlo es escribirlo:</p>
-<pre><code class="language-sql">ORDER BY nota ASC NULLS LAST      -- PostgreSQL, Oracle, SQLite 3.30+
-ORDER BY (nota IS NULL), nota     -- portable a MySQL y SQL Server
+<p><strong>SQL, traducción literal:</strong></p>
+<pre><code class="language-sql">SELECT s.*
+FROM students s
+WHERE NOT EXISTS (
+  SELECT 1 FROM enrollments e
+  JOIN courses c ON c.id = e.course_id
+  WHERE e.student_id = s.id AND c.periodo = '2026-1'
+);
 </code></pre>
-<p><strong>Interpretación:</strong> la migración no consiste en traducir sintaxis. Consiste en enumerar las divergencias semánticas que afectan a tu dominio y escribir una prueba por cada una. Esa prueba se ejecuta en CI contra los dos motores y es lo único que convierte «debería funcionar» en «funciona».</p>
+<p><strong>Álgebra, misma consulta:</strong></p>
+<pre><code class="language-text">students − π_students.*( students ⋈ enrollments ⋈ σ_periodo='2026-1'(courses) )
+</code></pre>
+<p>Las tres formulaciones devuelven el mismo conjunto. La tercera hace explícita la diferencia (<code>−</code>), que es lo que un plan de ejecución llamará <em>anti-join</em>.</p>
+<p><strong>Contraste con la trampa de <code>NOT IN</code>:</strong></p>
+<pre><code class="language-sql">SELECT * FROM students
+WHERE id NOT IN (SELECT student_id FROM enrollments);   -- peligroso
+</code></pre>
+<p>Si <code>enrollments.student_id</code> admite nulos y hay uno solo, el resultado es <strong>vacío</strong>, no el esperado. La razón es la lógica de tres valores (clase 019): <code>id NOT IN (1, 2, NULL)</code> se evalúa como <code>id&lt;&gt;1 ∧ id&lt;&gt;2 ∧ id&lt;&gt;NULL</code>, y el último término es <code>UNKNOWN</code>, que nunca es verdadero.</p>
+<p><code>NOT EXISTS</code> no sufre este problema porque no compara valores: comprueba la existencia de filas. Esta es la razón técnica —no estilística— para preferirlo.</p>
+<p><strong>Traza numérica:</strong> con 2 000 estudiantes, 1 fila con <code>student_id</code> nulo basta para que <code>NOT IN</code> devuelva 0 filas en lugar de las 340 correctas. Un fallo silencioso de 340 registros perdidos.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Migración</th>
-<th>Dificultad dominante</th>
+<th>Aspecto</th>
+<th>Álgebra</th>
+<th>Cálculo</th>
+<th>SQL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>MySQL → PostgreSQL</td>
-<td>Colación, <code>ONLY_FULL_GROUP_BY</code>, tipos laxos, división</td>
+<td>Estilo</td>
+<td>Procedimental</td>
+<td>Declarativo</td>
+<td>Declarativo</td>
 </tr>
 <tr>
-<td>PostgreSQL → MySQL</td>
-<td>Índices parciales, <code>jsonb</code>, tipos avanzados, DDL transaccional</td>
+<td>Especifica el orden</td>
+<td>Sí</td>
+<td>No</td>
+<td>No</td>
 </tr>
 <tr>
-<td>Oracle → PostgreSQL</td>
-<td>Cadena vacía, <code>DUAL</code>, PL/SQL, identificadores en mayúsculas</td>
+<td>Riesgo de expresión insegura</td>
+<td>No</td>
+<td>Sí</td>
+<td>No (acotado por <code>FROM</code>)</td>
 </tr>
 <tr>
-<td>SQL Server → PostgreSQL</td>
-<td>Aislamiento por bloqueo, <code>TOP</code>, T-SQL</td>
+<td>Poder expresivo</td>
+<td>Igual</td>
+<td>Igual</td>
+<td>Mayor</td>
 </tr>
 <tr>
-<td>Cualquiera → SQLite</td>
-<td>Concurrencia de escritura, tipado dinámico</td>
+<td>Uso real</td>
+<td>Interno del motor</td>
+<td>Fundamento teórico</td>
+<td>Interfaz del usuario</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Migrar comparando solo la sintaxis.</strong> Las divergencias caras no dan error.</li>
-<li><strong>Desactivar <code>ONLY_FULL_GROUP_BY</code> para que «funcione».</strong> Devuelve valores arbitrarios.</li>
-<li><strong>Suponer que <code>''</code> y <code>NULL</code> son distintos en Oracle.</strong></li>
-<li><strong>No fijar <code>NULLS FIRST/LAST</code>.</strong> Los informes ordenan distinto según el motor.</li>
-<li><strong>Ignorar el motor de almacenamiento en MySQL heredado.</strong> MyISAM no es transaccional.</li>
-<li><strong>Probar la migración solo con datos limpios.</strong> Las divergencias aparecen con nulos, vacíos y acentos.</li>
+<li><strong>Usar <code>NOT IN</code> con subconsulta que puede devolver nulos.</strong> Devuelve vacío sin avisar.</li>
+<li><strong>Creer que el orden de los <code>JOIN</code> escritos es el ejecutado.</strong> La equivalencia autoriza al motor a reordenar.</li>
+<li><strong>Intentar expresar «todos» con <code>IN</code>.</strong> <code>IN</code> es ∃; para ∀ hace falta la doble negación.</li>
+<li><strong>Esperar cierre transitivo sin recursión.</strong> Un <code>JOIN</code> de profundidad fija no recorre jerarquías de profundidad variable.</li>
+<li><strong>Confundir declarativo con «el motor lo hará bien siempre».</strong> El motor elige el cómo, pero con estadísticas malas elige mal (clase 042).</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Una migración de motor sin pruebas de equivalencia se descubre incompleta durante meses, en forma de incidencias sueltas que nadie relaciona entre sí. El conjunto de casos de esta clase es barato de escribir y es lo que convierte la migración en un proyecto con final.</p>
+<p>Cuando una consulta con <code>NOT IN</code> empieza a devolver menos filas tras una carga de datos, la causa casi siempre es un nulo nuevo en la subconsulta. Conocer el fundamento lógico convierte un misterio de tres días en una comprobación de tres minutos.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Amplía el archivo de casos con cinco divergencias que afecten a tu dominio.</li>
-<li>Ejecútalo en dos motores del <code>docker-compose</code> y guarda ambas salidas.</li>
-<li>Escribe un comparador que falle si difieren y añádelo a la integración continua.</li>
-<li>Documenta, por cada divergencia, la corrección adoptada.</li>
+<li>Escribe en cálculo de tuplas dos consultas reales de tu trabajo, una con ∃ y otra con ∀.</li>
+<li>Tradúcelas a SQL y al álgebra.</li>
+<li>Construye el caso con nulos que rompe la versión con <code>NOT IN</code> y captura la evidencia.</li>
+<li>Formula una pregunta de tu dominio que exija cierre transitivo y explica por qué queda fuera del cálculo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué <code>ONLY_FULL_GROUP_BY</code> desactivado produce informes erróneos y no errores?</li>
-<li>Explica qué código de tu dominio se rompería al migrar a Oracle por el tratamiento de la cadena vacía.</li>
-<li>¿Qué implica que SQL Server use bloqueo en <code>READ COMMITTED</code> para una consulta de informe larga?</li>
-<li>Escribe un <code>ORDER BY</code> con posición de nulos fijada que funcione en los cinco motores de la tabla.</li>
+<li>¿Por qué toda consulta SQL es automáticamente una expresión segura?</li>
+<li>Traduce <code>∀c ∈ obligatorios: inscrito(s, c)</code> a SQL y explica cada negación.</li>
+<li>Da un caso real donde <code>NOT IN</code> y <code>NOT EXISTS</code> devuelvan resultados distintos, con datos concretos.</li>
+<li>¿Qué le añade SQL al álgebra relacional, y por qué esas adiciones no rompen la capacidad de optimizar?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Cuántos nombres distintos hay, cuando el motor decide si «Ada» y «ada» son el mismo</p>
-<p>Una tabla con cuatro filas: <code>Ada</code>, <code>ada</code>, <code>ADA</code> y <code>Linus</code>. La pregunta es
-cuántos nombres distintos hay, y la respuesta correcta —cuatro— no depende
-de la consulta: depende de la <strong>intercalación</strong> de la columna, que no está
-escrita en ninguna parte de la consulta.</p>
-<p>Con la configuración por omisión, MySQL responde <strong>2</strong>: su intercalación
-<code>utf8mb4_0900_ai_ci</code> ignora mayúsculas y acentos, así que las tres primeras
-filas son el mismo valor. SQL Server responde lo que diga la intercalación
-de la instancia, que se eligió al instalarla y que casi nadie recuerda.
-PostgreSQL, SQLite y DuckDB responden 4, porque comparan byte a byte.</p>
-<p>Esta es la divergencia que rompe migraciones sin dar un solo error: los
-recuentos cambian, los <code>UNIQUE</code> aceptan o rechazan cosas distintas, y el
-<code>ORDER BY</code> devuelve otro orden. El caso obliga a escribir en cada motor la
-versión que responde 4.</p>
+<p><strong>Caso:</strong> Los estudiantes inscritos en todos los cursos: el cuantificador universal</p>
+<p>El cálculo relacional describe <strong>qué</strong> se quiere, con cuantificadores; el
+álgebra describe <strong>cómo</strong> obtenerlo, con operadores. Codd demostró que los
+dos tienen el mismo poder expresivo, y esta clase lo comprueba con la
+pregunta que peor se traduce: «¿quién está inscrito en todos los cursos?».</p>
+<p>No hay operador <code>PARA TODO</code> en SQL. La traducción es doble negación —«no
+existe un curso para el que no exista su inscripción»— y con los datos del
+caso (Ada en los dos cursos, Linus en uno, Grace en ninguno) solo Ada
+sobrevive. Que Grace <strong>no</strong> salga es la parte que atrapa a casi todo el
+mundo: sin inscripciones, «todos sus cursos cumplen» sería cierto por
+vacuidad si la pregunta estuviera mal escrita.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>distintos</th>
+<th>nombre</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>4</code></td>
+<td><code>Ada</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 022</code>: 4 de
-las 7 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 022</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -390,245 +290,267 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/datatype3.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/expressions/collations.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/expressions/subqueries.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/collation.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-subquery.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>MariaDB</td>
+<td>MongoDB</td>
 <td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/mariadb/consulta.sql">código</a></td>
-<td><a href="https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets">doc oficial</a></td>
-</tr>
-<tr>
-<td>Microsoft SQL Server</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/sql-server/consulta.sql">código</a></td>
-<td><a href="https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support">doc oficial</a></td>
-</tr>
-<tr>
-<td>Oracle Database</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/oracle-database/consulta.sql">código</a></td>
-<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/datatype3.html
--- nota: la intercalacion por omision es BINARY: compara byte a byte. Cambiar
---       la columna a `TEXT COLLATE NOCASE` haria que esta consulta devolviera 2.
+-- doc: https://sqlite.org/lang_expr.html
 
 -- === preparacion ===
-CREATE TABLE registros (
-    id     INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL
+CREATE TABLE cursos (
+    codigo TEXT PRIMARY KEY
 );
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
 
 -- === consulta ===
--- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
--- esta en la consulta: la intercalacion de la columna.
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Su intercalación por omisión es <code>BINARY</code>: compara byte a byte y responde 4 sin configurar nada. Para comparar sin mayúsculas hay que pedirlo expresamente con <code>COLLATE NOCASE</code>.</li>
-<li><strong>Por qué no:</strong> <code>NOCASE</code> solo ignora mayúsculas en el alfabeto ASCII: <code>Á</code> y <code>á</code> siguen siendo distintas. Cualquier aplicación con texto en español necesita algo más que la intercalación integrada.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/datatype3.html">https://sqlite.org/datatype3.html</a></li>
+<li><strong>Por qué sí:</strong> Soporta subconsultas correlacionadas anidadas, que es todo lo que la doble negación necesita: la traducción del cálculo cabe entera en SQL estándar.</li>
+<li><strong>Por qué no:</strong> Sin índice sobre <code>inscripciones</code>, la subconsulta interna se reevalúa por cada par estudiante-curso; con datos reales, ese plan es cuadrático.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_expr.html">https://sqlite.org/lang_expr.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/expressions/collations.html
--- nota: al analizar un volcado que viene de MySQL, este recuento NO coincide
---       con el del origen. No es un fallo: es la intercalacion.
+-- doc: https://duckdb.org/docs/stable/sql/expressions/subqueries.html
+-- nota: DuckDB descorrelaciona esta consulta y la convierte en reuniones. La
+--       forma del calculo y la del algebra terminan en el mismo plan: eso es
+--       la equivalencia de Codd, comprobada por el optimizador.
 
 -- === preparacion ===
-CREATE TABLE registros (
-    id     INTEGER PRIMARY KEY,
-    nombre VARCHAR NOT NULL
+CREATE TABLE cursos (
+    codigo VARCHAR PRIMARY KEY
 );
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
 
 -- === consulta ===
--- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
--- esta en la consulta: la intercalacion de la columna.
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Compara respetando mayúsculas por omisión y ofrece intercalaciones ICU como extensión cuando hace falta ordenar por idioma.</li>
-<li><strong>Por qué no:</strong> Al analizar datos que vienen de MySQL, el recuento distinto que devuelve DuckDB <strong>no coincide</strong> con el del origen: no es un fallo, es la intercalación, y descubrirlo tarde invalida el informe entero.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/expressions/collations.html">https://duckdb.org/docs/stable/sql/expressions/collations.html</a></li>
+<li><strong>Por qué sí:</strong> Su optimizador convierte las subconsultas correlacionadas en reuniones (descorrelación): es el motor donde mejor se ve que la forma del cálculo y la del álgebra terminan siendo el mismo plan.</li>
+<li><strong>Por qué no:</strong> Esa reescritura automática oculta el costo real de la forma escrita: lo que aquí es gratis, en otro motor puede ser el bucle anidado que tumba el informe.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/expressions/subqueries.html">https://duckdb.org/docs/stable/sql/expressions/subqueries.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/collation.html
--- nota: la comparacion por omision distingue mayusculas. Lo que hay que vigilar
---       aqui es otra cosa: la intercalacion viene de la biblioteca del sistema,
---       y una actualizacion de glibc puede cambiar el orden y dejar los indices
---       B-Tree de texto en un estado incoherente. De ahi el proveedor `icu`.
+-- doc: https://www.postgresql.org/docs/current/functions-subquery.html
+-- nota: la forma equivalente con agregacion es
+--         SELECT estudiante FROM inscripciones GROUP BY estudiante
+--         HAVING COUNT(DISTINCT curso) = (SELECT COUNT(*) FROM cursos);
+--       Da lo mismo aqui, pero deja de dar lo mismo si hay nulos.
+
+DROP TABLE IF EXISTS inscripciones, estudiantes, cursos;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS registros;
-
-CREATE TABLE registros (
-    id     integer PRIMARY KEY,
-    nombre text NOT NULL
+CREATE TABLE cursos (
+    codigo text PRIMARY KEY
 );
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
 
 -- === consulta ===
--- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
--- esta en la consulta: la intercalacion de la columna.
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La intercalación es explícita y se puede fijar por columna o por expresión; el comportamiento por omisión distingue mayúsculas, que es lo que casi siempre se quiere para una identidad.</li>
-<li><strong>Por qué no:</strong> La intercalación depende de la biblioteca del sistema operativo: una actualización de <code>glibc</code> puede cambiar el orden y <strong>corromper los índices B-Tree</strong> sobre columnas de texto. Por eso existe el proveedor <code>icu</code> y por eso hay que declararlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/collation.html">https://www.postgresql.org/docs/current/collation.html</a></li>
+<li><strong>Por qué sí:</strong> Además de la doble negación admite la forma con agregación —contar cursos distintos por estudiante y compararlo con el total—, y <code>EXPLAIN</code> permite medir cuál de las dos es más barata con los datos reales.</li>
+<li><strong>Por qué no:</strong> Las dos formas dejan de ser equivalentes en cuanto hay nulos o el conjunto divisor está vacío: la equivalencia es del modelo relacional, no de cualquier consulta que se le parezca.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-subquery.html">https://www.postgresql.org/docs/current/functions-subquery.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html
--- nota: SIN el COLLATE utf8mb4_bin de abajo, esta consulta devuelve 2, no 4:
---       la intercalacion por omision utf8mb4_0900_ai_ci ignora mayusculas y
---       acentos. Es la divergencia mas cara de las migraciones a y desde MySQL.
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html
+
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+DROP TABLE IF EXISTS cursos;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS registros;
-
-CREATE TABLE registros (
-    id     INT PRIMARY KEY,
-    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
+CREATE TABLE cursos (
+    codigo VARCHAR(50) PRIMARY KEY
 );
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
 
 -- === consulta ===
--- Cuantos nombres DISTINTOS hay. La respuesta correcta depende de algo que no
--- esta en la consulta: la intercalacion de la columna.
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+-- «Los estudiantes inscritos en TODOS los cursos» es la division relacional, y
+-- el calculo la escribe tal cual se lee: no existe ningun curso para el que no
+-- exista su inscripcion. El doble NOT EXISTS no es un truco: es la traduccion
+-- literal del cuantificador universal.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM cursos c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM inscripciones i
+        WHERE i.estudiante = e.nombre AND i.curso = c.codigo
+    )
+)
+ORDER BY e.nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Se puede pedir la comparación exacta con <code>COLLATE utf8mb4_bin</code> en la columna o en la propia consulta, sin cambiar la configuración del servidor.</li>
-<li><strong>Por qué no:</strong> Por omisión hace justo lo contrario, y en silencio: <code>utf8mb4_0900_ai_ci</code> ignora mayúsculas y acentos. Un <code>UNIQUE</code> sobre un correo acepta <code>Ada@x.org</code> <strong>o</strong> <code>ada@x.org</code>, pero no las dos, y eso es una decisión de producto que nadie tomó.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html">https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html</a></li>
+<li><strong>Por qué sí:</strong> Desde 8.0 su optimizador también transforma buena parte de las subconsultas en semirreuniones, y la forma con doble <code>NOT EXISTS</code> es portable tal cual.</li>
+<li><strong>Por qué no:</strong> Históricamente materializaba las subconsultas correlacionadas y volvía lentísima esta forma; en bases heredadas con versiones antiguas hay que escribir la variante con agregación.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html">https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html</a></li>
 </ul>
-<h4 id="mariadb--implementacionesmariadbconsultasql">MariaDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/mariadb/consulta.sql"><code>implementaciones/mariadb/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: mariadb
--- doc: https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets
--- nota: implementacion declarada. La sintaxis es la de MySQL, pero la
---       intercalacion por omision NO es la misma (utf8mb4_general_ci frente a
---       utf8mb4_0900_ai_ci): dos motores que se anuncian compatibles ordenan
---       distinto. Por eso el COLLATE explicito no es opcional al migrar.
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/
+// nota: sin cuantificadores, la unica via es la variante con agregacion:
+//       recoger los cursos de cada estudiante y comprobar que el conjunto de
+//       TODOS los cursos esta contenido en el suyo.
 
--- === preparacion ===
-DROP TABLE IF EXISTS registros;
+// === preparacion ===
+db.cursos.drop();
+db.inscripciones.drop();
 
-CREATE TABLE registros (
-    id     INT PRIMARY KEY,
-    nombre VARCHAR(50) COLLATE utf8mb4_bin NOT NULL
-);
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada'), (2, 'ada'), (3, 'ADA'), (4, 'Linus');
+db.cursos.insertMany([{ _id: &quot;DB-101&quot; }, { _id: &quot;SE-201&quot; }]);
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+]);
 
--- === consulta ===
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
+// === consulta ===
+const todos = db.cursos.find({}, { _id: 1 }).toArray().map((c) =&gt; c._id);
+db.inscripciones
+  .aggregate([
+    { $group: { _id: &quot;$estudiante&quot;, suyos: { $addToSet: &quot;$curso&quot; } } },
+    { $match: { $expr: { $setIsSubset: [todos, &quot;$suyos&quot;] } } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Comparte la sintaxis de MySQL, así que la corrección con <code>COLLATE</code> es la misma y el código migra sin cambios.</li>
-<li><strong>Por qué no:</strong> Sus intercalaciones por omisión <strong>no son las mismas</strong> que las de MySQL 8 (<code>utf8mb4_general_ci</code> frente a <code>utf8mb4_0900_ai_ci</code>), y ordenan distinto: dos motores que se anuncian compatibles devuelven listas en otro orden.</li>
-<li>📄 Documentación oficial: <a href="https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets">https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets</a></li>
-</ul>
-<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: sql-server
--- doc: https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support
--- nota: implementacion declarada. La intercalacion por omision se elige AL
---       INSTALAR la instancia y afecta tambien a los nombres de objetos y a
---       tempdb. Fijarla en la columna, como aqui, es la unica forma de que el
---       resultado no dependa de la maquina.
-
--- === preparacion ===
-DROP TABLE IF EXISTS dbo.registros;
-
-CREATE TABLE dbo.registros (
-    id     INT PRIMARY KEY,
-    nombre NVARCHAR(50) COLLATE Latin1_General_BIN2 NOT NULL
-);
-INSERT INTO dbo.registros (id, nombre) VALUES
-    (1, N'Ada'), (2, N'ada'), (3, N'ADA'), (4, N'Linus');
-
--- === consulta ===
-SELECT COUNT(DISTINCT nombre) AS distintos FROM dbo.registros;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> La intercalación se puede fijar en la propia consulta con <code>COLLATE Latin1_General_BIN2</code>, sin tocar la base ni la instancia.</li>
-<li><strong>Por qué no:</strong> La intercalación por omisión se elige <strong>al instalar la instancia</strong> y afecta también a los nombres de objetos y a las tablas temporales: mezclar dos bases con intercalaciones distintas produce errores al reunir columnas de texto que no se pueden resolver sin conversiones explícitas.</li>
-<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support">https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support</a></li>
-</ul>
-<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/022-mysql-sqlserver-y-oracle-divergencias/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: oracle-database
--- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html
--- nota: implementacion declarada. Aqui el comportamiento se controla POR SESION
---       con NLS_SORT y NLS_COMP: la misma consulta puede devolver 2 o 4 segun
---       quien la lance. Dejarlo en BINARY es la unica forma de que el resultado
---       sea el mismo para todos.
-
--- === preparacion ===
-ALTER SESSION SET NLS_SORT = 'BINARY';
-ALTER SESSION SET NLS_COMP = 'BINARY';
-
-CREATE TABLE registros (
-    id     NUMBER PRIMARY KEY,
-    nombre VARCHAR2(50) NOT NULL
-);
-INSERT INTO registros (id, nombre) VALUES (1, 'Ada');
-INSERT INTO registros (id, nombre) VALUES (2, 'ada');
-INSERT INTO registros (id, nombre) VALUES (3, 'ADA');
-INSERT INTO registros (id, nombre) VALUES (4, 'Linus');
-COMMIT;
-
--- === consulta ===
-SELECT COUNT(DISTINCT nombre) AS distintos FROM registros;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Con <code>NLS_SORT</code> y <code>NLS_COMP</code> se controla el mismo comportamiento por sesión, lo que permite ajustar la comparación sin cambiar el esquema.</li>
-<li><strong>Por qué no:</strong> Que sea por sesión es también el problema: la misma consulta devuelve resultados distintos según quién la lance. Y la cadena vacía sigue siendo <code>NULL</code>, lo que suma una divergencia más al recuento.</li>
-<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html</a></li>
+<li><strong>Por qué sí:</strong> La variante con agregación se traduce bien: agrupar por estudiante, recoger sus cursos en un conjunto y comparar su tamaño con el número total de cursos.</li>
+<li><strong>Por qué no:</strong> No hay cuantificadores ni subconsultas correlacionadas: la doble negación no se puede escribir, así que la equivalencia con el cálculo se pierde y hay que reformular la pregunta a mano cada vez.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/setIsSubset/</a></li>
 </ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -672,24 +594,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Oracle</strong> (2026). <a href="https://dev.mysql.com/doc/">MySQL Reference Manual</a>.<br />
-  Dialecto y comportamiento del motor InnoDB.</li>
-<li><strong>MariaDB Foundation</strong> (2026). <a href="https://mariadb.com/docs/">MariaDB Documentation</a>.<br />
-  Divergencias respecto de MySQL relevantes para la portabilidad.</li>
-<li><strong>Microsoft</strong> (2026). <a href="https://learn.microsoft.com/sql/sql-server/">SQL Server Documentation</a>.<br />
-  T-SQL, niveles de aislamiento y almacen de consultas.</li>
-<li><strong>Oracle</strong> (2026). <a href="https://docs.oracle.com/en/database/">Oracle Database Documentation</a>.<br />
-  PL/SQL y modelo de consistencia de lectura de Oracle.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="021.html">← Anterior</a> · <a href="023.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="022">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="021.html"><span class="sentido">← Anterior · 021</span>PostgreSQL: tipos, extensiones y modelo de procesos</a>
-<a class="siguiente" href="023.html"><span class="sentido">Siguiente · 023 →</span>SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a>
+<a class="anterior" href="021.html"><span class="sentido">← Anterior · 021</span>Álgebra relacional: selección, proyección, producto y reunión</a>
+<a class="siguiente" href="023.html"><span class="sentido">Siguiente · 023 →</span>Integridad: restricciones, claves foraneas y acciones referenciales</a>
 </nav>
 </main>
 <footer>

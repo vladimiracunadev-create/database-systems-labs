@@ -13,7 +13,7 @@ alguien pueda verlo sin tener que creerte.
 |---|---|---|
 | 8 evidencias de laboratorio | [`assessments/evidencias.md`](../assessments/evidencias.md) | Que sabes medir y declarar límites |
 | 1 proyecto final ejecutable | [`capstone.md`](capstone.md) | Que sabes diseñar y sostenerlo con datos |
-| 3–6 registros de decisión | Clase [063](../classes/part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md) | Que sabes decidir y revisar la decisión |
+| 3–6 registros de decisión | Clase [063](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md) | Que sabes decidir y revisar la decisión |
 | Retos de transferencia | Al final de cada clase | Que lo aplicaste a tu contexto real |
 | Un guion de defensa | [`capstone.md`](capstone.md#la-defensa) | Que sabes explicarlo a quien pregunta |
 

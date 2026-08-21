@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Qué resuelve un sistema de bases de datos y qué no. Parte 00: Fundamentos, sistemas y método.">
+<meta name="description" content="Qué es un dato, un registro y una tabla. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/001.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="001 — Qué resuelve un sistema de bases de datos y qué no · Database Systems Labs">
-<meta property="og:description" content="Qué resuelve un sistema de bases de datos y qué no. Parte 00: Fundamentos, sistemas y método.">
+<meta property="og:title" content="001 — Qué es un dato, un registro y una tabla · Database Systems Labs">
+<meta property="og:description" content="Qué es un dato, un registro y una tabla. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/001.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "001 — Qué resuelve un sistema de bases de datos y qué no", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["persistencia", "concurrencia", "integridad", "recuperación", "independencia de datos"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>001 — Qué resuelve un sistema de bases de datos y qué no · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "001 — Qué es un dato, un registro y una tabla", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["dato", "información", "registro", "campo", "tabla"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>001 — Qué es un dato, un registro y una tabla · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,216 +49,235 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-00.html">Parte 00 · Fundamentos, sistemas y método</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 001</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="001--qué-resuelve-un-sistema-de-bases-de-datos-y-qué-no">001 — Qué resuelve un sistema de bases de datos y qué no</h1>
+<h1 id="001--qué-es-un-dato-un-registro-y-una-tabla">001 — Qué es un dato, un registro y una tabla</h1>
 <blockquote>
 <p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
-3 horas estimadas · motores <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>persistencia</code> · <code>concurrencia</code> · <code>integridad</code> · <code>recuperación</code> · <code>independencia de datos</code></p>
-<p><strong>En este caso se comparan 9 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mongodb</code>, <code>redis</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>dato</code> · <code>información</code> · <code>registro</code> · <code>campo</code> · <code>tabla</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Establecer qué problemas concretos resuelve un sistema gestor de bases de datos (SGBD) y, sobre todo, cuáles <strong>no</strong> resuelve. Sin esa demarcación, cualquier archivo con datos se llama «base de datos» y cualquier fallo de diseño se atribuye al motor.</p>
+<p>Poner nombre a las tres cosas de las que se habla todo el rato en este programa
+—dato, registro y tabla— y, sobre todo, entender <strong>por qué se separan</strong>. Casi
+todos los errores de diseño que se estudiarán más adelante empiezan en una
+confusión de este nivel: meter dos hechos en un mismo dato, o guardar como texto
+algo que era un número, o llamar tabla a una lista que no lo es.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Enumerar los seis problemas del almacenamiento en archivos planos que motivaron la aparición de los SGBD.</li>
-<li>Reproducir una anomalía de actualización perdida y explicar por qué el sistema de archivos no la impide.</li>
-<li>Distinguir lo que el motor <strong>garantiza</strong> de lo que solo <strong>permite declarar</strong>.</li>
-<li>Justificar cuándo <em>no</em> usar un SGBD, con un criterio distinto de «es lo que se usa siempre».</li>
+<li>Distinguir un <strong>dato</strong> de la <strong>información</strong> que produce al interpretarlo.</li>
+<li>Identificar en un caso real cuáles son los registros y cuáles los campos.</li>
+<li>Explicar por qué una tabla exige que <strong>todas</strong> las filas tengan la misma forma.</li>
+<li>Detectar un campo que en realidad guarda dos hechos y separarlo.</li>
 <li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-problema-que-existía-antes">El problema que existía antes</h3>
-<p>Silberschatz, Korth y Sudarshan abren <em>Database System Concepts</em> con la lista de defectos del enfoque «un archivo por aplicación». No es historia: cada uno reaparece cuando alguien decide guardar el estado en JSON y arreglarlo después.</p>
+<h3 id="dato-no-es-lo-mismo-que-información">Dato no es lo mismo que información</h3>
+<p><code>38</code> es un dato. No significa nada por sí solo: puede ser una edad, una
+temperatura, un número de camiseta o los grados de una fiebre. Se convierte en
+<strong>información</strong> cuando se le añade contexto: <em>la temperatura del sensor 3 a las
+10:15 fue de 38 grados</em>.</p>
+<p>Esa distinción no es filosofía. Es la razón de que una base de datos guarde
+siempre el dato <strong>junto a su contexto</strong>: de qué es, de cuándo, de quién. Un
+número suelto en una celda es una promesa de confusión futura.</p>
+<p>William Kent, en <em>Data and Reality</em>, lleva la idea más lejos: ningún modelo
+captura el mundo, siempre se elige un recorte, y ese recorte es una decisión
+humana que el sistema no puede tomar. Guardar «la dirección de un cliente»
+obliga a decidir antes si un cliente tiene una dirección o varias, si la
+dirección de facturación es la misma que la de envío, y qué pasa cuando se muda.</p>
+<h3 id="el-registro-un-hecho-completo">El registro: un hecho completo</h3>
+<p>Un <strong>registro</strong> —una fila— es un hecho completo sobre una cosa. No medio hecho,
+ni dos.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Defecto</th>
-<th>Qué ocurre en la práctica</th>
+<th>Lo que se guarda</th>
+<th>¿Es un registro?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Redundancia e inconsistencia</td>
-<td>El mismo dato vive en dos archivos y divergen</td>
+<td><code>Ada Lovelace</code></td>
+<td>No: es un dato suelto, falta de qué es</td>
 </tr>
 <tr>
-<td>Dificultad de acceso</td>
-<td>Cada consulta nueva exige escribir un programa nuevo</td>
+<td><code>Ada Lovelace, ada@example.org, 2026-03-01</code></td>
+<td>Sí: una estudiante, con su correo y su fecha de alta</td>
 </tr>
 <tr>
-<td>Aislamiento de datos</td>
-<td>Formatos distintos impiden combinar información</td>
-</tr>
-<tr>
-<td>Problemas de integridad</td>
-<td>La regla «el saldo no puede ser negativo» vive en el código, no en el dato</td>
-</tr>
-<tr>
-<td>Problemas de atomicidad</td>
-<td>Una caída a mitad de una transferencia deja el dinero en ninguna parte</td>
-</tr>
-<tr>
-<td>Anomalías de concurrencia</td>
-<td>Dos procesos escriben a la vez y uno de los cambios desaparece</td>
-</tr>
-<tr>
-<td>Problemas de seguridad</td>
-<td>No hay forma de dar acceso parcial: o se ve el archivo entero o nada</td>
+<td><code>Ada Lovelace, ada@example.org, DB-101, SE-201</code></td>
+<td>No: mezcla dos hechos —quién es y en qué cursos está</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="lo-que-un-sgbd-aporta">Lo que un SGBD aporta</h3>
-<p>Un gestor no es «un lugar donde guardar tablas». Es un programa que ofrece cuatro servicios que un sistema de archivos no ofrece:</p>
-<ul>
-<li><strong>Persistencia con recuperación.</strong> Tras un corte de energía, el sistema vuelve a un estado consistente conocido, no a «lo que hubiera alcanzado a escribirse».</li>
-<li><strong>Concurrencia controlada.</strong> Muchos clientes leen y escriben simultáneamente y el resultado es equivalente a alguna ejecución ordenada (según el nivel de aislamiento elegido; parte 07).</li>
-<li><strong>Integridad declarada.</strong> Las restricciones se expresan una vez, en el esquema, y el motor las hace cumplir para todo cliente, incluido el que se conecta por consola a las tres de la mañana.</li>
-<li><strong>Independencia de datos.</strong> La forma física de almacenamiento puede cambiar sin reescribir las consultas. Es la aportación central del artículo de Codd (1970) y el tema de la clase 003.</li>
-</ul>
-<p>Hellerstein, Stonebraker y Hamilton describen cómo se implementan esos servicios: gestor de procesos, procesador de consultas, gestor de transacciones y gestor de almacenamiento compartido. Ningún componente es opcional si se quieren las cuatro garantías.</p>
-<h3 id="lo-que-un-sgbd-no-hace">Lo que un SGBD <strong>no</strong> hace</h3>
-<p>Aquí se pierde más tiempo del que se cree:</p>
-<ul>
-<li><strong>No hace que los datos sean verdaderos.</strong> Hace cumplir las restricciones que alguien declaró. Si nadie declaró que <code>edad &gt; 0</code>, el motor guardará <code>-4</code> sin protestar.</li>
-<li><strong>No modela el dominio por ti.</strong> William Kent dedica <em>Data and Reality</em> a mostrar que ningún esquema captura el mundo: siempre se elige un recorte. El motor ejecuta ese recorte, no lo mejora.</li>
-<li><strong>No compensa un modelo equivocado con más hardware.</strong> Una consulta que multiplica filas por una reunión mal planteada devuelve resultados erróneos igual de rápido.</li>
-<li><strong>No es gratis.</strong> Añade un proceso que operar, respaldar, actualizar y asegurar.</li>
-</ul>
-<h3 id="cuándo-no-usar-un-sgbd">Cuándo no usar un SGBD</h3>
-<p>Criterios defendibles para quedarse con archivos: los datos son de un solo escritor, caben en memoria, no hay reglas de integridad entre elementos, y perderlos es aceptable (caché, artefactos de compilación, registros efímeros). En cuanto aparezcan dos escritores o una invariante entre dos registros, el argumento se cae.</p>
-<pre><code class="language-mermaid">flowchart TD
-    A[&quot;Necesito guardar datos&quot;] --&gt; B{&quot;¿Más de un escritor&lt;br/&gt;concurrente?&quot;}
-    B -- &quot;No&quot; --&gt; C{&quot;¿Hay invariantes&lt;br/&gt;entre registros?&quot;}
-    B -- &quot;Sí&quot; --&gt; G[&quot;SGBD: hace falta control&lt;br/&gt;de concurrencia&quot;]
-    C -- &quot;No&quot; --&gt; D{&quot;¿Perderlos es&lt;br/&gt;aceptable?&quot;}
-    C -- &quot;Sí&quot; --&gt; G
-    D -- &quot;Sí&quot; --&gt; E[&quot;Archivos: suficiente&quot;]
-    D -- &quot;No&quot; --&gt; F{&quot;¿Consultas variadas&lt;br/&gt;o no previstas?&quot;}
-    F -- &quot;No&quot; --&gt; H[&quot;Archivo + copia verificada&quot;]
-    F -- &quot;Sí&quot; --&gt; G
+<p>La última fila es el error más común de quien viene de una hoja de cálculo, y
+tiene nombre: se estudiará como <strong>primera forma normal</strong> más adelante. De
+momento basta la regla práctica: <em>si para leer un campo hay que partirlo por
+comas, ese campo esconde varios hechos</em>.</p>
+<h3 id="el-campo-un-dato-con-nombre-y-con-tipo">El campo: un dato con nombre y con tipo</h3>
+<p>Cada columna de la tabla es un <strong>campo</strong>, y un campo tiene tres cosas: un
+nombre, un tipo y —a veces— una regla. <code>correo</code> es el nombre, texto es el tipo,
+«no puede repetirse» es la regla. El nombre dice qué significa el dato, el tipo
+dice qué valores son posibles y la regla dice cuáles son admisibles.</p>
+<p>Hernández, en <em>Database Design for Mere Mortals</em>, insiste en un detalle que
+parece menor y no lo es: <strong>el nombre del campo debe describir el dato, no su
+uso</strong>. <code>fecha_1</code> y <code>fecha_2</code> son nombres que dentro de seis meses no significan
+nada; <code>fecha_alta</code> y <code>fecha_baja</code> siguen significando lo mismo.</p>
+<h3 id="la-tabla-todas-las-filas-con-la-misma-forma">La tabla: todas las filas con la misma forma</h3>
+<p>Una <strong>tabla</strong> es un conjunto de registros que tienen exactamente los mismos
+campos. Esa uniformidad es lo que permite preguntar «dame los estudiantes dados
+de alta en marzo» sin mirar fila por fila qué campos trae cada una.</p>
+<p>Y es la diferencia más visible con una hoja de cálculo: en una hoja, la fila 12
+puede tener una columna más «porque ese caso era especial». En una tabla, no. Si
+un caso necesita otros campos, es que es <strong>otra cosa</strong> y va en otra tabla.</p>
+<pre><code class="language-mermaid">flowchart LR
+    A[&quot;38&quot;] --&gt;|&quot;+ contexto&quot;| B[&quot;temperatura del sensor 3&lt;br/&gt;a las 10:15&quot;]
+    B --&gt; C[&quot;registro:&lt;br/&gt;sensor_3 | 2026-08-19T10:15 | 38&quot;]
+    C --&gt; D[&quot;tabla lecturas:&lt;br/&gt;todas las filas con&lt;br/&gt;los mismos tres campos&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Dos cajeros aplican un cargo sobre la misma cuenta, que tiene <strong>1 000</strong> de saldo. Con archivos, cada proceso lee, calcula y escribe:</p>
-<pre><code class="language-text">t0  Cajero A lee saldo         -&gt; 1000
-t1  Cajero B lee saldo         -&gt; 1000
-t2  Cajero A calcula 1000 - 300 -&gt; 700
-t3  Cajero B calcula 1000 - 500 -&gt; 500
-t4  Cajero A escribe            -&gt; 700
-t5  Cajero B escribe            -&gt; 500
-</code></pre>
-<p>Saldo final: <strong>500</strong>. Saldo correcto: 1000 − 300 − 500 = <strong>200</strong>. Se perdieron 300 sin que ningún programa fallara ni ningún archivo se corrompiera: los dos cajeros hicieron exactamente lo que su código decía. Es la <em>actualización perdida</em>, la anomalía que Gray formalizaría como violación de aislamiento.</p>
-<p>El mismo escenario dentro de un SGBD, con una transacción por cajero y un nivel de aislamiento que detecte el conflicto, tiene tres desenlaces posibles: uno espera al otro y ambos terminan (200), o uno se aborta y se reintenta (200), o el motor informa de un fallo serializable y el cliente decide. Lo que <strong>no</strong> puede ocurrir es que un cambio confirmado se pierda en silencio.</p>
-<p>Comprobación numérica del argumento: con archivos, la ventana de riesgo es el intervalo <code>t0</code>–<code>t5</code>. Si cada operación dura 5 ms y llegan 40 cargos por segundo sobre la misma cuenta, la probabilidad de solapamiento no es marginal: es el caso habitual.</p>
-<h2 id="comparación">Comparación</h2>
+<p>Una academia lleva sus estudiantes en una hoja de cálculo:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Dimensión</th>
-<th>Archivos planos</th>
-<th>SGBD</th>
+<th>Nombre</th>
+<th>Contacto</th>
+<th>Cursos</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Unidad de escritura</td>
-<td>El archivo o un bloque</td>
-<td>La transacción</td>
+<td>Ada Lovelace</td>
+<td>ada@example.org / +56 9 1111</td>
+<td>DB-101, SE-201</td>
 </tr>
 <tr>
-<td>Recuperación tras caída</td>
-<td>Lo que alcanzó a escribirse</td>
-<td>Último estado confirmado</td>
+<td>Linus Torvalds</td>
+<td>linus@example.org</td>
+<td>DB-101</td>
 </tr>
 <tr>
-<td>Reglas de integridad</td>
-<td>En cada programa cliente</td>
-<td>Una vez, en el esquema</td>
-</tr>
-<tr>
-<td>Consultas no previstas</td>
-<td>Programa nuevo</td>
-<td>Consulta nueva</td>
-</tr>
-<tr>
-<td>Concurrencia</td>
-<td>Responsabilidad del programador</td>
-<td>Del gestor, según nivel declarado</td>
-</tr>
-<tr>
-<td>Control de acceso</td>
-<td>Permisos del sistema de archivos</td>
-<td>Por objeto, rol y fila</td>
-</tr>
-<tr>
-<td>Costo de operación</td>
-<td>Casi nulo</td>
-<td>Proceso que mantener</td>
+<td>Grace Hopper</td>
+<td>(sin correo)</td>
+<td></td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Qué está mal, campo por campo.</strong></p>
+<ul>
+<li><strong><code>Contacto</code></strong> guarda dos hechos distintos —correo y teléfono— separados por
+  una barra. Para buscar «quién tiene teléfono» hay que partir el texto, y en la
+  fila de Linus no hay barra: el mismo campo tiene dos formatos.</li>
+<li><strong><code>Cursos</code></strong> guarda una lista. Contar cuántos estudiantes hay en DB-101 exige
+  buscar una subcadena, y basta que alguien escriba <code>DB101</code> sin guion para que
+  ese estudiante desaparezca del recuento.</li>
+<li><strong><code>(sin correo)</code></strong> es texto que significa «no hay dato». Y es peligroso: si
+  mañana alguien busca los correos que contienen «sin», Grace aparecerá.</li>
+</ul>
+<p><strong>La versión con tablas.</strong></p>
+<pre><code class="language-text">estudiantes
+  id | nombre          | correo             | telefono
+   1 | Ada Lovelace    | ada@example.org    | +56 9 1111
+   2 | Linus Torvalds  | linus@example.org  | (vacío)
+   3 | Grace Hopper    | (vacío)            | (vacío)
+
+inscripciones
+  estudiante_id | curso
+              1 | DB-101
+              1 | SE-201
+              2 | DB-101
+</code></pre>
+<p>Tres cambios, y cada uno resuelve un problema concreto: el contacto se parte en
+dos campos con nombre propio, la lista de cursos se convierte en <strong>una fila por
+inscripción</strong>, y la ausencia de dato deja de escribirse con palabras.</p>
+<p>Ahora «cuántos estudiantes hay en DB-101» es contar filas, no buscar texto. Y
+Grace aparece en la tabla de estudiantes aunque no tenga ninguna inscripción,
+que es exactamente lo que ocurre en la realidad.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>«La base de datos garantiza que los datos sean correctos.»</strong> Garantiza las restricciones declaradas. Un esquema sin <code>CHECK</code>, sin <code>NOT NULL</code> y sin claves foráneas no garantiza nada; solo almacena.</li>
-<li><strong>«SQL es la base de datos.»</strong> SQL es un lenguaje. El gestor es el programa que lo ejecuta, y hay gestores sin SQL con las mismas garantías transaccionales.</li>
-<li><strong>«Si va lento, el motor es malo.»</strong> Antes de esa conclusión hay que mirar el modelo, los índices y el plan de ejecución (parte 08). El motor casi nunca es el primer sospechoso.</li>
-<li><strong>«Con NoSQL me ahorro el modelado.»</strong> Se cambia dónde ocurre el modelado, no si ocurre: pasa del esquema a los patrones de acceso (parte 05).</li>
-<li><strong>«Un archivo JSON es una base de datos.»</strong> Lo es en sentido coloquial y no lo es en sentido técnico: no ofrece atomicidad, aislamiento ni control de acceso.</li>
+<li><strong>Guardar varios hechos en un campo.</strong> Nombre completo, dirección entera,
+   lista separada por comas. Se detecta preguntando: ¿para usar esto tengo que
+   partirlo?</li>
+<li><strong>Escribir la ausencia de dato con palabras.</strong> <code>(sin correo)</code>, <code>N/A</code>, <code>-</code>,
+   <code>0</code>. Cada una obliga a recordarla al consultar, y nadie las recuerda todas.</li>
+<li><strong>Nombres de campo que describen la posición y no el dato.</strong> <code>campo_3</code>,
+   <code>columna_extra</code>, <code>dato</code>.</li>
+<li><strong>Filas con forma distinta.</strong> «Esta fila también lleva el nombre del tutor,
+   porque era un caso especial.» Ese caso especial es otra tabla.</li>
+<li><strong>Confundir el dato con su presentación.</strong> <code>$1.234,50</code> no es un número: es un
+   número ya formateado. El formato se aplica al mostrarlo, no al guardarlo.</li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>En un sistema real, la decisión «SGBD sí o no» arrastra consecuencias que no aparecen en el prototipo: quién aplica los parches de seguridad, dónde se guardan las copias, cómo se prueba la restauración, qué pasa cuando el disco se llena y quién recibe la alerta. Elegir un gestor es adoptar un servicio que operar, no solo una biblioteca que importar.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>Un campo que parece uno y son dos aparece en casi cualquier sistema real:
+<code>nombre_completo</code>, <code>direccion</code>, <code>periodo</code> (<code>2026-Q1</code>), <code>version</code> (<code>3.2.1</code>). En
+todos, la pregunta es la misma: ¿alguien va a querer buscar, ordenar o contar
+por una de las partes? Si la respuesta es sí, son campos distintos.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
-<p>Toma un sistema que hayas escrito y que guarde estado en archivos. Documenta, con evidencia:</p>
 <ol>
-<li>Una invariante entre dos registros que hoy nadie hace cumplir.</li>
-<li>Una secuencia concreta de dos procesos que la rompa (con marcas de tiempo, como en el ejemplo).</li>
-<li>Qué restricción del esquema la impediría en un SGBD.</li>
-<li>El costo de operación que asumirías al migrar.</li>
+<li>Busca una hoja de cálculo real —tuya o de tu trabajo— con al menos veinte
+   filas.</li>
+<li>Señala cada campo que guarde más de un hecho y escribe en qué campos se
+   partiría.</li>
+<li>Señala cada forma distinta de decir «no hay dato» que aparezca, y cuenta
+   cuántas hay.</li>
+<li>Dibuja las tablas que sustituirían a la hoja, y explica qué pregunta se
+   vuelve fácil con cada cambio.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Explica, con una traza temporal propia, una anomalía de concurrencia distinta de la actualización perdida y por qué el sistema de archivos no la evita.</li>
-<li>Un compañero afirma: «migramos a PostgreSQL, así que los datos ya son consistentes». ¿Qué le falta declarar para que esa frase sea cierta?</li>
-<li>Da un caso real de tu trabajo donde usar un SGBD sería una mala decisión, y justifica con los criterios del diagrama.</li>
-<li>¿Qué componente descrito por Hellerstein et al. desaparece si renuncias a la durabilidad, y qué garantía pierdes con él?</li>
+<li>Da un ejemplo propio de un dato que sin contexto pueda significar tres cosas
+   distintas.</li>
+<li>¿Por qué una tabla exige que todas las filas tengan los mismos campos? ¿Qué
+   se rompe si no es así?</li>
+<li>Un campo <code>telefono</code> guarda <code>+56 9 1111 / +56 2 2222</code> para algunos clientes.
+   ¿Qué consulta empieza a fallar y por qué?</li>
+<li>Explica por qué <code>(sin correo)</code> es peor que dejar el campo vacío.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Que el sistema impida por sí solo dos estudiantes con el mismo correo</p>
-<p>Se intentan registrar tres estudiantes, y el tercero repite el correo del
-primero. El programa <strong>no</strong> comprueba nada: la comprobación tiene que
-hacerla el sistema de datos. Al terminar, la consulta devuelve los correos
-registrados, ordenados alfabéticamente, uno por línea.</p>
-<p>Es la pregunta más elemental que se le puede hacer a un almacén de datos:
-¿puede garantizar una regla, o solo guardar lo que le den? Un archivo de
-texto y una hoja de cálculo aceptan el duplicado sin protestar; por eso no
-son bases de datos.</p>
+<p><strong>Caso:</strong> Una fila por hecho, en vez de una lista dentro de una celda</p>
+<p>La hoja de cálculo guardaba los cursos de cada estudiante en una sola celda:
+<code>DB-101, SE-201</code>. Aquí cada inscripción es <strong>una fila</strong>, y esa diferencia lo
+cambia todo: contar cuántos estudiantes hay en DB-101 pasa de ser una
+búsqueda de texto —que falla si alguien escribe <code>DB101</code> sin guion— a ser un
+recuento de filas.</p>
+<p>El caso guarda tres inscripciones de dos estudiantes y las devuelve
+ordenadas. Es la operación más elemental del programa, y sirve para ver que
+la idea de «un hecho por registro» no es exclusiva del modelo relacional:
+cada familia de motores la expresa a su manera.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>correo</th>
+<th>estudiante</th>
+<th>curso</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ada@example.org</code></td>
+<td><code>Ada</code></td>
+<td><code>DB-101</code></td>
 </tr>
 <tr>
-<td><code>linus@example.org</code></td>
+<td><code>Ada</code></td>
+<td><code>SE-201</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>DB-101</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 001</code>: 6 de
-las 7 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 001</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -276,256 +295,186 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/sqlite/consulta.sql">código</a></td>
 <td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-createtable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/index-unique/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/document/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/redis/consulta.txt">código</a></td>
 <td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Neo4j</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher">código</a></td>
-<td><a href="https://neo4j.com/docs/cypher-manual/current/constraints/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Amazon DynamoDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
 -- doc: https://sqlite.org/lang_createtable.html
--- nota: INSERT OR IGNORE deja que el motor rechace el duplicado sin abortar el
---       guion. Sin OR IGNORE, la tercera insercion lanza un error: esa es
---       exactamente la garantia que se esta demostrando.
+-- nota: la clave primaria compuesta impide que la misma inscripcion se guarde
+--       dos veces. En una hoja de calculo, nada lo impide.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    id     INTEGER PRIMARY KEY,
-    correo TEXT NOT NULL UNIQUE
+-- Un hecho por fila. La hoja de calculo guardaba «DB-101, SE-201» en una
+-- celda; aqui cada inscripcion es una fila propia, y contar deja de ser buscar
+-- texto.
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
-INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
-INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
--- El programa no comprueba nada: lo intenta igual. El motor lo rechaza.
-INSERT OR IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada',   'DB-101'),
+    ('Ada',   'SE-201'),
+    ('Linus', 'DB-101');
 
 -- === consulta ===
-SELECT correo FROM estudiantes ORDER BY correo;
+SELECT estudiante, curso FROM inscripciones ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>UNIQUE</code> es parte de la definición de la tabla, así que la regla vive con los datos y no en el programa que los escribe. SQLite lo comprueba aunque quien inserte sea otro proceso, otro lenguaje o la consola.</li>
-<li><strong>Por qué no:</strong> Al ser un archivo local sin servidor, la regla protege el archivo, no un sistema: dos máquinas con dos copias del archivo pueden tener cada una su «Ada» sin que nadie lo note.</li>
+<li><strong>Por qué sí:</strong> Es el motor con menos ceremonia posible: viene con Python, no hay servidor que levantar y una base de datos es un archivo. Para la primera hora de trabajo, no hay nada que estorbe menos.</li>
+<li><strong>Por qué no:</strong> Esa misma comodidad esconde lo que un motor con servidor aporta —usuarios, permisos, conexiones remotas—, así que conviene no confundir «funciona en mi máquina» con «sirve para un sistema».</li>
 <li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/constraints.html
--- nota: DuckDB no tiene INSERT OR IGNORE; la forma equivalente es
---       ON CONFLICT DO NOTHING, que es tambien la del estandar reciente.
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_table
+-- nota: la misma sentencia, otro motor. Lo que se aprende aqui no es de un
+--       producto: es SQL.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    id     INTEGER PRIMARY KEY,
-    correo VARCHAR NOT NULL UNIQUE
+-- Un hecho por fila. La hoja de calculo guardaba «DB-101, SE-201» en una
+-- celda; aqui cada inscripcion es una fila propia, y contar deja de ser buscar
+-- texto.
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
-INSERT INTO estudiantes VALUES (1, 'ada@example.org');
-INSERT INTO estudiantes VALUES (2, 'linus@example.org');
-INSERT INTO estudiantes VALUES (3, 'ada@example.org') ON CONFLICT DO NOTHING;
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada',   'DB-101'),
+    ('Ada',   'SE-201'),
+    ('Linus', 'DB-101');
 
 -- === consulta ===
-SELECT correo FROM estudiantes ORDER BY correo;
+SELECT estudiante, curso FROM inscripciones ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Acepta la misma restricción con la misma sintaxis, lo que permite comprobar que la regla no es de SQLite sino del modelo relacional.</li>
-<li><strong>Por qué no:</strong> DuckDB está pensado para analizar datos que ya existen, no para ser la autoridad que los admite: comprobar unicidad en cada inserción es precisamente el trabajo que su diseño columnar no optimiza.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Acepta el mismo SQL y permite comprobar desde el primer día que lo que se aprende no es de un producto: la misma sentencia funciona en otro motor con otra arquitectura por debajo.</li>
+<li><strong>Por qué no:</strong> Está pensado para analizar datos, no para registrarlos: aquí sirve para comparar, no para guardar la verdad de nada.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_table">https://duckdb.org/docs/stable/sql/statements/create_table</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
--- nota: la restriccion se implementa con un indice unico. Consultar
---       pg_indexes despues de crear la tabla lo hace visible.
+-- doc: https://www.postgresql.org/docs/current/sql-createtable.html
+-- nota: identica a la de SQLite salvo el nombre del tipo. La diferencia esta
+--       fuera de la sentencia: aqui hay un servidor, un usuario y una conexion.
 
 -- === preparacion ===
-DROP TABLE IF EXISTS estudiantes;
+DROP TABLE IF EXISTS inscripciones;
 
-CREATE TABLE estudiantes (
-    id     integer PRIMARY KEY,
-    correo text NOT NULL UNIQUE
+-- Un hecho por fila. La hoja de calculo guardaba «DB-101, SE-201» en una
+-- celda; aqui cada inscripcion es una fila propia, y contar deja de ser buscar
+-- texto.
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
-INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
-INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
-INSERT INTO estudiantes (id, correo) VALUES (3, 'ada@example.org')
-    ON CONFLICT (correo) DO NOTHING;
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada',   'DB-101'),
+    ('Ada',   'SE-201'),
+    ('Linus', 'DB-101');
 
 -- === consulta ===
-SELECT correo FROM estudiantes ORDER BY correo;
+SELECT estudiante, curso FROM inscripciones ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La restricción se apoya en un índice único y la comprueba el servidor dentro de la transacción: da igual cuántas aplicaciones escriban a la vez o en qué lenguaje estén, la segunda que intente el duplicado recibe un error.</li>
-<li><strong>Por qué no:</strong> Esa garantía cuesta una escritura de índice por fila y un servidor que administrar, actualizar y respaldar. Para un archivo de configuración de diez líneas es maquinaria de sobra.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Es la misma sentencia contra un servidor real, con usuarios y conexiones: sirve para ver que el SQL no cambia por tener infraestructura detrás.</li>
+<li><strong>Por qué no:</strong> Para tres filas es maquinaria de sobra: hay que instalarlo, arrancarlo y conectarse. Empezar aquí añade obstáculos que no enseñan nada sobre datos.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createtable.html">https://www.postgresql.org/docs/current/sql-createtable.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/index-unique/
-// nota: con ordered:false, insertMany intenta TODOS los documentos y solo
-//       falla el que viola el indice; el try/catch recoge ese error concreto.
+// doc: https://www.mongodb.com/docs/manual/core/document/
+// nota: aqui no se declara ninguna estructura antes de escribir. Es comodo, y
+//       tiene precio: nada impide que el documento siguiente traiga otros
+//       campos o el curso escrito de otra forma.
 
 // === preparacion ===
-db.estudiantes.drop();
-db.estudiantes.createIndex({ correo: 1 }, { unique: true });
-
-try {
-  db.estudiantes.insertMany(
-    [
-      { _id: 1, correo: &quot;ada@example.org&quot; },
-      { _id: 2, correo: &quot;linus@example.org&quot; },
-      { _id: 3, correo: &quot;ada@example.org&quot; },
-    ],
-    { ordered: false },
-  );
-} catch (e) {
-  // Error 11000 = clave duplicada. Es el resultado esperado, no un fallo.
-  if (!String(e).includes(&quot;11000&quot;)) throw e;
-}
+db.inscripciones.drop();
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+]);
 
 // === consulta ===
-db.estudiantes
-  .find({}, { _id: 0, correo: 1 })
-  .sort({ correo: 1 })
-  .forEach((d) =&gt; print(d.correo));
+db.inscripciones
+  .find({}, { _id: 0, estudiante: 1, curso: 1 })
+  .sort({ estudiante: 1, curso: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.curso));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Un índice único da la misma garantía sin esquema previo: se puede empezar a guardar documentos y añadir la regla después, cuando el dominio ya se entiende.</li>
-<li><strong>Por qué no:</strong> La restricción solo existe si alguien crea el índice —no hay nada en el documento que la exija— y en una colección fragmentada la unicidad solo se puede garantizar sobre la clave de fragmentación.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-unique/">https://www.mongodb.com/docs/manual/core/index-unique/</a></li>
+<li><strong>Por qué sí:</strong> Muestra que «un hecho por registro» no depende de las tablas: aquí cada inscripción es un documento, sin declarar antes ninguna estructura.</li>
+<li><strong>Por qué no:</strong> Al no declarar la estructura, nada impide que el documento siguiente traiga otros campos o el curso escrito de otra forma. La disciplina que en una tabla impone el esquema, aquí la tiene que poner el código.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/document/">https://www.mongodb.com/docs/manual/core/document/</a></li>
 </ul>
-<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-text"># motor: redis
 # doc: https://redis.io/docs/latest/develop/data-types/sets/
-# nota: un conjunto no admite repetidos por definicion. SADD devuelve 1 si
-#       anadio el elemento y 0 si ya estaba: la tercera orden devuelve 0.
+# nota: un conjunto no admite repetidos, asi que «un hecho, una vez» sale gratis.
+#       El precio esta a la vista: el par estudiante-curso hay que serializarlo
+#       en una cadena, y con eso desaparecen los campos. Pedir «los cursos de
+#       Ada» obligaria a partir el texto otra vez.
 
 # === preparacion ===
 FLUSHDB
-SADD correos ada@example.org
-SADD correos linus@example.org
-SADD correos ada@example.org
+SADD inscripciones Ada|DB-101
+SADD inscripciones Ada|SE-201
+SADD inscripciones Linus|DB-101
+SADD inscripciones Ada|DB-101
 
 # === consulta ===
-SORT correos ALPHA
+SORT inscripciones ALPHA
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Un conjunto es, por definición, una colección sin repeticiones: <code>SADD</code> devuelve 0 cuando el elemento ya estaba y no hay nada que comprobar. Con un solo hilo atendiendo las órdenes, dos clientes simultáneos no pueden colarse a la vez.</li>
-<li><strong>Por qué no:</strong> Garantiza que no hay dos correos iguales, y nada más: no hay tipos, ni relación con el resto del estudiante, ni durabilidad garantizada salvo que se configure. La regla se cumple; el modelo de datos no existe.</li>
+<li><strong>Por qué sí:</strong> Un conjunto guarda elementos sin repetir, así que la idea de «un hecho, una vez» se ve en su forma más pura: <code>SADD</code> del mismo par dos veces no crea dos entradas.</li>
+<li><strong>Por qué no:</strong> El par estudiante-curso hay que serializarlo en una sola cadena (<code>Ada|DB-101</code>), y con eso desaparecen los campos: no se puede pedir «los cursos de Ada» sin volver a partir el texto, que era justo el problema del que se venía huyendo.</li>
 <li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
-</ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
--- nota: la columna se declara con intercalacion binaria para que la unicidad
---       distinga mayusculas de minusculas; con la intercalacion por omision,
---       'Ada@example.org' contaria como duplicado.
-
--- === preparacion ===
-DROP TABLE IF EXISTS estudiantes;
-
-CREATE TABLE estudiantes (
-    id     INT PRIMARY KEY,
-    correo VARCHAR(200) COLLATE utf8mb4_bin NOT NULL UNIQUE
-) ENGINE=InnoDB;
-
-INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
-INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
-INSERT IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
-
--- === consulta ===
-SELECT correo FROM estudiantes ORDER BY correo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Mismo mecanismo que PostgreSQL y el motor relacional más común en alojamientos compartidos: <code>UNIQUE</code> sobre una columna es la forma normal de declarar una identidad de negocio.</li>
-<li><strong>Por qué no:</strong> La comparación de cadenas depende de la intercalación: con la predeterminada <code>utf8mb4_0900_ai_ci</code>, <code>Ada@example.org</code> y <code>ada@example.org</code> son el mismo valor, lo que a veces se quiere y a veces sorprende.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">https://dev.mysql.com/doc/refman/8.4/en/create-index.html</a></li>
-</ul>
-<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/001-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-cypher">// motor: neo4j
-// doc: https://neo4j.com/docs/cypher-manual/current/constraints/
-// nota: implementacion declarada. La restriccion de unicidad se declara sobre
-//       una propiedad de nodo; MERGE busca antes de crear, asi que el tercer
-//       estudiante no llega a duplicarse.
-
-// === preparacion ===
-MATCH (n:Estudiante) DETACH DELETE n;
-CREATE CONSTRAINT correo_unico IF NOT EXISTS
-  FOR (e:Estudiante) REQUIRE e.correo IS UNIQUE;
-MERGE (:Estudiante {correo: 'ada@example.org'});
-MERGE (:Estudiante {correo: 'linus@example.org'});
-MERGE (:Estudiante {correo: 'ada@example.org'});
-
-// === consulta ===
-MATCH (e:Estudiante) RETURN e.correo AS correo ORDER BY correo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Las restricciones de unicidad existen sobre propiedades de nodo y se comprueban en el servidor, igual que en un motor relacional.</li>
-<li><strong>Por qué no:</strong> Elegir un grafo por una regla de unicidad es elegir un sistema entero por su detalle menos característico; el grafo se justifica por los recorridos, no por las restricciones.</li>
-<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/constraints/">https://neo4j.com/docs/cypher-manual/current/constraints/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -541,15 +490,9 @@ MATCH (e:Estudiante) RETURN e.correo AS correo ORDER BY correo;
 <tbody>
 <tr>
 <td>Apache Cassandra</td>
-<td>Un <code>INSERT</code> en Cassandra es en realidad un «escribe esto», no un «añade si no existe»: si la clave ya está, sobrescribe en silencio. Comprobar primero exige una transacción ligera (<code>IF NOT EXISTS</code>), que necesita acuerdo entre réplicas y cuesta varias veces más que una escritura normal.</td>
-<td>Hacer del correo la clave de partición y usar <code>INSERT ... IF NOT EXISTS</code> solo en el registro, aceptando su costo, o dejar que la unicidad la garantice el servicio de identidad que está delante.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
-</tr>
-<tr>
-<td>Amazon DynamoDB</td>
-<td>No existen restricciones de unicidad sobre atributos que no sean la clave primaria; <code>PutItem</code> sobrescribe el elemento salvo que se le añada una condición explícita.</td>
-<td>Usar el correo como clave de partición y escribir con <code>ConditionExpression: attribute_not_exists(pk)</code>, que falla si el elemento ya existe. La regla pasa a estar en cada llamada, no en el esquema.</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc</a></td>
+<td>Resolvería el caso sin dificultad, pero exige decidir de antemano la clave de partición —es decir, por qué pregunta se va a consultar— y esa decisión no se puede tomar en la primera clase, cuando todavía no se sabe qué preguntas habrá.</td>
+<td>Se estudia en la parte de columnas anchas, donde la pregunta «¿qué consultas va a tener este dato?» ya se sabe contestar.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -600,14 +543,12 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
-<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
-  Descripción completa de los componentes internos de un SGBD relacional.</li>
 <li><strong>William Kent</strong> (2012). <a href="https://technicspub.com/data-and-reality/">Data and Reality</a>. 3.a ed. Technics Publications. ISBN 978-1-935504-21-4.<br />
   Por qué ningún modelo captura el mundo: fuente del criterio de alcance del programa.</li>
-<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
-  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>Michael J. Hernandez</strong> (2020). <a href="https://www.informit.com/store/database-design-for-mere-mortals-a-hands-on-guide-to-9780136788041">Database Design for Mere Mortals</a>. 4.a ed. Addison-Wesley. ISBN 978-0-13-678804-1.<br />
+  Método de diseño paso a paso, independiente de producto.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
 </ul>
 <hr />
 <blockquote>
@@ -616,7 +557,7 @@ enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="001">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="siguiente" href="002.html"><span class="sentido">Siguiente · 002 →</span>Arquitectura interna de un gestor, del cliente al disco</a>
+<a class="siguiente" href="002.html"><span class="sentido">Siguiente · 002 →</span>Del archivo y la hoja de cálculo a la base de datos</a>
 </nav>
 </main>
 <footer>

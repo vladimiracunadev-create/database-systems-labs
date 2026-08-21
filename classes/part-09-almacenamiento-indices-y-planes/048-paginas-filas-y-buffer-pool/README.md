@@ -1,0 +1,341 @@
+# 048 — Páginas, filas y buffer: por qué la entrada y salida manda
+
+> [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md) · [Siguiente →](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)
+
+Parte 09 — Almacenamiento, índices y planes · Intermedio ·
+3 horas estimadas · motores `postgresql`, `sqlite` · laboratorio
+[`labs/04-indexing`](../../../labs/04-indexing/README.md) · 3 fuentes.
+
+**Conceptos centrales:** `pagina` · `factor de bloque` · `buffer pool` · `localidad` · `lectura secuencial`
+
+**En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+---
+
+## Propósito
+
+Bajar al nivel donde se paga el costo real: páginas, filas y memoria. Casi todas las decisiones de rendimiento se explican como «cuántas páginas hay que tocar».
+
+## Resultados de aprendizaje
+
+Al terminar podrás:
+
+1. Calcular cuántas páginas ocupa una tabla y por qué importa.
+2. Explicar el factor de bloque y su efecto sobre los barridos.
+3. Describir el buffer y su política de reemplazo.
+4. Interpretar la tasa de aciertos y saber cuándo engaña.
+5. Estimar el costo de una consulta en páginas antes de ejecutarla.
+
+## Fundamentos
+
+### La página
+
+La unidad de E/S no es la fila: es la **página** (8 KB en PostgreSQL, 16 KB en InnoDB por defecto, configurable en SQLite). Leer un byte cuesta lo mismo que leer la página entera.
+
+```text
+Página de 8 192 bytes
+  cabecera                      24 B
+  punteros a filas         4 B × N
+  espacio libre
+  filas (desde el final)
+  cabecera de fila             ~23 B en PostgreSQL
+```
+
+**Factor de bloque** = filas por página:
+
+```text
+fila de 100 B (más 23 B de cabecera) = 123 B
+factor ≈ (8192 - 24) / (123 + 4) ≈ 64 filas por página
+```
+
+Con 1 000 000 de filas: **15 625 páginas ≈ 122 MB**. Ese número —no el de filas— determina el costo de un barrido.
+
+### El ancho de la fila importa más de lo que parece
+
+Añadir una columna `TEXT` de 200 bytes a la tabla anterior:
+
+```text
+fila de 323 B → factor ≈ 25 filas por página
+1 000 000 de filas → 40 000 páginas ≈ 313 MB
+```
+
+El barrido pasa a costar **2,6 veces más**, incluso para consultas que no leen esa columna. Es el argumento físico a favor de sacar los campos grandes y poco consultados a una tabla aparte, y también la razón por la que el formato columnar gana en analítica (clase 032).
+
+PostgreSQL mitiga esto con TOAST: los valores grandes se comprimen y se mueven a una tabla auxiliar, dejando un puntero en la fila. Solo se leen si la consulta los pide.
+
+### El buffer
+
+Caché de páginas en memoria compartida. La política habitual es una variante de LRU con protección contra barridos: un barrido secuencial de una tabla enorme no debe desalojar todo lo demás. PostgreSQL usa un anillo de buffers para barridos grandes por esa razón exacta.
+
+```sql
+SELECT relname,
+       heap_blks_read  AS leidas_disco,
+       heap_blks_hit   AS leidas_cache,
+       round(100.0 * heap_blks_hit /
+             NULLIF(heap_blks_hit + heap_blks_read, 0), 2) AS pct_aciertos
+FROM pg_statio_user_tables ORDER BY heap_blks_read DESC LIMIT 10;
+```
+
+**Dónde engaña la tasa de aciertos.** Un 99 % suena excelente, pero:
+
+- El sistema operativo tiene su propia caché: un «fallo» de PostgreSQL puede resolverse en RAM sin tocar el disco.
+- Es un acumulado desde el arranque; un problema de la última hora queda diluido.
+- Con un 99 % sobre 100 millones de accesos, el 1 % son un millón de lecturas físicas.
+
+Es una métrica de contexto, no un objetivo.
+
+### La jerarquía
+
+| Nivel | Latencia típica | Relativo |
+|---|---|---|
+| Caché L1 | ~1 ns | 1 |
+| RAM | ~100 ns | 100 |
+| SSD NVMe | ~100 µs | 100 000 |
+| Disco mecánico (aleatorio) | ~10 ms | 10 000 000 |
+| Red (mismo centro) | ~500 µs | 500 000 |
+
+El salto de RAM a SSD es de tres órdenes de magnitud. Toda la ingeniería de un motor consiste en cruzarlo lo menos posible.
+
+```mermaid
+flowchart TD
+    Q["Consulta"] --> E["Ejecutor"]
+    E --> B{"¿La página está<br/>en el buffer?"}
+    B -- "Sí (acierto)" --> H["~100 ns"]
+    B -- "No (fallo)" --> V{"¿Hay buffer libre?"}
+    V -- "Sí" --> L["Leer del disco<br/>~100 µs"]
+    V -- "No" --> D["Desalojar una víctima"]
+    D --> S{"¿Está sucia?"}
+    S -- "Sí" --> W["Escribirla primero<br/>(tras su registro WAL)"]
+    S -- "No" --> L
+    W --> L
+    L --> H
+```
+
+## Ejemplo trabajado
+
+Tabla `enrollments`: 5 000 000 de filas, fila de 80 bytes útiles.
+
+```text
+fila con cabecera ≈ 103 B
+factor de bloque  ≈ (8192-24)/(103+4) ≈ 76 filas/página
+páginas           = 5 000 000 / 76 ≈ 65 790
+tamaño            ≈ 65 790 · 8 KB ≈ 514 MB
+```
+
+**Consulta A — barrido secuencial:**
+
+```sql
+SELECT AVG(nota) FROM enrollments;
+```
+
+Toca las 65 790 páginas. En SSD con lectura secuencial a 1 GB/s: ~0,5 s. Si estuvieran en el buffer, ~0,05 s.
+
+**Consulta B — una fila por índice:**
+
+```sql
+SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
+```
+
+```text
+altura del B-Tree ≈ 3 niveles
+páginas de índice leídas: 3
+página de datos:          1
+total:                    4 páginas
+```
+
+**65 790 frente a 4.** Cuatro órdenes de magnitud, y la diferencia entera está en cuántas páginas se tocan.
+
+**Consulta C — el caso intermedio, que es donde se decide:**
+
+```sql
+SELECT * FROM enrollments WHERE course_id = 42;   -- devuelve 40 000 filas
+```
+
+Dos caminos:
+
+```text
+Barrido secuencial: 65 790 páginas, lectura SECUENCIAL
+Índice:             ~3 páginas de índice + hasta 40 000 lecturas ALEATORIAS de datos
+```
+
+Aquí la naturaleza del acceso manda. Una lectura secuencial de 65 790 páginas es más rápida que 40 000 aleatorias, porque el disco y el prelector trabajan a favor. **Por eso el optimizador elige el barrido cuando la consulta devuelve una fracción grande de la tabla** (clase 042): el umbral suele rondar el 5–20 % según el motor y la relación entre `random_page_cost` y `seq_page_cost`.
+
+**La corrección: correlación física.** Si las filas del mismo curso estuvieran contiguas en disco, las 40 000 lecturas dejarían de ser aleatorias.
+
+```sql
+CLUSTER enrollments USING enrollments_course_idx;   -- PostgreSQL: reorganiza una vez
+```
+
+En InnoDB esto es automático: la tabla **es** el índice de clave primaria (índice agrupado), así que las filas con claves primarias contiguas están físicamente juntas. Es una diferencia arquitectónica con consecuencias directas:
+
+| | PostgreSQL | InnoDB |
+|---|---|---|
+| Organización | Montón + índices separados | Tabla agrupada por clave primaria |
+| Índice secundario apunta a | Ubicación física de la fila | **La clave primaria** |
+| Consecuencia | Actualizar una fila puede exigir tocar todos los índices | Un índice secundario cuesta una búsqueda extra en el primario |
+| Clave primaria ancha | Coste moderado | Se copia en **cada** índice secundario |
+
+La última fila explica por qué en InnoDB una clave primaria ancha (un UUID en texto, una clave compuesta larga) infla todos los índices de la tabla.
+
+## Comparación
+
+| Acceso | Páginas tocadas | Naturaleza | Cuándo gana |
+|---|---|---|---|
+| Barrido secuencial | Todas | Secuencial | Se devuelve una fracción grande |
+| Búsqueda por índice | log N + 1 | Aleatoria | Muy selectiva |
+| Barrido de índice | Páginas del índice | Casi secuencial | Consulta cubierta |
+| Barrido de mapa de bits | Índice + datos ordenados | Semialeatoria | Selectividad intermedia |
+
+## Errores frecuentes
+
+1. **Razonar en filas y no en páginas.** El costo lo fija la página.
+2. **Columnas anchas en tablas muy consultadas.** Encarecen todos los barridos.
+3. **Perseguir el 99,9 % de aciertos.** Se compra RAM sin mirar el número absoluto de lecturas.
+4. **Suponer que el índice siempre gana.** Con baja selectividad, pierde.
+5. **Clave primaria ancha en InnoDB.** Se copia en todos los índices secundarios.
+6. **Medir con el caché caliente y presentarlo como mejora.**
+
+## De la clase a la operación
+
+Cuando una base «se pone lenta al crecer», casi siempre significa que el conjunto de trabajo dejó de caber en el buffer. El indicador que lo anticipa es el tamaño de las tablas e índices calientes frente a la memoria, no el uso de CPU.
+
+## Reto de transferencia
+
+1. Calcula el factor de bloque y el número de páginas de tu tabla más grande.
+2. Estima el costo en páginas de tus tres consultas más frecuentes y contrástalo con `EXPLAIN (BUFFERS)`.
+3. Mueve una columna ancha a una tabla aparte y mide el cambio en un barrido.
+4. Compara el tamaño de un índice secundario con clave primaria estrecha y con una ancha.
+
+## Preguntas de evaluación
+
+1. Calcula las páginas de una tabla de 20 M de filas de 250 bytes.
+2. ¿Por qué 40 000 lecturas aleatorias pueden ser más lentas que 65 000 secuenciales?
+3. Explica la diferencia entre montón e índice agrupado y una consecuencia práctica de cada una.
+4. Da un caso donde una tasa de aciertos del 99 % siga siendo un problema.
+
+---
+
+## 🌐 El mismo problema en cada motor
+
+**Caso:** La unidad de trabajo no es la fila, es la página
+
+Ningún motor lee una fila. Lee la **página** que la contiene —entre 4 y 16
+kibibytes según el motor— y la deja en una caché en memoria. De ahí salen
+casi todas las intuiciones de rendimiento que importan: por qué una fila
+ancha cuesta más aunque solo se lea una columna, por qué el orden físico de
+las filas cambia el número de páginas leídas, y por qué la primera consulta
+tarda diez veces más que la segunda.
+
+Lo que se compara aquí no admite una salida común: es el tamaño de página,
+dónde vive la caché y **quién decide su tamaño**. La respuesta a esa última
+pregunta separa a los motores que hay que dimensionar a mano de los que se
+apoyan en la caché del sistema operativo.
+
+Esta comparación es **conceptual**: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor **ofrece** y a qué precio, con la página oficial al lado de cada
+afirmación.
+
+| Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
+|---|---|---|---|---|
+| PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/storage-page-layout.html) |
+| MySQL | sí | conceptual | — | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool.html) |
+| SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/fileformat.html) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
+| MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/wiredtiger/) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html) |
+| Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/) |
+
+### Los que resuelven el caso
+
+#### PostgreSQL
+
+- **Cómo se hace aquí:** Página de 8 KiB fija en compilación. La caché es `shared_buffers`, en memoria compartida, y **encima** está la caché del sistema operativo: los datos se cachean dos veces. La recomendación clásica —una cuarta parte de la memoria— viene precisamente de esa doble caché.
+- **Por qué sí:** Apoyarse en el sistema operativo hace que un servidor mal dimensionado siga funcionando razonablemente, en vez de derrumbarse.
+- **Por qué no:** La doble caché desperdicia memoria y hace difícil razonar sobre qué está donde. Y como una fila no puede cruzar páginas, los valores grandes se van a un almacén aparte (TOAST), lo que añade lecturas invisibles en el plan.
+- 📄 Documentación oficial: <https://www.postgresql.org/docs/current/storage-page-layout.html>
+
+#### MySQL
+
+- **Cómo se hace aquí:** Página de 16 KiB por omisión. El `innodb_buffer_pool_size` es una caché propia que se recomienda dimensionar entre el 50 % y el 75 % de la memoria de la máquina, porque InnoDB usa entrada y salida directa y **no** se apoya en la caché del sistema.
+- **Por qué sí:** Una sola caché, bajo control del motor, con estadísticas propias sobre aciertos y fallos: es más fácil de razonar y de medir.
+- **Por qué no:** Ese dimensionado es responsabilidad de quien administra: por omisión, InnoDB reserva 128 MiB, una cifra pensada para un portátil de 2010 que sigue apareciendo en servidores de producción.
+- 📄 Documentación oficial: <https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool.html>
+
+#### SQLite
+
+- **Cómo se hace aquí:** Página configurable —4 KiB por omisión desde la versión 3.12— y una caché por **conexión**, no por proceso: `PRAGMA cache_size` se fija en cada conexión y su valor por omisión equivale a unos 2 MiB.
+- **Por qué sí:** `PRAGMA page_count` y `PRAGMA page_size` permiten ver el tamaño real del archivo en páginas sin ninguna herramienta: es el sitio más barato para entender de qué se está hablando.
+- **Por qué no:** Una caché por conexión significa que diez conexiones cachean diez veces lo mismo, y que cerrar la conexión tira la caché entera: el patrón «abrir, consultar, cerrar» paga cada consulta a precio de primera vez.
+- 📄 Documentación oficial: <https://sqlite.org/fileformat.html>
+
+#### DuckDB
+
+- **Cómo se hace aquí:** No guarda filas en páginas: guarda **grupos de filas** partidos en vectores por columna, comprimidos de forma distinta según el tipo. La unidad de lectura es el segmento de columna, no la fila.
+- **Por qué sí:** Leer dos columnas de una tabla de cien cuesta dos columnas: la unidad de entrada y salida está alineada con lo que pide una consulta analítica.
+- **Por qué no:** Reconstruir una fila entera obliga a tocar tantos segmentos como columnas tenga: lo que es óptimo para agregar es pésimo para el acceso por clave.
+- 📄 Documentación oficial: <https://duckdb.org/docs/stable/internals/storage.html>
+
+#### MongoDB
+
+- **Cómo se hace aquí:** WiredTiger organiza los datos en bloques de tamaño variable con compresión —snappy por omisión— y mantiene su propia caché fuera del montón, dimensionada por omisión al 50 % de la memoria menos 1 GiB. El sistema operativo cachea además los bloques comprimidos.
+- **Por qué sí:** La compresión reduce mucho la entrada y salida real, y separar la caché del montón evita las pausas del recolector.
+- **Por qué no:** Los datos están descomprimidos en la caché y comprimidos en la del sistema: calcular cuánta memoria hace falta de verdad exige entender las dos, y el valor por omisión deja poco margen si en la misma máquina corre algo más.
+- 📄 Documentación oficial: <https://www.mongodb.com/docs/manual/core/wiredtiger/>
+
+#### Apache Cassandra
+
+- **Cómo se hace aquí:** Los datos viven en archivos inmutables (SSTables) con un índice de particiones y un filtro de Bloom por archivo. La caché relevante no es la de filas —que está desactivada por omisión— sino la de claves y, sobre todo, la del sistema operativo sobre los archivos.
+- **Por qué sí:** El filtro de Bloom evita abrir archivos que seguro no contienen la clave: es lo que hace que una lectura no tenga que mirar en todos.
+- **Por qué no:** Una lectura puede acabar tocando varios archivos igualmente, y la caché de filas activada sin criterio expulsa datos útiles y empeora el rendimiento. Es de los pocos motores donde activar una caché suele ser mala idea.
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html>
+
+### Los que no resuelven este caso — y qué se hace en su lugar
+
+Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.
+
+| Motor | Por qué no | Qué se hace en su lugar | Fuente |
+|---|---|---|---|
+| Redis | No hay páginas ni caché de disco que discutir: **todo** el conjunto de datos está en memoria y las estructuras son las del propio lenguaje C. La pregunta de esta clase —cuántas páginas hay que leer— no existe. | La pregunta equivalente es otra: cuánta memoria ocupa cada estructura y qué codificación interna usa. `OBJECT ENCODING` y `MEMORY USAGE` la responden. | [doc](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/) |
+
+---
+
+## Laboratorio
+
+```bash
+python scripts/validate_repository.py
+python labs/04-indexing/run_indexing_lab.py
+```
+
+Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.
+
+## Evaluación
+
+| Criterio | Peso | Qué se comprueba |
+|---|---:|---|
+| Comprensión conceptual | 25 % | Explica el mecanismo, no solo el resultado |
+| Ejecución reproducible | 25 % | Otra persona obtiene lo mismo con las instrucciones dadas |
+| Interpretación basada en evidencia | 25 % | Cada conclusión se apoya en una salida o una medición |
+| Límites y riesgos declarados | 25 % | Dice qué no demuestra el ejercicio y qué faltaría en producción |
+
+La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.
+
+## Fuentes de esta clase
+
+Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+[`catalog/sources.json`](../../../catalog/sources.json) y el estado de los
+enlaces se comprueba con `python scripts/check_external_links.py`.
+
+- **Alex Petrov** (2019). [Database Internals: A Deep Dive into How Distributed Data Systems Work](https://www.databass.dev/). O'Reilly. ISBN 978-1-4920-4034-7.  
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.
+- **Joseph M. Hellerstein, Michael Stonebraker, James Hamilton** (2007). [Architecture of a Database System](https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf). Foundations and Trends in Databases 1(2). DOI [10.1561/1900000002](https://doi.org/10.1561/1900000002).  
+  Descripción completa de los componentes internos de un SGBD relacional.
+- **Egor Rogov** (2022). [PostgreSQL 14 Internals](https://postgrespro.com/community/books/internals). Postgres Professional. ISBN 978-5-6041193-2-8.  
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.
+
+---
+
+> [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md) · [Siguiente →](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)

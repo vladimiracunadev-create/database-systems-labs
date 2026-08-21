@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Modelado dimensional: hechos, dimensiones y cambios lentos. Parte 11: Analítica, integración y streaming.">
+<meta name="description" content="CAP, PACELC y lo que realmente se elige. Parte 10: Distribución, réplica y consistencia.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/055.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="055 — Modelado dimensional: hechos, dimensiones y cambios lentos · Database Systems Labs">
-<meta property="og:description" content="Modelado dimensional: hechos, dimensiones y cambios lentos. Parte 11: Analítica, integración y streaming.">
+<meta property="og:title" content="055 — CAP, PACELC y lo que realmente se elige · Database Systems Labs">
+<meta property="og:description" content="CAP, PACELC y lo que realmente se elige. Parte 10: Distribución, réplica y consistencia.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/055.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "055 — Modelado dimensional: hechos, dimensiones y cambios lentos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["tabla de hechos", "dimensión", "grano", "dimensión de cambio lento"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>055 — Modelado dimensional: hechos, dimensiones y cambios lentos · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "055 — CAP, PACELC y lo que realmente se elige", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["partición de red", "disponibilidad", "latencia frente a consistencia"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>055 — CAP, PACELC y lo que realmente se elige · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,328 +49,319 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-11.html">Parte 11 · Analítica, integración y streaming</a>
+  <a href="parte-10.html">Parte 10 · Distribución, réplica y consistencia</a>
   <span aria-hidden="true">/</span><span>Clase 055</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="055--modelado-dimensional-hechos-dimensiones-y-cambios-lentos">055 — Modelado dimensional: hechos, dimensiones y cambios lentos</h1>
+<h1 id="055--cap-pacelc-y-lo-que-realmente-se-elige">055 — CAP, PACELC y lo que realmente se elige</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 11 — Analítica, integración y streaming · Intermedio ·
-4 horas estimadas · motores <code>duckdb</code>, <code>clickhouse</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>tabla de hechos</code> · <code>dimensión</code> · <code>grano</code> · <code>dimensión de cambio lento</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 10 — Distribución, réplica y consistencia · Avanzado ·
+3 horas estimadas · motores <code>cassandra</code>, <code>spanner</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>partición de red</code> · <code>disponibilidad</code> · <code>latencia frente a consistencia</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Modelar para el análisis. El modelo dimensional optimiza una cosa —responder preguntas de negocio sobre grandes volúmenes— y renuncia deliberadamente a otras.</p>
+<p>Enunciar CAP con precisión, entender por qué su lectura popular es engañosa y usar PACELC, que describe mejor el compromiso que se toma todos los días.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Aplicar los cuatro pasos del método de Kimball.</li>
-<li>Declarar el grano de una tabla de hechos y comprobar que se respeta.</li>
-<li>Distinguir hechos aditivos, semiaditivos y no aditivos.</li>
-<li>Implementar dimensiones de cambio lento de tipos 1, 2 y 3.</li>
-<li>Explicar por qué se desnormaliza y qué se pierde.</li>
+<li>Enunciar el teorema CAP con las definiciones exactas de sus términos.</li>
+<li>Explicar por qué «elegir dos de tres» es una lectura incorrecta.</li>
+<li>Aplicar PACELC y situar motores reales en su clasificación.</li>
+<li>Determinar qué garantías sobreviven a una partición.</li>
+<li>Decidir el comportamiento de tu sistema durante una partición, por operación.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-cuatro-pasos">Los cuatro pasos</h3>
-<p>Kimball y Ross proponen un método en este orden estricto:</p>
+<h3 id="el-enunciado-preciso">El enunciado preciso</h3>
+<p>Gilbert y Lynch (2002) demostraron formalmente la conjetura de Brewer. Los términos tienen definiciones estrictas que casi nunca se citan:</p>
+<ul>
+<li><strong>C (consistencia):</strong> <em>linealizabilidad</em>. Existe un orden total de las operaciones compatible con el tiempo real; toda lectura devuelve la última escritura confirmada.</li>
+<li><strong>A (disponibilidad):</strong> <strong>toda</strong> petición a un nodo <strong>no caído</strong> recibe respuesta correcta, en tiempo finito.</li>
+<li><strong>P (tolerancia a particiones):</strong> el sistema sigue funcionando aunque la red pierda arbitrariamente mensajes entre nodos.</li>
+</ul>
+<p><strong>Teorema:</strong> ningún sistema distribuido puede garantizar las tres simultáneamente.</p>
+<h3 id="por-qué-dos-de-tres-está-mal">Por qué «dos de tres» está mal</h3>
+<p>La red <strong>se particiona</strong>. No es una opción de diseño: es un hecho del mundo. Renunciar a P significaría suponer que la red nunca falla, lo cual no es un sistema distribuido sino una apuesta.</p>
+<p>Por tanto la elección real es binaria y <strong>solo durante la partición</strong>:</p>
+<ul>
+<li><strong>CP:</strong> rechazar peticiones que no puedan garantizar consistencia. Se pierde disponibilidad.</li>
+<li><strong>AP:</strong> responder con datos posiblemente obsoletos. Se pierde consistencia.</li>
+</ul>
+<p>Brewer lo aclaró él mismo en 2012: el teorema se aplica en el instante de la partición y las tres propiedades son continuas, no binarias. Además, la mayor parte del tiempo <strong>no hay partición</strong>, y ahí CAP no dice nada. Ese vacío es lo que PACELC llena.</p>
+<h3 id="pacelc">PACELC</h3>
+<p>Abadi (2012):</p>
+<pre><code class="language-text">if (P) then (A or C)      -- durante una partición: disponibilidad o consistencia
+else     (L or C)         -- en operación normal: latencia o consistencia
+</code></pre>
+<p>La segunda mitad es la que gobierna el 99,9 % del tiempo. Cada confirmación sincrónica a otra región cuesta una ida y vuelta: entre Santiago y Fráncfort, unos 200 ms. Ese costo se paga <strong>siempre</strong>, no solo cuando algo falla.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Sistema</th>
+<th>Con partición</th>
+<th>Sin partición</th>
+<th>Clasificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL (líder único, síncrono)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>PostgreSQL (líder único, asíncrono)</td>
+<td>C en el líder</td>
+<td>L</td>
+<td>PC/EL</td>
+</tr>
+<tr>
+<td>Cassandra (<code>ONE</code>)</td>
+<td>A</td>
+<td>L</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Cassandra (<code>QUORUM</code>)</td>
+<td>Configurable</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>DynamoDB (eventual)</td>
+<td>A</td>
+<td>L</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>DynamoDB (fuerte)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>MongoDB (<code>majority</code>)</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+<tr>
+<td>Spanner</td>
+<td>C</td>
+<td>C</td>
+<td>PC/EC</td>
+</tr>
+</tbody>
+</table></div>
+<p>Dos observaciones que cambian la conversación:</p>
 <ol>
-<li><strong>Elegir el proceso de negocio.</strong> No un informe: un proceso («inscripción a cursos»).</li>
-<li><strong>Declarar el grano.</strong> Qué representa exactamente <strong>una fila</strong> de la tabla de hechos.</li>
-<li><strong>Identificar las dimensiones.</strong> Los «por qué, quién, cuándo, dónde» de ese hecho.</li>
-<li><strong>Identificar los hechos.</strong> Las medidas numéricas del proceso.</li>
+<li><strong>La clasificación es por operación, no por producto.</strong> Cassandra es AP o CP según el nivel de consistencia de <strong>cada</strong> consulta.</li>
+<li><strong>Spanner es PC/EC</strong> y aun así ofrece alta disponibilidad, porque usa redes privadas con particiones extremadamente raras y consenso rápido (clase 047). No viola CAP: elige C y su disponibilidad práctica es alta porque P casi nunca ocurre.</li>
 </ol>
-<p><strong>El paso 2 es el crítico.</strong> Un grano ambiguo produce dobles conteos, sumas incorrectas y meses de desconfianza en los datos. La formulación debe ser una frase completa: <em>«una fila por estudiante, curso y período»</em>, no «inscripciones».</p>
-<p>Y la regla que se deriva: <strong>nunca mezclar granos en la misma tabla de hechos</strong>. Si un informe necesita otro grano, es otra tabla.</p>
-<h3 id="hechos-y-su-aditividad">Hechos y su aditividad</h3>
+<h3 id="qué-sobrevive-a-una-partición">Qué sobrevive a una partición</h3>
+<p>Bailis et al. clasifican qué garantías son alcanzables <strong>manteniendo la disponibilidad total</strong>:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Tipo</th>
-<th>Se puede sumar</th>
-<th>Ejemplo</th>
+<th>Garantía</th>
+<th>¿Disponible bajo partición?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Aditivo</strong></td>
-<td>Por todas las dimensiones</td>
-<td>Monto pagado, unidades</td>
+<td>Consistencia eventual</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td><strong>Semiaditivo</strong></td>
-<td>Por todas menos el tiempo</td>
-<td>Saldo, inventario, matriculados</td>
+<td>Lectura de tus escrituras</td>
+<td>Sí (con sesión fijada)</td>
 </tr>
 <tr>
-<td><strong>No aditivo</strong></td>
-<td>Por ninguna</td>
-<td>Porcentajes, ratios, promedios</td>
+<td>Lectura monótona</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Consistencia causal</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Aislamiento de instantánea</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>Serializabilidad</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>Linealizabilidad</td>
+<td><strong>No</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>Regla de oro: <strong>guardar los componentes, no el ratio</strong>. En vez de <code>porcentaje_aprobacion</code>, guardar <code>aprobados</code> y <code>evaluados</code>, y calcular el porcentaje al consultar. Sumar porcentajes de distintas filas da un número sin significado; sumar componentes y dividir después, no.</p>
-<p>Los semiaditivos son la trampa silenciosa: sumar los saldos de los doce meses del año da un número que no es el saldo anual de nada.</p>
-<h3 id="dimensiones-de-cambio-lento">Dimensiones de cambio lento</h3>
-<p>¿Qué pasa cuando un atributo de dimensión cambia? Una estudiante cambia de programa en 2026. ¿Sus inscripciones de 2025 pertenecen al programa antiguo o al nuevo?</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tipo</th>
-<th>Qué hace</th>
-<th>Historia</th>
-<th>Cuándo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>1</strong></td>
-<td>Sobrescribe</td>
-<td>Se pierde</td>
-<td>Corrección de errores</td>
-</tr>
-<tr>
-<td><strong>2</strong></td>
-<td>Nueva fila con vigencia</td>
-<td><strong>Se conserva</strong></td>
-<td>El cambio importa históricamente</td>
-</tr>
-<tr>
-<td><strong>3</strong></td>
-<td>Columna «valor anterior»</td>
-<td>Solo el cambio previo</td>
-<td>Comparar dos versiones</td>
-</tr>
-</tbody>
-</table></div>
-<p>El tipo 2 es el habitual para atributos con significado histórico:</p>
-<pre><code class="language-sql">CREATE TABLE dim_estudiante (
-  sk_estudiante SERIAL PRIMARY KEY,       -- clave sustituta del almacén
-  nk_student_id INTEGER NOT NULL,         -- clave natural del origen
-  nombre        TEXT NOT NULL,
-  programa      TEXT NOT NULL,
-  comuna        TEXT,
-  valido_desde  DATE NOT NULL,
-  valido_hasta  DATE NOT NULL DEFAULT '9999-12-31',
-  es_actual     BOOLEAN NOT NULL DEFAULT true
-);
-CREATE UNIQUE INDEX ON dim_estudiante (nk_student_id) WHERE es_actual;
+<p>La frontera es nítida: todo lo que exige un orden total acordado necesita coordinación, y la coordinación es lo primero que una partición rompe. Todo lo demás —incluida la consistencia causal, que es bastante fuerte— se puede sostener sin coordinar.</p>
+<pre><code class="language-mermaid">flowchart TD
+    P{&quot;¿Hay partición&lt;br/&gt;de red?&quot;}
+    P -- &quot;Sí&quot; --&gt; A{&quot;¿Responder con datos&lt;br/&gt;posiblemente obsoletos?&quot;}
+    A -- &quot;Sí&quot; --&gt; AP[&quot;AP: disponible,&lt;br/&gt;inconsistente&quot;]
+    A -- &quot;No&quot; --&gt; CP[&quot;CP: rechaza o espera,&lt;br/&gt;consistente&quot;]
+    P -- &quot;No (99,9 % del tiempo)&quot; --&gt; L{&quot;¿Coordinar en cada&lt;br/&gt;operación?&quot;}
+    L -- &quot;Sí&quot; --&gt; EC[&quot;EC: consistente,&lt;br/&gt;+latencia por ida y vuelta&quot;]
+    L -- &quot;No&quot; --&gt; EL[&quot;EL: rápido,&lt;br/&gt;consistencia más débil&quot;]
 </code></pre>
-<p>La clave que la tabla de hechos guarda es <code>sk_estudiante</code>, <strong>no</strong> <code>nk_student_id</code>. Así cada hecho queda ligado a la versión de la dimensión vigente en su momento, y un informe de 2025 sigue mostrando el programa de 2025 aunque hoy sea otro.</p>
-<p>Es la diferencia entre «cómo era» y «cómo es», y las dos preguntas son legítimas: la primera se responde uniendo por <code>sk</code>, la segunda uniendo por <code>nk</code> con <code>es_actual</code>.</p>
-<pre><code class="language-mermaid">erDiagram
-    DIM_TIEMPO      ||--o{ HECHO_INSCRIPCION : &quot;cuándo&quot;
-    DIM_ESTUDIANTE  ||--o{ HECHO_INSCRIPCION : &quot;quién&quot;
-    DIM_CURSO       ||--o{ HECHO_INSCRIPCION : &quot;qué&quot;
-    DIM_DOCENTE     ||--o{ HECHO_INSCRIPCION : &quot;con quién&quot;
-    HECHO_INSCRIPCION {
-        int sk_tiempo FK
-        int sk_estudiante FK
-        int sk_curso FK
-        int sk_docente FK
-        numeric nota
-        int aprobado
-        int evaluado
-        int creditos
-    }
-    DIM_ESTUDIANTE {
-        int sk_estudiante PK
-        int nk_student_id
-        text programa
-        date valido_desde
-        date valido_hasta
-        bool es_actual
-    }
-</code></pre>
-<h3 id="por-qué-desnormalizar">Por qué desnormalizar</h3>
-<p>Las dimensiones se desnormalizan deliberadamente (esquema en estrella) en vez de normalizarse (copo de nieve):</p>
-<ul>
-<li>Menos reuniones en cada consulta analítica.</li>
-<li>Las dimensiones son pequeñas: la redundancia cuesta poco.</li>
-<li>Las herramientas de análisis y los usuarios entienden mejor un esquema plano.</li>
-</ul>
-<p>Lo que se pierde —anomalías de actualización— importa poco en un almacén, porque las escrituras son controladas y por lotes, no concurrentes desde una aplicación. <strong>Es la aplicación consciente de lo contrario a la clase 008</strong>, y por eso es legítima.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p><strong>Paso 1 — proceso:</strong> inscripción y evaluación académica.</p>
-<p><strong>Paso 2 — grano:</strong> <em>«una fila por estudiante, curso y período académico»</em>.</p>
-<p><strong>Paso 3 — dimensiones:</strong> tiempo (período), estudiante, curso, docente.</p>
-<p><strong>Paso 4 — hechos:</strong> nota, aprobado (0/1), evaluado (0/1), créditos.</p>
-<pre><code class="language-sql">CREATE TABLE hecho_inscripcion (
-  sk_tiempo     INTEGER NOT NULL REFERENCES dim_tiempo(sk_tiempo),
-  sk_estudiante INTEGER NOT NULL REFERENCES dim_estudiante(sk_estudiante),
-  sk_curso      INTEGER NOT NULL REFERENCES dim_curso(sk_curso),
-  sk_docente    INTEGER          REFERENCES dim_docente(sk_docente),
-  nota          NUMERIC(2,1),
-  aprobado      SMALLINT NOT NULL DEFAULT 0,
-  evaluado      SMALLINT NOT NULL DEFAULT 0,
-  creditos      SMALLINT NOT NULL,
-  PRIMARY KEY (sk_tiempo, sk_estudiante, sk_curso)
-);
+<p>Plataforma educativa con nodos en Santiago y Fráncfort. La red entre regiones se corta 4 minutos.</p>
+<p><strong>Operación 1 — leer el catálogo de cursos.</strong></p>
+<p>Datos que cambian una vez al día. Servir la versión de hace unos minutos no daña a nadie.</p>
+<pre><code class="language-text">Decisión: AP. Se sirve desde la réplica local aunque esté desconectada.
+Consecuencia: un curso creado hace 3 minutos en Santiago no se ve en Fráncfort.
+Aceptable: sí, y se documenta.
 </code></pre>
-<p>La clave primaria <strong>es</strong> la declaración del grano, hecha cumplir por el motor. Insertar dos filas para el mismo estudiante, curso y período es ahora imposible: el doble conteo queda excluido por construcción.</p>
-<p><strong>Los hechos elegidos, y por qué:</strong></p>
-<ul>
-<li><code>aprobado</code> y <code>evaluado</code> como enteros 0/1 en vez de un porcentaje. Son aditivos: <code>SUM(aprobado) / SUM(evaluado)</code> da el porcentaje correcto en <strong>cualquier</strong> agregación. Un <code>porcentaje_aprobacion</code> por fila no se puede promediar sin ponderar.</li>
-<li><code>nota</code> es <strong>no aditiva</strong>: <code>AVG(nota)</code> es válido, <code>SUM(nota)</code> no significa nada. Se documenta.</li>
-</ul>
-<p><strong>Consulta típica, sin ninguna reunión compleja:</strong></p>
-<pre><code class="language-sql">SELECT t.anio, t.semestre, c.facultad,
-       count(*)                                          AS inscripciones,
-       sum(f.evaluado)                                   AS evaluados,
-       sum(f.aprobado)                                   AS aprobados,
-       round(100.0 * sum(f.aprobado) / NULLIF(sum(f.evaluado),0), 1) AS pct_aprobacion,
-       round(avg(f.nota) FILTER (WHERE f.nota IS NOT NULL), 2)       AS nota_media
-FROM hecho_inscripcion f
-JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
-JOIN dim_curso  c ON c.sk_curso  = f.sk_curso
-GROUP BY t.anio, t.semestre, c.facultad
-ORDER BY t.anio, t.semestre, c.facultad;
+<p><strong>Operación 2 — inscribir en un curso con cupo limitado.</strong></p>
+<p>Si ambas regiones aceptan inscripciones sin coordinarse, el cupo se excede.</p>
+<pre><code class="language-text">Decisión: CP. Durante la partición, la región sin quórum rechaza.
+Consecuencia: 4 minutos sin inscripciones en Fráncfort.
+Aceptable: sí. Peor sería vender 50 plazas de un curso de 40.
 </code></pre>
-<p>Cuatro reuniones como máximo, todas por clave sustituta entera, todas hacia tablas pequeñas. Comparado con el esquema normalizado del OLTP, que exigiría recorrer <code>students</code>, <code>enrollments</code>, <code>courses</code>, <code>teaching</code> y <code>teachers</code>.</p>
-<p><strong>El cambio lento en acción.</strong> Ana pasa de «Ingeniería» a «Ciencias» el 2026-03-01:</p>
-<pre><code class="language-sql">UPDATE dim_estudiante
-   SET valido_hasta = DATE '2026-02-28', es_actual = false
- WHERE nk_student_id = 11 AND es_actual;
-
-INSERT INTO dim_estudiante (nk_student_id, nombre, programa, valido_desde)
-VALUES (11, 'Ana Pérez', 'Ciencias', DATE '2026-03-01');
+<p><strong>Operación 3 — registrar una nota.</strong></p>
+<p>Escritura de un solo autor por par (estudiante, curso). No hay conflicto posible.</p>
+<pre><code class="language-text">Decisión: AP con consistencia causal. Se acepta localmente y se reconcilia después.
+Consecuencia: la nota tarda en verse en la otra región.
+Aceptable: sí, porque no hay dos escritores compitiendo por el mismo dato.
 </code></pre>
-<p>Ahora:</p>
-<pre><code class="language-sql">-- &quot;Como era entonces&quot;: las inscripciones de 2025 cuentan en Ingeniería
-SELECT d.programa, count(*) FROM hecho_inscripcion f
-JOIN dim_estudiante d ON d.sk_estudiante = f.sk_estudiante
-JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
-WHERE t.anio = 2025 GROUP BY d.programa;
-
--- &quot;Como es ahora&quot;: las mismas inscripciones cuentan en Ciencias
-SELECT d.programa, count(*) FROM hecho_inscripcion f
-JOIN dim_estudiante h ON h.sk_estudiante = f.sk_estudiante
-JOIN dim_estudiante d ON d.nk_student_id = h.nk_student_id AND d.es_actual
-JOIN dim_tiempo t ON t.sk_tiempo = f.sk_tiempo
-WHERE t.anio = 2025 GROUP BY d.programa;
+<p><strong>La tabla que resulta, y que es el entregable de esta clase:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Operación</th>
+<th>Con partición</th>
+<th>Justificación</th>
+<th>Coste declarado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leer catálogo</td>
+<td>A</td>
+<td>Datos casi estáticos</td>
+<td>Hasta 5 min de desfase</td>
+</tr>
+<tr>
+<td>Inscribir con cupo</td>
+<td>C</td>
+<td>Recurso finito compartido</td>
+<td>Indisponible en la minoría</td>
+</tr>
+<tr>
+<td>Registrar nota</td>
+<td>A</td>
+<td>Un solo escritor por clave</td>
+<td>Visibilidad diferida</td>
+</tr>
+<tr>
+<td>Autenticar</td>
+<td>A</td>
+<td>Credenciales replicadas, cambios raros</td>
+<td>Un cambio de contraseña puede tardar</td>
+</tr>
+<tr>
+<td>Cambiar contraseña</td>
+<td>C</td>
+<td>Seguridad: no puede quedar la antigua</td>
+<td>Indisponible en la minoría</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Y el lado «else», que se paga siempre.</strong> Sin partición, la inscripción con <code>QUORUM</code> entre regiones cuesta:</p>
+<pre><code class="language-text">ida y vuelta Santiago-Fráncfort ≈ 200 ms
+inscripción con quórum global   ≈ 200 ms añadidos por operación
 </code></pre>
-<p><strong>Dos cifras distintas, ambas correctas.</strong> Sin cambio lento de tipo 2 solo se puede responder una de las dos preguntas, y normalmente se descubre cuando alguien pregunta la otra.</p>
-<p><strong>La dimensión de tiempo, siempre poblada de antemano:</strong></p>
-<pre><code class="language-sql">CREATE TABLE dim_tiempo (
-  sk_tiempo  INTEGER PRIMARY KEY,     -- p. ej. 20260301
-  fecha      DATE NOT NULL UNIQUE,
-  anio       SMALLINT NOT NULL,
-  semestre   SMALLINT NOT NULL,
-  mes        SMALLINT NOT NULL,
-  periodo_academico TEXT NOT NULL,
-  es_habil   BOOLEAN NOT NULL
-);
-</code></pre>
-<p>Tener el calendario como tabla evita repetir lógica de fechas en cada consulta y permite atributos que ninguna función de fecha conoce: períodos académicos, feriados locales, semanas de exámenes.</p>
+<p>Ese es el <code>EC</code> de PACELC, y es la razón por la que casi todos los sistemas globales acaban con <strong>datos regionales</strong>: la inscripción se coordina solo dentro de la región del curso, no globalmente. Eso convierte una decisión de consistencia global en una local, y es el diseño que de verdad se usa.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Aspecto</th>
-<th>Modelo normalizado (OLTP)</th>
-<th>Modelo dimensional (OLAP)</th>
+<th>Situación</th>
+<th>Clasificación adecuada</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Objetivo</td>
-<td>Evitar anomalías</td>
-<td>Responder preguntas rápido</td>
+<td>Sesiones y preferencias</td>
+<td>PA/EL</td>
 </tr>
 <tr>
-<td>Redundancia</td>
-<td>Mínima</td>
-<td>Aceptada en dimensiones</td>
+<td>Catálogo de productos</td>
+<td>PA/EL</td>
 </tr>
 <tr>
-<td>Reuniones por consulta</td>
-<td>Muchas</td>
-<td>Pocas, en estrella</td>
+<td>Inventario con reserva</td>
+<td>PC/EC</td>
 </tr>
 <tr>
-<td>Escrituras</td>
-<td>Concurrentes</td>
-<td>Por lotes, controladas</td>
+<td>Movimientos contables</td>
+<td>PC/EC</td>
 </tr>
 <tr>
-<td>Historia</td>
-<td>Presente</td>
-<td>Conservada (tipo 2)</td>
+<td>Métricas y telemetría</td>
+<td>PA/EL</td>
 </tr>
 <tr>
-<td>Comprensible para el negocio</td>
-<td>Poco</td>
-<td><strong>Mucho</strong></td>
+<td>Autenticación (lectura)</td>
+<td>PA/EL</td>
+</tr>
+<tr>
+<td>Cambio de credenciales</td>
+<td>PC/EC</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>No declarar el grano.</strong> Origen de todos los dobles conteos.</li>
-<li><strong>Mezclar granos en una tabla de hechos.</strong> Las sumas dejan de tener sentido.</li>
-<li><strong>Guardar ratios en vez de componentes.</strong> No se pueden reagregar.</li>
-<li><strong>Sumar hechos semiaditivos por el tiempo.</strong> Un saldo anual que no es de nadie.</li>
-<li><strong>Tipo 1 donde hacía falta tipo 2.</strong> La historia se pierde y no se recupera.</li>
-<li><strong>Usar la clave natural en los hechos.</strong> Rompe el cambio lento de tipo 2.</li>
-<li><strong>Calcular fechas en cada consulta.</strong> Falta la dimensión de tiempo.</li>
+<li><strong>«Elegimos AP» como decisión de producto.</strong> Es por operación, no por sistema.</li>
+<li><strong>Renunciar a P.</strong> La red se particiona; no es opcional.</li>
+<li><strong>Usar «consistencia» de CAP y de ACID como sinónimos.</strong> Son cosas distintas: linealizabilidad frente a restricciones de integridad.</li>
+<li><strong>Ignorar el lado «else».</strong> El costo de latencia se paga siempre, la partición casi nunca.</li>
+<li><strong>Suponer que un producto tiene una clasificación fija.</strong> Depende del nivel de consistencia elegido.</li>
+<li><strong>Coordinar globalmente lo que podría coordinarse por región.</strong></li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La causa más frecuente de «los informes no cuadran» no está en los datos: está en dos tablas de hechos con granos distintos que alguien sumó. Declarar el grano en la clave primaria lo convierte en un error de inserción en vez de en un número equivocado.</p>
+<p>La pregunta útil en una revisión de arquitectura no es «¿somos CP o AP?», sino «¿qué hace exactamente cada operación durante una partición, y quién decidió que eso era aceptable?». Esa tabla, escrita, vale más que cualquier etiqueta.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Elige un proceso de negocio tuyo y aplica los cuatro pasos.</li>
-<li>Declara el grano como frase completa y hazlo cumplir con la clave primaria.</li>
-<li>Clasifica cada hecho como aditivo, semiaditivo o no aditivo, y documéntalo.</li>
-<li>Implementa un cambio lento de tipo 2 y responde la misma pregunta «como era» y «como es».</li>
+<li>Enumera las operaciones críticas de tu sistema.</li>
+<li>Decide para cada una A o C durante la partición, con justificación de negocio.</li>
+<li>Calcula el costo de latencia del lado «else» en tu topología real.</li>
+<li>Identifica una operación que hoy se coordina globalmente y podría hacerlo por región.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Escribe el grano de una tabla de hechos tuya como frase completa.</li>
-<li>¿Por qué se guardan <code>aprobados</code> y <code>evaluados</code> en vez del porcentaje?</li>
-<li>Da un hecho semiaditivo de tu dominio y la agregación que sería incorrecta.</li>
-<li>Explica qué se rompe si la tabla de hechos guarda la clave natural.</li>
+<li>Enuncia CAP con las definiciones exactas de C, A y P.</li>
+<li>¿Por qué Spanner puede ser PC/EC y tener alta disponibilidad práctica?</li>
+<li>Da una operación de tu sistema que hoy es AP sin que nadie lo haya decidido.</li>
+<li>¿Qué garantías transaccionales son inalcanzables manteniendo disponibilidad total?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Atribuir cada venta a la ciudad que el cliente tenía entonces, no a la que tiene ahora</p>
-<p>El modelado dimensional separa <strong>hechos</strong> —lo que pasó, medible y
-numeroso— de <strong>dimensiones</strong> —el contexto por el que se filtra y se agrupa—.
-Y la pregunta que decide si el modelo sirve es una sola: ¿qué pasa cuando una
-dimensión cambia?</p>
-<p>El cliente A vendió por 100 cuando vivía en Santiago y por 200 después de
-mudarse a Valdivia. Con una dimensión de <strong>tipo 1</strong> —sobrescribir la
-ciudad— las dos ventas aparecen en Valdivia, y el informe del primer
-trimestre <strong>cambia retroactivamente</strong> cada vez que alguien se muda. Con una
-de <strong>tipo 2</strong> —una fila por versión, con su periodo de validez y su clave
-sustituta— cada venta queda atribuida a la ciudad de su momento, y el
-histórico deja de moverse.</p>
-<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>ciudad</th>
-<th>importe</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Santiago</code></td>
-<td><code>100</code></td>
-</tr>
-<tr>
-<td><code>Valdivia</code></td>
-<td><code>200</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 055</code>: 3 de
-las 5 implementaciones se ejecutan de verdad y su
-resultado se compara con esa tabla; el resto se declara como material revisado,
-no ejecutado.</p>
+<p><strong>Caso:</strong> Qué se elige de verdad cuando se dice «elegimos AP» o «elegimos CP»</p>
+<p>El teorema CAP dice algo muy concreto y muy limitado: <strong>cuando la red se
+parte</strong>, un sistema no puede ser a la vez consistente —en el sentido de
+linealizable— y disponible. Nada más. No dice que haya que elegir dos de
+tres, ni describe el comportamiento normal del sistema, que es el 99,9 % del
+tiempo.</p>
+<p>Por eso Abadi propuso PACELC, que completa la frase: <strong>si hay partición (P),
+se elige entre disponibilidad (A) y consistencia (C); y si no (E, <em>else</em>), se
+elige entre latencia (L) y consistencia (C)</strong>. La segunda mitad es la que
+manda casi siempre, y es la que las etiquetas «AP» y «CP» esconden.</p>
+<p>Aquí se compara qué elige cada motor en las dos mitades, y —lo más útil—
+<strong>qué se puede ajustar por operación</strong> en vez de por sistema.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -383,311 +374,98 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
+<td>Apache Cassandra</td>
 <td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/from.html">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/read-concern/">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/rangetypes.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/clickhouse/consulta.sql">código</a></td>
-<td><a href="https://clickhouse.com/docs/en/sql-reference/dictionaries">doc oficial</a></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Snowflake</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/snowflake/consulta.sql">código</a></td>
-<td><a href="https://docs.snowflake.com/en/sql-reference/sql/merge">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td><strong>no</strong></td>
+<td>conceptual</td>
 <td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/warm-standby.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Google Cloud Spanner</td>
+<td>sí</td>
+<td>conceptual</td>
 <td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc oficial</a></td>
+<td><a href="https://cloud.google.com/spanner/docs/true-time-external-consistency">doc oficial</a></td>
+</tr>
+<tr>
+<td>CockroachDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc oficial</a></td>
+<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/query_syntax/from.html
--- nota: el esquema en estrella es lo que mejor se le da: hechos grandes
---       reunidos con dimensiones pequenas que caben en memoria. Lo que NO tiene
---       es forma de mantener la dimension: cerrar la version vigente y abrir la
---       nueva hay que escribirlo, y nada impide dos vigentes a la vez.
-
--- === preparacion ===
--- La dimension con historia: una fila por VERSION del cliente, con su
--- periodo de validez y una clave sustituta propia. La clave de negocio
--- («A») se repite; la sustituta, no.
-CREATE TABLE dim_cliente (
-    sk       INTEGER PRIMARY KEY,
-    cliente  VARCHAR NOT NULL,
-    ciudad   VARCHAR NOT NULL,
-    desde    VARCHAR NOT NULL,
-    hasta    VARCHAR NOT NULL,
-    vigente  INTEGER NOT NULL
-);
-INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
-    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
-    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
-
--- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
-CREATE TABLE hechos_venta (
-    id         INTEGER PRIMARY KEY,
-    cliente_sk INTEGER NOT NULL,
-    fecha      VARCHAR NOT NULL,
-    importe    INTEGER NOT NULL
-);
-INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
-    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
-    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
-
--- === consulta ===
--- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
--- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
--- las dos ventas apareceran en Valdivia y el informe del primer trimestre
--- CAMBIARIA retroactivamente cada vez que alguien se muda.
-SELECT d.ciudad, SUM(h.importe) AS importe
-FROM hechos_venta h
-JOIN dim_cliente d ON d.sk = h.cliente_sk
-GROUP BY d.ciudad
-ORDER BY d.ciudad;
-</code></pre>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
 <ul>
-<li><strong>Por qué sí:</strong> El esquema en estrella es exactamente lo que su ejecutor hace mejor: una tabla de hechos grande reunida con dimensiones pequeñas, que caben en memoria y se resuelven con reunión hash sobre columnas comprimidas.</li>
-<li><strong>Por qué no:</strong> No tiene nada que ayude a <strong>mantener</strong> la dimensión: cerrar la versión vigente y abrir la nueva hay que escribirlo, y sin restricciones que lo impidan es fácil acabar con dos filas vigentes para el mismo cliente.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/from.html">https://duckdb.org/docs/stable/sql/query_syntax/from.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> PA/EL en la clasificación de Abadi: ante partición prefiere disponibilidad, y sin partición prefiere latencia. Pero eso es el valor por omisión, no una propiedad fija: el nivel de consistencia se elige <strong>por consulta</strong>, y con <code>QUORUM</code> en lectura y escritura se obtiene consistencia fuerte a cambio de esperar a la mayoría.</li>
+<li><strong>Por qué sí:</strong> Poder decidir por operación es lo más honesto que ofrece esta lista: la escritura del pago con <code>QUORUM</code>, la del registro de actividad con <code>ONE</code>, en el mismo clúster y en la misma aplicación.</li>
+<li><strong>Por qué no:</strong> Esa decisión hay que tomarla en <strong>cada</strong> consulta, y equivocarse no da ningún error: da datos viejos. Y la fórmula «R + W &gt; RF» hay que llevarla en la cabeza al escribir cada línea de código.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/rangetypes.html
--- nota: aqui los dos invariantes del tipo 2 se pueden IMPONER:
---         1) una sola version vigente  -&gt; indice unico parcial
---         2) periodos que no se solapan -&gt; restriccion de exclusion con daterange
---       Sin ellos, el tipo 2 es una convencion que alguien acabara rompiendo, y
---       el sintoma sera un informe con ventas duplicadas.
-
--- === preparacion ===
-DROP TABLE IF EXISTS hechos_venta, dim_cliente;
-
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-
-CREATE TABLE dim_cliente (
-    sk      integer PRIMARY KEY,
-    cliente text NOT NULL,
-    ciudad  text NOT NULL,
-    validez daterange NOT NULL,
-    vigente boolean NOT NULL,
-    EXCLUDE USING gist (cliente WITH =, validez WITH &amp;&amp;)
-);
-CREATE UNIQUE INDEX una_version_vigente ON dim_cliente (cliente) WHERE vigente;
-
-INSERT INTO dim_cliente (sk, cliente, ciudad, validez, vigente) VALUES
-    (1, 'A', 'Santiago', daterange('2026-01-01', '2026-07-01', '[)'), false),
-    (2, 'A', 'Valdivia', daterange('2026-07-01', 'infinity', '[)'), true);
-
-CREATE TABLE hechos_venta (
-    id         integer PRIMARY KEY,
-    cliente_sk integer NOT NULL REFERENCES dim_cliente(sk),
-    fecha      date NOT NULL,
-    importe    integer NOT NULL
-);
-INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
-    (1, 1, DATE '2026-03-15', 100),
-    (2, 2, DATE '2026-08-15', 200);
-
--- === consulta ===
-SELECT d.ciudad, SUM(h.importe) AS importe
-FROM hechos_venta h
-JOIN dim_cliente d ON d.sk = h.cliente_sk
-GROUP BY d.ciudad
-ORDER BY d.ciudad;
-</code></pre>
+<h4 id="mongodb">MongoDB</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Puede <strong>imponer</strong> el invariante que hace correcto al tipo 2: un índice único parcial sobre <code>(cliente) WHERE vigente</code> garantiza que nunca haya dos versiones vigentes, y los tipos de rango con restricción de exclusión impiden que dos periodos se solapen.</li>
-<li><strong>Por qué no:</strong> Esas garantías cuestan escrituras en cada cambio de dimensión, y el esquema en estrella sobre un motor de filas paga la reunión con la tabla de hechos en cada consulta: correcto, y no es donde va a ser rápido.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/rangetypes.html">https://www.postgresql.org/docs/current/rangetypes.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> PC/EC: ante partición, la minoría deja de aceptar escrituras —el primario se degrada— y sin partición prioriza consistencia con <code>readConcern</code> y <code>writeConcern</code>. También se ajusta por operación.</li>
+<li><strong>Por qué sí:</strong> El valor por omisión es el seguro y el arriesgado hay que pedirlo, que es el orden correcto: <code>w: "majority"</code> y <code>readConcern: "majority"</code> dan lecturas coherentes sin cambiar de motor.</li>
+<li><strong>Por qué no:</strong> Leer de secundarios para repartir carga rompe esa garantía sin avisar, y es lo primero que se hace cuando el primario va justo: la optimización más tentadora es justo la que cambia el modelo de consistencia.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/read-concern/">https://www.mongodb.com/docs/manual/reference/read-concern/</a></li>
 </ul>
-<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: clickhouse
--- doc: https://clickhouse.com/docs/en/sql-reference/dictionaries
--- nota: implementacion declarada, y con una advertencia importante. Los
---       DICCIONARIOS de ClickHouse resuelven la dimension sin reunion, con una
---       busqueda en memoria por clave... y devuelven el valor ACTUAL. Usarlos
---       con una dimension de tipo 2 reintroduce exactamente el error que el
---       tipo 2 existia para evitar: las ventas viejas se atribuyen a la ciudad
---       nueva.
---       La atribucion historica exige la reunion por rango de fechas de abajo,
---       que es justo lo que peor se le da a un motor columnar distribuido.
-
--- === preparacion ===
-CREATE TABLE dim_cliente (
-    sk      UInt32,
-    cliente String,
-    ciudad  String,
-    desde   Date,
-    hasta   Date,
-    vigente UInt8
-) ENGINE = MergeTree ORDER BY (cliente, desde);
-
-CREATE TABLE hechos_venta (
-    id         UInt32,
-    cliente_sk UInt32,
-    fecha      Date,
-    importe    UInt32
-) ENGINE = MergeTree ORDER BY (fecha, id);
-
-INSERT INTO dim_cliente VALUES
-    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
-    (2, 'A', 'Valdivia', '2026-07-01', '2106-02-07', 1);
-INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
-
--- === consulta ===
-SELECT d.ciudad, SUM(h.importe) AS importe
-FROM hechos_venta AS h
-INNER JOIN dim_cliente AS d ON d.sk = h.cliente_sk
-GROUP BY d.ciudad
-ORDER BY d.ciudad;
-</code></pre>
+<h4 id="postgresql">PostgreSQL</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Para hechos con miles de millones de filas no hay comparación, y sus diccionarios permiten resolver la dimensión sin reunión, con una búsqueda en memoria por clave.</li>
-<li><strong>Por qué no:</strong> Los diccionarios devuelven el valor <strong>actual</strong>, no el histórico: usarlos con una dimensión de tipo 2 vuelve a producir el error que el tipo 2 existía para evitar. La historia hay que resolverla con reunión por rango de fechas, que es justo lo que peor se le da.</li>
-<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/sql-reference/dictionaries">https://clickhouse.com/docs/en/sql-reference/dictionaries</a></li>
+<li><strong>Cómo se hace aquí:</strong> Con un solo nodo, la pregunta no se plantea: es CA en el sentido trivial de que no hay partición posible. Con réplica, el líder es consistente y las réplicas van por detrás; <code>synchronous_commit = remote_apply</code> da lecturas coherentes en la réplica a cambio de latencia en cada confirmación.</li>
+<li><strong>Por qué sí:</strong> Es el sistema más fácil de razonar: mientras se lea del primario, no hay modelo de consistencia que estudiar.</li>
+<li><strong>Por qué no:</strong> En cuanto se reparte la lectura entre réplicas, el sistema deja de ser trivial y nadie lo declara: la aplicación empieza a leer datos viejos sin que nada en el código lo indique. Es el «lo dirigimos a la réplica» que rompe el registro después de crearlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/warm-standby.html">https://www.postgresql.org/docs/current/warm-standby.html</a></li>
 </ul>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_select.html
--- nota: el invariante que hace correcto al tipo 2 —una sola version vigente por
---       cliente— se puede IMPONER, no solo desear:
---         CREATE UNIQUE INDEX una_vigente ON dim_cliente (cliente)
---           WHERE vigente = 1;
-
--- === preparacion ===
--- La dimension con historia: una fila por VERSION del cliente, con su
--- periodo de validez y una clave sustituta propia. La clave de negocio
--- («A») se repite; la sustituta, no.
-CREATE TABLE dim_cliente (
-    sk       INTEGER PRIMARY KEY,
-    cliente  TEXT NOT NULL,
-    ciudad   TEXT NOT NULL,
-    desde    TEXT NOT NULL,
-    hasta    TEXT NOT NULL,
-    vigente  INTEGER NOT NULL
-);
-INSERT INTO dim_cliente (sk, cliente, ciudad, desde, hasta, vigente) VALUES
-    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', 0),
-    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', 1);
-
--- La tabla de hechos apunta a la VERSION, no al cliente. Ahi esta todo.
-CREATE TABLE hechos_venta (
-    id         INTEGER PRIMARY KEY,
-    cliente_sk INTEGER NOT NULL,
-    fecha      TEXT NOT NULL,
-    importe    INTEGER NOT NULL
-);
-INSERT INTO hechos_venta (id, cliente_sk, fecha, importe) VALUES
-    (1, 1, '2026-03-15', 100),   -- cuando A vivia en Santiago
-    (2, 2, '2026-08-15', 200);   -- despues de mudarse a Valdivia
-
--- === consulta ===
--- Con dimension de tipo 2, cada venta se atribuye a la ciudad que el cliente
--- tenia EN ESE MOMENTO. Con una dimension de tipo 1 —sobrescribir la ciudad—
--- las dos ventas apareceran en Valdivia y el informe del primer trimestre
--- CAMBIARIA retroactivamente cada vez que alguien se muda.
-SELECT d.ciudad, SUM(h.importe) AS importe
-FROM hechos_venta h
-JOIN dim_cliente d ON d.sk = h.cliente_sk
-GROUP BY d.ciudad
-ORDER BY d.ciudad;
-</code></pre>
+<h4 id="google-cloud-spanner">Google Cloud Spanner</h4>
 <ul>
-<li><strong>Por qué sí:</strong> El modelo dimensional es un modelo, no una tecnología: se puede estudiar entero aquí, y el índice único parcial permite imponer también el invariante de la versión vigente.</li>
-<li><strong>Por qué no:</strong> No es un almacén analítico: sirve para entender el modelo y para prototipar la transformación, no para ejecutarla sobre volúmenes reales.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> CP con disponibilidad muy alta en la práctica: consistencia externa —equivalente a linealizabilidad— mediante Paxos y <strong>relojes con incertidumbre acotada</strong> (TrueTime). En vez de fingir que los relojes están sincronizados, mide el error y espera a que la incertidumbre pase.</li>
+<li><strong>Por qué sí:</strong> Ofrece transacciones distribuidas con serializabilidad estricta a escala global, algo que se consideraba imposible antes de 2012, y con SQL estándar encima.</li>
+<li><strong>Por qué no:</strong> Ese «esperar a que la incertidumbre pase» es latencia real en cada confirmación, y depende de una infraestructura de relojes —GPS y relojes atómicos— que solo existe dentro de un proveedor. La disponibilidad es altísima; el teorema no se ha roto, se ha comprado.</li>
+<li>📄 Documentación oficial: <a href="https://cloud.google.com/spanner/docs/true-time-external-consistency">https://cloud.google.com/spanner/docs/true-time-external-consistency</a></li>
 </ul>
-<h4 id="snowflake--implementacionessnowflakeconsultasql">Snowflake · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/implementaciones/snowflake/consulta.sql"><code>implementaciones/snowflake/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: snowflake
--- doc: https://docs.snowflake.com/en/sql-reference/sql/merge
--- nota: implementacion declarada. MERGE mantiene la dimension de tipo 2 en una
---       sola sentencia: cierra la version vigente e inserta la nueva.
---       Y una confusion frecuente que conviene deshacer: el VIAJE EN EL TIEMPO
---       de Snowflake permite consultar la tabla como estaba hace dias, pero NO
---       sustituye a la dimension de tipo 2. Sirve para recuperarse de un error,
---       no para atribuir hechos historicos: el viaje en el tiempo caduca, y la
---       historia del negocio no.
-
--- === preparacion ===
-CREATE OR REPLACE TABLE dim_cliente (
-    sk      NUMBER,
-    cliente STRING,
-    ciudad  STRING,
-    desde   DATE,
-    hasta   DATE,
-    vigente BOOLEAN
-);
-CREATE OR REPLACE TABLE hechos_venta (
-    id         NUMBER,
-    cliente_sk NUMBER,
-    fecha      DATE,
-    importe    NUMBER
-);
-
-INSERT INTO dim_cliente VALUES
-    (1, 'A', 'Santiago', '2026-01-01', '2026-06-30', FALSE),
-    (2, 'A', 'Valdivia', '2026-07-01', '9999-12-31', TRUE);
-INSERT INTO hechos_venta VALUES (1, 1, '2026-03-15', 100), (2, 2, '2026-08-15', 200);
-
--- El mantenimiento de la dimension, en una sentencia:
---   MERGE INTO dim_cliente d
---   USING nuevos_clientes n ON d.cliente = n.cliente AND d.vigente
---   WHEN MATCHED AND d.ciudad &lt;&gt; n.ciudad
---     THEN UPDATE SET d.vigente = FALSE, d.hasta = CURRENT_DATE()
---   WHEN NOT MATCHED
---     THEN INSERT (...) VALUES (...);
-
--- === consulta ===
-SELECT d.ciudad, SUM(h.importe) AS importe
-FROM hechos_venta h
-JOIN dim_cliente d ON d.sk = h.cliente_sk
-GROUP BY d.ciudad
-ORDER BY d.ciudad;
-</code></pre>
+<h4 id="cockroachdb">CockroachDB</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene <code>MERGE</code> para mantener la dimensión de tipo 2 en una sola sentencia —cerrar la versión vigente e insertar la nueva— y viaje en el tiempo, que permite consultar la tabla tal como estaba hace días sin haber guardado nada.</li>
-<li><strong>Por qué no:</strong> El viaje en el tiempo <strong>no</strong> sustituye a la dimensión de tipo 2: sirve para recuperarse de un error, no para atribuir hechos históricos. Confundir las dos cosas es un error de diseño frecuente y caro.</li>
-<li>📄 Documentación oficial: <a href="https://docs.snowflake.com/en/sql-reference/sql/merge">https://docs.snowflake.com/en/sql-reference/sql/merge</a></li>
+<li><strong>Cómo se hace aquí:</strong> CP también, con Raft por rango y serializabilidad como único nivel de aislamiento. Sin relojes atómicos: usa un intervalo de incertidumbre y reintenta las transacciones que caen dentro de él.</li>
+<li><strong>Por qué sí:</strong> Da la misma garantía fuerte sobre infraestructura corriente y con protocolo de PostgreSQL, así que buena parte de las herramientas ya existentes funcionan.</li>
+<li><strong>Por qué no:</strong> Los reintentos por incertidumbre son visibles para la aplicación: hay que escribir el ciclo de reintento sí o sí. Y con réplicas repartidas entre regiones, cada escritura paga la latencia de llegar a la mayoría.</li>
+<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer">https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Ni AP ni CP en sentido estricto: la réplica es asíncrona y la conmutación puede perder escrituras confirmadas. Su propia documentación lo dice y no promete consistencia fuerte.</li>
+<li><strong>Por qué sí:</strong> Para su trabajo —caché, colas, contadores, sesiones— esa elección es la correcta: la latencia es el requisito y perder el último segundo de una caché no cuesta nada.</li>
+<li><strong>Por qué no:</strong> El problema aparece cuando alguien empieza a guardar ahí lo que sí cuesta perder. Redis no engaña a nadie; la arquitectura que lo usa como fuente de verdad, sí.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -702,23 +480,17 @@ ORDER BY d.ciudad;
 </thead>
 <tbody>
 <tr>
-<td>MongoDB</td>
-<td>El modelo dimensional necesita reunir una tabla de hechos grande con dimensiones pequeñas, muchas veces y de muchas formas distintas; <code>$lookup</code> hace eso peor que cualquier motor relacional, y el modelo documental empuja a incrustar la dimensión, que es exactamente la desnormalización de tipo 1 con sus anomalías.</td>
-<td>Dejar MongoDB en el lado operativo y llevar los hechos a un almacén columnar donde el esquema en estrella tenga sentido.</td>
-<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>No hay reuniones ni consultas por rango de fechas sobre versiones: la atribución histórica no se puede expresar.</td>
-<td>Servir desde Redis el resultado <strong>ya agregado</strong> del informe, calculado en el almacén analítico: es una caché del informe, no un modelo dimensional.</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
+<td>SQLite</td>
+<td>Un solo proceso y un solo archivo: no hay red que se pueda partir, así que el teorema no dice nada sobre él. Incluirlo aquí sería usar el vocabulario sin el problema.</td>
+<td>La pregunta análoga en un sistema de un solo nodo es otra —qué pasa si se corta la luz— y se estudia en la clase de registro anticipado y recuperación.</td>
+<td><a href="https://sqlite.org/whentouse.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/04-indexing/run_indexing_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -762,22 +534,24 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Ralph Kimball, Margy Ross</strong> (2013). <a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/">The Data Warehouse Toolkit</a>. 3.a ed. Wiley. ISBN 978-1-118-53080-1.<br />
-  Modelado dimensional, tablas de hechos y dimensiones de cambio lento.</li>
-<li><strong>Joe Reis, Matt Housley</strong> (2022). <a href="https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/">Fundamentals of Data Engineering</a>. O'Reilly. ISBN 978-1-0981-0830-4.<br />
-  Ciclo de vida de la ingenieria de datos e integración entre sistemas.</li>
-<li><strong>dbt Labs</strong> (2026). <a href="https://docs.getdbt.com/">dbt Documentation</a>.<br />
-  Transformaciones versionadas y pruebas de datos en el almacen.</li>
+<li><strong>Seth Gilbert, Nancy Lynch</strong> (2002). <a href="https://dl.acm.org/doi/10.1145/564585.564601">Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services</a>. ACM SIGACT News 33(2). DOI <a href="https://doi.org/10.1145/564585.564601">10.1145/564585.564601</a>.<br />
+  Demostración formal del teorema CAP y de su enunciado exacto.</li>
+<li><strong>Eric Brewer</strong> (2012). <a href="https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/">CAP Twelve Years Later: How the Rules Have Changed</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.37">10.1109/MC.2012.37</a>.<br />
+  El propio autor corrige la lectura simplista de elegir dos de tres.</li>
+<li><strong>Daniel J. Abadi</strong> (2012). <a href="https://www.cs.umd.edu/~abadi/papers/abadi-pacelc.pdf">Consistency Tradeoffs in Modern Distributed Database System Design</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.33">10.1109/MC.2012.33</a>.<br />
+  PACELC: el compromiso latencia-consistencia existe también sin particiones.</li>
+<li><strong>Peter Bailis, Aaron Davidson, Alan Fekete, Ali Ghodsi, Joseph M. Hellerstein, Ion Stoica</strong> (2014). <a href="https://www.vldb.org/pvldb/vol7/p181-bailis.pdf">Highly Available Transactions: Virtues and Limitations</a>. PVLDB 7(3).<br />
+  Qué garantías transaccionales sobreviven a una partición y cuáles no.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="054.html">← Anterior</a> · <a href="056.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="055">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="054.html"><span class="sentido">← Anterior · 054</span>OLTP frente a OLAP: por qué se separan</a>
-<a class="siguiente" href="056.html"><span class="sentido">Siguiente · 056 →</span>Integración: ETL, ELT, captura de cambios y el registro como nexo</a>
+<a class="anterior" href="054.html"><span class="sentido">← Anterior · 054</span>Particionado, rebalanceo y claves calientes</a>
+<a class="siguiente" href="056.html"><span class="sentido">Siguiente · 056 →</span>Modelos de consistencia y garantías de sesión</a>
 </nav>
 </main>
 <footer>

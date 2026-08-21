@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="CAP, PACELC y lo que realmente se elige. Parte 09: Distribución, réplica y consistencia.">
+<meta name="description" content="Bloqueo en dos fases, MVCC e instantáneas. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/045.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="045 — CAP, PACELC y lo que realmente se elige · Database Systems Labs">
-<meta property="og:description" content="CAP, PACELC y lo que realmente se elige. Parte 09: Distribución, réplica y consistencia.">
+<meta property="og:title" content="045 — Bloqueo en dos fases, MVCC e instantáneas · Database Systems Labs">
+<meta property="og:description" content="Bloqueo en dos fases, MVCC e instantáneas. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/045.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "045 — CAP, PACELC y lo que realmente se elige", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["partición de red", "disponibilidad", "latencia frente a consistencia"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>045 — CAP, PACELC y lo que realmente se elige · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "045 — Bloqueo en dos fases, MVCC e instantáneas", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["2PL", "versión de fila", "instantánea", "interbloqueo", "vacuum"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>045 — Bloqueo en dos fases, MVCC e instantáneas · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,315 +49,269 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-09.html">Parte 09 · Distribución, réplica y consistencia</a>
+  <a href="parte-08.html">Parte 08 · Transacciones, concurrencia y recuperación</a>
   <span aria-hidden="true">/</span><span>Clase 045</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="045--cap-pacelc-y-lo-que-realmente-se-elige">045 — CAP, PACELC y lo que realmente se elige</h1>
+<h1 id="045--bloqueo-en-dos-fases-mvcc-e-instantáneas">045 — Bloqueo en dos fases, MVCC e instantáneas</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 09 — Distribución, réplica y consistencia · Avanzado ·
-3 horas estimadas · motores <code>cassandra</code>, <code>spanner</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>partición de red</code> · <code>disponibilidad</code> · <code>latencia frente a consistencia</code></p>
+<p>Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
+4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>2PL</code> · <code>versión de fila</code> · <code>instantánea</code> · <code>interbloqueo</code> · <code>vacuum</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Enunciar CAP con precisión, entender por qué su lectura popular es engañosa y usar PACELC, que describe mejor el compromiso que se toma todos los días.</p>
+<p>Conocer los dos mecanismos con que los motores implementan el aislamiento —bloqueo y versiones— porque determinan qué operaciones se estorban entre sí y cómo se resuelve un interbloqueo.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Enunciar el teorema CAP con las definiciones exactas de sus términos.</li>
-<li>Explicar por qué «elegir dos de tres» es una lectura incorrecta.</li>
-<li>Aplicar PACELC y situar motores reales en su clasificación.</li>
-<li>Determinar qué garantías sobreviven a una partición.</li>
-<li>Decidir el comportamiento de tu sistema durante una partición, por operación.</li>
+<li>Explicar el bloqueo en dos fases y por qué garantiza serializabilidad.</li>
+<li>Leer una matriz de compatibilidad de bloqueos.</li>
+<li>Describir cómo MVCC decide qué versión de fila ve cada transacción.</li>
+<li>Diagnosticar un interbloqueo y prevenirlo.</li>
+<li>Explicar por qué MVCC necesita recolección de versiones muertas.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-enunciado-preciso">El enunciado preciso</h3>
-<p>Gilbert y Lynch (2002) demostraron formalmente la conjetura de Brewer. Los términos tienen definiciones estrictas que casi nunca se citan:</p>
-<ul>
-<li><strong>C (consistencia):</strong> <em>linealizabilidad</em>. Existe un orden total de las operaciones compatible con el tiempo real; toda lectura devuelve la última escritura confirmada.</li>
-<li><strong>A (disponibilidad):</strong> <strong>toda</strong> petición a un nodo <strong>no caído</strong> recibe respuesta correcta, en tiempo finito.</li>
-<li><strong>P (tolerancia a particiones):</strong> el sistema sigue funcionando aunque la red pierda arbitrariamente mensajes entre nodos.</li>
-</ul>
-<p><strong>Teorema:</strong> ningún sistema distribuido puede garantizar las tres simultáneamente.</p>
-<h3 id="por-qué-dos-de-tres-está-mal">Por qué «dos de tres» está mal</h3>
-<p>La red <strong>se particiona</strong>. No es una opción de diseño: es un hecho del mundo. Renunciar a P significaría suponer que la red nunca falla, lo cual no es un sistema distribuido sino una apuesta.</p>
-<p>Por tanto la elección real es binaria y <strong>solo durante la partición</strong>:</p>
-<ul>
-<li><strong>CP:</strong> rechazar peticiones que no puedan garantizar consistencia. Se pierde disponibilidad.</li>
-<li><strong>AP:</strong> responder con datos posiblemente obsoletos. Se pierde consistencia.</li>
-</ul>
-<p>Brewer lo aclaró él mismo en 2012: el teorema se aplica en el instante de la partición y las tres propiedades son continuas, no binarias. Además, la mayor parte del tiempo <strong>no hay partición</strong>, y ahí CAP no dice nada. Ese vacío es lo que PACELC llena.</p>
-<h3 id="pacelc">PACELC</h3>
-<p>Abadi (2012):</p>
-<pre><code class="language-text">if (P) then (A or C)      -- durante una partición: disponibilidad o consistencia
-else     (L or C)         -- en operación normal: latencia o consistencia
-</code></pre>
-<p>La segunda mitad es la que gobierna el 99,9 % del tiempo. Cada confirmación sincrónica a otra región cuesta una ida y vuelta: entre Santiago y Fráncfort, unos 200 ms. Ese costo se paga <strong>siempre</strong>, no solo cuando algo falla.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Sistema</th>
-<th>Con partición</th>
-<th>Sin partición</th>
-<th>Clasificación</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL (líder único, síncrono)</td>
-<td>C</td>
-<td>C</td>
-<td>PC/EC</td>
-</tr>
-<tr>
-<td>PostgreSQL (líder único, asíncrono)</td>
-<td>C en el líder</td>
-<td>L</td>
-<td>PC/EL</td>
-</tr>
-<tr>
-<td>Cassandra (<code>ONE</code>)</td>
-<td>A</td>
-<td>L</td>
-<td>PA/EL</td>
-</tr>
-<tr>
-<td>Cassandra (<code>QUORUM</code>)</td>
-<td>Configurable</td>
-<td>C</td>
-<td>PC/EC</td>
-</tr>
-<tr>
-<td>DynamoDB (eventual)</td>
-<td>A</td>
-<td>L</td>
-<td>PA/EL</td>
-</tr>
-<tr>
-<td>DynamoDB (fuerte)</td>
-<td>C</td>
-<td>C</td>
-<td>PC/EC</td>
-</tr>
-<tr>
-<td>MongoDB (<code>majority</code>)</td>
-<td>C</td>
-<td>C</td>
-<td>PC/EC</td>
-</tr>
-<tr>
-<td>Spanner</td>
-<td>C</td>
-<td>C</td>
-<td>PC/EC</td>
-</tr>
-</tbody>
-</table></div>
-<p>Dos observaciones que cambian la conversación:</p>
+<h3 id="bloqueo-en-dos-fases-2pl">Bloqueo en dos fases (2PL)</h3>
+<p>Dos reglas:</p>
 <ol>
-<li><strong>La clasificación es por operación, no por producto.</strong> Cassandra es AP o CP según el nivel de consistencia de <strong>cada</strong> consulta.</li>
-<li><strong>Spanner es PC/EC</strong> y aun así ofrece alta disponibilidad, porque usa redes privadas con particiones extremadamente raras y consenso rápido (clase 047). No viola CAP: elige C y su disponibilidad práctica es alta porque P casi nunca ocurre.</li>
+<li><strong>Fase de crecimiento:</strong> la transacción adquiere bloqueos y no libera ninguno.</li>
+<li><strong>Fase de decrecimiento:</strong> libera bloqueos y no adquiere ninguno.</li>
 </ol>
-<h3 id="qué-sobrevive-a-una-partición">Qué sobrevive a una partición</h3>
-<p>Bailis et al. clasifican qué garantías son alcanzables <strong>manteniendo la disponibilidad total</strong>:</p>
+<p>En la práctica se usa <strong>2PL estricto</strong>: todos los bloqueos se liberan en el <code>COMMIT</code>. Eso evita además las lecturas sucias y las reversiones en cascada.</p>
+<p>Matriz de compatibilidad, para bloqueos de fila:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Garantía</th>
-<th>¿Disponible bajo partición?</th>
+<th>Tiene ↓ / Pide →</th>
+<th>Compartido (S)</th>
+<th>Exclusivo (X)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Consistencia eventual</td>
-<td>Sí</td>
+<td><strong>Compartido (S)</strong></td>
+<td>Compatible</td>
+<td>Espera</td>
 </tr>
 <tr>
-<td>Lectura de tus escrituras</td>
-<td>Sí (con sesión fijada)</td>
-</tr>
-<tr>
-<td>Lectura monótona</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Consistencia causal</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Aislamiento de instantánea</td>
-<td><strong>No</strong></td>
-</tr>
-<tr>
-<td>Serializabilidad</td>
-<td><strong>No</strong></td>
-</tr>
-<tr>
-<td>Linealizabilidad</td>
-<td><strong>No</strong></td>
+<td><strong>Exclusivo (X)</strong></td>
+<td>Espera</td>
+<td>Espera</td>
 </tr>
 </tbody>
 </table></div>
-<p>La frontera es nítida: todo lo que exige un orden total acordado necesita coordinación, y la coordinación es lo primero que una partición rompe. Todo lo demás —incluida la consistencia causal, que es bastante fuerte— se puede sostener sin coordinar.</p>
+<p>La consecuencia práctica en un motor con bloqueo puro (SQL Server en <code>READ COMMITTED</code> clásico): <strong>los lectores bloquean a los escritores</strong>. Un informe largo puede detener las escrituras.</p>
+<h3 id="mvcc">MVCC</h3>
+<p>En lugar de bloquear para leer, el motor guarda <strong>varias versiones</strong> de cada fila. Cada transacción ve una instantánea coherente.</p>
+<p>En PostgreSQL, cada fila lleva <code>xmin</code> (transacción que la creó) y <code>xmax</code> (la que la borró o actualizó). Una transacción con instantánea <code>S</code> ve una versión si:</p>
+<pre><code class="language-text">xmin está confirmada y es visible en S,  y
+xmax no existe, o no está confirmada, o no es visible en S
+</code></pre>
+<p>Un <code>UPDATE</code> no modifica: inserta una versión nueva y marca <code>xmax</code> en la anterior.</p>
+<p><strong>La regla que resume MVCC: los lectores no bloquean a los escritores y los escritores no bloquean a los lectores.</strong> Los escritores sí se bloquean entre sí sobre la misma fila.</p>
+<p>Precio: las versiones muertas ocupan espacio hasta que <code>VACUUM</code> las recupera, y una transacción abierta impide recuperarlas (clase 033).</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Mecanismo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>MVCC con versiones en la propia tabla + <code>VACUUM</code></td>
+</tr>
+<tr>
+<td>MySQL InnoDB</td>
+<td>MVCC con versiones en el segmento de deshacer + bloqueo de siguiente clave</td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td>MVCC con segmentos de deshacer</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Bloqueo por defecto; MVCC con <code>READ_COMMITTED_SNAPSHOT</code></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>Instantánea por archivo; un escritor</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="bloqueo-de-siguiente-clave">Bloqueo de siguiente clave</h3>
+<p>MVCC evita los fantasmas en lectura, pero no basta para escrituras que dependen de un rango. InnoDB añade el <strong>bloqueo de siguiente clave</strong>: bloquea el registro y el hueco anterior en el índice, impidiendo insertar en ese rango.</p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE course_id = 42 FOR UPDATE;
+-- bloquea las filas existentes Y los huecos: nadie puede insertar con course_id = 42
+</code></pre>
+<p>Efecto secundario importante: si la consulta <strong>no</strong> usa un índice, InnoDB bloquea todas las filas examinadas, que pueden ser la tabla entera. Un <code>FOR UPDATE</code> sin índice adecuado convierte una operación puntual en un bloqueo global.</p>
+<h3 id="interbloqueo">Interbloqueo</h3>
+<pre><code class="language-text">T1: bloquea fila A ... pide fila B
+T2: bloquea fila B ... pide fila A
+</code></pre>
+<p>Ciclo de espera. El motor lo detecta y <strong>aborta una</strong> de las transacciones (la «víctima»). No es un error del motor: es su forma correcta de resolverlo.</p>
+<p>Prevención, en orden de eficacia:</p>
+<ol>
+<li><strong>Acceder siempre a los recursos en el mismo orden.</strong> Si toda transacción bloquea las cuentas por identificador ascendente, no puede haber ciclo.</li>
+<li><strong>Transacciones cortas.</strong> Menos ventana para el ciclo.</li>
+<li><strong>Bloquear lo mínimo.</strong> <code>FOR UPDATE</code> solo sobre lo que se va a escribir, y con índice.</li>
+<li><strong>Reintentar.</strong> La víctima debe reintentar con retroceso; es parte del contrato.</li>
+</ol>
 <pre><code class="language-mermaid">flowchart TD
-    P{&quot;¿Hay partición&lt;br/&gt;de red?&quot;}
-    P -- &quot;Sí&quot; --&gt; A{&quot;¿Responder con datos&lt;br/&gt;posiblemente obsoletos?&quot;}
-    A -- &quot;Sí&quot; --&gt; AP[&quot;AP: disponible,&lt;br/&gt;inconsistente&quot;]
-    A -- &quot;No&quot; --&gt; CP[&quot;CP: rechaza o espera,&lt;br/&gt;consistente&quot;]
-    P -- &quot;No (99,9 % del tiempo)&quot; --&gt; L{&quot;¿Coordinar en cada&lt;br/&gt;operación?&quot;}
-    L -- &quot;Sí&quot; --&gt; EC[&quot;EC: consistente,&lt;br/&gt;+latencia por ida y vuelta&quot;]
-    L -- &quot;No&quot; --&gt; EL[&quot;EL: rápido,&lt;br/&gt;consistencia más débil&quot;]
+    subgraph P[&quot;2PL (bloqueo)&quot;]
+        L1[&quot;Leer: bloqueo S&quot;] --&gt; L2[&quot;Escribir: bloqueo X&quot;]
+        L2 --&gt; L3[&quot;COMMIT: liberar todo&quot;]
+        L1 -.-&gt;|&quot;lector bloquea&lt;br/&gt;a escritor&quot;| X1[&quot;Contención&quot;]
+    end
+    subgraph M[&quot;MVCC&quot;]
+        V1[&quot;Leer: instantánea&lt;br/&gt;sin bloqueo&quot;] --&gt; V2[&quot;Escribir: versión nueva&lt;br/&gt;+ bloqueo de fila&quot;]
+        V2 --&gt; V3[&quot;COMMIT&quot;]
+        V3 --&gt; V4[&quot;VACUUM recupera&lt;br/&gt;versiones muertas&quot;]
+    end
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Plataforma educativa con nodos en Santiago y Fráncfort. La red entre regiones se corta 4 minutos.</p>
-<p><strong>Operación 1 — leer el catálogo de cursos.</strong></p>
-<p>Datos que cambian una vez al día. Servir la versión de hace unos minutos no daña a nadie.</p>
-<pre><code class="language-text">Decisión: AP. Se sirve desde la réplica local aunque esté desconectada.
-Consecuencia: un curso creado hace 3 minutos en Santiago no se ve en Fráncfort.
-Aceptable: sí, y se documenta.
+<h3 id="interbloqueo-reproducible">Interbloqueo reproducible</h3>
+<pre><code class="language-text">Sesión A                                 Sesión B
+BEGIN;
+UPDATE cuentas SET saldo=saldo-100
+  WHERE id=1;                            BEGIN;
+                                         UPDATE cuentas SET saldo=saldo-50
+                                           WHERE id=2;
+UPDATE cuentas SET saldo=saldo+100
+  WHERE id=2;      -- espera a B
+                                         UPDATE cuentas SET saldo=saldo+50
+                                           WHERE id=1;   -- espera a A → CICLO
 </code></pre>
-<p><strong>Operación 2 — inscribir en un curso con cupo limitado.</strong></p>
-<p>Si ambas regiones aceptan inscripciones sin coordinarse, el cupo se excede.</p>
-<pre><code class="language-text">Decisión: CP. Durante la partición, la región sin quórum rechaza.
-Consecuencia: 4 minutos sin inscripciones en Fráncfort.
-Aceptable: sí. Peor sería vender 50 plazas de un curso de 40.
+<p>PostgreSQL detecta el ciclo en ~1 s (<code>deadlock_timeout</code>) y aborta una:</p>
+<pre><code class="language-text">ERROR:  deadlock detected
+DETAIL: Process 1234 waits for ShareLock on transaction 5678; blocked by process 5679.
+HINT:   See server log for query details.
 </code></pre>
-<p><strong>Operación 3 — registrar una nota.</strong></p>
-<p>Escritura de un solo autor por par (estudiante, curso). No hay conflicto posible.</p>
-<pre><code class="language-text">Decisión: AP con consistencia causal. Se acepta localmente y se reconcilia después.
-Consecuencia: la nota tarda en verse en la otra región.
-Aceptable: sí, porque no hay dos escritores compitiendo por el mismo dato.
+<p><strong>Corrección por orden canónico:</strong></p>
+<pre><code class="language-python">def transferir(conn, origen, destino, monto):
+    # Bloquear siempre por id ascendente: dos transferencias cruzadas
+    # (1→2 y 2→1) piden los mismos bloqueos en el mismo orden y no hay ciclo.
+    primero, segundo = sorted([origen, destino])
+    with conn.transaction():
+        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (primero,))
+        conn.execute(&quot;SELECT id FROM cuentas WHERE id = %s FOR UPDATE&quot;, (segundo,))
+        conn.execute(&quot;UPDATE cuentas SET saldo = saldo - %s WHERE id = %s&quot;, (monto, origen))
+        conn.execute(&quot;UPDATE cuentas SET saldo = saldo + %s WHERE id = %s&quot;, (monto, destino))
 </code></pre>
-<p><strong>La tabla que resulta, y que es el entregable de esta clase:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Operación</th>
-<th>Con partición</th>
-<th>Justificación</th>
-<th>Coste declarado</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Leer catálogo</td>
-<td>A</td>
-<td>Datos casi estáticos</td>
-<td>Hasta 5 min de desfase</td>
-</tr>
-<tr>
-<td>Inscribir con cupo</td>
-<td>C</td>
-<td>Recurso finito compartido</td>
-<td>Indisponible en la minoría</td>
-</tr>
-<tr>
-<td>Registrar nota</td>
-<td>A</td>
-<td>Un solo escritor por clave</td>
-<td>Visibilidad diferida</td>
-</tr>
-<tr>
-<td>Autenticar</td>
-<td>A</td>
-<td>Credenciales replicadas, cambios raros</td>
-<td>Un cambio de contraseña puede tardar</td>
-</tr>
-<tr>
-<td>Cambiar contraseña</td>
-<td>C</td>
-<td>Seguridad: no puede quedar la antigua</td>
-<td>Indisponible en la minoría</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Y el lado «else», que se paga siempre.</strong> Sin partición, la inscripción con <code>QUORUM</code> entre regiones cuesta:</p>
-<pre><code class="language-text">ida y vuelta Santiago-Fráncfort ≈ 200 ms
-inscripción con quórum global   ≈ 200 ms añadidos por operación
+<p>Con el orden canónico, una de las dos espera y ambas terminan. Sin él, una muere y hay que reintentarla.</p>
+<h3 id="mvcc-en-acción">MVCC en acción</h3>
+<pre><code class="language-sql">-- Sesión A
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM enrollments;   -- 240 000
+
+-- Sesión B (concurrente)
+INSERT INTO enrollments VALUES (...);   -- 1 000 filas
+COMMIT;
+
+-- Sesión A, otra vez
+SELECT COUNT(*) FROM enrollments;   -- 240 000  ← sigue viendo su instantánea
+COMMIT;
+SELECT COUNT(*) FROM enrollments;   -- 241 000
 </code></pre>
-<p>Ese es el <code>EC</code> de PACELC, y es la razón por la que casi todos los sistemas globales acaban con <strong>datos regionales</strong>: la inscripción se coordina solo dentro de la región del curso, no globalmente. Eso convierte una decisión de consistencia global en una local, y es el diseño que de verdad se usa.</p>
+<p>Ninguna de las dos sesiones esperó a la otra. Ese es todo el valor de MVCC.</p>
+<p><strong>El precio, medido.</strong> Durante la transacción de A, las versiones antiguas no se pueden recuperar:</p>
+<pre><code class="language-sql">SELECT relname, n_dead_tup, last_autovacuum FROM pg_stat_user_tables
+WHERE relname = 'enrollments';
+</code></pre>
+<p>Con 2 000 actualizaciones por segundo y una transacción de A abierta 30 minutos, se acumulan ~3,6 millones de versiones muertas que ningún vacuum puede retirar hasta que A termine. La tabla crece, los barridos leen páginas casi vacías y el rendimiento cae de forma sostenida.</p>
+<p><strong>Diagnóstico de transacciones largas:</strong></p>
+<pre><code class="language-sql">SELECT pid, state, now() - xact_start AS duracion, query
+FROM pg_stat_activity
+WHERE state &lt;&gt; 'idle' AND xact_start IS NOT NULL
+ORDER BY duracion DESC LIMIT 5;
+</code></pre>
+<p>Es la primera consulta que ejecutar cuando una base «crece sin motivo».</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Situación</th>
-<th>Clasificación adecuada</th>
+<th>Dimensión</th>
+<th>2PL puro</th>
+<th>MVCC</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Sesiones y preferencias</td>
-<td>PA/EL</td>
+<td>Lector frente a escritor</td>
+<td>Se bloquean</td>
+<td>No se bloquean</td>
 </tr>
 <tr>
-<td>Catálogo de productos</td>
-<td>PA/EL</td>
+<td>Escritor frente a escritor</td>
+<td>Se bloquean</td>
+<td>Se bloquean</td>
 </tr>
 <tr>
-<td>Inventario con reserva</td>
-<td>PC/EC</td>
+<td>Coste en espacio</td>
+<td>Bajo</td>
+<td>Versiones + recolección</td>
 </tr>
 <tr>
-<td>Movimientos contables</td>
-<td>PC/EC</td>
+<td>Interbloqueos</td>
+<td>Frecuentes</td>
+<td>Menos, pero existen</td>
 </tr>
 <tr>
-<td>Métricas y telemetría</td>
-<td>PA/EL</td>
+<td>Lecturas consistentes</td>
+<td>Con bloqueo largo</td>
+<td>Gratis, por instantánea</td>
 </tr>
 <tr>
-<td>Autenticación (lectura)</td>
-<td>PA/EL</td>
-</tr>
-<tr>
-<td>Cambio de credenciales</td>
-<td>PC/EC</td>
+<td>Problema operativo típico</td>
+<td>Contención</td>
+<td>Hinchazón por transacción larga</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>«Elegimos AP» como decisión de producto.</strong> Es por operación, no por sistema.</li>
-<li><strong>Renunciar a P.</strong> La red se particiona; no es opcional.</li>
-<li><strong>Usar «consistencia» de CAP y de ACID como sinónimos.</strong> Son cosas distintas: linealizabilidad frente a restricciones de integridad.</li>
-<li><strong>Ignorar el lado «else».</strong> El costo de latencia se paga siempre, la partición casi nunca.</li>
-<li><strong>Suponer que un producto tiene una clasificación fija.</strong> Depende del nivel de consistencia elegido.</li>
-<li><strong>Coordinar globalmente lo que podría coordinarse por región.</strong></li>
+<li><strong><code>SELECT ... FOR UPDATE</code> sin índice.</strong> Bloquea todas las filas examinadas.</li>
+<li><strong>Orden de acceso inconsistente.</strong> Fabrica interbloqueos evitables.</li>
+<li><strong>No reintentar la víctima.</strong> El interbloqueo llega al usuario como error.</li>
+<li><strong>Transacciones largas en un motor MVCC.</strong> Impiden la recolección.</li>
+<li><strong>Suponer que MVCC elimina el bloqueo.</strong> Los escritores siguen compitiendo por la misma fila.</li>
+<li><strong>Bloquear el padre cuando bastaba una sentencia atómica.</strong></li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La pregunta útil en una revisión de arquitectura no es «¿somos CP o AP?», sino «¿qué hace exactamente cada operación durante una partición, y quién decidió que eso era aceptable?». Esa tabla, escrita, vale más que cualquier etiqueta.</p>
+<p>Los interbloqueos aumentan de golpe tras un despliegue que cambió el orden de las escrituras. Registrar el grafo de espera y el orden de acceso de cada transacción convierte un problema intermitente en uno reproducible.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Enumera las operaciones críticas de tu sistema.</li>
-<li>Decide para cada una A o C durante la partición, con justificación de negocio.</li>
-<li>Calcula el costo de latencia del lado «else» en tu topología real.</li>
-<li>Identifica una operación que hoy se coordina globalmente y podría hacerlo por región.</li>
+<li>Provoca un interbloqueo con dos sesiones y captura el mensaje del motor.</li>
+<li>Corrígelo con orden canónico y demuestra que ya no ocurre.</li>
+<li>Mide <code>n_dead_tup</code> antes, durante y después de una transacción larga.</li>
+<li>Compara el mismo escenario en un motor con bloqueo y en uno con MVCC.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Enuncia CAP con las definiciones exactas de C, A y P.</li>
-<li>¿Por qué Spanner puede ser PC/EC y tener alta disponibilidad práctica?</li>
-<li>Da una operación de tu sistema que hoy es AP sin que nadie lo haya decidido.</li>
-<li>¿Qué garantías transaccionales son inalcanzables manteniendo disponibilidad total?</li>
+<li>¿Por qué el 2PL estricto evita las reversiones en cascada?</li>
+<li>Explica con <code>xmin</code>/<code>xmax</code> por qué la sesión A sigue viendo 240 000 filas.</li>
+<li>¿Qué bloquea exactamente <code>FOR UPDATE</code> sobre una consulta sin índice en InnoDB?</li>
+<li>Da dos transacciones de tu sistema que podrían formar un ciclo y define su orden canónico.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Qué se elige de verdad cuando se dice «elegimos AP» o «elegimos CP»</p>
-<p>El teorema CAP dice algo muy concreto y muy limitado: <strong>cuando la red se
-parte</strong>, un sistema no puede ser a la vez consistente —en el sentido de
-linealizable— y disponible. Nada más. No dice que haya que elegir dos de
-tres, ni describe el comportamiento normal del sistema, que es el 99,9 % del
-tiempo.</p>
-<p>Por eso Abadi propuso PACELC, que completa la frase: <strong>si hay partición (P),
-se elige entre disponibilidad (A) y consistencia (C); y si no (E, <em>else</em>), se
-elige entre latencia (L) y consistencia (C)</strong>. La segunda mitad es la que
-manda casi siempre, y es la que las etiquetas «AP» y «CP» esconden.</p>
-<p>Aquí se compara qué elige cada motor en las dos mitades, y —lo más útil—
-<strong>qué se puede ajustar por operación</strong> en vez de por sistema.</p>
+<p><strong>Caso:</strong> Bloquear o versionar: las dos familias de control de concurrencia</p>
+<p>Solo hay dos formas de que dos transacciones no se pisen. <strong>Bloquear</strong>: la
+primera que llega retiene el dato y la segunda espera —es el bloqueo en dos
+fases, que da serializabilidad a cambio de esperas e interbloqueos.
+<strong>Versionar</strong>: cada escritura crea una versión nueva y cada lector ve la que
+existía cuando empezó, de modo que <strong>los lectores nunca bloquean a los
+escritores ni al revés</strong>; es MVCC.</p>
+<p>Casi todos los motores modernos usan MVCC para leer y algún bloqueo para
+escribir, pero el reparto exacto cambia mucho, y con él el trabajo de
+limpiar las versiones viejas: el vacío de PostgreSQL, el segmento de
+deshacer de Oracle y de InnoDB, y las lápidas de Cassandra son el mismo
+problema con tres nombres.</p>
 <p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
 resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
 cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
@@ -374,98 +328,98 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
+<td>PostgreSQL</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><a href="https://www.postgresql.org/docs/current/mvcc-intro.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/wal.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">doc oficial</a></td>
+</tr>
+<tr>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/read-concern/">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/faq/concurrency/">doc oficial</a></td>
 </tr>
 <tr>
-<td>PostgreSQL</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/warm-standby.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Google Cloud Spanner</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cloud.google.com/spanner/docs/true-time-external-consistency">doc oficial</a></td>
-</tr>
-<tr>
-<td>CockroachDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">doc oficial</a></td>
-</tr>
-<tr>
-<td>SQLite</td>
+<td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
+<h4 id="postgresql">PostgreSQL</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> PA/EL en la clasificación de Abadi: ante partición prefiere disponibilidad, y sin partición prefiere latencia. Pero eso es el valor por omisión, no una propiedad fija: el nivel de consistencia se elige <strong>por consulta</strong>, y con <code>QUORUM</code> en lectura y escritura se obtiene consistencia fuerte a cambio de esperar a la mayoría.</li>
-<li><strong>Por qué sí:</strong> Poder decidir por operación es lo más honesto que ofrece esta lista: la escritura del pago con <code>QUORUM</code>, la del registro de actividad con <code>ONE</code>, en el mismo clúster y en la misma aplicación.</li>
-<li><strong>Por qué no:</strong> Esa decisión hay que tomarla en <strong>cada</strong> consulta, y equivocarse no da ningún error: da datos viejos. Y la fórmula «R + W &gt; RF» hay que llevarla en la cabeza al escribir cada línea de código.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> MVCC puro en el almacén: un <code>UPDATE</code> <strong>no modifica la fila</strong>, escribe una versión nueva y marca la vieja como muerta. Los lectores no toman ningún bloqueo. El precio es la limpieza: <code>VACUUM</code> recupera el espacio de las versiones muertas, y <code>autovacuum</code> lo hace solo.</li>
+<li><strong>Por qué sí:</strong> Los informes largos no bloquean nunca la escritura, y el aislamiento serializable se consigue sin bloqueos gracias a SSI.</li>
+<li><strong>Por qué no:</strong> El coste está en el mantenimiento: una transacción abierta durante horas impide vaciar y la tabla se hincha; y el contador de transacciones puede llegar a agotarse si el vacío se retrasa lo suficiente. Es la avería de operación más común del motor.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/mvcc-intro.html">https://www.postgresql.org/docs/current/mvcc-intro.html</a></li>
+</ul>
+<h4 id="mysql">MySQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> MVCC para las lecturas mediante el <strong>registro de deshacer</strong> —la fila se modifica en su sitio y la versión anterior se reconstruye desde ese registro— y bloqueos de fila e índice para las escrituras, incluidos los bloqueos de hueco que evitan fantasmas.</li>
+<li><strong>Por qué sí:</strong> Modificar en el sitio evita la hinchazón de la tabla, y el espacio de las versiones viejas se reutiliza sin un proceso de vacío.</li>
+<li><strong>Por qué no:</strong> Los bloqueos de hueco producen interbloqueos donde no parece haberlos —dos inserciones en el mismo rango vacío— y una transacción larga hace crecer el registro de deshacer hasta llenar el disco, que es la misma avería con otro nombre.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html</a></li>
+</ul>
+<h4 id="sqlite">SQLite</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> En modo WAL, los lectores leen del archivo principal más el registro y ven una instantánea; el escritor añade al registro. Es una forma mínima de MVCC: <strong>un</strong> escritor y muchos lectores, sin bloqueos de lectura.</li>
+<li><strong>Por qué sí:</strong> Cabe entero en la cabeza: un escritor, cero interbloqueos, cero configuración.</li>
+<li><strong>Por qué no:</strong> No hay grados: no se puede tener dos escritores por mucho que escriban en tablas distintas. Y el registro WAL crece hasta que un punto de control lo recorta, cosa que un lector muy largo puede impedir.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/wal.html">https://sqlite.org/wal.html</a></li>
+</ul>
+<h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Bloqueo en dos fases de verdad como comportamiento por omisión, con granularidad de fila, página y tabla, y <strong>escalada</strong> automática de bloqueos cuando hay demasiados. Opcionalmente, versiones con <code>READ_COMMITTED_SNAPSHOT</code>, guardadas en <code>tempdb</code>.</li>
+<li><strong>Por qué sí:</strong> El bloqueo es el modelo que más fácil hace razonar sobre el orden de las operaciones, y su detector de interbloqueos elige víctima y devuelve un error claro.</li>
+<li><strong>Por qué no:</strong> La escalada de bloqueos convierte un <code>UPDATE</code> grande en un bloqueo de tabla entera; y al activar las versiones, toda la carga de versiones cae en <code>tempdb</code>, que pasa a ser el cuello de botella de la instancia.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide">https://learn.microsoft.com/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide</a></li>
+</ul>
+<h4 id="oracle-database">Oracle Database</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> MVCC con segmentos de deshacer desde antes de que se llamara así: la lectura consistente reconstruye la versión que existía al empezar la sentencia. Si el segmento ya se reutilizó, la consulta falla con el célebre ORA-01555, «snapshot too old».</li>
+<li><strong>Por qué sí:</strong> Es la implementación más madura y probada del modelo, con décadas de carga real encima.</li>
+<li><strong>Por qué no:</strong> Ese ORA-01555 es exactamente el mismo problema que la hinchazón de PostgreSQL, resuelto al revés: en vez de que la tabla crezca, la consulta larga muere. Hay que dimensionar el espacio de deshacer, y eso es trabajo de administración.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/cncpt/data-concurrency-and-consistency.html</a></li>
 </ul>
 <h4 id="mongodb">MongoDB</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> PC/EC: ante partición, la minoría deja de aceptar escrituras —el primario se degrada— y sin partición prioriza consistencia con <code>readConcern</code> y <code>writeConcern</code>. También se ajusta por operación.</li>
-<li><strong>Por qué sí:</strong> El valor por omisión es el seguro y el arriesgado hay que pedirlo, que es el orden correcto: <code>w: "majority"</code> y <code>readConcern: "majority"</code> dan lecturas coherentes sin cambiar de motor.</li>
-<li><strong>Por qué no:</strong> Leer de secundarios para repartir carga rompe esa garantía sin avisar, y es lo primero que se hace cuando el primario va justo: la optimización más tentadora es justo la que cambia el modelo de consistencia.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/read-concern/">https://www.mongodb.com/docs/manual/reference/read-concern/</a></li>
-</ul>
-<h4 id="postgresql">PostgreSQL</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Con un solo nodo, la pregunta no se plantea: es CA en el sentido trivial de que no hay partición posible. Con réplica, el líder es consistente y las réplicas van por detrás; <code>synchronous_commit = remote_apply</code> da lecturas coherentes en la réplica a cambio de latencia en cada confirmación.</li>
-<li><strong>Por qué sí:</strong> Es el sistema más fácil de razonar: mientras se lea del primario, no hay modelo de consistencia que estudiar.</li>
-<li><strong>Por qué no:</strong> En cuanto se reparte la lectura entre réplicas, el sistema deja de ser trivial y nadie lo declara: la aplicación empieza a leer datos viejos sin que nada en el código lo indique. Es el «lo dirigimos a la réplica» que rompe el registro después de crearlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/warm-standby.html">https://www.postgresql.org/docs/current/warm-standby.html</a></li>
-</ul>
-<h4 id="google-cloud-spanner">Google Cloud Spanner</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> CP con disponibilidad muy alta en la práctica: consistencia externa —equivalente a linealizabilidad— mediante Paxos y <strong>relojes con incertidumbre acotada</strong> (TrueTime). En vez de fingir que los relojes están sincronizados, mide el error y espera a que la incertidumbre pase.</li>
-<li><strong>Por qué sí:</strong> Ofrece transacciones distribuidas con serializabilidad estricta a escala global, algo que se consideraba imposible antes de 2012, y con SQL estándar encima.</li>
-<li><strong>Por qué no:</strong> Ese «esperar a que la incertidumbre pase» es latencia real en cada confirmación, y depende de una infraestructura de relojes —GPS y relojes atómicos— que solo existe dentro de un proveedor. La disponibilidad es altísima; el teorema no se ha roto, se ha comprado.</li>
-<li>📄 Documentación oficial: <a href="https://cloud.google.com/spanner/docs/true-time-external-consistency">https://cloud.google.com/spanner/docs/true-time-external-consistency</a></li>
-</ul>
-<h4 id="cockroachdb">CockroachDB</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> CP también, con Raft por rango y serializabilidad como único nivel de aislamiento. Sin relojes atómicos: usa un intervalo de incertidumbre y reintenta las transacciones que caen dentro de él.</li>
-<li><strong>Por qué sí:</strong> Da la misma garantía fuerte sobre infraestructura corriente y con protocolo de PostgreSQL, así que buena parte de las herramientas ya existentes funcionan.</li>
-<li><strong>Por qué no:</strong> Los reintentos por incertidumbre son visibles para la aplicación: hay que escribir el ciclo de reintento sí o sí. Y con réplicas repartidas entre regiones, cada escritura paga la latencia de llegar a la mayoría.</li>
-<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer">https://www.cockroachlabs.com/docs/stable/architecture/transaction-layer</a></li>
-</ul>
-<h4 id="redis">Redis</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Ni AP ni CP en sentido estricto: la réplica es asíncrona y la conmutación puede perder escrituras confirmadas. Su propia documentación lo dice y no promete consistencia fuerte.</li>
-<li><strong>Por qué sí:</strong> Para su trabajo —caché, colas, contadores, sesiones— esa elección es la correcta: la latencia es el requisito y perder el último segundo de una caché no cuesta nada.</li>
-<li><strong>Por qué no:</strong> El problema aparece cuando alguien empieza a guardar ahí lo que sí cuesta perder. Redis no engaña a nadie; la arquitectura que lo usa como fuente de verdad, sí.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+<li><strong>Cómo se hace aquí:</strong> WiredTiger usa control de concurrencia optimista con versiones a nivel de documento: dos escrituras sobre el <strong>mismo</strong> documento entran en conflicto y una se reintenta, mientras que sobre documentos distintos no se estorban.</li>
+<li><strong>Por qué sí:</strong> El conflicto es por documento, no por página ni por tabla: la granularidad más fina posible en su modelo.</li>
+<li><strong>Por qué no:</strong> Un documento «caliente» —un contador global, un agregado muy actualizado— se convierte en el punto de contención, y la solución no es configurar nada, es rediseñar el modelo para repartirlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/faq/concurrency/">https://www.mongodb.com/docs/manual/faq/concurrency/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -480,17 +434,17 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>SQLite</td>
-<td>Un solo proceso y un solo archivo: no hay red que se pueda partir, así que el teorema no dice nada sobre él. Incluirlo aquí sería usar el vocabulario sin el problema.</td>
-<td>La pregunta análoga en un sistema de un solo nodo es otra —qué pasa si se corta la luz— y se estudia en la clase de registro anticipado y recuperación.</td>
-<td><a href="https://sqlite.org/whentouse.html">doc</a></td>
+<td>Apache Cassandra</td>
+<td>No hay control de concurrencia: no hay bloqueos ni versiones que un lector deba respetar. La última escritura gana según su marca de tiempo, y si dos llegan con la misma, gana la mayor por valor. No es una variante de MVCC: es renunciar al problema.</td>
+<td>Transacciones ligeras (<code>IF NOT EXISTS</code>, <code>IF condicion</code>) cuando de verdad hace falta comparar antes de escribir, sabiendo que cuestan un acuerdo entre réplicas y varias veces más que una escritura normal.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -534,24 +488,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Seth Gilbert, Nancy Lynch</strong> (2002). <a href="https://dl.acm.org/doi/10.1145/564585.564601">Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services</a>. ACM SIGACT News 33(2). DOI <a href="https://doi.org/10.1145/564585.564601">10.1145/564585.564601</a>.<br />
-  Demostración formal del teorema CAP y de su enunciado exacto.</li>
-<li><strong>Eric Brewer</strong> (2012). <a href="https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/">CAP Twelve Years Later: How the Rules Have Changed</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.37">10.1109/MC.2012.37</a>.<br />
-  El propio autor corrige la lectura simplista de elegir dos de tres.</li>
-<li><strong>Daniel J. Abadi</strong> (2012). <a href="https://www.cs.umd.edu/~abadi/papers/abadi-pacelc.pdf">Consistency Tradeoffs in Modern Distributed Database System Design</a>. IEEE Computer 45(2). DOI <a href="https://doi.org/10.1109/MC.2012.33">10.1109/MC.2012.33</a>.<br />
-  PACELC: el compromiso latencia-consistencia existe también sin particiones.</li>
-<li><strong>Peter Bailis, Aaron Davidson, Alan Fekete, Ali Ghodsi, Joseph M. Hellerstein, Ion Stoica</strong> (2014). <a href="https://www.vldb.org/pvldb/vol7/p181-bailis.pdf">Highly Available Transactions: Virtues and Limitations</a>. PVLDB 7(3).<br />
-  Qué garantías transaccionales sobreviven a una partición y cuáles no.</li>
+<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
+  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/mvcc.html">PostgreSQL: Concurrency Control</a>.<br />
+  Niveles de aislamiento tal como los implementa PostgreSQL, no como los define la norma.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="044.html">← Anterior</a> · <a href="046.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="045">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="044.html"><span class="sentido">← Anterior · 044</span>Particionado, rebalanceo y claves calientes</a>
-<a class="siguiente" href="046.html"><span class="sentido">Siguiente · 046 →</span>Modelos de consistencia y garantías de sesión</a>
+<a class="anterior" href="044.html"><span class="sentido">← Anterior · 044</span>Anomalías de aislamiento y la crítica a los niveles ANSI</a>
+<a class="siguiente" href="046.html"><span class="sentido">Siguiente · 046 →</span>Registro anticipado y recuperación: WAL y ARIES</a>
 </nav>
 </main>
 <footer>

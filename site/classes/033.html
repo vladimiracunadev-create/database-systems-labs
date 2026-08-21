@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="ACID: qué garantiza cada letra y quién la implementa. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta name="description" content="SQLite y DuckDB: motores embebidos, transaccional frente a analítico. Parte 05: Motores relacionales y dialectos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/033.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="033 — ACID: qué garantiza cada letra y quién la implementa · Database Systems Labs">
-<meta property="og:description" content="ACID: qué garantiza cada letra y quién la implementa. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta property="og:title" content="033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico · Database Systems Labs">
+<meta property="og:description" content="SQLite y DuckDB: motores embebidos, transaccional frente a analítico. Parte 05: Motores relacionales y dialectos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/033.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "033 — ACID: qué garantiza cada letra y quién la implementa", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["atomicidad", "consistencia", "aislamiento", "durabilidad", "unidad de recuperación"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>033 — ACID: qué garantiza cada letra y quién la implementa · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["motor embebido", "tipado dinamico", "almacenamiento columnar", "vectorización"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,250 +49,282 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-07.html">Parte 07 · Transacciones, concurrencia y recuperación</a>
+  <a href="parte-05.html">Parte 05 · Motores relacionales y dialectos</a>
   <span aria-hidden="true">/</span><span>Clase 033</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="033--acid-qué-garantiza-cada-letra-y-quién-la-implementa">033 — ACID: qué garantiza cada letra y quién la implementa</h1>
+<h1 id="033--sqlite-y-duckdb-motores-embebidos-transaccional-frente-a-analítico">033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 07 — Transacciones, concurrencia y recuperación · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>atomicidad</code> · <code>consistencia</code> · <code>aislamiento</code> · <code>durabilidad</code> · <code>unidad de recuperación</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 05 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>motor embebido</code> · <code>tipado dinamico</code> · <code>almacenamiento columnar</code> · <code>vectorización</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 4 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Precisar qué garantiza cada letra de ACID, quién la implementa y qué queda fuera. «Usamos una base ACID» no significa que el sistema sea correcto: significa que existen unas garantías concretas si se usan bien.</p>
+<p>Entender los motores embebidos y, con ellos, la diferencia fundamental entre un sistema transaccional y uno analítico. SQLite y DuckDB comparten arquitectura y resuelven problemas opuestos.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Definir con precisión atomicidad, consistencia, aislamiento y durabilidad.</li>
-<li>Explicar por qué la C es distinta de las otras tres.</li>
-<li>Identificar qué mecanismo del motor implementa cada letra.</li>
-<li>Reconocer las garantías que se pierden por configuración.</li>
-<li>Explicar por qué una transacción larga es un problema operativo.</li>
+<li>Explicar qué significa «embebido» y qué desaparece al no haber servidor.</li>
+<li>Describir el tipado dinámico de SQLite y cuándo muerde.</li>
+<li>Justificar por qué SQLite admite un solo escritor y qué habilita el modo WAL.</li>
+<li>Explicar por qué el almacenamiento columnar cambia el orden de magnitud en analítica.</li>
+<li>Elegir entre ambos según la carga de trabajo.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-transacción">La transacción</h3>
-<p>Gray (1981) define la transacción como la unidad de trabajo que lleva la base de un estado consistente a otro, con la propiedad de que o se aplica entera o no se aplica nada. Es simultáneamente unidad de <strong>recuperación</strong>, de <strong>concurrencia</strong> y de <strong>consistencia</strong>.</p>
-<h3 id="las-cuatro-letras-una-por-una">Las cuatro letras, una por una</h3>
-<p><strong>A — Atomicidad.</strong> Todo o nada. Si la transacción falla o el proceso muere, no queda ningún efecto parcial. Lo implementa el registro de deshacer (<em>undo</em>): el motor guarda cómo revertir cada cambio antes de aplicarlo.</p>
-<p><strong>C — Consistencia.</strong> Aquí está la trampa pedagógica. Las otras tres letras son propiedades <strong>del motor</strong>; la C es una propiedad <strong>de la aplicación y del esquema</strong>. El motor solo garantiza las restricciones que alguien declaró (clase 013). Si nadie declaró que el saldo no puede ser negativo, ninguna transacción ACID lo impedirá.</p>
-<p>Formulación honesta: <em>la atomicidad y el aislamiento permiten que la aplicación mantenga sus invariantes; la C es la afirmación de que las mantiene</em>.</p>
-<p><strong>I — Aislamiento.</strong> Las transacciones concurrentes producen un resultado equivalente a <strong>alguna</strong> ejecución en serie. Esa es la definición de serializabilidad, y es el nivel más fuerte. En la práctica casi todos los sistemas funcionan en niveles más débiles que <strong>sí</strong> permiten anomalías, y por defecto (clase 034). Lo implementan el bloqueo en dos fases o el control multiversión (clase 035).</p>
-<p><strong>D — Durabilidad.</strong> Una vez confirmada, la transacción sobrevive a fallos. Lo implementa el registro anticipado (clase 036). El matiz importante: durabilidad <strong>frente a qué fallo</strong>. Sobrevivir a la caída del proceso, a la de la máquina, a la pérdida del disco y a la del centro de datos son cuatro garantías distintas con cuatro costos distintos.</p>
+<h3 id="embebido">Embebido</h3>
+<p>No hay proceso servidor ni protocolo de red: el motor es una biblioteca enlazada al programa. Lo que desaparece:</p>
+<ul>
+<li>La latencia de red (microsegundos en vez de milisegundos por consulta).</li>
+<li>La autenticación y los permisos por usuario: quien puede leer el archivo, lo puede todo.</li>
+<li>El acceso concurrente entre máquinas.</li>
+<li>La administración: no hay nada que arrancar ni que parchear por separado.</li>
+</ul>
+<p>Lo que <strong>no</strong> desaparece: transacciones, índices, planificador, registro anticipado y recuperación. SQLite implementa todo eso en menos de un megabyte, y por eso es el mejor motor para estudiar un gestor completo.</p>
+<h3 id="tipado-dinámico-de-sqlite">Tipado dinámico de SQLite</h3>
+<p>SQLite no tiene tipos de columna en el sentido habitual: tiene <strong>afinidades</strong>. Una columna declarada <code>INTEGER</code> acepta texto.</p>
+<pre><code class="language-sql">CREATE TABLE t (n INTEGER);
+INSERT INTO t VALUES ('hola');     -- se acepta
+SELECT typeof(n) FROM t;           -- 'text'
+</code></pre>
+<p>Desde la versión 3.37 existen las tablas <code>STRICT</code>, que restauran el comportamiento esperado:</p>
+<pre><code class="language-sql">CREATE TABLE t (n INTEGER) STRICT;
+INSERT INTO t VALUES ('hola');     -- error: cannot store TEXT value in INTEGER column
+</code></pre>
+<p><strong>Recomendación del repositorio:</strong> usar <code>STRICT</code> siempre que la versión lo permita. El tipado laxo es una fuente de datos sucios que después nadie sabe de dónde salieron.</p>
+<p>Tampoco hay tipos de fecha: se usa texto ISO-8601, número Julian o entero Unix. El repositorio usa texto ISO-8601 en UTC con <code>CHECK</code> de formato, porque es legible y ordenable lexicográficamente.</p>
+<h3 id="un-solo-escritor">Un solo escritor</h3>
+<p>SQLite serializa las escrituras a nivel de base de datos completa. En modo de registro por reversión (<code>rollback journal</code>), un escritor bloquea también a los lectores. En modo <strong>WAL</strong>:</p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;
+</code></pre>
+<ul>
+<li>Los lectores no bloquean al escritor y el escritor no bloquea a los lectores.</li>
+<li>Sigue habiendo <strong>un solo escritor a la vez</strong>.</li>
+<li>Requiere memoria compartida, así que no funciona bien sobre sistemas de archivos en red.</li>
+</ul>
+<p>Configuración habitual para una aplicación real:</p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;
+PRAGMA synchronous  = NORMAL;    -- FULL es más seguro; NORMAL es seguro con WAL ante caída de proceso
+PRAGMA foreign_keys = ON;        -- ¡por conexión!
+PRAGMA busy_timeout = 5000;      -- esperar en vez de fallar con SQLITE_BUSY
+</code></pre>
+<p><code>busy_timeout</code> es el que más incidencias evita: sin él, cualquier colisión de escritura devuelve un error inmediato al cliente.</p>
+<h3 id="duckdb-la-misma-forma-el-problema-opuesto">DuckDB: la misma forma, el problema opuesto</h3>
+<p>DuckDB es también embebido y también SQL, pero está construido para analítica:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Fallo</th>
-<th>Mecanismo necesario</th>
+<th>Dimensión</th>
+<th>SQLite</th>
+<th>DuckDB</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Caída del proceso</td>
-<td>WAL escrito al sistema operativo</td>
+<td>Almacenamiento</td>
+<td>Por filas</td>
+<td><strong>Por columnas</strong></td>
 </tr>
 <tr>
-<td>Caída de la máquina</td>
-<td><code>fsync</code> del WAL al disco</td>
+<td>Ejecución</td>
+<td>Fila a fila</td>
+<td><strong>Vectorizada</strong> (lotes de ~2 048 valores)</td>
 </tr>
 <tr>
-<td>Pérdida del disco</td>
-<td>Réplica o copia externa</td>
+<td>Carga objetivo</td>
+<td>Muchas transacciones pequeñas</td>
+<td>Pocas consultas que barren mucho</td>
 </tr>
 <tr>
-<td>Pérdida del centro de datos</td>
-<td>Réplica geográficamente distante</td>
+<td>Escritura concurrente</td>
+<td>Un escritor</td>
+<td>Un escritor</td>
 </tr>
 <tr>
-<td>Error humano (<code>DROP TABLE</code>)</td>
-<td>Copia con recuperación a un punto en el tiempo</td>
+<td>Lectura de Parquet/CSV</td>
+<td>No nativa</td>
+<td>Nativa, sin importar</td>
+</tr>
+<tr>
+<td>Uso típico</td>
+<td>Aplicación, móvil, borde</td>
+<td>Análisis local, transformación</td>
 </tr>
 </tbody>
 </table></div>
-<p>Ninguna configuración de un solo nodo protege de las tres últimas.</p>
-<h3 id="garantías-que-se-pierden-por-configuración">Garantías que se pierden por configuración</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Configuración</th>
-<th>Qué se pierde</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL <code>synchronous_commit = off</code></td>
-<td>Durabilidad: hasta ~0,2 s de transacciones confirmadas</td>
-</tr>
-<tr>
-<td>PostgreSQL <code>fsync = off</code></td>
-<td>Durabilidad y posiblemente la integridad del archivo</td>
-</tr>
-<tr>
-<td>MySQL <code>innodb_flush_log_at_trx_commit = 2</code></td>
-<td>Durabilidad ante caída de la máquina</td>
-</tr>
-<tr>
-<td>MySQL con tablas MyISAM</td>
-<td><strong>Todo</strong>: no hay transacciones</td>
-</tr>
-<tr>
-<td>Réplica asíncrona con conmutación</td>
-<td>Las transacciones aún no replicadas</td>
-</tr>
-<tr>
-<td>SQLite <code>synchronous = OFF</code></td>
-<td>Durabilidad e integridad ante corte de energía</td>
-</tr>
-</tbody>
-</table></div>
-<p>La primera y la tercera son decisiones legítimas para datos reconstruibles, y hay que <strong>declararlas</strong>, no heredarlas de un archivo de configuración copiado.</p>
+<p><strong>Por qué el formato columnar cambia el orden de magnitud.</strong> Para <code>SELECT AVG(nota) FROM enrollments</code> sobre una tabla de 20 columnas y 10 millones de filas:</p>
+<ul>
+<li><strong>Por filas:</strong> para leer una columna hay que leer las páginas que contienen las filas enteras. Si la fila ocupa 200 bytes y la nota 8, se leen ~2 GB para usar 80 MB.</li>
+<li><strong>Por columnas:</strong> la columna <code>nota</code> está contigua. Se leen ~80 MB, y además comprime mucho mejor porque los valores contiguos son homogéneos.</li>
+</ul>
+<p>Factor 25 en E/S por el mismo SQL y los mismos datos. A eso se añade la ejecución vectorizada, que procesa lotes en vez de fila a fila y aprovecha mejor la caché de la CPU.</p>
 <pre><code class="language-mermaid">flowchart TD
-    T[&quot;BEGIN&quot;] --&gt; W[&quot;Escrituras&quot;]
-    W --&gt; A{&quot;¿COMMIT o fallo?&quot;}
-    A -- &quot;Fallo&quot; --&gt; U[&quot;Registro de deshacer&lt;br/&gt;→ ATOMICIDAD&quot;]
-    A -- &quot;COMMIT&quot; --&gt; V{&quot;¿Se violó alguna&lt;br/&gt;restricción declarada?&quot;}
-    V -- &quot;Sí&quot; --&gt; U
-    V -- &quot;No&quot; --&gt; L[&quot;WAL + fsync&lt;br/&gt;→ DURABILIDAD&quot;]
-    L --&gt; OK[&quot;Confirmado&quot;]
-    W -.-&gt;|&quot;2PL o MVCC&quot;| I[&quot;AISLAMIENTO&quot;]
-    V -.-&gt; C[&quot;CONSISTENCIA&lt;br/&gt;(esquema + aplicación)&quot;]
+    C[&quot;¿Qué carga tengo?&quot;] --&gt; A{&quot;¿Muchas escrituras&lt;br/&gt;pequeñas y concurrentes?&quot;}
+    A -- &quot;Sí&quot; --&gt; B{&quot;¿Varios procesos&lt;br/&gt;o máquinas?&quot;}
+    B -- &quot;Sí&quot; --&gt; S[&quot;PostgreSQL / MySQL&quot;]
+    B -- &quot;No&quot; --&gt; SL[&quot;SQLite + WAL&quot;]
+    A -- &quot;No&quot; --&gt; D{&quot;¿Consultas que barren&lt;br/&gt;muchas filas y pocas columnas?&quot;}
+    D -- &quot;Sí&quot; --&gt; E{&quot;¿Cabe en una&lt;br/&gt;máquina?&quot;}
+    E -- &quot;Sí&quot; --&gt; DD[&quot;DuckDB&quot;]
+    E -- &quot;No&quot; --&gt; CH[&quot;ClickHouse / almacén (parte 11)&quot;]
+    D -- &quot;No&quot; --&gt; SL
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Transferencia entre cuentas, el caso canónico:</p>
+<p>Misma pregunta analítica, dos motores. 10 millones de inscripciones.</p>
+<pre><code class="language-sql">SELECT c.periodo, COUNT(*) AS inscritos, AVG(e.nota) AS promedio
+FROM enrollments e JOIN courses c ON c.id = e.course_id
+GROUP BY c.periodo ORDER BY c.periodo;
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Datos leídos</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>Todas las páginas de <code>enrollments</code> (filas completas)</td>
+<td>Barrido por filas, agregación por hash</td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>Solo <code>course_id</code> y <code>nota</code></td>
+<td>Barrido columnar comprimido, agregación vectorizada</td>
+</tr>
+</tbody>
+</table></div>
+<p>La diferencia no está en la calidad del código de cada motor: está en el formato. SQLite no puede leer solo dos columnas porque no están separadas físicamente.</p>
+<p><strong>Y el caso inverso</strong>, una carga transaccional:</p>
 <pre><code class="language-sql">BEGIN;
-UPDATE cuentas SET saldo = saldo - 300 WHERE id = 1;
-UPDATE cuentas SET saldo = saldo + 300 WHERE id = 2;
+INSERT INTO enrollments (student_id, course_id) VALUES (:s, :c);
+UPDATE courses SET inscritos = inscritos + 1 WHERE id = :c;
 COMMIT;
 </code></pre>
-<p><strong>Qué garantiza cada letra aquí:</strong></p>
-<ul>
-<li><strong>A:</strong> si el proceso muere entre los dos <code>UPDATE</code>, ninguno queda aplicado. Los 300 no desaparecen.</li>
-<li><strong>I:</strong> otra transferencia concurrente sobre la cuenta 1 no ve el estado intermedio ni provoca actualización perdida (con el nivel adecuado).</li>
-<li><strong>D:</strong> tras el <code>COMMIT</code>, un corte de energía no deshace la operación.</li>
-<li><strong>C:</strong> <strong>nada</strong>, salvo que se declare. Sin restricciones, esto se acepta:</li>
-</ul>
-<pre><code class="language-sql">BEGIN;
-UPDATE cuentas SET saldo = saldo - 100000 WHERE id = 1;  -- saldo queda en -99 700
-COMMIT;   -- ACID perfecto, negocio roto
+<p>Repetido 100 000 veces con parámetros distintos, SQLite es netamente superior: escribir una fila en formato columnar obliga a tocar tantos bloques como columnas tenga la tabla. DuckDB está diseñado para cargas por lotes, no para transacciones pequeñas.</p>
+<p><strong>Conclusión operativa:</strong> no es que uno sea mejor. Es que el formato de almacenamiento <strong>es</strong> la decisión, y determina qué carga sale barata. Esta es la misma idea que reaparece en la clase 032 (analítica columnar) y en la 054 (OLTP frente a OLAP).</p>
+<p><strong>Interoperabilidad.</strong> DuckDB lee archivos SQLite y Parquet directamente:</p>
+<pre><code class="language-sql">INSTALL sqlite; LOAD sqlite;
+SELECT COUNT(*) FROM sqlite_scan('school.db', 'enrollments');
+SELECT * FROM read_parquet('notas/*.parquet') WHERE periodo = '2026-1';
 </code></pre>
-<p>La transacción es atómica, aislada y duradera, y deja un saldo imposible. La C exige escribirla:</p>
-<pre><code class="language-sql">ALTER TABLE cuentas ADD CONSTRAINT saldo_no_negativo CHECK (saldo &gt;= 0);
-</code></pre>
-<p>Ahora sí: el <code>UPDATE</code> falla, la transacción se revierte y la atomicidad garantiza que no queda rastro.</p>
-<p><strong>La invariante que un <code>CHECK</code> no cubre.</strong> «La suma de todos los saldos es constante»: relaciona filas distintas y no hay <code>CHECK</code> estándar que lo exprese. Solo el aislamiento serializable garantiza que dos transferencias concurrentes no la rompan; en niveles más débiles hay que auditarla:</p>
-<pre><code class="language-sql">SELECT SUM(saldo) FROM cuentas;   -- debe coincidir con el total esperado
-</code></pre>
-<p><strong>Transacciones largas: el problema operativo.</strong></p>
-<pre><code class="language-sql">BEGIN;
-SELECT * FROM enrollments;          -- el informe tarda 40 minutos
--- ... la sesión queda abierta ...
-COMMIT;
-</code></pre>
-<p>Durante esos 40 minutos, en un motor MVCC:</p>
-<ul>
-<li>El motor <strong>no puede</strong> limpiar las versiones antiguas de fila, porque esta transacción podría necesitarlas. Las tablas se hinchan (clase 021).</li>
-<li>Con bloqueo (SQL Server en <code>READ COMMITTED</code> por defecto), además bloquea escritores.</li>
-<li>Si la transacción escribió algo, mantiene sus bloqueos todo ese tiempo.</li>
-</ul>
-<p>Medición típica: una transacción abierta 40 minutos en una base con 2 000 actualizaciones por segundo impide recuperar ~4,8 millones de versiones de fila. La consecuencia se ve como «la base creció 30 GB de la nada».</p>
-<p><strong>Regla operativa:</strong> una transacción abarca las escrituras que deben ser atómicas y nada más. Nunca debe contener llamadas de red a servicios externos, esperas de usuario ni informes largos.</p>
+<p>Patrón muy útil: la aplicación escribe en SQLite y el análisis se hace con DuckDB sobre el mismo archivo, sin ETL ni servidor.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Propiedad</th>
-<th>La garantiza</th>
-<th>Se pierde si</th>
+<th>Criterio</th>
+<th>SQLite</th>
+<th>DuckDB</th>
+<th>PostgreSQL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Atomicidad</td>
-<td>Registro de deshacer</td>
-<td>Casi nunca; el motor la sostiene</td>
+<td>Proceso servidor</td>
+<td>No</td>
+<td>No</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>Consistencia</td>
-<td>Esquema + aplicación</td>
-<td>No se declaran las restricciones</td>
+<td>Escritores concurrentes</td>
+<td>1</td>
+<td>1</td>
+<td>Muchos</td>
 </tr>
 <tr>
-<td>Aislamiento</td>
-<td>2PL o MVCC</td>
-<td>Nivel por defecto más débil que serializable</td>
+<td>Formato</td>
+<td>Filas</td>
+<td>Columnas</td>
+<td>Filas</td>
 </tr>
 <tr>
-<td>Durabilidad</td>
-<td>WAL + <code>fsync</code></td>
-<td>Configuración de rendimiento; réplica asíncrona</td>
+<td>Bueno en</td>
+<td>OLTP pequeño</td>
+<td>OLAP local</td>
+<td>OLTP general</td>
+</tr>
+<tr>
+<td>Control de acceso</td>
+<td>Del archivo</td>
+<td>Del archivo</td>
+<td>Por rol y fila</td>
+</tr>
+<tr>
+<td>Réplica</td>
+<td>No nativa</td>
+<td>No</td>
+<td>Sí</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Creer que la C la pone el motor.</strong> La pone el esquema que se escribió.</li>
-<li><strong>Suponer serializable por defecto.</strong> Ningún motor de servidor lo hace por omisión.</li>
-<li><strong>Transacciones que envuelven llamadas HTTP.</strong> Un servicio lento hincha la base.</li>
-<li><strong>Confiar en la durabilidad con réplica asíncrona y conmutación automática.</strong> Se pierden transacciones confirmadas.</li>
-<li><strong>Usar MyISAM y hablar de transacciones.</strong> No las hay.</li>
-<li><strong>No probar la restauración.</strong> La durabilidad sin restauración probada es una suposición (clase 048).</li>
+<li><strong>Olvidar <code>PRAGMA foreign_keys = ON</code>.</strong> Se aplica por conexión; sin él, las claves foráneas son decorativas.</li>
+<li><strong>No activar WAL en aplicaciones con lectores concurrentes.</strong> Los lectores se bloquean sin necesidad.</li>
+<li><strong>SQLite en un sistema de archivos en red.</strong> El bloqueo no es fiable; es la vía rápida a la corrupción.</li>
+<li><strong>No usar tablas <code>STRICT</code>.</strong> El tipado laxo deja entrar datos que después hay que limpiar.</li>
+<li><strong>Usar DuckDB como base transaccional.</strong> No es su carga; el formato columnar castiga la escritura fila a fila.</li>
+<li><strong>Sin <code>busy_timeout</code>.</strong> Errores <code>SQLITE_BUSY</code> esporádicos que parecen aleatorios.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>«Somos ACID» es una respuesta incompleta a «¿pueden perder mi pedido?». La respuesta completa enumera: el nivel de aislamiento efectivo, la configuración de <code>fsync</code>, el modo de replicación y el resultado de la última prueba de restauración.</p>
+<p>Una parte grande de los sistemas que usan PostgreSQL solo por costumbre funcionarían mejor con SQLite: menos operación, menos latencia, respaldo trivial (copiar un archivo). El criterio es la concurrencia de escritura y el número de máquinas, no el tamaño de los datos.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Determina el nivel de aislamiento y la configuración de durabilidad reales de tu base.</li>
-<li>Escribe la invariante de negocio más importante y verifica si el esquema la garantiza.</li>
-<li>Provoca un fallo a mitad de una transacción y demuestra la atomicidad.</li>
-<li>Localiza la transacción más larga de tu sistema y estima su efecto sobre las versiones de fila.</li>
+<li>Ejecuta la misma consulta analítica sobre el mismo conjunto en SQLite y en DuckDB, y mide.</li>
+<li>Ejecuta la misma carga transaccional en ambos y mide.</li>
+<li>Activa WAL en SQLite y demuestra con dos conexiones que un lector no bloquea al escritor.</li>
+<li>Crea una tabla <code>STRICT</code> y demuestra qué inserción deja de aceptarse.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué la C es de naturaleza distinta a A, I y D?</li>
-<li>Da una invariante de tu dominio que ningún <code>CHECK</code> pueda expresar y di quién la vigila.</li>
-<li>Enumera los cuatro fallos frente a los que puede exigirse durabilidad y el mecanismo de cada uno.</li>
-<li>Explica el efecto de una transacción abierta durante una hora en un motor MVCC.</li>
+<li>¿Qué garantías se pierden al no tener proceso servidor, y cuáles se conservan?</li>
+<li>Explica con números por qué el formato columnar reduce la E/S de una consulta analítica.</li>
+<li>¿Por qué el modo WAL no permite dos escritores simultáneos?</li>
+<li>Da un sistema real de tu experiencia que hoy usa un servidor y podría usar SQLite, y defiende la decisión.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Una transferencia que se completa y otra que se deshace sin dejar rastro</p>
-<p>ACID son cuatro promesas distintas y conviene no confundirlas. <strong>A</strong>tomicidad:
-o todo o nada. <strong>C</strong>onsistencia: las reglas declaradas siguen siendo ciertas
-al terminar. <strong>I</strong>slamiento: las transacciones concurrentes no se ven a
-medias. <strong>D</strong>urabilidad: lo confirmado sobrevive a un corte de luz.</p>
-<p>El caso ejercita las dos primeras. Una transferencia de 30 de A a B se
-confirma; otra de 500 se deshace, y con ella la mitad que ya se había
-escrito. Entre las dos sentencias de la transferencia hay un instante en el
-que el dinero está duplicado: la atomicidad es la garantía de que ese
-instante no existe para nadie más, y que al deshacer no queda rastro.</p>
-<p>Al final, A tiene 70 y B tiene 80: la suma sigue siendo 150, que es el
-invariante que ninguna transferencia debe romper.</p>
+<p><strong>Caso:</strong> El mismo agregado, sin servidor, en el proceso de la propia aplicación</p>
+<p>Un motor embebido no es un motor pequeño: es un motor <strong>sin servidor</strong>, que
+vive dentro del proceso de la aplicación. No hay red, no hay conexión, no
+hay usuario que autenticar. Y la base de datos es un archivo que se puede
+copiar, adjuntar en un correo o versionar.</p>
+<p>El caso es deliberadamente simple —filas y suma de notas por curso— porque
+lo que se compara no es la consulta sino <strong>dónde se ejecuta</strong>. SQLite y
+DuckDB dan la misma respuesta y son la misma clase de sistema; lo que los
+separa es para qué está optimizado cada uno: uno guarda filas y sirve
+transacciones, el otro guarda columnas y sirve análisis.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>cuenta</th>
-<th>saldo</th>
+<th>curso</th>
+<th>filas</th>
+<th>suma</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>A</code></td>
-<td><code>70</code></td>
+<td><code>DB-101</code></td>
+<td><code>3</code></td>
+<td><code>220</code></td>
 </tr>
 <tr>
-<td><code>B</code></td>
-<td><code>80</code></td>
+<td><code>SE-201</code></td>
+<td><code>1</code></td>
+<td><code>66</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 033</code>: 4 de
-las 5 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 033</code>: 3 de
+las 4 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -310,273 +342,182 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/transactional.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/why_duckdb">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-arch.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
+<td>ClickHouse</td>
 <td>sí</td>
 <td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/transactions/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/operations/utilities/clickhouse-local">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
+<td>MongoDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/administration/install-community/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/transactional.html
--- nota: el CHECK (saldo &gt;= 0) es la «C» de ACID: la regla que sigue siendo
---       cierta al terminar. El ROLLBACK es la «A». Son dos garantias distintas
---       y aqui se ven las dos en el mismo archivo.
+-- doc: https://sqlite.org/whentouse.html
+-- nota: guarda FILAS completas, una detras de otra en la pagina. Para sumar la
+--       columna `nota` hay que leer tambien `estudiante` y `curso` de cada fila:
+--       con veinte columnas y un millon de filas, sumar una sola cuesta leerlo
+--       casi todo.
 
 -- === preparacion ===
-CREATE TABLE cuentas (
-    id    TEXT PRIMARY KEY,
-    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
-
--- Transferencia valida: las dos escrituras son UNA operacion.
-BEGIN;
-UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
-UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
-COMMIT;
-
--- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
--- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
--- sentencias existe un instante en el que el dinero esta duplicado; la
--- atomicidad es la garantia de que ese instante no existe para nadie mas y de
--- que al deshacer no queda rastro de el.
-BEGIN;
-UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
--- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
--- transaccion, el abono a B se habria quedado escrito para siempre.
-ROLLBACK;
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT id, saldo FROM cuentas ORDER BY id;
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es ACID completo desde su primera versión, sobre un archivo y sin servidor: la atomicidad se implementa con un diario de reversión o con WAL, y sobrevive a un corte de luz igual que un motor grande.</li>
-<li><strong>Por qué no:</strong> El aislamiento es de grano grueso: en el modo por omisión, un escritor bloquea la base entera. Y la durabilidad depende de <code>PRAGMA synchronous</code>, que muchas aplicaciones bajan a <code>NORMAL</code> para ganar velocidad sin declarar que están cambiando la «D» por rendimiento.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/transactional.html">https://sqlite.org/transactional.html</a></li>
+<li><strong>Por qué sí:</strong> Es el motor embebido transaccional: guarda filas completas, cumple ACID sobre un archivo y está en cada teléfono, cada navegador y cada avión. Si la aplicación escribe registros de uno en uno y los vuelve a leer de uno en uno, es exactamente la herramienta.</li>
+<li><strong>Por qué no:</strong> Al guardar filas, un agregado sobre una columna tiene que leer todas las demás columnas de todas las filas. Con un millón de registros y veinte columnas, sumar una sola cuesta leerlo casi todo.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/whentouse.html">https://sqlite.org/whentouse.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+-- doc: https://duckdb.org/docs/stable/why_duckdb
+-- nota: guarda COLUMNAS. Este agregado lee la columna `nota` y la columna
+--       `curso`, y ninguna otra. Ademas, la misma consulta funciona sobre un
+--       archivo sin cargarlo:
+--         SELECT curso, COUNT(*), SUM(nota) FROM 'notas.parquet' GROUP BY curso;
 
 -- === preparacion ===
-CREATE TABLE cuentas (
-    id    VARCHAR PRIMARY KEY,
-    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
-
--- Transferencia valida: las dos escrituras son UNA operacion.
-BEGIN;
-UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
-UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
-COMMIT;
-
--- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
--- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
--- sentencias existe un instante en el que el dinero esta duplicado; la
--- atomicidad es la garantia de que ese instante no existe para nadie mas y de
--- que al deshacer no queda rastro de el.
-BEGIN;
-UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
--- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
--- transaccion, el abono a B se habria quedado escrito para siempre.
-ROLLBACK;
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT id, saldo FROM cuentas ORDER BY id;
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> También es ACID sobre su archivo, con control de concurrencia por versiones: sirve para comprobar el invariante en el mismo sitio donde se analizan los datos.</li>
-<li><strong>Por qué no:</strong> Un solo proceso escritor: no hay transacciones entre aplicaciones, y por tanto el problema real de la concurrencia no se puede ni plantear aquí.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
+<li><strong>Por qué sí:</strong> Es el motor embebido analítico: guarda columnas, las comprime y las procesa en lotes vectorizados. El mismo agregado sobre millones de filas lee solo la columna que necesita, y además puede consultar directamente un CSV o un Parquet sin cargarlo.</li>
+<li><strong>Por qué no:</strong> Un solo proceso escritor y sin control de concurrencia entre aplicaciones: no es el sitio donde vive la verdad del negocio, sino donde se analiza una copia de ella.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/why_duckdb">https://duckdb.org/docs/stable/why_duckdb</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
--- nota: aqui el DDL tambien es transaccional. Esto es legal y se deshace entero:
---         BEGIN; ALTER TABLE cuentas ADD COLUMN divisa text; ROLLBACK;
---       En MySQL y en Oracle, ese ALTER confirma la transaccion y no hay vuelta
---       atras. Es la razon por la que las migraciones de esquema son mucho mas
---       seguras en PostgreSQL.
+-- doc: https://www.postgresql.org/docs/current/tutorial-arch.html
+-- nota: la misma respuesta, con un proceso servidor detras. Lo que se gana
+--       —usuarios, permisos, conexiones remotas, replica, concurrencia— y lo
+--       que se paga —instalar, configurar, actualizar, respaldar— es la
+--       decision entera de esta clase.
 
 -- === preparacion ===
-DROP TABLE IF EXISTS cuentas;
+DROP TABLE IF EXISTS notas;
 
-CREATE TABLE cuentas (
-    id    text PRIMARY KEY,
-    saldo integer NOT NULL CHECK (saldo &gt;= 0)
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
-
--- Transferencia valida: las dos escrituras son UNA operacion.
-BEGIN;
-UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
-UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
-COMMIT;
-
--- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
--- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
--- sentencias existe un instante en el que el dinero esta duplicado; la
--- atomicidad es la garantia de que ese instante no existe para nadie mas y de
--- que al deshacer no queda rastro de el.
-BEGIN;
-UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
--- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
--- transaccion, el abono a B se habria quedado escrito para siempre.
-ROLLBACK;
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT id, saldo FROM cuentas ORDER BY id;
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Las cuatro letras están, y además el DDL es transaccional: se puede crear una tabla, cargarla y deshacerlo todo. Esa propiedad —que MySQL y Oracle no tienen— es la que hace seguras las migraciones de esquema.</li>
-<li><strong>Por qué no:</strong> La durabilidad se puede aflojar por sesión con <code>synchronous_commit = off</code>, que multiplica el rendimiento a cambio de poder perder las últimas transacciones confirmadas. Es legítimo y hay que declararlo, porque deja de ser ACID en el sentido estricto.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
+<li><strong>Por qué sí:</strong> Está aquí como contraste: la misma respuesta, con un servidor detrás que aporta lo que ningún embebido tiene —usuarios, permisos, conexiones remotas, réplica y escrituras concurrentes de muchas aplicaciones.</li>
+<li><strong>Por qué no:</strong> Todo eso hay que instalarlo, configurarlo, actualizarlo y respaldarlo. Para una aplicación de escritorio, una herramienta de línea de órdenes o una prueba automatizada, es infraestructura que no resuelve nada.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-arch.html">https://www.postgresql.org/docs/current/tutorial-arch.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html
--- nota: dos avisos que no estan en el codigo y hay que saber igual:
---       1) El DDL NO es transaccional: un ALTER TABLE dentro de una transaccion
---          la confirma implicitamente.
---       2) innodb_flush_log_at_trx_commit distinto de 1 significa perder hasta
---          un segundo de transacciones YA CONFIRMADAS tras una caida.
-
--- === preparacion ===
-DROP TABLE IF EXISTS cuentas;
-
-CREATE TABLE cuentas (
-    id    VARCHAR(10) PRIMARY KEY,
-    saldo INT NOT NULL CHECK (saldo &gt;= 0)
-);
-INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
-
--- Transferencia valida: las dos escrituras son UNA operacion.
-BEGIN;
-UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
-UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
-COMMIT;
-
--- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
--- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
--- sentencias existe un instante en el que el dinero esta duplicado; la
--- atomicidad es la garantia de que ese instante no existe para nadie mas y de
--- que al deshacer no queda rastro de el.
-BEGIN;
-UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
--- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
--- transaccion, el abono a B se habria quedado escrito para siempre.
-ROLLBACK;
-
--- === consulta ===
-SELECT id, saldo FROM cuentas ORDER BY id;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> InnoDB es ACID: registro de rehacer, registro de deshacer y confirmación en dos fases con el registro binario.</li>
-<li><strong>Por qué no:</strong> Dos trampas históricas. El DDL <strong>no</strong> es transaccional: un <code>ALTER TABLE</code> dentro de una transacción la confirma implícitamente y ya no hay vuelta atrás. Y <code>innodb_flush_log_at_trx_commit</code> distinto de 1 significa perder hasta un segundo de transacciones confirmadas tras una caída.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html</a></li>
-</ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-transacciones-concurrencia-y-recuperacion/033-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
 <p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/transactions/
-// nota: implementacion DECLARADA, y el motivo es parte de la leccion: las
-//       transacciones de varios documentos exigen un CONJUNTO DE REPLICAS. En
-//       el servidor suelto que levanta este repositorio, este guion falla con
-//       «Transaction numbers are only allowed on a replica set member or
-//       mongos». No se ejecuta porque no se puede, y decirlo vale mas que
-//       fingir que si.
-//
-//       Con una sola cuenta por documento no haria falta nada de esto: la
-//       escritura de un documento ya es atomica. La transaccion aparece justo
-//       cuando el agregado se reparte en dos documentos, que es la senal de que
-//       el modelo documental se esta usando como si fuera relacional.
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/operations/utilities/clickhouse-local
+-- nota: implementacion declarada. Se ejecuta con `clickhouse-local`, sin
+--       servidor ni configuracion:
+--         clickhouse-local --queries-file consulta.sql
+--       Sirve para ver que «embebido» y «columnar» son dos ejes distintos:
+--       SQLite es embebido y de filas, DuckDB embebido y columnar, ClickHouse
+--       servidor columnar... y tambien columnar sin servidor con esta utilidad.
 
-// === preparacion ===
-db.cuentas.drop();
-db.cuentas.insertMany([
-  { _id: &quot;A&quot;, saldo: 100 },
-  { _id: &quot;B&quot;, saldo: 50 },
-]);
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante String,
+    curso      String,
+    nota       Int32
+) ENGINE = MergeTree ORDER BY (curso, estudiante);
 
-const sesion = db.getMongo().startSession();
-const cuentas = sesion.getDatabase(db.getName()).cuentas;
+INSERT INTO notas VALUES
+    ('Ada',   'DB-101', 90),
+    ('Grace', 'DB-101', 72),
+    ('Linus', 'DB-101', 58),
+    ('Ada',   'SE-201', 66);
 
-// Transferencia valida.
-sesion.startTransaction();
-cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -30 } });
-cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 30 } });
-sesion.commitTransaction();
-
-// Transferencia imposible: se comprueba DENTRO de la transaccion y se aborta.
-sesion.startTransaction();
-cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 500 } });
-const origen = cuentas.findOne({ _id: &quot;A&quot; });
-if (origen.saldo &lt; 500) {
-  sesion.abortTransaction();
-} else {
-  cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -500 } });
-  sesion.commitTransaction();
-}
-sesion.endSession();
-
-// === consulta ===
-db.cuentas
-  .find()
-  .sort({ _id: 1 })
-  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.saldo));
+-- === consulta ===
+SELECT curso, COUNT(*) AS filas, SUM(nota) AS suma
+FROM notas
+GROUP BY curso
+ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde la versión 4.0 tiene transacciones de varios documentos con la misma semántica: <code>startTransaction</code>, <code>commitTransaction</code>, <code>abortTransaction</code>. Sobre un solo documento, la atomicidad es automática y no hace falta nada.</li>
-<li><strong>Por qué no:</strong> <strong>Exigen un conjunto de réplicas</strong>: en un servidor suelto —como el de este repositorio— sencillamente no se pueden usar, y por eso esta implementación se declara en vez de ejecutarse. Además tienen un límite de 60 segundos por omisión y un costo notable frente a escribir un solo documento, que es la señal de que el modelo debería haberse diseñado para no necesitarlas.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/transactions/">https://www.mongodb.com/docs/manual/core/transactions/</a></li>
+<li><strong>Por qué sí:</strong> También tiene un modo embebido, <code>clickhouse-local</code>, que ejecuta consultas sobre archivos sin servidor. Sirve para comprobar que «embebido» y «columnar» son dos ejes independientes: hay cuatro combinaciones y las cuatro existen.</li>
+<li><strong>Por qué no:</strong> Ese modo es una herramienta de línea de órdenes, no una biblioteca que se enlaza en la aplicación: no se puede empotrar en un programa como se hace con SQLite o DuckDB.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/operations/utilities/clickhouse-local">https://clickhouse.com/docs/en/operations/utilities/clickhouse-local</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -592,22 +533,22 @@ db.cuentas
 <tbody>
 <tr>
 <td>Redis</td>
-<td><code>MULTI</code>/<code>EXEC</code> no es una transacción ACID: garantiza que las órdenes se ejecutan seguidas y sin intercalación, pero <strong>no hay reversión</strong>. Si una orden falla en medio, las anteriores ya se aplicaron y las siguientes se aplican igual. Su documentación lo dice sin rodeos.</td>
-<td>Un script Lua, que sí es atómico y aislado, comprobando las condiciones <strong>antes</strong> de escribir nada: la reversión se sustituye por no llegar a empezar.</td>
-<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc</a></td>
+<td>Aunque corra en la misma máquina, sigue siendo un servidor con su protocolo y su puerto: hay serialización y viaje de red aunque sea por bucle local. No es un motor embebido, es un servidor cercano.</td>
+<td>Para una caché dentro del proceso, una estructura en memoria del propio lenguaje; Redis empieza a valer cuando esa caché tiene que compartirse entre varios procesos o máquinas.</td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
-<td>No hay transacciones entre particiones ni reversión. <code>BATCH</code> solo es atómico y aislado dentro de una partición, y su uso entre particiones lo desaconseja la propia documentación por el costo del registro de lotes.</td>
-<td>Diseñar para que la operación quepa en una partición, o implementar una saga con pasos compensatorios en la aplicación, asumiendo que hay estados intermedios visibles.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+<td>MongoDB</td>
+<td>No hay versión embebida disponible: la biblioteca <code>mongodb-embedded</code> se retiró, así que MongoDB implica siempre un proceso servidor aparte.</td>
+<td>Para almacenamiento documental dentro del proceso, SQLite con sus funciones JSON cubre buena parte del caso sin añadir un servicio.</td>
+<td><a href="https://www.mongodb.com/docs/manual/administration/install-community/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -651,22 +592,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Jim Gray</strong> (1981). <a href="https://jimgray.azurewebsites.net/papers/thetransactionconcept.pdf">The Transaction Concept: Virtues and Limitations</a>. VLDB.<br />
-  Define la transacción como unidad de consistencia y recuperación.</li>
-<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
-  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/optoverview.html">SQLite: Query Optimizer Overview</a>.<br />
+  Como decide SQLite usar un índice; útil para leer EXPLAIN QUERY PLAN.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="032.html">← Anterior</a> · <a href="034.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="033">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="032.html"><span class="sentido">← Anterior · 032</span>Analítica columnar: por qué el formato cambia el orden de magnitud</a>
-<a class="siguiente" href="034.html"><span class="sentido">Siguiente · 034 →</span>Anomalías de aislamiento y la crítica a los niveles ANSI</a>
+<a class="anterior" href="032.html"><span class="sentido">← Anterior · 032</span>MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</a>
+<a class="siguiente" href="034.html"><span class="sentido">Siguiente · 034 →</span>El agregado como unidad de consistencia</a>
 </nav>
 </main>
 <footer>

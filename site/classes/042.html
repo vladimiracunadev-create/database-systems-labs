@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Planes de ejecución: leer EXPLAIN y refutar una hipótesis. Parte 08: Almacenamiento, índices y planes.">
+<meta name="description" content="Analítica columnar: por qué el formato cambia el orden de magnitud. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/042.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis · Database Systems Labs">
-<meta property="og:description" content="Planes de ejecución: leer EXPLAIN y refutar una hipótesis. Parte 08: Almacenamiento, índices y planes.">
+<meta property="og:title" content="042 — Analítica columnar: por qué el formato cambia el orden de magnitud · Database Systems Labs">
+<meta property="og:description" content="Analítica columnar: por qué el formato cambia el orden de magnitud. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/042.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["optimizador por costos", "estadística", "estimación de cardinalidad", "costo frente a tiempo"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "042 — Analítica columnar: por qué el formato cambia el orden de magnitud", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["almacenamiento columnar", "compresión", "ejecución vectorizada", "poda de particiones"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>042 — Analítica columnar: por qué el formato cambia el orden de magnitud · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,290 +49,279 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-08.html">Parte 08 · Almacenamiento, índices y planes</a>
+  <a href="parte-07.html">Parte 07 · Grafos, columnas, tiempo y búsqueda</a>
   <span aria-hidden="true">/</span><span>Clase 042</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="042--planes-de-ejecución-leer-explain-y-refutar-una-hipótesis">042 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis</h1>
+<h1 id="042--analítica-columnar-por-qué-el-formato-cambia-el-orden-de-magnitud">042 — Analítica columnar: por qué el formato cambia el orden de magnitud</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 08 — Almacenamiento, índices y planes · Avanzado ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>optimizador por costos</code> · <code>estadística</code> · <code>estimación de cardinalidad</code> · <code>costo frente a tiempo</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 07 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
+3 horas estimadas · motores <code>clickhouse</code>, <code>duckdb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>almacenamiento columnar</code> · <code>compresión</code> · <code>ejecución vectorizada</code> · <code>poda de particiones</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Leer un plan de ejecución como evidencia y no como adorno. El plan permite convertir «va lento» en una hipótesis concreta, comprobable y refutable.</p>
+<p>Explicar por qué un motor columnar responde en segundos lo que un motor por filas tarda minutos, y qué se paga a cambio. La respuesta está en el formato, la compresión y la forma de ejecutar.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar cómo el optimizador por costos elige un plan.</li>
-<li>Distinguir costo estimado de tiempo real y filas estimadas de filas devueltas.</li>
-<li>Diagnosticar los cuatro fallos habituales de estimación.</li>
-<li>Refutar una hipótesis de rendimiento con evidencia.</li>
-<li>Saber cuándo el problema es la estadística y no el índice.</li>
+<li>Calcular la E/S de una consulta analítica en formato por filas y por columnas.</li>
+<li>Explicar por qué la compresión es mucho más eficaz por columnas.</li>
+<li>Describir la ejecución vectorizada y su relación con la caché de la CPU.</li>
+<li>Elegir clave de ordenamiento y granularidad de índice disperso.</li>
+<li>Justificar el conteo aproximado y calcular su error.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-optimizador-por-costos">El optimizador por costos</h3>
-<p>Selinger et al. (1979) definieron el método que siguen todos los motores relacionales:</p>
-<ol>
-<li>Enumerar planes equivalentes (equivalencias E1–E6 de la clase 011).</li>
-<li>Estimar, para cada uno, cuántas filas produce cada operador a partir de las <strong>estadísticas</strong> del catálogo.</li>
-<li>Asignar un costo mediante un modelo (páginas secuenciales, páginas aleatorias, CPU por fila).</li>
-<li>Elegir el más barato.</li>
-</ol>
-<p>El eslabón débil es el paso 2: <strong>si la estimación de cardinalidad es mala, la elección será mala</strong>, por bueno que sea el modelo de costos. Casi todos los planes malos son fallos de estimación.</p>
-<h3 id="las-dos-parejas-de-números">Las dos parejas de números</h3>
-<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) SELECT ...;
+<h3 id="el-formato-manda">El formato manda</h3>
+<pre><code class="language-text">Tabla: 20 columnas, 100 millones de filas, fila media 200 bytes → 20 GB
+
+Consulta: SELECT periodo, AVG(nota) FROM enrollments GROUP BY periodo
+Columnas necesarias: periodo (8 B) + nota (8 B) = 16 B por fila
+
+Por filas:     hay que leer las páginas completas          → ~20 GB
+Por columnas:  solo dos columnas                           → ~1,6 GB
+Con compresión columnar (factor típico 8×)                 → ~0,2 GB
 </code></pre>
-<pre><code class="language-text">Seq Scan on enrollments  (cost=0.00..91234.00 rows=12 width=32)
-                         (actual time=0.03..842.11 rows=3841022 loops=1)
-  Filter: (nota &gt; 4.0)
-  Rows Removed by Filter: 1158978
-  Buffers: shared hit=1204 read=64586
-</code></pre>
+<p><strong>Factor 100</strong> de E/S para el mismo SQL y los mismos datos. Ninguna optimización de consulta compite con eso.</p>
+<h3 id="por-qué-comprime-tanto-mejor">Por qué comprime tanto mejor</h3>
+<p>En formato por filas, bytes contiguos pertenecen a columnas distintas: un entero, un texto, una fecha. La entropía local es alta y el compresor genérico saca poco.</p>
+<p>Por columnas, los valores contiguos son del mismo tipo y a menudo del mismo rango, lo que habilita codificaciones específicas:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Pareja</th>
-<th>Qué comparar</th>
+<th>Codificación</th>
+<th>Cuándo</th>
+<th>Ejemplo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>cost</code> frente a <code>actual time</code></td>
-<td>El costo es una unidad interna, <strong>no</strong> milisegundos. Solo sirve para comparar planes entre sí</td>
+<td>Diccionario</td>
+<td>Pocos valores distintos</td>
+<td>300 períodos en 100 M de filas → 2 bytes por fila</td>
 </tr>
 <tr>
-<td><code>rows</code> estimadas frente a <code>rows</code> reales</td>
-<td><strong>Aquí está el diagnóstico.</strong> Una desviación de más de 10× explica casi cualquier plan malo</td>
+<td>Longitud de secuencia</td>
+<td>Valores repetidos contiguos</td>
+<td>Datos ordenados por esa columna</td>
+</tr>
+<tr>
+<td>Delta</td>
+<td>Valores crecientes</td>
+<td>Marcas de tiempo, identificadores</td>
+</tr>
+<tr>
+<td>Delta-of-delta</td>
+<td>Incrementos regulares</td>
+<td>Series a intervalo fijo</td>
+</tr>
+<tr>
+<td>Bit-packing</td>
+<td>Rango pequeño conocido</td>
+<td>Nota de 1,0 a 7,0 en un decimal → 6 bits</td>
 </tr>
 </tbody>
 </table></div>
-<p>En el ejemplo: estimó 12 filas y devolvió 3 841 022. Un factor de 320 000. Con esa estimación el planificador eligió un bucle anidado que, con 3,8 millones de filas, es catastrófico.</p>
-<h3 id="los-cuatro-fallos-de-estimación">Los cuatro fallos de estimación</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Fallo</th>
-<th>Síntoma</th>
-<th>Corrección</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Estadísticas obsoletas</strong></td>
-<td>Estimaciones lejanas tras una carga masiva</td>
-<td><code>ANALYZE tabla</code></td>
-</tr>
-<tr>
-<td><strong>Columnas correlacionadas</strong></td>
-<td>Subestimación con varios <code>AND</code></td>
-<td><code>CREATE STATISTICS ... (dependencies)</code></td>
-</tr>
-<tr>
-<td><strong>Distribución sesgada</strong></td>
-<td>Bien para valores comunes, mal para los raros</td>
-<td>Subir <code>default_statistics_target</code></td>
-</tr>
-<tr>
-<td><strong>Expresión opaca</strong></td>
-<td>Estimación fija del 0,5 % o similar</td>
-<td>Índice de expresión, o reescribir el predicado</td>
-</tr>
-</tbody>
-</table></div>
-<p>El segundo merece detalle. El planificador supone <strong>independencia</strong> entre predicados:</p>
-<pre><code class="language-text">sel(ciudad='Santiago') = 0,30
-sel(region='Metropolitana') = 0,35
-estimación combinada = 0,30 · 0,35 = 0,105  → 10,5 %
-realidad: casi toda Santiago está en la Metropolitana → ~30 %
+<p>Regla práctica: <strong>la clave de ordenamiento decide la compresión</strong>. Ordenar por una columna de baja cardinalidad hace que sus valores queden contiguos y la codificación por longitud de secuencia rinda al máximo.</p>
+<h3 id="ejecución-vectorizada">Ejecución vectorizada</h3>
+<p>Un motor por filas ejecuta un árbol de operadores fila a fila: por cada fila, una llamada virtual por operador. Con 100 millones de filas y 5 operadores, son 500 millones de llamadas.</p>
+<p>Un motor vectorizado procesa <strong>lotes</strong> de ~1 024–2 048 valores por llamada. Consecuencias:</p>
+<ul>
+<li>Se amortiza el coste de la llamada entre miles de valores.</li>
+<li>El bucle interior opera sobre un arreglo contiguo, que cabe en la caché L1/L2.</li>
+<li>El compilador puede autovectorizar con instrucciones SIMD.</li>
+</ul>
+<p>Es la razón por la que DuckDB y ClickHouse superan a un motor por filas incluso cuando todos los datos están en memoria: la ventaja no es solo de E/S.</p>
+<h3 id="índice-disperso-y-poda">Índice disperso y poda</h3>
+<p>ClickHouse no indexa cada fila: guarda una marca cada <code>index_granularity</code> filas (8 192 por defecto) con el valor mínimo y máximo del bloque. Es un índice <strong>disperso</strong>.</p>
+<pre><code class="language-sql">CREATE TABLE enrollments (
+  periodo    LowCardinality(String),
+  course_id  UInt32,
+  student_id UInt32,
+  nota       Decimal(2,1),
+  registrada_en DateTime
+) ENGINE = MergeTree
+ORDER BY (periodo, course_id, registrada_en);
 </code></pre>
-<p>Subestima por un factor de 3. Con varias columnas correlacionadas, el error se multiplica. PostgreSQL 10+ permite corregirlo:</p>
-<pre><code class="language-sql">CREATE STATISTICS est_ciudad_region (dependencies, ndistinct)
-  ON ciudad, region FROM direcciones;
-ANALYZE direcciones;
+<p><code>ORDER BY</code> aquí <strong>no</strong> es orden de salida: es el orden físico de almacenamiento y define el índice primario. Una consulta con <code>WHERE periodo = '2026-1'</code> descarta bloques enteros sin leerlos. Con 100 M de filas repartidas en 300 períodos, la poda elimina el 99,7 % de los datos antes de descomprimir nada.</p>
+<p><code>LowCardinality(String)</code> aplica codificación por diccionario explícita: para columnas con menos de ~10 000 valores distintos, reduce el tamaño y acelera los agrupamientos.</p>
+<h3 id="conteo-aproximado">Conteo aproximado</h3>
+<p>Contar valores distintos exactamente exige recordar todos los vistos. HyperLogLog (Flajolet et al.) lo estima con memoria prácticamente constante:</p>
+<pre><code class="language-text">memoria     ≈ 12 KB
+error medio ≈ 1,04 / √m,  con m = 2^14 = 16 384 registros
+            ≈ 0,81 %
 </code></pre>
-<h3 id="método-de-refutación">Método de refutación</h3>
-<p>Un plan no se «mejora»: se formula una hipótesis y se intenta <strong>refutarla</strong>.</p>
+<pre><code class="language-sql">SELECT uniq(student_id)      FROM enrollments;   -- aproximado, ~12 KB
+SELECT uniqExact(student_id) FROM enrollments;   -- exacto, memoria proporcional a la cardinalidad
+</code></pre>
+<p>Con 50 millones de estudiantes distintos, <code>uniqExact</code> necesita gigabytes; <code>uniq</code> responde con 12 KB y un error inferior al 1 %. Para un panel, ese error es irrelevante; para una factura, no. <strong>La decisión es del negocio, y debe estar escrita.</strong></p>
 <pre><code class="language-mermaid">flowchart TD
-    S[&quot;Síntoma: consulta lenta&quot;] --&gt; P[&quot;EXPLAIN ANALYZE&lt;br/&gt;capturar el plan completo&quot;]
-    P --&gt; D{&quot;¿rows estimadas ≈&lt;br/&gt;rows reales?&quot;}
-    D -- &quot;No, &gt;10×&quot; --&gt; E[&quot;Hipótesis: fallo de estimación&quot;]
-    E --&gt; E1[&quot;ANALYZE · estadísticas extendidas ·&lt;br/&gt;subir el objetivo&quot;]
-    E1 --&gt; M[&quot;Volver a medir&quot;]
-    D -- &quot;Sí&quot; --&gt; O{&quot;¿Qué operador&lt;br/&gt;consume el tiempo?&quot;}
-    O --&gt; O1[&quot;Barrido: ¿falta índice?&quot;]
-    O --&gt; O2[&quot;Orden: ¿work_mem o índice ordenado?&quot;]
-    O --&gt; O3[&quot;Reunión: ¿algoritmo adecuado?&quot;]
-    O1 --&gt; H[&quot;Hipótesis concreta&quot;]
-    O2 --&gt; H
-    O3 --&gt; H
-    H --&gt; T[&quot;Aplicar el cambio&lt;br/&gt;en un entorno comparable&quot;]
-    T --&gt; M
-    M --&gt; R{&quot;¿Mejoró en&lt;br/&gt;condiciones iguales?&quot;}
-    R -- &quot;No&quot; --&gt; RF[&quot;Hipótesis refutada:&lt;br/&gt;revertir y volver a P&quot;]
-    R -- &quot;Sí&quot; --&gt; OK[&quot;Documentar: antes, después,&lt;br/&gt;condiciones y límite&quot;]
+    Q[&quot;Consulta analítica&quot;] --&gt; P[&quot;1. Poda por índice disperso&lt;br/&gt;descarta bloques&quot;]
+    P --&gt; C[&quot;2. Leer solo las columnas&lt;br/&gt;necesarias&quot;]
+    C --&gt; D[&quot;3. Descomprimir&lt;br/&gt;(a menudo se opera comprimido)&quot;]
+    D --&gt; V[&quot;4. Ejecución vectorizada&lt;br/&gt;lotes de ~2 048&quot;]
+    V --&gt; A[&quot;5. Agregación&lt;br/&gt;exacta o aproximada&quot;]
+    A --&gt; R[&quot;Resultado&quot;]
 </code></pre>
-<p>El paso que casi nadie da es <strong>revertir cuando la hipótesis se refuta</strong>. Los índices que no sirvieron se quedan, y al cabo de dos años la tabla tiene once índices de los que se usan cuatro.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Síntoma: el panel del curso tarda 8 s.</p>
-<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
-SELECT c.nombre, count(*) AS inscritos, avg(e.nota) AS promedio
-FROM courses c JOIN enrollments e ON e.course_id = c.id
-WHERE c.periodo = '2026-1' AND e.estado = 'activa'
-GROUP BY c.id, c.nombre;
+<p>Pregunta: <em>«promedio de nota y número de estudiantes distintos por período»</em> sobre 100 millones de inscripciones.</p>
+<p><strong>PostgreSQL (por filas), sin índice útil:</strong></p>
+<pre><code class="language-text">Barrido secuencial de enrollments      → 20 GB leídos
+HashAggregate sobre 100 M filas
+Tiempo: minutos
 </code></pre>
-<p><strong>Plan inicial:</strong></p>
-<pre><code class="language-text">HashAggregate  (cost=... rows=40) (actual time=8123.4..8124.1 rows=40 loops=1)
-  -&gt;  Nested Loop  (cost=... rows=53) (actual time=0.4..7890.2 rows=1521044 loops=1)
-        -&gt;  Seq Scan on courses c  (rows=40) (actual rows=40 loops=1)
-              Filter: (periodo = '2026-1')
-        -&gt;  Index Scan using enr_course_idx on enrollments e
-              (cost=... rows=1) (actual rows=38026 loops=40)
-              Index Cond: (course_id = c.id)
-              Filter: (estado = 'activa')
-              Rows Removed by Filter: 6710
-        Buffers: shared hit=201 read=182304
+<p><strong>ClickHouse:</strong></p>
+<pre><code class="language-sql">SELECT periodo, avg(nota) AS promedio, uniq(student_id) AS estudiantes
+FROM enrollments GROUP BY periodo ORDER BY periodo;
 </code></pre>
-<p><strong>Diagnóstico, leyendo los números:</strong></p>
-<ol>
-<li>El bucle anidado estimó <strong>53</strong> filas y produjo <strong>1 521 044</strong>: factor 28 700.</li>
-<li>El origen: el índice interno estimó <code>rows=1</code> por iteración y devolvió 38 026.</li>
-<li>Con <code>rows=1</code> estimado, el bucle anidado parecía barato. Con 38 026, es la peor elección posible.</li>
-</ol>
-<p><strong>Hipótesis 1:</strong> las estadísticas de <code>enrollments</code> están obsoletas.</p>
-<pre><code class="language-sql">ANALYZE enrollments;
+<pre><code class="language-text">Columnas leídas: periodo (diccionario), nota, student_id
+Bytes leídos tras compresión: ~0,4 GB
+Agregación vectorizada + HyperLogLog
+Tiempo: segundos
 </code></pre>
-<p>Nueva ejecución: la estimación interna pasa de 1 a 16 800. El planificador cambia a reunión por hash:</p>
-<pre><code class="language-text">HashAggregate  (actual time=612.3..613.0 rows=40 loops=1)
-  -&gt;  Hash Join  (actual time=88.1..520.7 rows=1521044 loops=1)
-        -&gt;  Seq Scan on enrollments e   (actual rows=4250000)
-              Filter: (estado = 'activa')
-        -&gt;  Hash  -&gt;  Seq Scan on courses c  (actual rows=40)
+<p><strong>Y la consulta inversa</strong>, un solo registro:</p>
+<pre><code class="language-sql">SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
 </code></pre>
-<p><strong>8 123 ms → 613 ms</strong> sin crear un solo índice. El problema nunca fue el índice: era la estadística.</p>
-<p><strong>Hipótesis 2:</strong> todavía se barren 4,25 millones de inscripciones. Un índice parcial evitaría el barrido.</p>
-<pre><code class="language-sql">CREATE INDEX enr_activas ON enrollments (course_id) INCLUDE (nota)
-WHERE estado = 'activa';
-</code></pre>
-<pre><code class="language-text">HashAggregate  (actual time=214.8..215.2 rows=40 loops=1)
-  -&gt;  Nested Loop  (actual rows=1521044 loops=1)
-        -&gt;  Seq Scan on courses c  (actual rows=40)
-        -&gt;  Index Only Scan using enr_activas  (actual rows=38026 loops=40)
-              Heap Fetches: 0
-</code></pre>
-<p><strong>613 ms → 215 ms.</strong> <code>Heap Fetches: 0</code> confirma que el índice cubre la consulta.</p>
-<p><strong>Registro de evidencia, que es el entregable:</strong></p>
-<pre><code class="language-text">Consulta      : panel del curso, período 2026-1
-Antes         : 8 123 ms · bucle anidado · estimación 53 / real 1 521 044
-Intervención 1: ANALYZE enrollments        → 613 ms (reunión por hash)
-Intervención 2: índice parcial cubriente   → 215 ms (Heap Fetches: 0)
-Costo añadido : índice de 92 MB, mantenido en cada escritura de fila activa
-Condiciones   : PostgreSQL 16, 5 M inscripciones, caché caliente en las tres medidas
-No demuestra  : nada sobre concurrencia; una sola sesión
-</code></pre>
-<p>La penúltima línea —caché caliente en las tres medidas— es lo que hace comparables los números. La última evita que alguien extrapole.</p>
+<ul>
+<li>PostgreSQL con índice: <strong>una</strong> búsqueda B-Tree, ~4 páginas, latencia inferior al milisegundo.</li>
+<li>ClickHouse: <code>student_id</code> no encabeza la clave de ordenamiento, así que no hay poda. Debe leer todos los bloques de todas las columnas seleccionadas.</li>
+</ul>
+<p>Esta asimetría es el punto central: <strong>no existe un motor bueno para todo</strong>. Es la razón de que OLTP y OLAP se separen (clase 054) y de que la persistencia poliglota exista (clase 062).</p>
+<p><strong>Efecto de la clave de ordenamiento, medido.</strong> La misma tabla con dos claves distintas:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th><code>ORDER BY</code></th>
+<th style="text-align: right;">Tamaño en disco</th>
+<th><code>WHERE periodo=...</code></th>
+<th><code>WHERE student_id=...</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(periodo, course_id, registrada_en)</code></td>
+<td style="text-align: right;">1,2 GB</td>
+<td>Poda al 0,3 %</td>
+<td>Sin poda</td>
+</tr>
+<tr>
+<td><code>(student_id, registrada_en)</code></td>
+<td style="text-align: right;">2,8 GB</td>
+<td>Sin poda</td>
+<td>Poda al 0,001 %</td>
+</tr>
+</tbody>
+</table></div>
+<p>El tamaño difiere porque ordenar por <code>periodo</code> agrupa valores repetidos y la codificación por longitud de secuencia rinde mucho más. <strong>La clave de ordenamiento afecta simultáneamente al tamaño y a qué consultas son rápidas</strong>: es la decisión de diseño más importante en un motor columnar, equivalente a la clave de partición en columnas anchas (clase 029).</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Señal en el plan</th>
-<th>Causa probable</th>
-<th>Acción</th>
+<th>Dimensión</th>
+<th>Por filas (OLTP)</th>
+<th>Columnar (OLAP)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>rows</code> estimadas ≪ reales</td>
-<td>Estadísticas obsoletas o correlación</td>
-<td><code>ANALYZE</code>, estadísticas extendidas</td>
+<td>Leer una fila entera</td>
+<td>Excelente</td>
+<td>Malo</td>
 </tr>
 <tr>
-<td><code>Rows Removed by Filter</code> alto</td>
-<td>Índice sin la columna del filtro</td>
-<td>Añadirla al índice</td>
+<td>Leer 2 columnas de millones de filas</td>
+<td>Malo</td>
+<td>Excelente</td>
 </tr>
 <tr>
-<td><code>Sort Method: external merge</code></td>
-<td><code>work_mem</code> insuficiente</td>
-<td>Subirlo o indexar el orden</td>
+<td>Insertar una fila</td>
+<td>Excelente</td>
+<td>Malo (por lotes)</td>
 </tr>
 <tr>
-<td>Bucle anidado con <code>loops</code> alto</td>
-<td>Estimación baja del interno</td>
-<td>Corregir estadística</td>
+<td>Actualizar una fila</td>
+<td>Excelente</td>
+<td>Muy costoso</td>
 </tr>
 <tr>
-<td><code>Heap Fetches</code> alto en barrido de índice</td>
-<td>Mapa de visibilidad desactualizado</td>
-<td><code>VACUUM</code></td>
+<td>Compresión</td>
+<td>2–3×</td>
+<td>8–30×</td>
 </tr>
 <tr>
-<td><code>read</code> ≫ <code>hit</code> en <code>Buffers</code></td>
-<td>El conjunto de trabajo no cabe</td>
-<td>Más memoria o menos datos</td>
+<td>Transacciones</td>
+<td>Completas</td>
+<td>Limitadas</td>
+</tr>
+<tr>
+<td>Índices secundarios</td>
+<td>Muchos</td>
+<td>Pocos, dispersos</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Leer <code>cost</code> como milisegundos.</strong> Es una unidad interna sin significado absoluto.</li>
-<li><strong>Usar <code>EXPLAIN</code> sin <code>ANALYZE</code>.</strong> No hay filas reales que comparar.</li>
-<li><strong>Crear índices antes de mirar la estimación.</strong> La mitad de los planes malos se arreglan con <code>ANALYZE</code>.</li>
-<li><strong>Medir una vez en frío y otra en caliente.</strong> Los números dejan de ser comparables.</li>
-<li><strong>Forzar el plan con pistas.</strong> Tapa el síntoma y estorba cuando los datos cambian.</li>
-<li><strong>No revertir lo que no funcionó.</strong> Los índices inútiles se acumulan.</li>
+<li><strong>Usar un motor columnar como OLTP.</strong> Cada <code>UPDATE</code> puntual reescribe partes de muchas columnas.</li>
+<li><strong>Insertar fila a fila en ClickHouse.</strong> Genera miles de fragmentos pequeños y la fusión no da abasto; hay que insertar por lotes.</li>
+<li><strong>Elegir <code>ORDER BY</code> sin mirar las consultas.</strong> Se pierde la poda y la compresión a la vez.</li>
+<li><strong><code>SELECT *</code> en columnar.</strong> Anula la única ventaja del formato.</li>
+<li><strong>Presentar cifras aproximadas como exactas.</strong> <code>uniq</code> no es <code>uniqExact</code>.</li>
+<li><strong>Suponer que la compresión es gratis.</strong> Cuesta CPU al escribir; se recupera con creces en lectura.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Un plan que degrada tras un despliegue suele deberse a una carga masiva sin <code>ANALYZE</code> o a un cambio en la distribución de datos. Guardar los planes de las consultas críticas como referencia permite detectar el cambio en minutos en vez de en días.</p>
+<p>Migrar informes de un motor por filas a uno columnar suele dar mejoras de uno o dos órdenes de magnitud, y añade un sistema que sincronizar con el origen (clase 056). Antes de eso, conviene comprobar qué consigue DuckDB sobre exportaciones Parquet: a menudo basta y no añade servicio alguno.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Captura el plan de tu consulta más lenta con <code>ANALYZE</code> y <code>BUFFERS</code>.</li>
-<li>Identifica el operador con mayor desviación entre estimación y realidad.</li>
-<li>Formula una hipótesis, aplícala y vuelve a medir en las mismas condiciones.</li>
-<li>Escribe el registro de evidencia completo, incluida la línea de «no demuestra».</li>
+<li>Toma tu consulta analítica más pesada y calcula los bytes que lee en formato por filas.</li>
+<li>Exporta los datos a Parquet y ejecútala con DuckDB; mide bytes y tiempo.</li>
+<li>Prueba dos claves de ordenamiento distintas y compara tamaño y poda.</li>
+<li>Sustituye un conteo exacto por uno aproximado, mide el error real y decide si es aceptable.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué una subestimación de cardinalidad lleva a elegir bucle anidado?</li>
-<li>Explica por qué el planificador subestima con columnas correlacionadas y cómo se corrige.</li>
-<li>¿Qué significa <code>Heap Fetches</code> distinto de cero en un barrido de índice?</li>
-<li>Da una hipótesis tuya que resultó refutada y qué hiciste con el cambio.</li>
+<li>Calcula la E/S de una consulta tuya en ambos formatos, con cifras reales.</li>
+<li>¿Por qué ordenar por una columna de baja cardinalidad reduce el tamaño total?</li>
+<li>Explica por qué la ejecución vectorizada ayuda incluso con todos los datos en memoria.</li>
+<li>Da una métrica de tu negocio donde el error del 1 % de HyperLogLog sea inaceptable.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Tres consultas que devuelven lo mismo y no cuestan lo mismo</p>
-<p>Un plan de ejecución no se lee para admirarlo: se lee para <strong>refutar una
-hipótesis</strong>. «Esta consulta es lenta porque falta un índice» es una hipótesis,
-y el plan es lo que la confirma o la tumba. Sin esa disciplina, optimizar
-consiste en añadir índices hasta que algo mejore.</p>
-<p>El caso pregunta quién tiene al menos una inscripción, y admite tres
-formulaciones equivalentes: reunión con <code>DISTINCT</code>, <code>IN</code> con subconsulta y
-semirreunión con <code>EXISTS</code>. Las tres devuelven las mismas dos filas —eso lo
-garantiza el álgebra relacional— y ninguna cuesta lo mismo. Cuál gana no se
-decide leyendo el SQL: se decide midiendo, y cada implementación trae al lado
-la orden exacta con la que se mide en ese motor.</p>
+<p><strong>Caso:</strong> Sumar una columna de mil filas y entender por qué el formato decide el tiempo</p>
+<p>La consulta analítica típica toca <strong>pocas columnas de muchísimas filas</strong>. La
+transaccional toca <strong>todas las columnas de pocas filas</strong>. Esa diferencia, y
+no el lenguaje, es la que separa a los dos mundos: un almacén orientado a
+filas guarda la fila entera junta, así que para sumar una columna tiene que
+leer también todas las demás.</p>
+<p>El caso genera mil filas repartidas en dos categorías y suma el importe de
+cada una. Con mil filas, todos los motores tardan lo mismo: eso es
+deliberado, porque lo que se compara aquí es <strong>cómo</strong> llegan al mismo
+número. El «por qué no» de cada motor dice a partir de qué volumen ese cómo
+empieza a decidir si la consulta tarda un segundo o un minuto.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>nombre</th>
+<th>categoria</th>
+<th>importe</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Ada</code></td>
+<td><code>c0</code></td>
+<td><code>250500</code></td>
 </tr>
 <tr>
-<td><code>Linus</code></td>
+<td><code>c1</code></td>
+<td><code>250000</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 042</code>: 5 de
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 042</code>: 3 de
 las 6 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
@@ -348,360 +337,256 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
+<td>DuckDB</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/using-explain.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>MySQL</td>
+<td>ClickHouse</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/explain.html">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">doc oficial</a></td>
 </tr>
 <tr>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/eqp.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/fileformat.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>DuckDB</td>
+<td>PostgreSQL</td>
 <td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/guides/meta/explain_analyze.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/parallel-query.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Google BigQuery</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/bigquery/consulta.sql">código</a></td>
+<td><a href="https://cloud.google.com/bigquery/docs/best-practices-costs">doc oficial</a></td>
+</tr>
+<tr>
+<td>Snowflake</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/snowflake/consulta.sql">código</a></td>
+<td><a href="https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/explain-results/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/cassandra/consulta.cql">código</a></td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/slowlog-get/">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/using-explain.html
--- nota: como se mide aqui:
---         EXPLAIN (ANALYZE, BUFFERS) SELECT ...
---       Lo que hay que mirar, en este orden:
---         1. «rows=X ... actual rows=Y»: si X e Y difieren en un orden de
---            magnitud, el problema son las ESTADISTICAS, no el indice.
---         2. «Rows Removed by Filter»: trabajo hecho y tirado.
---         3. «shared read» frente a «shared hit»: cuanto vino del disco.
---       Y un aviso: ANALYZE EJECUTA la consulta. Sobre un UPDATE o un DELETE
---       hay que envolverlo en BEGIN ... ROLLBACK.
-
--- === preparacion ===
-DROP TABLE IF EXISTS inscripciones, estudiantes;
-
-CREATE TABLE estudiantes (
-    nombre text PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante text NOT NULL,
-    curso      text NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
--- devuelven LO MISMO y cuestan cosas distintas:
---
---   A) SELECT DISTINCT e.nombre FROM estudiantes e
---      JOIN inscripciones i ON i.estudiante = e.nombre;
---      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
---
---   B) SELECT nombre FROM estudiantes
---      WHERE nombre IN (SELECT estudiante FROM inscripciones);
---      -&gt; el optimizador suele convertirlo en semirreunion; suele.
---
---   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
---      coincidencia y no multiplica nada.
---
--- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
--- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
--- esta clase se llama «refutacion».
-SELECT e.nombre
-FROM estudiantes e
-WHERE EXISTS (
-    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
-)
-ORDER BY e.nombre;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>EXPLAIN (ANALYZE, BUFFERS)</code> es el mejor instrumento de esta lista: da coste estimado <strong>y</strong> tiempo real, filas estimadas <strong>y</strong> filas reales —cuando divergen mucho, el problema son las estadísticas y no el índice— y cuántos bloques vinieron de la caché y cuántos del disco.</li>
-<li><strong>Por qué no:</strong> <code>ANALYZE</code> <strong>ejecuta la consulta</strong>: sobre un <code>UPDATE</code> o un <code>DELETE</code> hay que envolverlo en una transacción y deshacerla, o se aplica de verdad. Es un error que se comete una sola vez en producción.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/using-explain.html">https://www.postgresql.org/docs/current/using-explain.html</a></li>
-</ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/explain.html
--- nota: como se mide aqui:
---         EXPLAIN ANALYZE SELECT ...        (8.0.18 y posteriores, con tiempos)
---         EXPLAIN FORMAT=JSON SELECT ...    (el coste que calculo el optimizador)
---       La columna `rows` del EXPLAIN clasico es una ESTIMACION, no un hecho:
---       se lee como si fuera un dato medido y no lo es.
-
--- === preparacion ===
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS estudiantes;
-
-CREATE TABLE estudiantes (
-    nombre VARCHAR(50) PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
--- devuelven LO MISMO y cuestan cosas distintas:
---
---   A) SELECT DISTINCT e.nombre FROM estudiantes e
---      JOIN inscripciones i ON i.estudiante = e.nombre;
---      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
---
---   B) SELECT nombre FROM estudiantes
---      WHERE nombre IN (SELECT estudiante FROM inscripciones);
---      -&gt; el optimizador suele convertirlo en semirreunion; suele.
---
---   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
---      coincidencia y no multiplica nada.
---
--- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
--- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
--- esta clase se llama «refutacion».
-SELECT e.nombre
-FROM estudiantes e
-WHERE EXISTS (
-    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
-)
-ORDER BY e.nombre;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Desde 8.0.18 tiene <code>EXPLAIN ANALYZE</code> con tiempos reales, y <code>EXPLAIN FORMAT=JSON</code> expone el coste que calculó el optimizador para cada alternativa.</li>
-<li><strong>Por qué no:</strong> La columna <code>rows</code> del <code>EXPLAIN</code> clásico es una <strong>estimación</strong> que la gente lee como si fuera un hecho, y sus estadísticas son mucho más pobres que las de PostgreSQL: se muestrean pocas páginas del índice y se recalculan en momentos difíciles de predecir.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/explain.html">https://dev.mysql.com/doc/refman/8.4/en/explain.html</a></li>
-</ul>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/eqp.html
--- nota: como se mide aqui:
---         EXPLAIN QUERY PLAN SELECT ...
---       Dos lineas y una pregunta: SCAN o SEARCH. No hay coste ni tiempo, asi
---       que no se pueden comparar dos planes por numero; solo por forma.
-
--- === preparacion ===
-CREATE TABLE estudiantes (
-    nombre TEXT PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
-
--- === consulta ===
--- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
--- devuelven LO MISMO y cuestan cosas distintas:
---
---   A) SELECT DISTINCT e.nombre FROM estudiantes e
---      JOIN inscripciones i ON i.estudiante = e.nombre;
---      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
---
---   B) SELECT nombre FROM estudiantes
---      WHERE nombre IN (SELECT estudiante FROM inscripciones);
---      -&gt; el optimizador suele convertirlo en semirreunion; suele.
---
---   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
---      coincidencia y no multiplica nada.
---
--- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
--- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
--- esta clase se llama «refutacion».
-SELECT e.nombre
-FROM estudiantes e
-WHERE EXISTS (
-    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
-)
-ORDER BY e.nombre;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>EXPLAIN QUERY PLAN</code> cabe en dos líneas y dice lo único que suele importar: si hubo <code>SCAN</code> o <code>SEARCH ... USING INDEX</code>. Para aprender a leer planes es el mejor punto de partida, porque no hay ruido.</li>
-<li><strong>Por qué no:</strong> No da coste ni tiempo ni filas: no se puede comparar dos planes por número, solo por forma. Y como el planificador tiene pocas opciones, no enseña a diagnosticar los casos difíciles.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/eqp.html">https://sqlite.org/eqp.html</a></li>
-</ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/guides/meta/explain_analyze.html
--- nota: como se mide aqui:
---         EXPLAIN ANALYZE SELECT ...
---       Dibuja el arbol con el tiempo de cada operador. Aviso: el optimizador
---       reescribe tanto que este EXISTS acabara convertido en una reunion, y el
---       plan no se parecera a lo escrito.
+-- doc: https://duckdb.org/docs/stable/internals/storage.html
+-- nota: aqui la suma lee DOS columnas y ninguna mas, ya comprimidas, en lotes
+--       de miles de valores por operacion en vez de una llamada por fila. Es la
+--       misma consulta y una arquitectura distinta.
+--       Para verlo: EXPLAIN ANALYZE delante de la consulta.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    nombre VARCHAR PRIMARY KEY
+CREATE TABLE hechos (
+    id        INTEGER PRIMARY KEY,
+    categoria VARCHAR NOT NULL,
+    importe   INTEGER NOT NULL
 );
-CREATE TABLE inscripciones (
-    estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+INSERT INTO hechos
+SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
 
 -- === consulta ===
--- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
--- devuelven LO MISMO y cuestan cosas distintas:
---
---   A) SELECT DISTINCT e.nombre FROM estudiantes e
---      JOIN inscripciones i ON i.estudiante = e.nombre;
---      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
---
---   B) SELECT nombre FROM estudiantes
---      WHERE nombre IN (SELECT estudiante FROM inscripciones);
---      -&gt; el optimizador suele convertirlo en semirreunion; suele.
---
---   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
---      coincidencia y no multiplica nada.
---
--- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
--- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
--- esta clase se llama «refutacion».
-SELECT e.nombre
-FROM estudiantes e
-WHERE EXISTS (
-    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
-)
-ORDER BY e.nombre;
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>EXPLAIN ANALYZE</code> dibuja el árbol de operadores con el tiempo de cada uno y las filas que pasaron: es la forma más legible de ver dónde se va el tiempo de una consulta analítica.</li>
-<li><strong>Por qué no:</strong> Su optimizador reescribe tanto —descorrelación, empuje de filtros, reordenación de reuniones— que el plan casi nunca se parece a la consulta escrita, y eso confunde a quien está aprendiendo a relacionar ambas cosas.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/guides/meta/explain_analyze.html">https://duckdb.org/docs/stable/guides/meta/explain_analyze.html</a></li>
+<li><strong>Por qué sí:</strong> Almacenamiento columnar, ejecución vectorizada por lotes de miles de valores y paralelismo por trozos: la suma lee solo las dos columnas que necesita, ya comprimidas, y sin una llamada de función por fila. Es la arquitectura analítica completa dentro de un proceso.</li>
+<li><strong>Por qué no:</strong> Esa arquitectura es pésima para lo contrario: leer una fila entera por su clave obliga a tocar todos los bloques de columna, y modificar filas sueltas reescribe bloques enteros.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/internals/storage.html">https://duckdb.org/docs/stable/internals/storage.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/explain-results/
-// nota: como se mide aqui:
-//         db.estudiantes.aggregate([...]).explain(&quot;executionStats&quot;)
-//       Las tres cifras que resuelven casi todo:
-//         nReturned            lo que devolvio
-//         totalKeysExamined    entradas de indice leidas
-//         totalDocsExamined    documentos leidos
-//       Si los dos ultimos son mucho mayores que el primero, se lee de mas.
-//       Y recordar que el plan ganador queda CACHEADO: la consulta puede
-//       degradarse meses despues sin que el codigo haya cambiado.
-
-// === preparacion ===
-db.estudiantes.drop();
-db.inscripciones.drop();
-db.estudiantes.insertMany([
-  { _id: &quot;Ada&quot; }, { _id: &quot;Linus&quot; }, { _id: &quot;Grace&quot; },
-]);
-db.inscripciones.insertMany([
-  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
-  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
-  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
-]);
-db.inscripciones.createIndex({ estudiante: 1 });
-
-// === consulta ===
-// La forma barata: agrupar por estudiante en la coleccion PEQUENA de las
-// inscripciones, en vez de recorrer los estudiantes buscando cada uno.
-db.inscripciones
-  .aggregate([
-    { $group: { _id: &quot;$estudiante&quot; } },
-    { $sort: { _id: 1 } },
-  ])
-  .forEach((d) =&gt; print(d._id));
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>explain("executionStats")</code> da las tres cifras que resuelven casi todo: <code>nReturned</code>, <code>totalKeysExamined</code> y <code>totalDocsExamined</code>. Si el segundo o el tercero son mucho mayores que el primero, se está leyendo de más, y ahí está el diagnóstico.</li>
-<li><strong>Por qué no:</strong> Su planificador prueba varios planes y <strong>cachea el ganador</strong>: la consulta puede ir bien meses y degradarse cuando la distribución cambia, sin que nada haya cambiado en el código. Diagnosticarlo exige acordarse de que la caché de planes existe.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/explain-results/">https://www.mongodb.com/docs/manual/reference/explain-results/</a></li>
-</ul>
-<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
 <p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: cassandra
--- doc: https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html
--- nota: implementacion declarada. Aqui no hay plan que leer porque no hay
---       optimizador que elija: la consulta hace lo que el modelo permite. Lo que
---       si hay es TRACING, que muestra la traza DISTRIBUIDA:
---         - que nodo coordino la consulta
---         - a que replicas pregunto y cuanto tardo cada una
---         - cuantas SSTables se abrieron
---         - cuantas lapidas se recorrieron  &lt;- el diagnostico mas util del motor
---
---       Y la consecuencia incomoda: si va lenta, la culpa es del modelo de
---       datos. El diagnostico es barato; la correccion es crear otra tabla y
---       migrar los datos.
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+-- nota: implementacion declarada. La clausula ORDER BY del motor MergeTree no
+--       es un orden de presentacion: es el ORDEN FISICO de los datos, y de el
+--       dependen la compresion y los indices de salto, que descartan bloques
+--       enteros sin leerlos.
+--       Lo que este motor NO tiene: transacciones. No hay BEGIN, y corregir
+--       filas es una mutacion asincrona que reescribe partes.
 
 -- === preparacion ===
-CREATE KEYSPACE IF NOT EXISTS escuela
-  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE TABLE hechos (
+    id        UInt32,
+    categoria LowCardinality(String),
+    importe   UInt32
+) ENGINE = MergeTree ORDER BY (categoria, id);
 
-DROP TABLE IF EXISTS escuela.inscripciones_por_estudiante;
-
-CREATE TABLE escuela.inscripciones_por_estudiante (
-    estudiante text,
-    curso      text,
-    PRIMARY KEY (estudiante, curso)
-);
-
-INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'DB-101');
-INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'SE-201');
-INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Linus', 'DB-101');
+INSERT INTO hechos
+SELECT number + 1, concat('c', toString((number + 1) % 2)), number + 1
+FROM numbers(1000);
 
 -- === consulta ===
-TRACING ON;
-SELECT DISTINCT estudiante FROM escuela.inscripciones_por_estudiante;
-TRACING OFF;
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>TRACING ON</code> no muestra un plan —no hay optimizador que elija— sino la <strong>traza distribuida</strong> de la consulta: qué nodo coordinó, a qué réplicas preguntó, cuántas SSTables se abrieron y cuántas lápidas se recorrieron. Para diagnosticar este motor, esa información vale más que un plan.</li>
-<li><strong>Por qué no:</strong> Precisamente porque no hay optimizador, no hay nada que refutar sobre la consulta: si va lenta, la culpa es del modelo de datos, y arreglarlo significa crear otra tabla y migrar. El diagnóstico es barato; la corrección, no.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html">https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html</a></li>
+<li><strong>Por qué sí:</strong> Lleva la misma idea a escala distribuida: <code>MergeTree</code> ordena y comprime por partes, los índices de salto descartan bloques enteros sin leerlos, y la ejecución es masivamente paralela. Es lo que se usa cuando la tabla tiene miles de millones de filas.</li>
+<li><strong>Por qué no:</strong> No es transaccional: no hay <code>BEGIN</code>, las actualizaciones y borrados son mutaciones asíncronas que reescriben partes, y las reuniones entre tablas grandes son su punto débil. Es un almacén de hechos, no un sistema operacional.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/fileformat.html
+-- nota: SQLite guarda la FILA entera junta en la pagina. Para sumar `importe`
+--       tiene que leer tambien `id` y `categoria` de cada una de las mil filas.
+--       Con mil no se nota. Con cien millones, es el problema entero, y ningun
+--       indice lo arregla: no se trata de encontrar las filas, se trata de
+--       leerlas todas.
+
+-- === preparacion ===
+CREATE TABLE hechos (
+    id        INTEGER PRIMARY KEY,
+    categoria TEXT NOT NULL,
+    importe   INTEGER NOT NULL
+);
+
+WITH RECURSIVE serie(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM serie WHERE n &lt; 1000
+)
+INSERT INTO hechos (id, categoria, importe)
+SELECT n, 'c' || (n % 2), n FROM serie;
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Está aquí para mostrar el contraste desde el otro lado: el mismo SQL, el mismo resultado, y un almacenamiento por filas que obliga a leer cada registro entero para sumar una columna.</li>
+<li><strong>Por qué no:</strong> Con mil filas no se nota; con cien millones, la diferencia es de órdenes de magnitud, y no hay índice que la arregle porque el problema no es encontrar las filas, es leerlas todas.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/fileformat.html">https://sqlite.org/fileformat.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/parallel-query.html
+-- nota: el punto intermedio. Filas en disco, pero con agregacion en paralelo
+--       (Parallel Seq Scan + Partial Aggregate + Gather) cuando la tabla es lo
+--       bastante grande. Para verlo hacen falta mas de mil filas y
+--         SET max_parallel_workers_per_gather = 4;
+--         EXPLAIN (ANALYZE) SELECT ...
+
+-- === preparacion ===
+DROP TABLE IF EXISTS hechos;
+
+CREATE TABLE hechos (
+    id        integer PRIMARY KEY,
+    categoria text NOT NULL,
+    importe   integer NOT NULL
+);
+
+INSERT INTO hechos (id, categoria, importe)
+SELECT n, 'c' || (n % 2), n FROM generate_series(1, 1000) AS s(n);
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es el punto intermedio honesto: filas en disco, pero con ejecución paralela, agregación en paralelo y <code>BRIN</code> para tablas ordenadas. Para analítica de tamaño medio sobre los datos operativos, evita montar un almacén aparte.</li>
+<li><strong>Por qué no:</strong> Sigue leyendo filas completas y usando una versión por fila para el control de concurrencia: por mucho paralelismo, no compite con un formato columnar cuando la consulta toca dos columnas de una tabla de cien.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/parallel-query.html">https://www.postgresql.org/docs/current/parallel-query.html</a></li>
+</ul>
+<h4 id="google-bigquery--implementacionesbigqueryconsultasql">Google BigQuery · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/bigquery/consulta.sql"><code>implementaciones/bigquery/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: bigquery
+-- doc: https://cloud.google.com/bigquery/docs/best-practices-costs
+-- nota: implementacion declarada. Aqui la optimizacion no es de tiempo: es de
+--       FACTURA. Se paga por bytes LEIDOS, y al ser columnar, leer dos columnas
+--       cuesta dos columnas. La misma consulta con SELECT * sobre una tabla de
+--       cien columnas cuesta cincuenta veces mas y devuelve lo mismo.
+--       Antes de lanzarla en serio:
+--         bq query --dry_run   -&gt; dice cuantos bytes se van a leer, sin cobrar.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE analitica.hechos
+PARTITION BY RANGE_BUCKET(id, GENERATE_ARRAY(0, 1000000, 100000))
+CLUSTER BY categoria
+AS
+SELECT n AS id,
+       CONCAT('c', CAST(MOD(n, 2) AS STRING)) AS categoria,
+       n AS importe
+FROM UNNEST(GENERATE_ARRAY(1, 1000)) AS n;
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM analitica.hechos
+GROUP BY categoria
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Separa por completo almacenamiento y cómputo: el mismo formato columnar, con miles de nodos efímeros que se asignan por consulta y sin nada que administrar. Para un agregado sobre petabytes ocasional, es la opción con menos operación.</li>
+<li><strong>Por qué no:</strong> Se paga por bytes leídos: la misma consulta escrita con <code>SELECT *</code> en vez de dos columnas cuesta dinero de verdad, y una consulta mal filtrada puede costar más que el análisis que la motivó. Aquí la optimización no es de tiempo, es de factura.</li>
+<li>📄 Documentación oficial: <a href="https://cloud.google.com/bigquery/docs/best-practices-costs">https://cloud.google.com/bigquery/docs/best-practices-costs</a></li>
+</ul>
+<h4 id="snowflake--implementacionessnowflakeconsultasql">Snowflake · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/implementaciones/snowflake/consulta.sql"><code>implementaciones/snowflake/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: snowflake
+-- doc: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
+-- nota: implementacion declarada. Snowflake divide la tabla en micro-particiones
+--       columnares de 50-500 MB y guarda metadatos de cada una —minimo, maximo,
+--       numero de valores distintos—, de modo que una consulta filtrada puede
+--       descartar particiones enteras sin leerlas. Ese es todo el secreto, y
+--       depende de que los datos esten agrupados por la columna que se filtra.
+--       El computo se factura por TIEMPO ENCENDIDO: dimensionar y suspender el
+--       almacen es parte del diseno, no una tarea de operacion posterior.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE hechos (
+    id        NUMBER,
+    categoria STRING,
+    importe   NUMBER
+) CLUSTER BY (categoria);
+
+INSERT INTO hechos (id, categoria, importe)
+SELECT SEQ4() + 1,
+       'c' || TO_VARCHAR(MOD(SEQ4() + 1, 2)),
+       SEQ4() + 1
+FROM TABLE(GENERATOR(ROWCOUNT =&gt; 1000));
+
+-- === consulta ===
+SELECT categoria, SUM(importe) AS importe
+FROM hechos
+GROUP BY categoria
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Micro-particiones columnares con metadatos por partición que permiten descartar bloques sin leerlos, y almacenes de cómputo independientes que se dimensionan por carga: el equipo de análisis no compite con el de ingesta.</li>
+<li><strong>Por qué no:</strong> El cómputo se factura por tiempo encendido, así que la disciplina de apagar y dimensionar es parte del diseño; y su rendimiento depende del orden de agrupamiento, que hay que mantener con <code>CLUSTER BY</code> en tablas grandes.</li>
+<li>📄 Documentación oficial: <a href="https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions">https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -716,10 +601,10 @@ TRACING OFF;
 </thead>
 <tbody>
 <tr>
-<td>Redis</td>
-<td>No hay planes: cada orden tiene una complejidad fija y documentada, y está escrita en su página de referencia. <code>SMEMBERS</code> es O(N) y siempre lo será; no hay optimizador que pueda cambiarlo.</td>
-<td>La disciplina equivalente es leer la complejidad en la documentación antes de usar la orden, y vigilar el registro de órdenes lentas (<code>SLOWLOG GET</code>), que delata las que bloquearon el hilo único.</td>
-<td><a href="https://redis.io/docs/latest/commands/slowlog-get/">doc</a></td>
+<td>MongoDB</td>
+<td>Su almacenamiento es orientado a documentos: sumar un campo de un millón de documentos obliga a leer un millón de documentos completos. La tubería de agregación es expresiva, pero el formato no ayuda.</td>
+<td>Exportar a Parquet y analizar con DuckDB o ClickHouse, que es lo que hace en la práctica casi todo el que tiene datos operativos en MongoDB y preguntas analíticas sobre ellos.</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -770,22 +655,24 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>P. Griffiths Selinger, M. M. Astrahan, D. D. Chamberlin, R. A. Lorie, T. G. Price</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/582095.582099">Access Path Selection in a Relational Database Management System</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/582095.582099">10.1145/582095.582099</a>.<br />
-  Base del optimizador por costos que siguen usando los motores actuales.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/using-explain.html">PostgreSQL: Using EXPLAIN</a>.<br />
-  Lectura de planes de ejecución y diferencia entre costo estimado y tiempo real.</li>
-<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/optoverview.html">SQLite: Query Optimizer Overview</a>.<br />
-  Como decide SQLite usar un índice; útil para leer EXPLAIN QUERY PLAN.</li>
+<li><strong>ClickHouse, Inc.</strong> (2026). <a href="https://clickhouse.com/docs/">ClickHouse Documentation</a>.<br />
+  Motores de tabla, claves de ordenamiento y vistas materializadas.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
+<li><strong>Michael Stonebraker, Samuel Madden, Daniel J. Abadi, Stavros Harizopoulos, Nabil Hachem, Pat Helland</strong> (2007). <a href="https://cs.brown.edu/courses/cs227/archives/2008/Papers/OLTP/hstore.pdf">The End of an Architectural Era (It's Time for a Complete Rewrite)</a>. VLDB.<br />
+  Mide en qué gasta el tiempo realmente un motor OLTP tradicional.</li>
+<li><strong>Philippe Flajolet, Eric Fusy, Olivier Gandouet, Frederic Meunier</strong> (2007). <a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf">HyperLogLog: The Analysis of a Near-Optimal Cardinality Estimation Algorithm</a>. Analysis of Algorithms (AofA).<br />
+  Conteo aproximado de distintos con memoria prácticamente constante.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="041.html">← Anterior</a> · <a href="043.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="042">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="041.html"><span class="sentido">← Anterior · 041</span>Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a>
-<a class="siguiente" href="043.html"><span class="sentido">Siguiente · 043 →</span>Réplica: líder único, multilíder y sin líder</a>
+<a class="anterior" href="041.html"><span class="sentido">← Anterior · 041</span>Búsqueda de texto: índice invertido, análisis y relevancia</a>
+<a class="siguiente" href="043.html"><span class="sentido">Siguiente · 043 →</span>ACID: qué garantiza cada letra y quién la implementa</a>
 </nav>
 </main>
 <footer>

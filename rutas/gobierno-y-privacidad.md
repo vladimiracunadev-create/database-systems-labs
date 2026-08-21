@@ -84,31 +84,31 @@ interpretación jurídica es de abogados, y conviene decirlo en voz alta.
 
 ## 📚 Tu ruta en el programa
 
-8 partes, 127 horas estimadas.
+8 partes, 147 horas estimadas.
 
-1. 📚 [**Parte 00 — Fundamentos**](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 01 — Modelado conceptual y requisitos**](../classes/part-01-modelado-conceptual-y-requisitos/README.md)
+2. 📚 [**Parte 02 — Modelado conceptual y requisitos**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). No se gobierna lo que no se sabe nombrar.
-3. 📚 [**Parte 03 — SQL en profundidad**](../classes/part-03-sql-en-profundidad/README.md)
+3. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Necesitas leer y escribir las consultas que auditas. Añade
-   [013 — Integridad: restricciones y acciones referenciales](../classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/README.md).
-4. 📚 [**Parte 07 — Transacciones, concurrencia y recuperación**](../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md)
+   [013 — Integridad: restricciones y acciones referenciales](../classes/part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md).
+4. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
    (5 clases · 18 h). Para entender qué significa que un dato esté «confirmado».
-5. 📚 [**Parte 09 — Distribución, réplica y consistencia**](../classes/part-09-distribucion-replica-y-consistencia/README.md)
+5. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
    (5 clases · 17 h). Dónde acaban las copias.
-6. 📚 [**Parte 10 — Operación, seguridad y gobierno**](../classes/part-10-operacion-seguridad-y-gobierno/README.md)
+6. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
    (6 clases · 19 h). El núcleo del rol:
-   [048 — Respaldo y restauración probada](../classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/README.md),
-   [050 — Control de acceso: privilegio mínimo, roles y seguridad por fila](../classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/README.md),
-   [051 — Inyección SQL y parametrización](../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md)
-   y [053 — Privacidad, retención y gobierno del dato](../classes/part-10-operacion-seguridad-y-gobierno/053-privacidad-retencion-y-gobierno-del-dato/README.md).
-7. 📚 [**Parte 11 — Analítica, integración y streaming**](../classes/part-11-analitica-integracion-y-streaming/README.md)
+   [048 — Respaldo y restauración probada](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md),
+   [050 — Control de acceso: privilegio mínimo, roles y seguridad por fila](../classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md),
+   [051 — Inyección SQL y parametrización](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md)
+   y [053 — Privacidad, retención y gobierno del dato](../classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md).
+7. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
    (4 clases · 13 h). El dato personal se multiplica en las tuberías analíticas, y ahí se
    olvida.
-8. 📚 [**Parte 13 — Arquitectura y proyecto final**](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+8. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h). Con
-   [063 — Registro de decisiones y costo total](../classes/part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md),
+   [063 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md),
    que es el formato en el que se documenta una decisión de gobierno.
 
 Laboratorios de la ruta:
@@ -177,7 +177,7 @@ cambio normativo, y donde la experiencia previa en operación pesa mucho.
 
 ## 🚀 Siguientes pasos
 
-1. Haz la Parte 10 completa: es tu núcleo, y las cuatro clases citadas son el mínimo.
+1. Haz la Parte 11 completa: es tu núcleo, y las cuatro clases citadas son el mínimo.
 2. Toma un esquema real y aplícale privilegio mínimo; demuestra con consultas que funciona.
 3. Escribe el inventario de datos personales de un sistema que conozcas, con retención por
    categoría.

@@ -1,0 +1,105 @@
+---
+caso:
+  titulo: Qué usar cuando la respuesta correcta es «esto no necesita un servidor»
+  modo: conceptual
+  contrato: |
+    La decisión cabe en tres preguntas, y basta que una se conteste que sí para
+    necesitar una base de datos: ¿escribe más de un proceso a la vez?, ¿hay
+    reglas que deban cumplirse siempre?, ¿perder los datos es inaceptable?
+
+    Cuando las tres se contestan que no, la respuesta correcta es un archivo, y
+    decirlo forma parte del oficio. Esta comparación no ejecuta nada: recorre las
+    opciones reales —incluidas las que no son bases de datos— y dice para qué
+    sirve cada una y qué pasa el día en que el caso crece.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: sqlite
+    aplica: si
+    como: >-
+      El paso intermedio que casi nadie considera: una base de datos completa,
+      con SQL y transacciones, dentro de un archivo y sin servidor. Su propia
+      documentación lo plantea así: **la competencia de SQLite no es PostgreSQL,
+      es `fopen()`**.
+    porque_si: >-
+      Cubre la mayoría de los casos donde una hoja de cálculo se quedó corta y un
+      servidor es demasiado: aplicaciones de escritorio, herramientas de línea de
+      órdenes, aplicaciones móviles, pruebas automatizadas y el estado local de
+      cualquier programa.
+    porque_no: >-
+      Un solo escritor a la vez y sin acceso remoto ni usuarios. En cuanto
+      aparece un segundo proceso que escribe o alguien tiene que conectarse desde
+      otra máquina, se acabó.
+    doc: https://sqlite.org/whentouse.html
+
+  - id: duckdb
+    aplica: si
+    como: >-
+      El equivalente para analizar en vez de registrar: consulta directamente un
+      CSV o un Parquet de gigabytes **sin cargarlo** en ningún sitio, sin
+      servidor y sin esquema previo.
+    porque_si: >-
+      Para el caso más frecuente de todos —«tengo un fichero grande y quiero
+      preguntarle cosas»— evita montar una base de datos entera para algo que se
+      hace una vez al mes.
+    porque_no: >-
+      No es un sistema de registro: un solo escritor, sin concurrencia y sin
+      servicio. Analiza una copia; no guarda la verdad.
+    doc: https://duckdb.org/docs/stable/why_duckdb
+
+  - id: postgresql
+    aplica: si
+    como: >-
+      La respuesta cuando alguna de las tres preguntas se contesta que sí:
+      servidor, usuarios, permisos, concurrencia real, integridad declarada y
+      durabilidad probada.
+    porque_si: >-
+      No hay atajo cuando hacen falta esas garantías. Y como motor generalista
+      cubre además búsqueda de texto, JSON y vectores, así que a menudo es el
+      único servicio que hay que operar.
+    porque_no: >-
+      Hay que instalarlo, configurarlo, actualizarlo, respaldarlo y vigilarlo,
+      durante años. Ese costo no aparece en ninguna comparativa de rendimiento y
+      es el que de verdad se paga.
+    doc: https://www.postgresql.org/docs/current/tutorial-arch.html
+
+  - id: redis
+    aplica: si
+    como: >-
+      Para lo que es **desechable por naturaleza**: caché, sesiones, contadores,
+      colas de trabajo. Datos que se pueden reconstruir y cuya pérdida no cuesta
+      nada.
+    porque_si: >-
+      Cuando el requisito es latencia y el dato es reconstruible, es la respuesta
+      obvia y la más barata de operar.
+    porque_no: >-
+      Su modelo de durabilidad no promete lo que un almacén tiene que prometer:
+      con la configuración por omisión puede perder hasta un segundo de
+      escrituras, y la réplica es asíncrona. Usarlo como fuente de la verdad es
+      el error de arquitectura más común que se comete con él.
+    doc: https://redis.io/docs/latest/develop/
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      Exige un servidor igual que PostgreSQL, así que no es una alternativa al
+      archivo: la decisión de esta clase es entre archivo y servidor, y una vez
+      tomada la segunda, cuál servidor es otra pregunta.
+    alternativa: >-
+      Si lo que atraía era guardar documentos sin declarar esquema, SQLite con
+      sus funciones JSON cubre buena parte del caso sin añadir un servicio.
+    doc: https://www.mongodb.com/docs/manual/administration/install-community/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Está diseñado para un problema que casi ningún sistema tiene: un volumen de
+      escritura que una sola máquina no puede absorber. Adoptarlo «por si
+      crecemos» es pagar su modelo —sin reuniones, sin transacciones, con
+      reparaciones periódicas— sin recibir nada a cambio.
+    alternativa: >-
+      Un motor generalista con réplicas de lectura y particionado interno cubre
+      un crecimiento de dos órdenes de magnitud sin cambiar la forma de razonar
+      sobre los datos.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/getting-started/

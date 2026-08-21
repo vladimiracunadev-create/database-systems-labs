@@ -43,7 +43,7 @@ Un resultado correcto sin explicación no demuestra transferencia. La aprobació
 | 3 · Sólido | Invariantes declarados, priorizados y comprobados al menos por una prueba. |
 | 4 · Profesional | Invariantes medibles y trazables hasta la consulta o restricción que los sostiene. |
 
-Mínimo para aprobar: **Funcional (2)**. Clases: [005](../classes/part-01-modelado-conceptual-y-requisitos/005-de-requisitos-a-entidades/README.md) · [013](../classes/part-02-modelo-relacional-y-algebra/013-integridad-restricciones-y-acciones-referenciales/README.md)
+Mínimo para aprobar: **Funcional (2)**. Clases: [015](../classes/part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/README.md) · [023](../classes/part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md)
 
 ### Modelado · 12 puntos
 
@@ -58,7 +58,7 @@ Mínimo para aprobar: **Funcional (2)**. Clases: [005](../classes/part-01-modela
 | 3 · Sólido | Modelo coherente con los accesos, con normalización justificada. |
 | 4 · Profesional | Coherente en los tres niveles, con la desnormalización deliberada y su costo declarado. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [006](../classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/README.md) · [008](../classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/README.md) · [009](../classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [016](../classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/README.md) · [018](../classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/README.md) · [019](../classes/part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md)
 
 ### Consultas y contratos · 8 puntos
 
@@ -73,7 +73,7 @@ Mínimo para aprobar: **Sólido (3)**. Clases: [006](../classes/part-01-modelado
 | 3 · Sólido | Consultas parametrizadas y probadas con nulos, vacíos y duplicados. |
 | 4 · Profesional | Además, contrato de esquema versionado y probado ante cambios. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [014](../classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/README.md) · [016](../classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/README.md) · [019](../classes/part-03-sql-en-profundidad/019-nulos-y-logica-de-tres-valores/README.md) · [051](../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [024](../classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) · [026](../classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md) · [029](../classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/README.md) · [061](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md)
 
 ### Transacciones y concurrencia · 10 puntos
 
@@ -88,7 +88,7 @@ Mínimo para aprobar: **Sólido (3)**. Clases: [014](../classes/part-03-sql-en-p
 | 3 · Sólido | Una anomalía reproducida y corregida, con el mecanismo explicado. |
 | 4 · Profesional | Anomalías reproducidas, corregidas y protegidas por una prueba automática. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [034](../classes/part-07-transacciones-concurrencia-y-recuperacion/034-anomalias-de-aislamiento-y-la-critica-ansi/README.md) · [037](../classes/part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md) · Laboratorios: [03](../labs/03-transactions/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [044](../classes/part-08-transacciones-concurrencia-y-recuperacion/044-anomalias-de-aislamiento-y-la-critica-ansi/README.md) · [047](../classes/part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md) · Laboratorios: [03](../labs/03-transactions/README.md)
 
 ### Rendimiento y planes · 10 puntos
 
@@ -103,7 +103,7 @@ Mínimo para aprobar: **Sólido (3)**. Clases: [034](../classes/part-07-transacc
 | 3 · Sólido | Protocolo reproducible, plan de ejecución leído y conclusión acotada a la carga. |
 | 4 · Profesional | Además, costo de escritura del índice medido y decisión justificada con números. |
 
-Mínimo para aprobar: **Funcional (2)**. Clases: [042](../classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/README.md) · Laboratorios: [04](../labs/04-indexing/README.md)
+Mínimo para aprobar: **Funcional (2)**. Clases: [052](../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md) · Laboratorios: [04](../labs/04-indexing/README.md)
 
 ### Distribución y consistencia · 8 puntos
 
@@ -118,7 +118,7 @@ Mínimo para aprobar: **Funcional (2)**. Clases: [042](../classes/part-08-almace
 | 3 · Sólido | Se observa el efecto de la réplica en una lectura y se declara la garantía de sesión. |
 | 4 · Profesional | Además, se mide el retraso y se elige la corrección con su costo. |
 
-Mínimo para aprobar: **Funcional (2)**. Clases: [045](../classes/part-09-distribucion-replica-y-consistencia/045-cap-pacelc-y-lo-que-realmente-se-elige/README.md) · [046](../classes/part-09-distribucion-replica-y-consistencia/046-modelos-de-consistencia-y-garantias-de-sesion/README.md) · Laboratorios: [07](../labs/07-replication/README.md)
+Mínimo para aprobar: **Funcional (2)**. Clases: [055](../classes/part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md) · [056](../classes/part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md) · Laboratorios: [07](../labs/07-replication/README.md)
 
 ### Seguridad y privacidad · 12 puntos
 
@@ -133,7 +133,7 @@ Mínimo para aprobar: **Funcional (2)**. Clases: [045](../classes/part-09-distri
 | 3 · Sólido | Privilegio mínimo demostrado con una consulta que falla como debe, y datos sintéticos. |
 | 4 · Profesional | Además, retención implementada, minimización declarada y secretos fuera del repositorio. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [050](../classes/part-10-operacion-seguridad-y-gobierno/050-control-de-acceso-y-seguridad-por-fila/README.md) · [051](../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md) · [053](../classes/part-10-operacion-seguridad-y-gobierno/053-privacidad-retencion-y-gobierno-del-dato/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [060](../classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md) · [061](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md) · [063](../classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md)
 
 ### Respaldo y recuperación · 12 puntos
 
@@ -148,7 +148,7 @@ Mínimo para aprobar: **Sólido (3)**. Clases: [050](../classes/part-10-operacio
 | 3 · Sólido | Restauración ejecutada y verificada, con RPO y RTO declarados. |
 | 4 · Profesional | Además, restauración a un punto en el tiempo y prueba de que el archivo está íntegro. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [048](../classes/part-10-operacion-seguridad-y-gobierno/048-respaldo-y-restauracion-probada/README.md) · [036](../classes/part-07-transacciones-concurrencia-y-recuperacion/036-registro-anticipado-y-recuperacion/README.md) · Laboratorios: [08](../labs/08-recovery/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [058](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md) · [046](../classes/part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md) · Laboratorios: [08](../labs/08-recovery/README.md)
 
 ### Operación y observabilidad · 8 puntos
 
@@ -163,7 +163,7 @@ Mínimo para aprobar: **Sólido (3)**. Clases: [048](../classes/part-10-operacio
 | 3 · Sólido | Objetivo de servicio con las métricas que lo miden y una alerta accionable. |
 | 4 · Profesional | Además, capacidad proyectada y runbook probado por otra persona. |
 
-Mínimo para aprobar: **Funcional (2)**. Clases: [052](../classes/part-10-operacion-seguridad-y-gobierno/052-observabilidad-slo-y-capacidad/README.md)
+Mínimo para aprobar: **Funcional (2)**. Clases: [062](../classes/part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md)
 
 ### Decisiones y comunicación · 10 puntos
 
@@ -178,7 +178,7 @@ Mínimo para aprobar: **Funcional (2)**. Clases: [052](../classes/part-10-operac
 | 3 · Sólido | ADR completo, con alternativas descartadas y su porqué. |
 | 4 · Profesional | Además, costo total estimado, criterio de revisión y plan de vuelta atrás. |
 
-Mínimo para aprobar: **Sólido (3)**. Clases: [063](../classes/part-13-arquitectura-y-proyecto-final/063-registro-de-decisiones-y-costo-total/README.md) · [064](../classes/part-13-arquitectura-y-proyecto-final/064-proyecto-final-disenar-medir-y-defender/README.md)
+Mínimo para aprobar: **Sólido (3)**. Clases: [073](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md) · [074](../classes/part-14-arquitectura-y-proyecto-final/074-proyecto-final-disenar-medir-y-defender/README.md)
 
 ## Faltas críticas
 

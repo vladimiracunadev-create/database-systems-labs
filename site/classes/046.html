@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Modelos de consistencia y garantías de sesión. Parte 09: Distribución, réplica y consistencia.">
+<meta name="description" content="Registro anticipado y recuperación: WAL y ARIES. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/046.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="046 — Modelos de consistencia y garantías de sesión · Database Systems Labs">
-<meta property="og:description" content="Modelos de consistencia y garantías de sesión. Parte 09: Distribución, réplica y consistencia.">
+<meta property="og:title" content="046 — Registro anticipado y recuperación: WAL y ARIES · Database Systems Labs">
+<meta property="og:description" content="Registro anticipado y recuperación: WAL y ARIES. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/046.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "046 — Modelos de consistencia y garantías de sesión", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["linealizabilidad", "consistencia causal", "lectura monotona", "convergencia"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>046 — Modelos de consistencia y garantías de sesión · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "046 — Registro anticipado y recuperación: WAL y ARIES", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["WAL", "punto de control", "rehacer", "deshacer", "LSN"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>046 — Registro anticipado y recuperación: WAL y ARIES · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,328 +49,248 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-09.html">Parte 09 · Distribución, réplica y consistencia</a>
+  <a href="parte-08.html">Parte 08 · Transacciones, concurrencia y recuperación</a>
   <span aria-hidden="true">/</span><span>Clase 046</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="046--modelos-de-consistencia-y-garantías-de-sesión">046 — Modelos de consistencia y garantías de sesión</h1>
+<h1 id="046--registro-anticipado-y-recuperación-wal-y-aries">046 — Registro anticipado y recuperación: WAL y ARIES</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="045.html">← Anterior</a> · <a href="047.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="045.html">← Anterior</a> · <a href="047.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 09 — Distribución, réplica y consistencia · Avanzado ·
-3 horas estimadas · motores <code>cassandra</code>, <code>mongodb</code>, <code>spanner</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md"><code>labs/07-replication</code></a> · 5 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>linealizabilidad</code> · <code>consistencia causal</code> · <code>lectura monotona</code> · <code>convergencia</code></p>
+<p>Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>WAL</code> · <code>punto de control</code> · <code>rehacer</code> · <code>deshacer</code> · <code>LSN</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Ordenar el vocabulario de la consistencia. «Consistencia fuerte» y «eventual» son los extremos de una jerarquía con muchos escalones útiles en medio, y elegir el escalón correcto ahorra coordinación.</p>
+<p>Entender cómo un motor sobrevive a una caída: el registro anticipado y el algoritmo de recuperación. Es el mecanismo que hace real la D de ACID, y explica muchas decisiones de configuración.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Situar los modelos principales en su jerarquía de implicación.</li>
-<li>Distinguir linealizabilidad de serializabilidad.</li>
-<li>Aplicar las cuatro garantías de sesión.</li>
-<li>Explicar la consistencia causal y cómo se implementa.</li>
-<li>Reconocer para qué sirven los CRDT y cuáles son sus límites.</li>
+<li>Enunciar la regla del registro anticipado y por qué es necesaria.</li>
+<li>Describir las tres fases de ARIES y qué garantiza cada una.</li>
+<li>Explicar qué es un punto de control y qué acorta.</li>
+<li>Relacionar <code>fsync</code> con la durabilidad real ante cada tipo de fallo.</li>
+<li>Leer el modo WAL de SQLite como ejemplo completo y pequeño.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-jerarquía">La jerarquía</h3>
-<pre><code class="language-mermaid">flowchart TD
-    L[&quot;Linealizabilidad&lt;br/&gt;(orden total + tiempo real)&quot;] --&gt; SEQ[&quot;Consistencia secuencial&lt;br/&gt;(orden total, sin tiempo real)&quot;]
-    SEQ --&gt; CAU[&quot;Consistencia causal&lt;br/&gt;(orden de lo relacionado)&quot;]
-    CAU --&gt; SES[&quot;Garantías de sesión&lt;br/&gt;(por cliente)&quot;]
-    SES --&gt; EV[&quot;Consistencia eventual&lt;br/&gt;(convergencia, sin plazo)&quot;]
-    L -.-&gt;|&quot;exige coordinación&quot;| CO[&quot;Indisponible bajo partición&quot;]
-    CAU -.-&gt;|&quot;sin coordinación global&quot;| DI[&quot;Disponible bajo partición&quot;]
+<h3 id="la-regla">La regla</h3>
+<p><strong>Antes de escribir una página modificada al disco, debe estar en disco el registro que describe esa modificación.</strong></p>
+<p>Sin esa regla no hay recuperación posible: si la página llegara antes que el registro, tras una caída habría un cambio en los datos del que no queda constancia de a qué transacción pertenece, y no se sabría si deshacerlo.</p>
+<p>Escribir el registro es barato (secuencial, al final del archivo); escribir las páginas es caro (aleatorio). Por eso el motor confirma la transacción cuando el registro está a salvo y aplaza las páginas.</p>
+<h3 id="aries-las-tres-fases">ARIES: las tres fases</h3>
+<p>Mohan et al. (1992) definen el algoritmo que implementan casi todos los motores. Cada registro lleva un <strong>LSN</strong> (número de secuencia), y cada página guarda el LSN del último cambio que la afectó.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;Caída&quot;] --&gt; A[&quot;1. ANÁLISIS&lt;br/&gt;desde el último punto de control:&lt;br/&gt;qué transacciones estaban activas&lt;br/&gt;y qué páginas sucias había&quot;]
+    A --&gt; R[&quot;2. REHACER&lt;br/&gt;reaplicar TODO lo registrado,&lt;br/&gt;incluso de transacciones no confirmadas&lt;br/&gt;→ estado exacto del momento de la caída&quot;]
+    R --&gt; U[&quot;3. DESHACER&lt;br/&gt;revertir las transacciones&lt;br/&gt;que no llegaron a confirmar&quot;]
+    U --&gt; OK[&quot;Base consistente&quot;]
 </code></pre>
-<p>La línea que importa está entre <strong>secuencial</strong> y <strong>causal</strong>: por encima hace falta acuerdo global y el sistema deja de estar disponible durante una partición; por debajo, no.</p>
-<h3 id="linealizabilidad-frente-a-serializabilidad">Linealizabilidad frente a serializabilidad</h3>
-<p>Se confunden constantemente y son cosas distintas:</p>
+<p>El punto que sorprende: la fase de rehacer <strong>reaplica también cambios de transacciones que no se confirmaron</strong>. Se llama <em>repeating history</em>. Reconstruye el estado exacto del instante de la caída y solo después deshace lo que corresponde. Es más simple y más robusto que intentar filtrar durante el rehacer.</p>
+<p>Los registros de compensación (CLR) registran el propio deshacer, de forma que si el sistema cae <strong>durante</strong> la recuperación, la siguiente no repite trabajo ya deshecho. Es lo que hace la recuperación idempotente.</p>
+<h3 id="puntos-de-control">Puntos de control</h3>
+<p>Sin ellos, la recuperación tendría que leer el registro desde el principio de los tiempos. Un punto de control anota el estado en un instante; la recuperación empieza ahí.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th></th>
-<th>Linealizabilidad</th>
-<th>Serializabilidad</th>
+<th>Parámetro</th>
+<th>Efecto de aumentarlo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Ámbito</td>
-<td>Operaciones sobre <strong>un objeto</strong></td>
-<td><strong>Transacciones</strong> sobre varios objetos</td>
+<td>Intervalo entre puntos de control</td>
+<td>Menos E/S en marcha, <strong>recuperación más larga</strong></td>
 </tr>
 <tr>
-<td>Garantiza</td>
-<td>Orden total compatible con el tiempo real</td>
-<td>Equivalencia a <em>alguna</em> ejecución en serie</td>
-</tr>
-<tr>
-<td>Tiempo real</td>
-<td><strong>Sí</strong>: si A termina antes de que B empiece, A va antes</td>
-<td><strong>No</strong>: el orden serie puede ser cualquiera</td>
-</tr>
-<tr>
-<td>Origen</td>
-<td>Sistemas distribuidos</td>
-<td>Bases de datos</td>
+<td>Tamaño máximo del registro</td>
+<td>Ídem</td>
 </tr>
 </tbody>
 </table></div>
-<p>La combinación de ambas se llama <strong>estricta serializabilidad</strong>, y es lo que ofrecen Spanner y CockroachDB. PostgreSQL en <code>SERIALIZABLE</code> sobre un nodo también la cumple de hecho, porque no hay distribución que rompa el tiempo real.</p>
-<p>Consecuencia práctica: un sistema puede ser serializable y devolver datos «viejos». Si una transacción confirma y otra empieza después y no la ve, es serializable —existe un orden serie válido— pero no linealizable. Para un usuario que acaba de guardar algo, esa distinción es la diferencia entre un sistema correcto y uno roto.</p>
-<h3 id="las-cuatro-garantías-de-sesión">Las cuatro garantías de sesión</h3>
-<p>Definidas por conveniencia del cliente, no del sistema. Son baratas y resuelven casi todas las quejas de usuario:</p>
+<p>Es un compromiso explícito entre rendimiento normal y tiempo de recuperación (RTO, clase 048). Un sistema con puntos de control cada hora puede tardar mucho en volver.</p>
+<h3 id="fsync-durabilidad-frente-a-qué"><code>fsync</code>: durabilidad frente a qué</h3>
+<p>Escribir en un archivo no lo pone en el disco: lo deja en la caché del sistema operativo. <code>fsync</code> fuerza el volcado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Garantía</th>
-<th>Promete</th>
-<th>Implementación típica</th>
+<th>Configuración</th>
+<th>Caída del proceso</th>
+<th>Caída de la máquina</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Lectura de tus escrituras</strong></td>
-<td>Ves lo que acabas de escribir</td>
-<td>Leer del líder tras escribir, o esperar al LSN</td>
+<td>Sin <code>fsync</code> en el commit</td>
+<td>Sobrevive</td>
+<td><strong>Se pierden transacciones confirmadas</strong></td>
 </tr>
 <tr>
-<td><strong>Lectura monótona</strong></td>
-<td>Nunca ves datos que retroceden</td>
-<td>Fijar la sesión a una réplica</td>
+<td>Con <code>fsync</code> en el commit</td>
+<td>Sobrevive</td>
+<td>Sobrevive</td>
 </tr>
 <tr>
-<td><strong>Escrituras monótonas</strong></td>
-<td>Tus escrituras se aplican en tu orden</td>
-<td>Enrutar las escrituras de la sesión al mismo nodo</td>
-</tr>
-<tr>
-<td><strong>Lectura de tus escrituras en orden</strong></td>
-<td>Lees los efectos en el orden causal</td>
-<td>Marcas de versión propagadas</td>
+<td><code>fsync</code> + disco que miente sobre su caché</td>
+<td>Sobrevive</td>
+<td><strong>Puede perderse o corromperse</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>Ninguna exige coordinación global. Todas sobreviven a una partición. Es el mejor retorno por unidad de esfuerzo en un sistema distribuido.</p>
-<h3 id="consistencia-causal">Consistencia causal</h3>
-<p>Si el evento A <strong>causó</strong> el evento B, todo observador ve A antes que B. Los eventos no relacionados pueden verse en cualquier orden.</p>
-<p>Se apoya en la relación «ocurre antes» de Lamport (1978) y se implementa con relojes vectoriales o marcas de versión que viajan con los datos.</p>
-<pre><code class="language-text">Ana publica una nota            (A)
-Luis lee A y comenta            (B)   B depende causalmente de A
-Sara publica algo sin relación  (C)   C es concurrente con A y B
-
-Todo observador debe ver A antes que B.
-Ver C antes o después es indiferente.
-</code></pre>
-<p>Es el modelo más fuerte que se puede sostener con disponibilidad total, y basta para casi cualquier sistema social o colaborativo. El caso que motiva su existencia es el clásico: nadie debe ver la respuesta a un mensaje que aún no ha visto.</p>
-<h3 id="crdt">CRDT</h3>
-<p>Estructuras cuyo estado converge sin coordinación, porque su operación de fusión es asociativa, conmutativa e idempotente. Shapiro et al. las formalizaron.</p>
+<p>La tercera fila es real: discos de consumo con caché de escritura sin respaldo de energía confirman <code>fsync</code> antes de haber escrito. Es la razón por la que el hardware de servidor lleva caché con batería.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>CRDT</th>
-<th>Semántica</th>
-<th>Límite</th>
+<th>Motor</th>
+<th>Parámetro</th>
+<th>Valor seguro</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Contador G</td>
-<td>Solo incrementa</td>
-<td>No decrementa</td>
+<td>PostgreSQL</td>
+<td><code>synchronous_commit</code></td>
+<td><code>on</code></td>
 </tr>
 <tr>
-<td>Contador PN</td>
-<td>Incrementa y decrementa</td>
-<td>No admite cotas</td>
+<td>PostgreSQL</td>
+<td><code>fsync</code></td>
+<td><code>on</code> (nunca <code>off</code> en producción)</td>
 </tr>
 <tr>
-<td>Conjunto G</td>
-<td>Solo añade</td>
-<td>No elimina</td>
+<td>MySQL</td>
+<td><code>innodb_flush_log_at_trx_commit</code></td>
+<td><code>1</code></td>
 </tr>
 <tr>
-<td>Conjunto OR</td>
-<td>Añade y elimina</td>
-<td>Metadatos crecen</td>
-</tr>
-<tr>
-<td>LWW-Register</td>
-<td>Gana el de marca de tiempo mayor</td>
-<td><strong>Se pierden escrituras</strong></td>
-</tr>
-<tr>
-<td>RGA / secuencias</td>
-<td>Texto colaborativo</td>
-<td>Complejo, metadatos</td>
+<td>SQLite</td>
+<td><code>synchronous</code></td>
+<td><code>FULL</code>, o <code>NORMAL</code> con WAL</td>
 </tr>
 </tbody>
 </table></div>
-<p>El límite fundamental: <strong>un CRDT no puede hacer cumplir una invariante global</strong>. Un contador PN converge, y no puede garantizar «nunca por debajo de cero» sin coordinación, porque dos réplicas pueden decrementar simultáneamente sin verse. Esa es exactamente la frontera de Bailis (clase 045).</p>
-<p><code>LWW-Register</code> merece una advertencia: es el CRDT más usado y el que silenciosamente <strong>descarta</strong> escrituras concurrentes. Con relojes desincronizados, la que gana puede ser la más antigua.</p>
+<h3 id="wal-en-sqlite">WAL en SQLite</h3>
+<p>SQLite es lo bastante pequeño para leer su mecanismo completo. En modo WAL:</p>
+<ul>
+<li>Los cambios se añaden al archivo <code>-wal</code>; el archivo principal no se toca en el momento del commit.</li>
+<li>Los lectores consultan un índice en memoria compartida (<code>-shm</code>) para saber qué páginas leer del WAL y cuáles del archivo principal.</li>
+<li>Un <strong>checkpoint</strong> traslada las páginas del WAL al archivo principal.</li>
+</ul>
+<p>De ahí que <code>synchronous = NORMAL</code> sea seguro con WAL frente a la caída del proceso pero no frente a un corte de energía: el WAL no se sincroniza en cada commit, solo en los checkpoints.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Foro del curso, replicado entre dos regiones con replicación asíncrona.</p>
-<p><strong>Sin ninguna garantía:</strong></p>
-<pre><code class="language-text">t0  Ana (Santiago)  publica  &quot;¿Alguien entiende la clase 34?&quot;   → réplica CL
-t1  Luis (Fráncfort) lee la pregunta (ya replicada) y responde   → réplica DE
-t2  Sara (Fráncfort) carga el hilo → ve la respuesta de Luis
-                                     pero NO la pregunta de Ana
+<p>Traza de una transacción y su recuperación.</p>
+<pre><code class="language-text">LSN  Registro
+100  BEGIN T1
+101  T1: UPDATE cuentas id=1  saldo 1000 -&gt; 700   [undo: 1000] [redo: 700]
+102  BEGIN T2
+103  T2: UPDATE cuentas id=2  saldo  500 -&gt; 800   [undo: 500]  [redo: 800]
+104  T1: UPDATE cuentas id=2  saldo  800 -&gt; 900   (espera: fila bloqueada por T2)
+105  COMMIT T2                      &lt;- fsync aquí
+106  CHECKPOINT (activas: T1)
+107  T1: UPDATE cuentas id=2  saldo  800 -&gt; 900   [undo: 800] [redo: 900]
+     *** CAÍDA ***   T1 nunca confirmó
 </code></pre>
-<p>Sara ve una respuesta a nada. Es una violación de causalidad, y es lo que produce la replicación asíncrona sin control de orden.</p>
-<p><strong>Con consistencia causal:</strong></p>
-<pre><code class="language-python"># Cada publicación lleva las dependencias que su autor había visto.
-publicacion = {
-    &quot;id&quot;: &quot;p2&quot;,
-    &quot;autor&quot;: &quot;luis&quot;,
-    &quot;texto&quot;: &quot;Yo la entendí, mira...&quot;,
-    &quot;depende_de&quot;: [&quot;p1&quot;],          # Luis había visto p1 al escribir
-}
-
-def mostrar(hilo, replica):
-    for p in hilo:
-        # No se muestra nada cuyas causas no estén presentes.
-        if not all(replica.tiene(d) for d in p[&quot;depende_de&quot;]):
-            replica.solicitar(p[&quot;depende_de&quot;])
-            continue
-        mostrar_publicacion(p)
+<p><strong>Recuperación:</strong></p>
+<pre><code class="language-text">ANÁLISIS   desde LSN 106: T1 activa, sin COMMIT. Páginas sucias: cuentas(1), cuentas(2)
+REHACER    reaplica 107 (y 101, 103 si sus páginas no estaban en disco)
+           estado tras rehacer: id=1 -&gt; 700, id=2 -&gt; 900     (incluye cambios de T1)
+DESHACER   T1 no confirmó: revertir 107 y 101 usando la información de deshacer
+           107 deshecho -&gt; id=2 vuelve a 800   (CLR con LSN 108)
+           101 deshecho -&gt; id=1 vuelve a 1000  (CLR con LSN 109)
 </code></pre>
-<p>La réplica retrasa <code>p2</code> hasta tener <code>p1</code>. Sara nunca ve la respuesta sin la pregunta. <strong>No hizo falta coordinación global</strong>: solo propagar dependencias.</p>
-<p><strong>Con garantías de sesión, para el otro problema:</strong></p>
-<pre><code class="language-text">t0  Ana publica en la réplica CL
-t1  Ana recarga → se enruta a la réplica DE (aún sin replicar)
-t2  Ana no ve su propia publicación
+<p><strong>Estado final:</strong> <code>id=1 → 1000</code> (T1 revertida), <code>id=2 → 800</code> (T2 confirmada y conservada). Exactamente lo que ACID promete: T2 duradera, T1 como si nunca hubiera ocurrido.</p>
+<p>Obsérvese que la fase de rehacer dejó momentáneamente <code>id=2 = 900</code>, un valor de una transacción no confirmada. No es un error: es el estado del instante de la caída, que la fase de deshacer corrige.</p>
+<p><strong>Comprobación en SQLite:</strong></p>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+import sqlite3, os
+con = sqlite3.connect('demo.db')
+con.execute('PRAGMA journal_mode=WAL')
+con.execute('CREATE TABLE IF NOT EXISTS cuentas(id INTEGER PRIMARY KEY, saldo INTEGER)')
+con.execute('INSERT OR REPLACE INTO cuentas VALUES (1, 1000)')
+con.commit()
+con.execute('BEGIN')
+con.execute('UPDATE cuentas SET saldo = 700 WHERE id = 1')
+print('WAL existe:', os.path.exists('demo.db-wal'))   # los cambios están en el WAL
+os._exit(1)                                            # muerte del proceso, sin COMMIT
+PY
+sqlite3 demo.db &quot;SELECT saldo FROM cuentas WHERE id=1;&quot;   # 1000: la transacción se revirtió
 </code></pre>
-<pre><code class="language-python">def leer_hilo(sesion, hilo_id):
-    r = replica_de(sesion)                       # lectura monótona: siempre la misma
-    if r.version() &lt; sesion.get(&quot;version_minima&quot;, 0):
-        r = lider                                # lectura de tus escrituras
-    return r.leer(hilo_id)
-
-def publicar(sesion, texto):
-    version = lider.publicar(texto)
-    sesion[&quot;version_minima&quot;] = version
-</code></pre>
-<p>Dos garantías, unas pocas líneas, ninguna coordinación global.</p>
-<p><strong>Contraste con un caso donde hace falta coordinación.</strong> «El foro se cierra al llegar a 1 000 mensajes»: es una invariante global sobre un contador con cota. Ningún CRDT ni garantía de sesión la sostiene. Requiere consenso (clase 047) o aceptar que se pase de 1 000 y compensar después.</p>
-<p><strong>Tabla de decisión resultante:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Operación del foro</th>
-<th>Modelo suficiente</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Publicar y leer mensajes</td>
-<td>Causal + sesión</td>
-</tr>
-<tr>
-<td>Contar mensajes para mostrar</td>
-<td>Eventual (aproximado)</td>
-</tr>
-<tr>
-<td>Cerrar el hilo al llegar al límite</td>
-<td>Linealizable</td>
-</tr>
-<tr>
-<td>Editar el propio mensaje</td>
-<td>Sesión (escrituras monótonas)</td>
-</tr>
-<tr>
-<td>Edición colaborativa a varias manos</td>
-<td>CRDT de secuencia</td>
-</tr>
-</tbody>
-</table></div>
+<p>El archivo <code>-wal</code> es visible durante la transacción y la reapertura ejecuta la recuperación automáticamente.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Modelo</th>
-<th>Coordinación</th>
-<th>Disponible bajo partición</th>
-<th>Coste</th>
+<th>Fallo</th>
+<th>Qué lo cubre</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Linealizable</td>
-<td>Global, por operación</td>
-<td>No</td>
-<td>Alto</td>
+<td>Reversión de una transacción</td>
+<td>Registro de deshacer, en marcha</td>
 </tr>
 <tr>
-<td>Secuencial</td>
-<td>Global</td>
-<td>No</td>
-<td>Alto</td>
+<td>Caída del proceso</td>
+<td>Registro en la caché del sistema operativo</td>
 </tr>
 <tr>
-<td>Causal</td>
-<td>Solo dependencias</td>
-<td><strong>Sí</strong></td>
-<td>Medio (metadatos)</td>
+<td>Caída de la máquina</td>
+<td><code>fsync</code> del registro en el commit</td>
 </tr>
 <tr>
-<td>Sesión</td>
-<td>Ninguna</td>
-<td><strong>Sí</strong></td>
-<td>Bajo</td>
+<td>Corrupción de página</td>
+<td>Suma de comprobación + copia + registro</td>
 </tr>
 <tr>
-<td>Eventual</td>
-<td>Ninguna</td>
-<td><strong>Sí</strong></td>
-<td>Mínimo</td>
+<td>Pérdida del disco</td>
+<td>Réplica o copia externa (clase 048)</td>
+</tr>
+<tr>
+<td>Error humano</td>
+<td>Recuperación a un punto en el tiempo</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Confundir linealizabilidad con serializabilidad.</strong> Distinto ámbito y distinta promesa.</li>
-<li><strong>Pedir consistencia fuerte por defecto.</strong> Se paga latencia en cada operación (el «else» de PACELC).</li>
-<li><strong>Aceptar consistencia eventual sin garantías de sesión.</strong> Produce quejas de usuario evitables con poco esfuerzo.</li>
-<li><strong>Creer que los CRDT resuelven las invariantes.</strong> Convergen; no restringen.</li>
-<li><strong><code>LWW-Register</code> con relojes desincronizados.</strong> Descarta escrituras válidas.</li>
-<li><strong>No decir cuánto dura «eventualmente».</strong> Sin un plazo medido, no es una garantía operativa.</li>
+<li><strong><code>fsync = off</code> en producción.</strong> Se descubre en el primer corte de energía.</li>
+<li><strong>Puntos de control muy espaciados sin medir el RTO.</strong> La recuperación tarda más de lo que el negocio tolera.</li>
+<li><strong>Confundir el registro del motor con el registro de la aplicación.</strong> Son cosas distintas con propósitos distintos.</li>
+<li><strong>No vigilar el espacio del WAL.</strong> Una réplica detenida impide reciclarlo y llena el disco.</li>
+<li><strong>Suponer que el WAL es una copia de seguridad.</strong> Lo es solo junto con una copia base.</li>
+<li><strong>Almacenamiento que miente sobre <code>fsync</code>.</strong> La durabilidad depende del hardware.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Casi todas las quejas de «datos que aparecen y desaparecen» se resuelven con lectura de tus escrituras y lectura monótona, sin tocar el modelo de consistencia del almacén. Es la primera intervención que hay que probar.</p>
+<p>El WAL es también la base de la replicación (clase 043) y de la captura de cambios (clase 056): el mismo flujo que permite recuperarse permite que otro nodo reproduzca los cambios. Entenderlo aquí ahorra explicarlo tres veces más adelante.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Clasifica cinco operaciones de tu sistema en la jerarquía de modelos.</li>
-<li>Implementa lectura de tus escrituras y lectura monótona en una de ellas.</li>
-<li>Reproduce una violación de causalidad y corrígela propagando dependencias.</li>
-<li>Identifica una invariante que ningún CRDT puede sostener y di cómo la resolverías.</li>
+<li>Reproduce el experimento de SQLite y observa los archivos <code>-wal</code> y <code>-shm</code>.</li>
+<li>Mata el proceso a mitad de una transacción y demuestra que la base queda consistente.</li>
+<li>Mide el tiempo de recuperación con dos intervalos de punto de control distintos.</li>
+<li>Documenta la configuración de durabilidad de tu sistema y qué se pierde en cada tipo de fallo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Da un sistema serializable que no sea linealizable, con una traza.</li>
-<li>¿Por qué la consistencia causal sobrevive a una partición y la secuencial no?</li>
-<li>Explica qué escrituras pierde un <code>LWW-Register</code> y en qué condiciones.</li>
-<li>Elige el modelo mínimo suficiente para tres operaciones tuyas y justifica cada elección.</li>
+<li>¿Por qué el registro debe llegar al disco antes que la página de datos?</li>
+<li>Explica por qué la fase de rehacer reaplica transacciones que no se confirmaron.</li>
+<li>¿Qué función cumplen los registros de compensación si el sistema cae durante la recuperación?</li>
+<li>Con <code>synchronous_commit = off</code>, ¿qué se pierde exactamente y ante qué fallo?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Leer lo que uno acaba de escribir, y otras garantías que no son gratis</p>
-<p>«Consistencia eventual» no dice nada útil por sí sola: dice que <strong>algún
-día</strong> todas las réplicas coincidirán. Lo que decide si una aplicación
-funciona son las garantías intermedias, y las tres que más importan tienen
-nombre propio:</p>
-<ul>
-<li><strong>Leer las propias escrituras</strong>: quien acaba de guardar su perfil lo ve
-  actualizado. Sin esta garantía, el usuario guarda, recarga y ve lo de
-  antes: la queja de soporte más común de los sistemas replicados.</li>
-<li><strong>Lecturas monótonas</strong>: nadie ve el tiempo ir hacia atrás. Sin ella, dos
-  recargas seguidas pueden mostrar un comentario y luego no mostrarlo.</li>
-<li><strong>Consistencia causal</strong>: si una respuesta se escribió después de una
-  pregunta, nadie ve la respuesta antes que la pregunta.</li>
-</ul>
-<p>Ninguna se consigue sola: cada motor las ofrece —o no— con un mecanismo
-distinto, y casi siempre hay que pedirlas.</p>
+<p><strong>Caso:</strong> Qué se escribe primero para que un corte de luz no pierda nada</p>
+<p>La durabilidad no se consigue escribiendo los datos: se consigue escribiendo
+<strong>la intención</strong> antes que los datos. Esa es la regla del registro
+anticipado: el cambio se anota en un registro secuencial y se fuerza a disco
+<strong>antes</strong> de tocar las páginas de datos, que pueden esperar. Al arrancar tras
+una caída, el motor rehace lo confirmado y deshace lo que no llegó a
+confirmarse. ARIES puso nombre a ese protocolo en 1992 y sigue siendo el
+esquema de casi todos.</p>
+<p>Lo que hay que comparar aquí no es si cada motor lo tiene —lo tienen casi
+todos— sino <strong>el parámetro con el que se cambia durabilidad por
+rendimiento</strong>. Ese parámetro existe en todos y casi nadie lo declara al decir
+«nuestra base de datos es ACID».</p>
 <p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
 resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
 cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
@@ -387,98 +307,98 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/causal-consistency-read-write-concerns/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
-</tr>
-<tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/hot-standby.html">doc oficial</a></td>
+<td><a href="https://www.postgresql.org/docs/current/wal-intro.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency-guarantees.html">doc oficial</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Google Cloud Spanner</td>
+<td>SQLite</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://cloud.google.com/spanner/docs/timestamp-bounds">doc oficial</a></td>
+<td><a href="https://sqlite.org/wal.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td>sí</td>
 <td>conceptual</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/wait/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/write-concern/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/configuration/cass_yaml_file.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://duckdb.org/docs/stable/connect/concurrency">doc oficial</a></td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="mongodb">MongoDB</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Las tres están y se piden explícitamente. Las <strong>sesiones causalmente consistentes</strong> (<code>startSession({causalConsistency: true})</code>) garantizan leer las propias escrituras y lecturas monótonas incluso leyendo de secundarios, porque el controlador lleva la cuenta del tiempo de operación y el servidor espera a alcanzarlo.</li>
-<li><strong>Por qué sí:</strong> Es de las implementaciones más completas y mejor documentadas: la garantía es del <strong>cliente</strong>, no del servidor, que es donde el usuario la necesita.</li>
-<li><strong>Por qué no:</strong> Hay que abrir la sesión y usarla en todas las operaciones relacionadas: si una parte del código no la usa, la garantía desaparece justo ahí, sin error ni aviso.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/causal-consistency-read-write-concerns/">https://www.mongodb.com/docs/manual/core/causal-consistency-read-write-concerns/</a></li>
-</ul>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> No hay garantías de sesión: hay una fórmula. Si el número de réplicas leídas más las escritas supera el factor de replicación (<strong>R + W &gt; RF</strong>), la lectura ve necesariamente la última escritura. Con <code>RF = 3</code>, <code>QUORUM</code> en ambas cumple la condición.</li>
-<li><strong>Por qué sí:</strong> La garantía es explícita, aritmética y comprobable: no depende de confiar en la implementación, sino de una desigualdad que se puede verificar en el código.</li>
-<li><strong>Por qué no:</strong> Es responsabilidad del programador en <strong>cada</strong> consulta. Y aun cumpliendo la fórmula, escrituras concurrentes se resuelven por «la última gana» según el reloj: no hay causalidad, hay marcas de tiempo.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html</a></li>
-</ul>
 <h4 id="postgresql">PostgreSQL</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Leyendo del primario, las tres garantías se cumplen por construcción. Al repartir lecturas entre réplicas hay que recuperarlas a mano: la aplicación lee la posición del WAL tras escribir y espera a que la réplica la haya alcanzado, o dirige al primario las lecturas posteriores a una escritura del mismo usuario.</li>
-<li><strong>Por qué sí:</strong> El mecanismo está expuesto —<code>pg_current_wal_lsn</code>, <code>pg_last_wal_replay_lsn</code>— así que la garantía se puede construir y medir, no solo esperar.</li>
-<li><strong>Por qué no:</strong> Nada de eso viene hecho. La forma habitual de repartir lecturas —un balanceador delante— rompe las tres garantías sin que ninguna capa avise, y el síntoma aparece en producción como «a veces no se guarda».</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/hot-standby.html">https://www.postgresql.org/docs/current/hot-standby.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> Registro anticipado (WAL) con puntos de control periódicos. <code>fsync = on</code> y <code>synchronous_commit = on</code> de fábrica: la confirmación no vuelve hasta que el registro está en disco. El mismo WAL sirve para la réplica y para la recuperación a un punto en el tiempo.</li>
+<li><strong>Por qué sí:</strong> Un solo mecanismo cubre durabilidad, réplica y respaldo continuo, y se puede aflojar <strong>por transacción</strong>: las escrituras críticas síncronas y las accesorias asíncronas, en la misma aplicación.</li>
+<li><strong>Por qué no:</strong> <code>synchronous_commit = off</code> multiplica el rendimiento y abre una ventana de pérdida de transacciones ya confirmadas; y <code>fsync = off</code> puede corromper la base entera. Los dos existen, los dos se usan, y casi nunca se documentan en el sitio donde alguien los vaya a leer.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/wal-intro.html">https://www.postgresql.org/docs/current/wal-intro.html</a></li>
 </ul>
 <h4 id="mysql">MySQL</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Con Group Replication existe <code>group_replication_consistency</code>, que permite exigir que una lectura espere a haber aplicado todas las transacciones anteriores del grupo (<code>BEFORE</code>), o que una escritura espere a que todos la hayan aplicado (<code>AFTER</code>).</li>
-<li><strong>Por qué sí:</strong> Es un ajuste por sesión con nombres claros para lo que se quiere: permite pedir «leer las propias escrituras» sin implementar nada.</li>
-<li><strong>Por qué no:</strong> Solo está en Group Replication, no en la réplica clásica —que es la que tiene la inmensa mayoría de las instalaciones— y cada nivel añade espera real a cada operación.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency-guarantees.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency-guarantees.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> InnoDB escribe en el registro de rehacer y usa además el <strong>búfer de doble escritura</strong> para protegerse de páginas escritas a medias. El parámetro clave es <code>innodb_flush_log_at_trx_commit</code>: 1 vuelca en cada confirmación, 2 vuelca al sistema operativo y 0 vuelca una vez por segundo.</li>
+<li><strong>Por qué sí:</strong> Tener tres niveles explícitos permite decidir con conocimiento: 2 es un punto intermedio razonable si lo que puede caerse es el proceso y no la máquina.</li>
+<li><strong>Por qué no:</strong> El valor 2 —y sobre todo el 0— significan perder hasta un segundo de transacciones <strong>confirmadas</strong>. Muchas guías de rendimiento lo recomiendan sin decir eso, y aparece en sistemas de facturación.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html</a></li>
 </ul>
-<h4 id="google-cloud-spanner">Google Cloud Spanner</h4>
+<h4 id="sqlite">SQLite</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Ofrece la garantía más fuerte que existe —consistencia externa, es decir, serializabilidad estricta— de modo que las tres garantías de sesión se cumplen sin pedir nada. También permite <strong>lecturas de instantánea</strong> acotadas por antigüedad, para leer más barato aceptando datos con retraso.</li>
-<li><strong>Por qué sí:</strong> No hay que razonar sobre anomalías de réplica: el sistema se comporta como si fuera un solo nodo, incluso entre continentes.</li>
-<li><strong>Por qué no:</strong> Se paga en latencia por escritura y en dependencia de un proveedor. Y las lecturas de instantánea, que son las baratas, vuelven a introducir el retraso: la garantía fuerte es la cara.</li>
-<li>📄 Documentación oficial: <a href="https://cloud.google.com/spanner/docs/timestamp-bounds">https://cloud.google.com/spanner/docs/timestamp-bounds</a></li>
+<li><strong>Cómo se hace aquí:</strong> Dos modos. El diario de reversión clásico guarda las páginas originales antes de modificarlas; el modo WAL escribe los cambios en un archivo aparte y consolida con puntos de control. <code>PRAGMA synchronous</code> decide si se fuerza a disco: <code>FULL</code> es durable, <code>NORMAL</code> en modo WAL puede perder las últimas transacciones.</li>
+<li><strong>Por qué sí:</strong> Su implementación está entre las más probadas que existen —hay una batería de pruebas de fallo con cortes simulados— y funciona en dispositivos sin administrador.</li>
+<li><strong>Por qué no:</strong> La durabilidad depende de que el sistema de archivos no mienta al confirmar la escritura, y varios lo hacen (montajes en red, algunos teléfonos). El motor cumple; la capa de abajo a veces no.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/wal.html">https://sqlite.org/wal.html</a></li>
 </ul>
 <h4 id="redis">Redis</h4>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Leyendo del primario, un cliente ve siempre sus escrituras: el hilo único las ordena. Leyendo de réplicas, no hay garantía alguna, porque la réplica es asíncrona. <code>WAIT</code> permite bloquear hasta que N réplicas hayan recibido las escrituras anteriores.</li>
-<li><strong>Por qué sí:</strong> <code>WAIT</code> da un control explícito y medible sobre cuánta durabilidad y cuánta coherencia se exige, operación por operación.</li>
-<li><strong>Por qué no:</strong> <code>WAIT</code> garantiza recepción, no aplicación ni durabilidad en disco, y añade una espera de red en el camino caliente: usarlo en cada escritura anula la razón por la que se eligió Redis.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/wait/">https://redis.io/docs/latest/commands/wait/</a></li>
+<li><strong>Cómo se hace aquí:</strong> Dos mecanismos combinables: instantáneas RDB —una copia completa cada cierto número de cambios— y AOF, un registro de las órdenes recibidas. <code>appendfsync</code> decide cuándo se fuerza: <code>always</code>, <code>everysec</code> (el valor por omisión) o <code>no</code>.</li>
+<li><strong>Por qué sí:</strong> Deja explícito que la durabilidad es una <strong>elección</strong>, no una promesa: se puede ir desde ninguna hasta forzar en cada orden, y el costo de cada opción es visible.</li>
+<li><strong>Por qué no:</strong> El valor por omisión, <code>everysec</code>, significa hasta un segundo de escrituras perdidas. Redis se usa como caché precisamente porque eso suele dar igual; el problema aparece cuando alguien empieza a guardar ahí lo que no puede perder.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> WiredTiger escribe un <strong>diario</strong> con puntos de control cada 60 segundos, y la garantía real de una escritura la fija <code>writeConcern</code>: <code>w: "majority"</code> con <code>j: true</code> significa que la mayoría de las réplicas lo tiene y lo ha escrito en su diario.</li>
+<li><strong>Por qué sí:</strong> La durabilidad se decide por operación y no por servidor: la escritura que importa puede exigir mayoría mientras el resto va rápido.</li>
+<li><strong>Por qué no:</strong> Con <code>w: 1</code>, una escritura se da por hecha cuando la tiene <strong>un</strong> nodo, y una conmutación por error puede revertirla: la operación tuvo éxito para el cliente y no existe en la base. Es la clase de pérdida más difícil de explicar después.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/write-concern/">https://www.mongodb.com/docs/manual/reference/write-concern/</a></li>
+</ul>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Cada nodo escribe en su <strong>registro de compromiso</strong> y en una tabla en memoria; el registro se vuelca según <code>commitlog_sync</code>, que por omisión es periódico cada 10 ms. La durabilidad real, sin embargo, la da la replicación: con <code>QUORUM</code>, el dato está en varios nodos antes de contestar.</li>
+<li><strong>Por qué sí:</strong> Reparte la garantía entre varias máquinas en vez de confiarla al disco de una: la pérdida de un nodo entero no pierde datos.</li>
+<li><strong>Por qué no:</strong> Con <code>commitlog_sync</code> periódico, un corte de corriente simultáneo en varios nodos puede perder los últimos milisegundos. Y la reparación de lo que quedó desincronizado no es automática: hay que ejecutar reparaciones periódicas, y olvidarlas es una de las averías clásicas del motor.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/configuration/cass_yaml_file.html">https://cassandra.apache.org/doc/latest/cassandra/managing/configuration/cass_yaml_file.html</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -494,16 +414,16 @@ afirmación.</p>
 <tbody>
 <tr>
 <td>DuckDB</td>
-<td>No hay réplicas ni sesiones distribuidas: un proceso, un archivo. Las garantías de sesión no tienen sentido donde no hay más de una copia.</td>
-<td>La pregunta equivalente en analítica es otra —cuánto retraso tiene el almacén respecto al sistema operacional— y se trata en la parte de integración y captura de cambios.</td>
-<td><a href="https://duckdb.org/docs/stable/connect/concurrency">doc</a></td>
+<td>Tiene registro anticipado sobre su archivo, pero compararlo aquí no enseña nada nuevo: no hay réplica que alimentar con ese registro, ni recuperación a un punto en el tiempo, ni parámetros de durabilidad que decidir.</td>
+<td>En analítica la recuperación no se hace con el registro: se hace <strong>reconstruyendo</strong> desde el origen, que es la copia de verdad. Se trata en la parte de integración.</td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/07-replication/run_replication_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -547,26 +467,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Kyle Kingsbury</strong> (2026). <a href="https://jepsen.io/consistency">Jepsen: Consistency Models</a>.<br />
-  Mapa de modelos de consistencia y sus relaciones de implicación.</li>
-<li><strong>Kyle Kingsbury</strong> (2026). <a href="https://jepsen.io/analyses">Jepsen: Analyses</a>.<br />
-  Informes que verifican empiricamente las garantías que cada motor afirma.</li>
-<li><strong>Werner Vogels</strong> (2009). <a href="https://dl.acm.org/doi/10.1145/1435417.1435432">Eventually Consistent</a>. Communications of the ACM 52(1). DOI <a href="https://doi.org/10.1145/1435417.1435432">10.1145/1435417.1435432</a>.<br />
-  Definición operativa de consistencia eventual y de sus variantes de sesión.</li>
-<li><strong>Leslie Lamport</strong> (1978). <a href="https://dl.acm.org/doi/10.1145/359545.359563">Time, Clocks, and the Ordering of Events in a Distributed System</a>. Communications of the ACM 21(7). DOI <a href="https://doi.org/10.1145/359545.359563">10.1145/359545.359563</a>.<br />
-  Orden causal y relojes logicos: base de la consistencia distribuida.</li>
-<li><strong>Marc Shapiro, Nuno Preguica, Carlos Baquero, Marek Zawirski</strong> (2011). <a href="https://inria.hal.science/inria-00609399/document">Conflict-free Replicated Data Types</a>. SSS.<br />
-  Estructuras que convergen sin coordinación: alternativa al bloqueo distribuido.</li>
+<li><strong>C. Mohan, Don Haderle, Bruce Lindsay, Hamid Pirahesh, Peter Schwarz</strong> (1992). <a href="https://dl.acm.org/doi/10.1145/128765.128770">ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging</a>. ACM TODS 17(1). DOI <a href="https://doi.org/10.1145/128765.128770">10.1145/128765.128770</a>.<br />
+  Algoritmo de recuperación con registro anticipado que implementan casi todos los motores.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/wal.html">SQLite: Write-Ahead Logging</a>.<br />
+  Registro anticipado explicado en un motor lo bastante pequeno para leerlo entero.</li>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="045.html">← Anterior</a> · <a href="047.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="045.html">← Anterior</a> · <a href="047.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="046">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="045.html"><span class="sentido">← Anterior · 045</span>CAP, PACELC y lo que realmente se elige</a>
-<a class="siguiente" href="047.html"><span class="sentido">Siguiente · 047 →</span>Consenso y transacciones distribuidas: Raft, 2PC y sagas</a>
+<a class="anterior" href="045.html"><span class="sentido">← Anterior · 045</span>Bloqueo en dos fases, MVCC e instantáneas</a>
+<a class="siguiente" href="047.html"><span class="sentido">Siguiente · 047 →</span>Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a>
 </nav>
 </main>
 <footer>

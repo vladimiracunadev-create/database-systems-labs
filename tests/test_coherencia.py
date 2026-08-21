@@ -92,6 +92,7 @@ def test_el_indice_de_rutas_lista_todas_las_guias(curriculo: dict) -> None:
 def test_el_curriculo_no_tiene_horas_sueltas(curriculo: dict) -> None:
     """La suma de las partes es la del programa: sin esto, toda cifra publicada miente."""
     total = sum(c["hours"] for p in curriculo["parts"] for c in p["classes"])
-    assert total == 210, f"el programa suma {total} horas; el material publicado dice 210"
+    assert f"{total} horas" in README, (
+        f"el programa suma {total} horas y la portada no lo dice")
     datos = yaml.safe_load((RAIZ / "curriculum.yaml").read_text(encoding="utf-8"))
     assert datos["programa"]["idioma"] == "es"

@@ -5,7 +5,7 @@ ordenan el recorrido según el cargo al que apuntas: qué partes hacer, en qué 
 clases no puedes saltarte, con qué laboratorios practicar y qué tienes que poder demostrar
 al terminar.
 
-Todas empiezan por la [Parte 00 — Fundamentos](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md):
+Todas empiezan por la [Parte 01 — Fundamentos](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md):
 es el cimiento común, y saltárselo se paga tres partes más adelante.
 
 > Leyenda: 📚 partes y clases · 🧪 laboratorio · 🎓 credencial · 📈 mercado.
@@ -101,10 +101,10 @@ título de la oferta:
    planes de ejecución, o una decisión de arquitectura defendida. Las tres se preparan en
    partes distintas.
 3. **¿Cuánto tiempo tienes?** Ninguna ruta baja de las 100 horas. Si tienes menos, haz la
-   Parte 00 y la Parte 03 completas: son las que más rendimiento dan por hora invertida en
+   Parte 01 y la Parte 04 completas: son las que más rendimiento dan por hora invertida en
    cualquier rol.
 
-Todas las rutas convergen en la [Parte 13](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+Todas las rutas convergen en la [Parte 14](../classes/part-14-arquitectura-y-proyecto-final/README.md)
 y en el [proyecto final](../projects/capstone.md): diseñar, medir y defender.
 
 ## De dónde salen las cifras de mercado

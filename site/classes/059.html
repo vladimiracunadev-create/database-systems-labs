@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Índices vectoriales aproximados: HNSW, IVF y el recall. Parte 12: Vectores, recuperación y RAG.">
+<meta name="description" content="Migraciones evolutivas sin ventana de caída. Parte 11: Operación, seguridad y gobierno.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/059.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="059 — Índices vectoriales aproximados: HNSW, IVF y el recall · Database Systems Labs">
-<meta property="og:description" content="Índices vectoriales aproximados: HNSW, IVF y el recall. Parte 12: Vectores, recuperación y RAG.">
+<meta property="og:title" content="059 — Migraciones evolutivas sin ventana de caída · Database Systems Labs">
+<meta property="og:description" content="Migraciones evolutivas sin ventana de caída. Parte 11: Operación, seguridad y gobierno.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/059.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "059 — Índices vectoriales aproximados: HNSW, IVF y el recall", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["búsqueda aproximada", "recall", "HNSW", "cuantización", "latencia frente a exactitud"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>059 — Índices vectoriales aproximados: HNSW, IVF y el recall · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "059 — Migraciones evolutivas sin ventana de caída", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["expandir y contraer", "doble escritura", "relleno", "compatibilidad hacia atras"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>059 — Migraciones evolutivas sin ventana de caída · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,364 +49,366 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-12.html">Parte 12 · Vectores, recuperación y RAG</a>
+  <a href="parte-11.html">Parte 11 · Operación, seguridad y gobierno</a>
   <span aria-hidden="true">/</span><span>Clase 059</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="059--índices-vectoriales-aproximados-hnsw-ivf-y-el-recall">059 — Índices vectoriales aproximados: HNSW, IVF y el recall</h1>
+<h1 id="059--migraciones-evolutivas-sin-ventana-de-caída">059 — Migraciones evolutivas sin ventana de caída</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="058.html">← Anterior</a> · <a href="060.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="058.html">← Anterior</a> · <a href="060.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 12 — Vectores, recuperación y RAG · Avanzado ·
-4 horas estimadas · motores <code>qdrant</code>, <code>milvus</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>búsqueda aproximada</code> · <code>recall</code> · <code>HNSW</code> · <code>cuantización</code> · <code>latencia frente a exactitud</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 11 — Operación, seguridad y gobierno · Avanzado ·
+3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>expandir y contraer</code> · <code>doble escritura</code> · <code>relleno</code> · <code>compatibilidad hacia atras</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Buscar entre millones de vectores en milisegundos aceptando no encontrar siempre el mejor resultado. El índice aproximado cambia exactitud por velocidad, y hay que saber cuánta.</p>
+<p>Cambiar el esquema mientras la aplicación sirve tráfico. La técnica se resume en una idea: nunca hacer un cambio incompatible; hacer dos compatibles con un periodo de convivencia en medio.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Definir recall y medirlo contra la búsqueda exhaustiva.</li>
-<li>Explicar la estructura de HNSW y el papel de <code>m</code> y <code>ef</code>.</li>
-<li>Comparar HNSW, IVF y la cuantización.</li>
-<li>Ajustar parámetros con una curva de recall frente a latencia.</li>
-<li>Explicar el efecto del filtrado por metadatos sobre el recall.</li>
+<li>Aplicar el patrón expandir-migrar-contraer.</li>
+<li>Identificar qué operaciones DDL bloquean y por cuánto.</li>
+<li>Diseñar una doble escritura con relleno y verificación.</li>
+<li>Escribir migraciones idempotentes y reversibles.</li>
+<li>Reconocer el cambio que sí exige una ventana de parada.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="recall-la-métrica-que-no-se-puede-omitir">Recall: la métrica que no se puede omitir</h3>
-<pre><code class="language-text">recall@k = |resultados_aproximados ∩ resultados_exactos| / k
+<h3 id="expandir-migrar-contraer">Expandir, migrar, contraer</h3>
+<p>Ambler y Sadalage formalizaron la técnica. Todo cambio incompatible se descompone en tres despliegues:</p>
+<pre><code class="language-text">1. EXPANDIR   Añadir lo nuevo sin quitar lo viejo. Ambas versiones del código funcionan.
+2. MIGRAR     Rellenar los datos nuevos. Cambiar el código para usarlos. Verificar.
+3. CONTRAER   Eliminar lo viejo, cuando ya nadie lo usa.
 </code></pre>
-<p>Se mide comparando contra la búsqueda <strong>exhaustiva</strong> sobre el mismo conjunto. Si nadie la ha medido, el sistema tiene un recall desconocido, y «desconocido» en la práctica suele significar 0,7.</p>
-<h3 id="hnsw">HNSW</h3>
-<p>Malkov y Yashunin proponen un grafo navegable jerárquico:</p>
-<ul>
-<li>Varias capas. La superior tiene pocos nodos con enlaces largos; las inferiores, todos los nodos con enlaces cortos.</li>
-<li>La búsqueda entra por arriba, avanza con avidez hacia el vecino más cercano a la consulta, y baja de capa al no poder mejorar.</li>
-<li>Complejidad aproximada: <strong>O(log N)</strong> en vez de O(N).</li>
-</ul>
-<p>Parámetros:</p>
+<p>La regla que lo hace funcionar: <strong>en todo momento, la versión antigua y la nueva del código deben poder ejecutarse contra el mismo esquema</strong>. Durante un despliegue gradual conviven, y en una reversión también.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Parámetro</th>
-<th>Momento</th>
-<th>Efecto de aumentarlo</th>
+<th>Cambio deseado</th>
+<th>Expandir</th>
+<th>Migrar</th>
+<th>Contraer</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>m</code></td>
-<td>Construcción</td>
-<td>Más enlaces por nodo: mejor recall, más memoria</td>
+<td>Renombrar columna</td>
+<td>Añadir la nueva</td>
+<td>Copiar + doble escritura + cambiar lecturas</td>
+<td>Eliminar la antigua</td>
 </tr>
 <tr>
-<td><code>ef_construction</code></td>
-<td>Construcción</td>
-<td>Grafo de mejor calidad, construcción más lenta</td>
+<td>Cambiar tipo</td>
+<td>Añadir columna con el tipo nuevo</td>
+<td>Convertir + doble escritura</td>
+<td>Eliminar la antigua</td>
 </tr>
 <tr>
-<td><code>ef_search</code></td>
-<td>Consulta</td>
-<td><strong>Mejor recall, más latencia</strong></td>
+<td>Dividir tabla</td>
+<td>Crear la nueva + vista de compatibilidad</td>
+<td>Copiar + cambiar escrituras</td>
+<td>Eliminar la antigua</td>
+</tr>
+<tr>
+<td>Añadir <code>NOT NULL</code></td>
+<td>Añadir <code>CHECK NOT VALID</code></td>
+<td>Corregir nulos + <code>VALIDATE</code></td>
+<td>Convertir a <code>NOT NULL</code></td>
+</tr>
+<tr>
+<td>Añadir clave foránea</td>
+<td><code>NOT VALID</code></td>
+<td>Corregir huérfanos + <code>VALIDATE</code></td>
+<td>—</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>ef_search</code> es el único ajustable <strong>por consulta</strong>, y es la palanca operativa: permite pedir más exactitud en las consultas que la necesitan sin reconstruir nada.</p>
-<pre><code class="language-text">memoria del grafo ≈ n_vectores × m × 2 × 4 B (enlaces bidireccionales)
-1 000 000 × 16 × 2 × 4 B ≈ 128 MB   (además de los vectores)
-</code></pre>
-<h3 id="ivf">IVF</h3>
-<p>Alternativa: agrupar los vectores en <code>nlist</code> celdas por k-medias; en la consulta, buscar solo en las <code>nprobe</code> celdas más cercanas.</p>
+<h3 id="qué-bloquea-y-por-cuánto">Qué bloquea y por cuánto</h3>
+<p>Este es el conocimiento operativo que evita incidentes:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th></th>
-<th>HNSW</th>
-<th>IVF</th>
-<th>IVF + PQ</th>
+<th>Operación</th>
+<th>PostgreSQL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Memoria</td>
-<td>Alta (vectores + grafo)</td>
-<td>Media</td>
-<td><strong>Baja</strong> (cuantizada)</td>
+<td><code>ADD COLUMN</code> sin valor por defecto</td>
+<td>Instantáneo (bloqueo breve)</td>
 </tr>
 <tr>
-<td>Construcción</td>
-<td>Lenta</td>
-<td>Rápida (requiere entrenamiento)</td>
-<td>Rápida</td>
+<td><code>ADD COLUMN ... DEFAULT</code></td>
+<td>Instantáneo desde PG 11</td>
 </tr>
 <tr>
-<td>Recall a igual latencia</td>
-<td><strong>Mejor</strong></td>
-<td>Bueno</td>
-<td>Menor</td>
+<td><code>ADD COLUMN ... NOT NULL</code> sin defecto</td>
+<td><strong>Falla</strong> si hay filas</td>
 </tr>
 <tr>
-<td>Inserción incremental</td>
-<td>Buena</td>
-<td>Degrada: hay que reentrenar</td>
-<td>Ídem</td>
+<td><code>DROP COLUMN</code></td>
+<td>Instantáneo (marca como borrada)</td>
 </tr>
 <tr>
-<td>Escala</td>
-<td>Millones</td>
-<td>Miles de millones</td>
-<td>Miles de millones</td>
+<td><code>ALTER TYPE</code> que exige conversión</td>
+<td><strong>Reescribe la tabla</strong>: bloqueo largo</td>
+</tr>
+<tr>
+<td><code>CREATE INDEX</code></td>
+<td><strong>Bloquea escrituras</strong></td>
+</tr>
+<tr>
+<td><code>CREATE INDEX CONCURRENTLY</code></td>
+<td>No bloquea; más lento; puede fallar y dejar un índice inválido</td>
+</tr>
+<tr>
+<td><code>ADD CONSTRAINT ... NOT VALID</code></td>
+<td>Instantáneo</td>
+</tr>
+<tr>
+<td><code>VALIDATE CONSTRAINT</code></td>
+<td>Barrido sin bloquear escrituras</td>
+</tr>
+<tr>
+<td><code>SET NOT NULL</code> con <code>CHECK</code> validado previo</td>
+<td>Instantáneo desde PG 12</td>
 </tr>
 </tbody>
 </table></div>
-<p>La <strong>cuantización de producto</strong> (PQ, Johnson et al.) divide el vector en subvectores y sustituye cada uno por el código de su centroide. Comprime 10–50× a cambio de recall. Para mil millones de vectores es la única opción viable en memoria.</p>
-<h3 id="el-problema-del-filtrado">El problema del filtrado</h3>
-<p>Casi siempre se quiere buscar <strong>dentro de un subconjunto</strong>: solo los fragmentos de un curso, solo los del último año.</p>
-<pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta con filtro&quot;] --&gt; S{&quot;Estrategia&quot;}
-    S --&gt; A[&quot;Pre-filtrado:&lt;br/&gt;filtrar y luego buscar&quot;]
-    S --&gt; B[&quot;Post-filtrado:&lt;br/&gt;buscar k y luego filtrar&quot;]
-    S --&gt; C[&quot;Filtrado integrado:&lt;br/&gt;el índice conoce el filtro&quot;]
-    A --&gt; A1[&quot;Recall correcto&lt;br/&gt;Puede degradar a exhaustivo&quot;]
-    B --&gt; B1[&quot;Rápido&lt;br/&gt;DEVUELVE MENOS DE k&lt;br/&gt;o nada&quot;]
-    C --&gt; C1[&quot;Lo mejor de ambos&lt;br/&gt;Requiere soporte del motor&quot;]
+<p><strong>La trampa de la cola de bloqueos.</strong> Un <code>ALTER TABLE</code> que necesita un bloqueo exclusivo espera a que terminen las transacciones en curso, y <strong>mientras espera bloquea a todas las que llegan detrás</strong>. Una consulta de informe de 10 minutos convierte un <code>ALTER</code> instantáneo en 10 minutos de indisponibilidad total de esa tabla.</p>
+<p>La defensa es siempre la misma:</p>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+ALTER TABLE ... ;   -- si no consigue el bloqueo en 3 s, falla y se reintenta después
 </code></pre>
-<p><strong>El post-filtrado es la trampa.</strong> Si se piden 10 vecinos y se filtra después por un curso que representa el 1 % del corpus, lo esperable es obtener <strong>0 resultados</strong>, aunque existan cientos de fragmentos relevantes de ese curso.</p>
-<p>Qdrant implementa filtrado integrado con índices de carga útil; pgvector se apoya en el planificador de PostgreSQL, que puede elegir entre índice vectorial y filtro previo según la selectividad estimada — con los mismos aciertos y errores de estimación de la clase 042.</p>
+<p>En MySQL, además, hay que recordar que <strong>el DDL no es transaccional</strong> (clase 014): una migración de varios pasos que falla a la mitad no se revierte sola.</p>
+<pre><code class="language-mermaid">flowchart LR
+    V1[&quot;Código v1&lt;br/&gt;usa columna vieja&quot;] --&gt; E[&quot;EXPANDIR&lt;br/&gt;añadir columna nueva&lt;br/&gt;+ doble escritura&quot;]
+    E --&gt; V12[&quot;v1 y v2 conviven&lt;br/&gt;ambas funcionan&quot;]
+    V12 --&gt; M[&quot;MIGRAR&lt;br/&gt;rellenar por lotes&lt;br/&gt;+ verificar&quot;]
+    M --&gt; V2[&quot;Código v2&lt;br/&gt;lee la nueva&quot;]
+    V2 --&gt; W[&quot;Esperar: ¿reversión posible?&lt;br/&gt;días, no minutos&quot;]
+    W --&gt; C[&quot;CONTRAER&lt;br/&gt;eliminar la vieja&quot;]
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Colección: 2 000 000 de fragmentos, vectores de 768 dimensiones normalizados.</p>
-<p><strong>Referencia exhaustiva:</strong></p>
-<pre><code class="language-sql">SET LOCAL enable_indexscan = off;         -- forzar búsqueda exacta
-SELECT id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10;
--- latencia: 1 840 ms   recall: 1,000 por definición
+<p>Objetivo: renombrar <code>enrollments.nota</code> a <code>calificacion</code> y cambiar su tipo de <code>REAL</code> a <code>NUMERIC(2,1)</code>. Tabla de 5 millones de filas, 400 escrituras/s.</p>
+<p><strong>Lo que NO se puede hacer:</strong></p>
+<pre><code class="language-sql">ALTER TABLE enrollments RENAME COLUMN nota TO calificacion;
 </code></pre>
-<p><strong>HNSW con distintos <code>ef_search</code>:</strong></p>
-<pre><code class="language-sql">CREATE INDEX ON fragmentos USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+<p>Instantáneo en el motor y <strong>catastrófico</strong>: todo el código desplegado que dice <code>nota</code> falla desde ese instante, incluidas las instancias que aún no se han actualizado.</p>
+<h3 id="paso-1--expandir">Paso 1 — Expandir</h3>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+ALTER TABLE enrollments ADD COLUMN calificacion NUMERIC(2,1);   -- instantáneo
 
-SET hnsw.ef_search = 40;
-SELECT id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10;
-</code></pre>
-<p><strong>Curva medida sobre 200 consultas de evaluación:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th style="text-align: right;"><code>ef_search</code></th>
-<th style="text-align: right;">Latencia p50</th>
-<th style="text-align: right;">Latencia p99</th>
-<th style="text-align: right;">recall@10</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: right;">10</td>
-<td style="text-align: right;">1,2 ms</td>
-<td style="text-align: right;">3 ms</td>
-<td style="text-align: right;">0,71</td>
-</tr>
-<tr>
-<td style="text-align: right;">40</td>
-<td style="text-align: right;">2,8 ms</td>
-<td style="text-align: right;">6 ms</td>
-<td style="text-align: right;">0,93</td>
-</tr>
-<tr>
-<td style="text-align: right;">100</td>
-<td style="text-align: right;">5,9 ms</td>
-<td style="text-align: right;">12 ms</td>
-<td style="text-align: right;">0,981</td>
-</tr>
-<tr>
-<td style="text-align: right;">200</td>
-<td style="text-align: right;">11,4 ms</td>
-<td style="text-align: right;">24 ms</td>
-<td style="text-align: right;">0,994</td>
-</tr>
-<tr>
-<td style="text-align: right;">400</td>
-<td style="text-align: right;">22,1 ms</td>
-<td style="text-align: right;">47 ms</td>
-<td style="text-align: right;">0,998</td>
-</tr>
-<tr>
-<td style="text-align: right;">exhaustivo</td>
-<td style="text-align: right;">1 840 ms</td>
-<td style="text-align: right;">2 100 ms</td>
-<td style="text-align: right;">1,000</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Lectura de la curva.</strong> Entre 10 y 100 el recall sube 27 puntos por 4,7 ms. Entre 200 y 400 sube 0,4 puntos por 10,7 ms. El rendimiento decreciente es evidente y <strong>el punto de operación se elige aquí</strong>, no por intuición:</p>
-<pre><code class="language-text">Elección: ef_search = 100 → recall 0,981 con p99 de 12 ms
-Justificación: perder el 1,9 % de los mejores resultados es aceptable porque
-               hay un reordenador posterior (clase 060) y el generador recibe
-               10 fragmentos, no 1.
-</code></pre>
-<p><strong>Efecto de <code>m</code>,</strong> que sí exige reconstruir:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th style="text-align: right;"><code>m</code></th>
-<th style="text-align: right;">Memoria del grafo</th>
-<th style="text-align: right;">recall@10 (<code>ef</code>=100)</th>
-<th style="text-align: right;">Tiempo de construcción</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: right;">8</td>
-<td style="text-align: right;">128 MB</td>
-<td style="text-align: right;">0,942</td>
-<td style="text-align: right;">4 min</td>
-</tr>
-<tr>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">256 MB</td>
-<td style="text-align: right;">0,981</td>
-<td style="text-align: right;">9 min</td>
-</tr>
-<tr>
-<td style="text-align: right;">32</td>
-<td style="text-align: right;">512 MB</td>
-<td style="text-align: right;">0,993</td>
-<td style="text-align: right;">21 min</td>
-</tr>
-<tr>
-<td style="text-align: right;">64</td>
-<td style="text-align: right;">1 024 MB</td>
-<td style="text-align: right;">0,996</td>
-<td style="text-align: right;">52 min</td>
-</tr>
-</tbody>
-</table></div>
-<p>De 32 a 64 se duplica la memoria por 0,3 puntos. <strong><code>m = 16</code> o <code>32</code> es donde está el equilibrio</strong> en la mayoría de los corpus.</p>
-<p><strong>El filtrado, medido:</strong></p>
-<pre><code class="language-sql">-- Post-filtrado: MAL
-WITH v AS (SELECT id, curso_id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10)
-SELECT * FROM v WHERE curso_id = 42;
-</code></pre>
-<pre><code class="language-text">curso_id = 42 representa el 0,8 % del corpus
-resultados devueltos: 0 de 10 consultas de prueba devolvieron algo
-</code></pre>
-<p>Cero. El sistema «funciona» y no encuentra nada.</p>
-<pre><code class="language-sql">-- Pre-filtrado con índice parcial: BIEN cuando hay pocos valores de filtro
-CREATE INDEX ON fragmentos USING hnsw (embedding vector_cosine_ops)
-  WHERE curso_id = 42;
+CREATE OR REPLACE FUNCTION sync_calificacion() RETURNS TRIGGER AS $$
+BEGIN
+  -- Doble escritura en ambos sentidos: el código viejo escribe `nota`,
+  -- el nuevo escribe `calificacion`, y ambos quedan sincronizados.
+  IF NEW.calificacion IS DISTINCT FROM OLD.calificacion THEN
+    NEW.nota := NEW.calificacion::real;
+  ELSIF NEW.nota IS DISTINCT FROM OLD.nota THEN
+    NEW.calificacion := NEW.nota::numeric(2,1);
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
 
--- Filtrado integrado (Qdrant): BIEN en el caso general
+CREATE TRIGGER trg_sync_calificacion BEFORE INSERT OR UPDATE ON enrollments
+FOR EACH ROW EXECUTE FUNCTION sync_calificacion();
 </code></pre>
-<pre><code class="language-json">{
-  &quot;vector&quot;: [...],
-  &quot;filter&quot;: {&quot;must&quot;: [{&quot;key&quot;: &quot;curso_id&quot;, &quot;match&quot;: {&quot;value&quot;: 42}}]},
-  &quot;limit&quot;: 10,
-  &quot;params&quot;: {&quot;hnsw_ef&quot;: 128}
-}
+<p>Aquí no ha cambiado nada para el código existente. Se puede revertir sin consecuencias.</p>
+<h3 id="paso-2--rellenar-por-lotes">Paso 2 — Rellenar por lotes</h3>
+<p>Un <code>UPDATE</code> único de 5 millones de filas mantendría un bloqueo enorme, generaría 5 millones de versiones muertas y un WAL gigantesco.</p>
+<pre><code class="language-sql">DO $$
+DECLARE ultimo RECORD; n INTEGER;
+BEGIN
+  LOOP
+    WITH lote AS (
+      SELECT student_id, course_id FROM enrollments
+      WHERE calificacion IS NULL AND nota IS NOT NULL
+      ORDER BY student_id, course_id LIMIT 10000 FOR UPDATE SKIP LOCKED
+    )
+    UPDATE enrollments e SET calificacion = e.nota::numeric(2,1)
+    FROM lote l WHERE e.student_id = l.student_id AND e.course_id = l.course_id;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    EXIT WHEN n = 0;
+    COMMIT;             -- transacción corta por lote
+    PERFORM pg_sleep(0.1);   -- dar aire al autovacuum y a la réplica
+  END LOOP;
+END $$;
 </code></pre>
-<pre><code class="language-text">resultados: 10 de 10   recall@10 dentro del subconjunto: 0,97
+<p><code>SKIP LOCKED</code> evita esperar a filas que la aplicación está modificando. La pausa evita que el relleno dispare el retraso de réplica (clase 043).</p>
+<h3 id="paso-3--verificar-antes-de-seguir">Paso 3 — Verificar antes de seguir</h3>
+<pre><code class="language-sql">SELECT count(*) FROM enrollments
+WHERE nota IS DISTINCT FROM calificacion::real;   -- debe ser 0
 </code></pre>
-<p><strong>Regla de decisión sobre el filtrado:</strong></p>
+<p><strong>Esta consulta es la puerta.</strong> Si no da cero, no se avanza.</p>
+<h3 id="paso-4--desplegar-el-código-que-lee-calificacion">Paso 4 — Desplegar el código que lee <code>calificacion</code></h3>
+<p>Despliegue gradual. Durante horas conviven instancias que leen una y otra columna; el disparador mantiene ambas correctas.</p>
+<h3 id="paso-5--esperar">Paso 5 — Esperar</h3>
+<p>Días, no minutos. Es la ventana en la que una reversión del código sigue siendo posible sin tocar la base.</p>
+<h3 id="paso-6--contraer">Paso 6 — Contraer</h3>
+<pre><code class="language-sql">SET lock_timeout = '3s';
+DROP TRIGGER trg_sync_calificacion ON enrollments;
+ALTER TABLE enrollments DROP COLUMN nota;
+</code></pre>
+<p><strong>Resumen de la operación:</strong></p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Selectividad del filtro</th>
-<th>Estrategia</th>
+<th>Paso</th>
+<th>Duración</th>
+<th>Bloqueo</th>
+<th>¿Reversible?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>&gt; 20 % del corpus</td>
-<td>Post-filtrado con <code>k</code> ampliado (pedir 50 para quedarse con 10)</td>
+<td>1 Expandir</td>
+<td>&lt; 1 s</td>
+<td>Breve</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>1–20 %</td>
-<td>Filtrado integrado</td>
+<td>2 Rellenar</td>
+<td>~2 h</td>
+<td>Ninguno</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>&lt; 1 %</td>
-<td>Pre-filtrado exhaustivo (el subconjunto es pequeño; el índice no hace falta)</td>
+<td>3 Verificar</td>
+<td>minutos</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>4 Desplegar</td>
+<td>~30 min</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>5 Esperar</td>
+<td>días</td>
+<td>Ninguno</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>6 Contraer</td>
+<td>&lt; 1 s</td>
+<td>Breve</td>
+<td><strong>No</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>La última fila es la más contraintuitiva y la más útil: con un filtro muy selectivo, <strong>la búsqueda exhaustiva sobre el subconjunto es rápida y exacta</strong>. No todo necesita índice.</p>
+<p>Cinco de seis pasos son reversibles. Solo el último no lo es, y para entonces ya se ha demostrado que nadie usa la columna vieja.</p>
+<h3 id="el-cambio-que-sí-exige-parada">El cambio que sí exige parada</h3>
+<p>No todo se puede hacer en caliente. Ejemplos honestos: cambiar la clave primaria de una tabla enorme referenciada por muchas otras, o una reorganización que exige reescribir el conjunto sin espacio para una copia. Ahí la decisión correcta es programar una ventana, comunicarla y ensayarla sobre una copia restaurada (clase 048), no forzar un procedimiento en caliente que se quedará a medias.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Escala</th>
-<th>Índice recomendado</th>
+<th>Enfoque</th>
+<th>Caída</th>
+<th>Riesgo</th>
+<th>Duración total</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>&lt; 10 000 vectores</td>
-<td>Ninguno: exhaustivo</td>
+<td><code>ALTER</code> directo</td>
+<td>Sí, mientras dure</td>
+<td>Alto</td>
+<td>Minutos</td>
 </tr>
 <tr>
-<td>10 000 – 10 M</td>
-<td>HNSW</td>
+<td>Expandir-migrar-contraer</td>
+<td>Ninguna</td>
+<td>Bajo</td>
+<td>Días</td>
 </tr>
 <tr>
-<td>10 M – 100 M</td>
-<td>HNSW con cuantización, o IVF</td>
+<td>Tabla sombra + intercambio</td>
+<td>Segundos</td>
+<td>Medio</td>
+<td>Horas</td>
 </tr>
 <tr>
-<td>&gt; 100 M</td>
-<td>IVF + PQ, distribuido</td>
-</tr>
-<tr>
-<td>Filtro muy selectivo</td>
-<td>Exhaustivo sobre el subconjunto</td>
+<td>Herramienta en línea (<code>gh-ost</code>, <code>pt-osc</code>)</td>
+<td>Ninguna</td>
+<td>Medio</td>
+<td>Horas</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>No medir el recall.</strong> Es el error fundamental: se desconoce qué se está perdiendo.</li>
-<li><strong>Post-filtrado con filtros selectivos.</strong> Devuelve menos de <code>k</code> o nada.</li>
-<li><strong>Subir <code>ef_search</code> sin curva.</strong> Se paga latencia sin ganancia apreciable.</li>
-<li><strong><code>m</code> muy alto.</strong> Duplica la memoria por décimas de recall.</li>
-<li><strong>Reconstruir el índice tras cada inserción.</strong> HNSW admite inserción incremental.</li>
-<li><strong>Índice para colecciones pequeñas.</strong> Con 5 000 vectores, el exhaustivo es más rápido y exacto.</li>
-<li><strong>Comparar recall entre modelos distintos.</strong> No es comparable.</li>
+<li><strong><code>RENAME COLUMN</code> en caliente.</strong> Rompe todo el código desplegado.</li>
+<li><strong><code>ALTER</code> sin <code>lock_timeout</code>.</strong> Una consulta larga bloquea la tabla entera.</li>
+<li><strong><code>UPDATE</code> masivo en una sola transacción.</strong> Hinchazón, WAL enorme, retraso de réplica.</li>
+<li><strong><code>CREATE INDEX</code> sin <code>CONCURRENTLY</code> en producción.</strong> Bloquea escrituras.</li>
+<li><strong>Contraer el mismo día que se despliega.</strong> No queda margen de reversión.</li>
+<li><strong>Migraciones no idempotentes.</strong> Un reintento tras un fallo parcial falla o duplica.</li>
+<li><strong>No verificar entre pasos.</strong> Se avanza sobre datos incompletos.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El recall se degrada silenciosamente al crecer la colección o al cambiar la distribución de los datos. Medirlo periódicamente contra una muestra exhaustiva —igual que se prueba la restauración de copias— es lo que evita descubrir meses después que la búsqueda dejó de encontrar.</p>
+<p>Las migraciones son el cambio con mayor probabilidad de causar una caída, porque se prueban con datos de desarrollo y se ejecutan sobre datos de producción. Ensayarlas contra una copia restaurada del tamaño real es la práctica que más incidentes evita.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Construye un conjunto de 100 consultas y calcula la referencia exhaustiva.</li>
-<li>Traza la curva de recall frente a latencia variando <code>ef_search</code>.</li>
-<li>Elige el punto de operación y justifícalo por escrito.</li>
-<li>Reproduce el fallo del post-filtrado y corrígelo con filtrado integrado.</li>
+<li>Elige un cambio incompatible real y descomponlo en los tres pasos.</li>
+<li>Implementa la doble escritura y demuestra que ambas versiones del código funcionan.</li>
+<li>Rellena por lotes midiendo el retraso de réplica durante el proceso.</li>
+<li>Escribe la consulta de verificación que actúa como puerta entre pasos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Cómo se mide el recall y contra qué referencia?</li>
-<li>Explica por qué el post-filtrado devuelve cero resultados con un filtro del 0,8 %.</li>
-<li>¿Qué diferencia hay entre <code>ef_construction</code> y <code>ef_search</code> en cuanto a cuándo se pueden cambiar?</li>
-<li>Con un filtro que selecciona el 0,3 % del corpus, ¿qué estrategia elegirías y por qué?</li>
+<li>¿Por qué <code>RENAME COLUMN</code> es peligroso si es instantáneo en el motor?</li>
+<li>Explica la cola de bloqueos y cómo <code>lock_timeout</code> la evita.</li>
+<li>¿Qué aporta <code>SKIP LOCKED</code> en un relleno por lotes?</li>
+<li>Da un cambio de tu esquema que sí exigiría una ventana de parada, y justifícalo.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Renunciar a encontrar siempre el vecino más cercano, y saber exactamente cuánto se renuncia</p>
-<p>La búsqueda exacta del vecino más cercano en muchas dimensiones no tiene
-atajo: hay que comparar contra todos. Por eso los índices vectoriales son
-<strong>aproximados</strong>: renuncian a garantizar el resultado correcto a cambio de
-ser miles de veces más rápidos.</p>
-<p>Esa renuncia se mide, y tiene nombre: <strong>recall@k</strong>, la fracción de los k
-vecinos verdaderos que el índice devolvió. Un índice con recall 0,95
-devuelve, de media, 19 de cada 20 correctos. Y aquí está lo importante: el
-recall <strong>no se puede saber sin medirlo</strong> contra una búsqueda exacta sobre el
-mismo conjunto.</p>
-<p>Los tres compromisos son siempre los mismos —velocidad, memoria y recall— y
-cada familia de índice los reparte distinto. Esta comparación enumera qué
-ofrece cada motor y <strong>qué parámetro mueve cada eje</strong>, porque elegirlos a ojo
-es lo habitual y es un error.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Añadir una columna con la aplicación en marcha y sin que nadie lo note</p>
+<p>Una migración sin caída no es una migración rápida: es una migración
+<strong>compatible en los dos sentidos</strong>. Durante el despliegue conviven la versión
+vieja del código y la nueva, así que el esquema tiene que servir a las dos a
+la vez. De ahí el patrón de tres tiempos: <strong>expandir</strong> —añadir lo nuevo sin
+tocar lo viejo—, <strong>migrar</strong> —rellenar por lotes mientras ambas versiones
+funcionan— y <strong>contraer</strong> —retirar lo viejo, y solo cuando ya no queda nadie
+usándolo.</p>
+<p>El caso ejecuta los tres pasos sobre una tabla de personas: se añade
+<code>apellido</code> anulable, se rellena y se inserta una fila nueva con las dos
+columnas. El resultado es trivial; lo que cambia entre motores es <strong>cuánto
+bloquea cada paso</strong>, y ahí está la diferencia entre un despliegue invisible y
+una caída de veinte minutos.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>apellido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>Lovelace</code></td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>Torvalds</code></td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>Hopper</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 059</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -419,91 +421,303 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>Qdrant</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://qdrant.tech/documentation/concepts/indexing/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Milvus</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://milvus.io/docs/index.md">doc oficial</a></td>
-</tr>
-<tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/indexes-types.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-altertable.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>OpenSearch</td>
+<td>MySQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://docs.opensearch.org/latest/vector-search/">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_altertable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://duckdb.org/docs/stable/extensions/vss">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/alter_table">doc oficial</a></td>
 </tr>
 <tr>
-<td>SQLite</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="qdrant">Qdrant</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-altertable.html
+-- nota: casi todo ALTER TABLE pide un bloqueo ACCESS EXCLUSIVE, aunque sea un
+--       instante. Si hay una consulta larga en marcha, el ALTER espera Y TODO
+--       LO QUE LLEGUE DETRAS ESPERA CON EL. La forma segura es:
+--         SET lock_timeout = '3s';
+--         ALTER TABLE personas ADD COLUMN apellido text;
+--       y reintentar si falla, en vez de confiar en que sera rapido.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS personas;
+
+CREATE TABLE personas (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido text;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> HNSW con parámetros explícitos: <code>m</code> (conexiones por nodo, memoria y calidad), <code>ef_construct</code> (esfuerzo al construir) y <code>ef</code> en cada consulta (esfuerzo al buscar). Añade cuantización escalar, binaria y por producto para reducir memoria, y permite guardar el original en disco y reordenar los candidatos con él.</li>
-<li><strong>Por qué sí:</strong> El compromiso se ajusta <strong>por consulta</strong> con <code>ef</code>, sin reconstruir nada: la misma colección puede servir una búsqueda rápida y otra exhaustiva.</li>
-<li><strong>Por qué no:</strong> HNSW es un grafo en memoria: su tamaño crece con <code>m</code> y con el número de vectores, y no se puede reducir sin perder recall. La cuantización lo alivia y <strong>baja el recall</strong>; medir cuánto es obligatorio, no opcional.</li>
-<li>📄 Documentación oficial: <a href="https://qdrant.tech/documentation/concepts/indexing/">https://qdrant.tech/documentation/concepts/indexing/</a></li>
+<li><strong>Por qué sí:</strong> Desde la versión 11, añadir una columna con valor por omisión <strong>no reescribe la tabla</strong>: es un cambio de catálogo instantáneo. Y el DDL es transaccional, así que una migración a medias se deshace entera.</li>
+<li><strong>Por qué no:</strong> Casi todo <code>ALTER TABLE</code> pide un bloqueo <code>ACCESS EXCLUSIVE</code>, aunque sea por un instante: si hay una consulta larga en marcha, el <code>ALTER</code> espera <strong>y todo lo que llegue detrás espera con él</strong>. La regla práctica es poner siempre <code>lock_timeout</code> y reintentar, en vez de confiar en que será rápido.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-altertable.html">https://www.postgresql.org/docs/current/sql-altertable.html</a></li>
 </ul>
-<h4 id="milvus">Milvus</h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html
+-- nota: declarar el algoritmo a proposito, para que el motor FALLE en vez de
+--       copiar en silencio una tabla de 200 GB:
+--         ALTER TABLE personas ADD COLUMN apellido VARCHAR(50), ALGORITHM=INSTANT;
+--       Y recordar que el DDL NO es transaccional: una migracion a medias se
+--       queda a medias.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS personas;
+
+CREATE TABLE personas (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido VARCHAR(50);
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Ofrece la mayor variedad de familias: <strong>IVF</strong> —agrupa en celdas y busca solo en <code>nprobe</code> de ellas—, <strong>HNSW</strong>, <strong>DiskANN</strong> para conjuntos que no caben en memoria, y variantes cuantizadas de cada una.</li>
-<li><strong>Por qué sí:</strong> Poder elegir familia permite ajustarse al presupuesto real: IVF con cuantización por producto cabe en una fracción de la memoria que pide HNSW, a cambio de recall.</li>
-<li><strong>Por qué no:</strong> IVF tiene un fallo propio que sorprende: si el vecino verdadero cayó en una celda que <code>nprobe</code> no visitó, <strong>no aparece nunca</strong>, por mucho que se suba el límite de resultados. Y construir el índice exige entrenar con una muestra representativa.</li>
-<li>📄 Documentación oficial: <a href="https://milvus.io/docs/index.md">https://milvus.io/docs/index.md</a></li>
+<li><strong>Por qué sí:</strong> InnoDB tiene DDL en línea con <code>ALGORITHM=INPLACE</code> y, para añadir columnas, <code>ALGORITHM=INSTANT</code> desde 8.0.12: la columna se añade en milisegundos sin copiar la tabla.</li>
+<li><strong>Por qué no:</strong> El DDL <strong>no</strong> es transaccional: una migración a medias se queda a medias. Y no todos los cambios admiten <code>INSTANT</code>; los que no, copian la tabla entera, así que hay que declarar el algoritmo explícitamente para que el motor <strong>falle</strong> en vez de copiar en silencio una tabla de 200 GB.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html</a></li>
 </ul>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_altertable.html
+-- nota: ADD COLUMN es casi instantaneo. Cambiar un tipo o anadir una
+--       restriccion, en cambio, exige el procedimiento de doce pasos que
+--       documenta el propio proyecto: crear tabla nueva, copiar, borrar,
+--       renombrar. Y durante ese rato la base esta bloqueada.
+
+-- === preparacion ===
+CREATE TABLE personas (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido TEXT;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Con pgvector, dos índices: <strong>HNSW</strong> —mejor recall, construcción lenta, más memoria— e <strong>IVFFlat</strong> —construcción rápida, menos memoria, hay que elegir el número de listas y <strong>reconstruirlo</strong> cuando los datos crecen—. El esfuerzo de búsqueda se ajusta con <code>hnsw.ef_search</code> o <code>ivfflat.probes</code>.</li>
-<li><strong>Por qué sí:</strong> El índice vive junto a los datos: se puede combinar con <code>WHERE</code> sobre columnas normales y todo ocurre en una transacción. Para la mayoría de los sistemas, eso vale más que unos puntos de recall.</li>
-<li><strong>Por qué no:</strong> El filtrado y el índice conviven mal: si el <code>WHERE</code> es muy selectivo, PostgreSQL puede recorrer el índice vectorial y descartar casi todo después, devolviendo menos resultados de los pedidos. Es el mismo problema del filtrado que Qdrant resuelve dentro del grafo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-types.html">https://www.postgresql.org/docs/current/indexes-types.html</a></li>
+<li><strong>Por qué sí:</strong> <code>ALTER TABLE ... ADD COLUMN</code> es una operación de catálogo, casi instantánea, y desde la versión 3.35 también existe <code>DROP COLUMN</code>.</li>
+<li><strong>Por qué no:</strong> Es casi lo único que se puede alterar: cambiar un tipo, añadir una restricción o reordenar columnas exige el procedimiento de doce pasos que documenta el propio proyecto —crear tabla nueva, copiar, borrar, renombrar—, y durante ese rato la base está bloqueada.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_altertable.html">https://sqlite.org/lang_altertable.html</a></li>
 </ul>
-<h4 id="opensearch">OpenSearch</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/alter_table
+-- nota: la consulta util antes de migrar es esta otra, sobre una copia de los
+--       datos reales:
+--         SELECT COUNT(*) FILTER (WHERE apellido IS NULL) AS sin_apellido,
+--                COUNT(*) AS total FROM personas;
+--       Migrar sin esa cuenta es empezar a ciegas.
+
+-- === preparacion ===
+CREATE TABLE personas (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+INSERT INTO personas (id, nombre) VALUES
+    (1, 'Ada Lovelace'), (2, 'Linus Torvalds');
+
+-- EXPANDIR. La columna nueva nace ANULABLE y sin restricciones: la version
+-- vieja de la aplicacion, que no la conoce, sigue insertando sin problemas.
+ALTER TABLE personas ADD COLUMN apellido VARCHAR;
+
+-- MIGRAR. Se rellena por lotes, sin bloquear la tabla entera. Mientras dura,
+-- conviven las dos versiones del codigo: la vieja escribe solo `nombre` y la
+-- nueva escribe las dos columnas.
+UPDATE personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE personas SET apellido = 'Torvalds' WHERE id = 2;
+
+-- CONTRAER. Solo cuando NO queda nadie ejecutando la version vieja se puede
+-- endurecer la columna o retirar la antigua. Ese «solo cuando» es la parte que
+-- se salta todo el mundo, y es la que produce la caida.
+INSERT INTO personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM personas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Índice <code>knn_vector</code> con HNSW sobre las bibliotecas Lucene, nmslib o FAISS, con <code>ef_search</code> y <code>m</code> configurables, y búsqueda exacta disponible para medir el recall contra ella.</li>
-<li><strong>Por qué sí:</strong> Que la búsqueda exacta esté a mano en el mismo sistema hace fácil lo que casi nadie hace: <strong>medir</strong> el recall real en vez de suponerlo.</li>
-<li><strong>Por qué no:</strong> El índice vectorial se suma al invertido en la misma memoria del clúster, y competir por ella degrada las dos búsquedas a la vez. Dimensionar deja de ser un problema de una sola estructura.</li>
-<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/vector-search/">https://docs.opensearch.org/latest/vector-search/</a></li>
+<li><strong>Por qué sí:</strong> Admite el mismo <code>ALTER TABLE</code> para el caso, y sirve para lo que de verdad hace falta antes de migrar: <strong>comprobar sobre una copia de los datos reales</strong> cuántas filas tienen el campo vacío o mal formado. Migrar sin esa cuenta es empezar a ciegas.</li>
+<li><strong>Por qué no:</strong> No hay aplicación en marcha que proteger: el problema de esta clase —dos versiones del código conviviendo— no existe aquí.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/alter_table">https://duckdb.org/docs/stable/sql/statements/alter_table</a></li>
 </ul>
-<h4 id="duckdb">DuckDB</h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/
+// nota: la fase de EXPANDIR es gratis: anadir un campo es escribir documentos
+//       con el. Lo que no es gratis es lo de despues: el codigo tiene que
+//       tratar con documentos viejos SIN el campo y nuevos con el, a veces
+//       durante anos. La migracion no desaparece, se vuelve invisible.
+
+// === preparacion ===
+db.personas.drop();
+db.personas.insertMany([
+  { _id: 1, nombre: &quot;Ada Lovelace&quot; },
+  { _id: 2, nombre: &quot;Linus Torvalds&quot; },
+]);
+
+// MIGRAR: por lotes, sin bloquear nada.
+db.personas.updateOne({ _id: 1 }, { $set: { apellido: &quot;Lovelace&quot; } });
+db.personas.updateOne({ _id: 2 }, { $set: { apellido: &quot;Torvalds&quot; } });
+
+// La version nueva del codigo ya escribe las dos cosas.
+db.personas.insertOne({ _id: 3, nombre: &quot;Grace Hopper&quot;, apellido: &quot;Hopper&quot; });
+
+// CONTRAER seria, aqui, un validador $jsonSchema que exija el campo. Y solo
+// cuando ya no queden documentos sin el:
+//   db.personas.countDocuments({ apellido: { $exists: false } })  -&gt;  0
+
+// === consulta ===
+db.personas
+  .find({}, { _id: 1, apellido: 1 })
+  .sort({ _id: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.apellido));
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Fuerza bruta vectorizada, y una extensión HNSW experimental. Su papel aquí no es servir búsquedas: es <strong>calcular la verdad</strong> contra la que se mide el recall de los demás.</li>
-<li><strong>Por qué sí:</strong> Sin una lista de vecinos verdaderos, la palabra «recall» no significa nada. Calcularla por fuerza bruta sobre una muestra es exactamente el trabajo para el que sirve.</li>
-<li><strong>Por qué no:</strong> Ese cálculo es caro por definición: sirve para una muestra de consultas de evaluación, no para el tráfico real.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/extensions/vss">https://duckdb.org/docs/stable/extensions/vss</a></li>
+<li><strong>Por qué sí:</strong> No hay <code>ALTER TABLE</code> que ejecutar: añadir un campo es escribir documentos con él. La fase de expandir es gratis y la migración se puede hacer documento a documento sin bloquear nada.</li>
+<li><strong>Por qué no:</strong> Esa facilidad esconde el trabajo: el esquema pasa a estar en el código, que tiene que tratar con documentos viejos <strong>sin</strong> el campo y nuevos con él, a veces durante años. La migración no desaparece; se vuelve invisible y permanente.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/">https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+-- nota: implementacion declarada. ADD es barato: no reescribe datos y las filas
+--       viejas devuelven null en la columna nueva.
+--       Lo que NO se puede alterar nunca: la clave primaria, el tipo de una
+--       columna existente y el orden de agrupamiento. Para eso hay que crear
+--       otra tabla, migrar los datos y cambiar la aplicacion. La decision de
+--       modelado se toma una vez.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.personas;
+
+CREATE TABLE escuela.personas (
+    id     int PRIMARY KEY,
+    nombre text
+);
+INSERT INTO escuela.personas (id, nombre) VALUES (1, 'Ada Lovelace');
+INSERT INTO escuela.personas (id, nombre) VALUES (2, 'Linus Torvalds');
+
+-- EXPANDIR
+ALTER TABLE escuela.personas ADD apellido text;
+
+-- MIGRAR
+UPDATE escuela.personas SET apellido = 'Lovelace' WHERE id = 1;
+UPDATE escuela.personas SET apellido = 'Torvalds' WHERE id = 2;
+
+INSERT INTO escuela.personas (id, nombre, apellido) VALUES (3, 'Grace Hopper', 'Hopper');
+
+-- === consulta ===
+SELECT id, apellido FROM escuela.personas;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>ALTER TABLE ... ADD</code> es un cambio de esquema que se propaga por el clúster y no reescribe datos: las filas viejas devuelven <code>null</code> en la columna nueva, sin coste.</li>
+<li><strong>Por qué no:</strong> Lo que <strong>no</strong> se puede cambiar es la clave primaria, ni el tipo de una columna existente, ni el orden de agrupamiento: para eso hay que crear otra tabla y migrar los datos. La decisión de modelado se toma una vez.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -518,23 +732,17 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>SQLite</td>
-<td>No hay índice vectorial en el motor: solo fuerza bruta escrita a mano, que es lo que la clase anterior ya mostró. Aquí no aportaría una fila distinta.</td>
-<td>Extensiones de terceros construidas sobre SQLite para búsqueda vectorial en el dispositivo, con las mismas familias de índice y los mismos compromisos.</td>
-<td><a href="https://sqlite.org/lang_expr.html">doc</a></td>
-</tr>
-<tr>
 <td>Redis</td>
-<td>Su índice vectorial vive en el módulo de búsqueda, no en el servidor base: compararlo aquí exigiría una imagen distinta de la que este repositorio levanta.</td>
-<td>Con el módulo, HNSW o fuerza bruta sobre campos de hash o JSON; sin él, Redis como caché de los resultados que devuelve otro sistema.</td>
-<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc</a></td>
+<td>No hay esquema que migrar, pero sí hay <strong>formato de valor</strong>, y cambiarlo es el mismo problema con menos ayuda: no hay <code>ALTER</code> que avise ni catálogo que consultar para saber qué claves tienen el formato viejo.</td>
+<td>Versionar el formato en el nombre de la clave (<code>sesion:v2:123</code>) y hacer que el código lea las dos versiones durante la transición: expandir, migrar y contraer, escrito a mano.</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/06-vector-search/run_vector_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -578,24 +786,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Yu A. Malkov, D. A. Yashunin</strong> (2020). <a href="https://arxiv.org/abs/1603.09320">Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs</a>. IEEE TPAMI 42(4). DOI <a href="https://doi.org/10.1109/TPAMI.2018.2889473">10.1109/TPAMI.2018.2889473</a>.<br />
-  Índice HNSW: el que usan Qdrant, Weaviate, Milvus, pgvector y Lucene.</li>
-<li><strong>Jeff Johnson, Matthijs Douze, Herve Jegou</strong> (2019). <a href="https://arxiv.org/abs/1702.08734">Billion-scale Similarity Search with GPUs</a>. IEEE Transactions on Big Data.<br />
-  FAISS: cuantización de producto y compromiso memoria-exactitud.</li>
-<li><strong>Qdrant</strong> (2026). <a href="https://qdrant.tech/documentation/">Qdrant Documentation</a>.<br />
-  Colecciones, filtros con carga útil y parametros HNSW.</li>
-<li><strong>LF AI &amp; Data Foundation</strong> (2026). <a href="https://milvus.io/docs">Milvus Documentation</a>.<br />
-  Índices vectoriales distribuidos y sus compromisos de exactitud.</li>
+<li><strong>Scott W. Ambler, Pramod J. Sadalage</strong> (2006). <a href="https://databaserefactoring.com/">Refactoring Databases: Evolutionary Database Design</a>. Addison-Wesley. ISBN 978-0-321-29353-4.<br />
+  Migraciones con período de transición y compatibilidad hacia atras.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="058.html">← Anterior</a> · <a href="060.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="058.html">← Anterior</a> · <a href="060.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="059">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="058.html"><span class="sentido">← Anterior · 058</span>Embeddings y métricas de distancia: qué significa parecido</a>
-<a class="siguiente" href="060.html"><span class="sentido">Siguiente · 060 →</span>Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a>
+<a class="anterior" href="058.html"><span class="sentido">← Anterior · 058</span>Respaldo y restauración: solo cuenta lo que se ha restaurado</a>
+<a class="siguiente" href="060.html"><span class="sentido">Siguiente · 060 →</span>Control de acceso: privilegio mínimo, roles y seguridad por fila</a>
 </nav>
 </main>
 <footer>

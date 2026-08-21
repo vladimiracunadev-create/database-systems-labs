@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="El agregado como unidad de consistencia. Parte 05: Documentos y clave-valor.">
+<meta name="description" content="DDL: el esquema como contrato ejecutable. Parte 04: SQL en profundidad.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/024.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="024 — El agregado como unidad de consistencia · Database Systems Labs">
-<meta property="og:description" content="El agregado como unidad de consistencia. Parte 05: Documentos y clave-valor.">
+<meta property="og:title" content="024 — DDL: el esquema como contrato ejecutable · Database Systems Labs">
+<meta property="og:description" content="DDL: el esquema como contrato ejecutable. Parte 04: SQL en profundidad.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/024.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "024 — El agregado como unidad de consistencia", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["agregado", "frontera transaccional", "entidad", "actividad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>024 — El agregado como unidad de consistencia · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "024 — DDL: el esquema como contrato ejecutable", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["tipo de dato", "restricción", "valor por defecto", "DDL transaccional"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>024 — DDL: el esquema como contrato ejecutable · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,253 +49,284 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-05.html">Parte 05 · Documentos y clave-valor</a>
+  <a href="parte-04.html">Parte 04 · SQL en profundidad</a>
   <span aria-hidden="true">/</span><span>Clase 024</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="024--el-agregado-como-unidad-de-consistencia">024 — El agregado como unidad de consistencia</h1>
+<h1 id="024--ddl-el-esquema-como-contrato-ejecutable">024 — DDL: el esquema como contrato ejecutable</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="023.html">← Anterior</a> · <a href="025.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="023.html">← Anterior</a> · <a href="025.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 05 — Documentos y clave-valor · Intermedio ·
-3 horas estimadas · motores <code>mongodb</code>, <code>redis</code>, <code>dynamodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>agregado</code> · <code>frontera transaccional</code> · <code>entidad</code> · <code>actividad</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 04 — SQL en profundidad · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>tipo de dato</code> · <code>restricción</code> · <code>valor por defecto</code> · <code>DDL transaccional</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender la idea que organiza casi todo el mundo no relacional: el <strong>agregado</strong>. Elegir sus fronteras es elegir dónde hay transacciones y dónde no.</p>
+<p>Escribir el esquema como un contrato ejecutable: cada línea de DDL es una promesa que el motor hace cumplir. Un esquema laxo traslada esa responsabilidad a cada programa cliente, presente y futuro.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Definir agregado y distinguirlo de entidad y de tabla.</li>
-<li>Explicar por qué la frontera del agregado es la frontera de la atomicidad.</li>
-<li>Aplicar el criterio de Helland sobre entidades y actividades.</li>
-<li>Diseñar la coherencia entre agregados sin transacción distribuida.</li>
-<li>Reconocer cuándo un agregado mal elegido produce un punto caliente.</li>
+<li>Elegir tipos por el dominio del dato, no por costumbre.</li>
+<li>Justificar por qué el dinero no se guarda en coma flotante, con una demostración.</li>
+<li>Aplicar el criterio de tipos para fechas, horas y zonas horarias.</li>
+<li>Aprovechar el DDL transaccional donde existe y protegerte donde no.</li>
+<li>Escribir un esquema en el que un dato inválido sea imposible, no improbable.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="qué-es-un-agregado">Qué es un agregado</h3>
-<p>Sadalage y Fowler toman el término del diseño dirigido por el dominio: un <strong>agregado</strong> es un conjunto de datos que se trata como una unidad para lectura y escritura. Un pedido con sus líneas y su dirección de envío es un agregado; el cliente que lo hizo es otro.</p>
-<p>En un modelo relacional el agregado no existe: cada entidad es su tabla y la transacción puede abarcar cuantas quiera. En los modelos documental, clave-valor y de columnas anchas, el agregado <strong>es</strong> la unidad de almacenamiento, de replicación y —esto es lo decisivo— de <strong>atomicidad</strong>.</p>
+<h3 id="el-tipo-es-la-primera-restricción">El tipo es la primera restricción</h3>
+<p>Antes de cualquier <code>CHECK</code>, el tipo ya limita el dominio. Elegirlo mal deja pasar valores que ninguna restricción posterior recupera.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Modelo</th>
-<th>Unidad de atomicidad garantizada</th>
+<th>Dato</th>
+<th>Tipo correcto</th>
+<th>Tipo frecuente y equivocado</th>
+<th>Qué se rompe</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Relacional</td>
-<td>La transacción, sobre cualquier conjunto de tablas</td>
+<td>Dinero</td>
+<td><code>NUMERIC(12,2)</code> / entero de centavos</td>
+<td><code>FLOAT</code>, <code>REAL</code></td>
+<td>Errores de redondeo acumulativos</td>
 </tr>
 <tr>
-<td>Documental</td>
-<td>El documento; varios documentos solo con transacciones explícitas</td>
+<td>Fecha y hora con huso</td>
+<td><code>TIMESTAMPTZ</code></td>
+<td><code>TIMESTAMP</code> sin huso</td>
+<td>Ambigüedad en cambios de hora</td>
 </tr>
 <tr>
-<td>Clave-valor</td>
-<td>La clave; operaciones multiclave solo con guiones o transacciones</td>
+<td>Fecha sin hora</td>
+<td><code>DATE</code></td>
+<td><code>TEXT</code></td>
+<td>Comparaciones y aritmética imposibles</td>
 </tr>
 <tr>
-<td>Columnas anchas</td>
-<td>La partición</td>
+<td>Identificador externo</td>
+<td><code>TEXT</code> con <code>CHECK</code> de formato</td>
+<td><code>INTEGER</code></td>
+<td>Se pierden ceros a la izquierda</td>
+</tr>
+<tr>
+<td>Booleano</td>
+<td><code>BOOLEAN</code></td>
+<td><code>INTEGER</code>, <code>CHAR(1)</code></td>
+<td>Tres estados donde debe haber dos</td>
+</tr>
+<tr>
+<td>Enumeración corta</td>
+<td><code>TEXT</code> + <code>CHECK IN (...)</code></td>
+<td><code>TEXT</code> libre</td>
+<td>Valores nuevos sin control</td>
+</tr>
+<tr>
+<td>Duración</td>
+<td>Entero de segundos o <code>INTERVAL</code></td>
+<td><code>TEXT</code> «2h 30m»</td>
+<td>Aritmética imposible</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="la-consecuencia">La consecuencia</h3>
-<p>Si dos datos deben cambiar juntos <strong>siempre</strong>, deben estar en el mismo agregado o hay que asumir explícitamente la inconsistencia transitoria. No hay tercera opción barata.</p>
-<p>Ejemplo: «el saldo del monedero y el registro del movimiento deben cuadrar». En un solo documento, la escritura es atómica. En dos documentos, existe un instante en que uno se escribió y el otro no; si el proceso muere ahí, queda una inconsistencia que alguien debe reparar.</p>
-<h3 id="entidades-y-actividades">Entidades y actividades</h3>
-<p>Helland ofrece el marco más útil para el caso distribuido:</p>
+<h3 id="dinero-en-coma-flotante-la-demostración">Dinero en coma flotante: la demostración</h3>
+<p>Los tipos <code>FLOAT</code> y <code>DOUBLE</code> siguen IEEE 754, que representa en binario. El valor decimal <code>0,1</code> no tiene representación binaria finita, igual que 1/3 no la tiene en decimal.</p>
+<pre><code class="language-sql">SELECT 0.1 + 0.2 = 0.3;             -- en coma flotante: falso
+SELECT CAST(0.1 AS REAL) + CAST(0.2 AS REAL);   -- 0.30000000000000004
+</code></pre>
+<p>Con 10 000 transacciones de un producto de 19,99, el error acumulado deja de ser teórico y aparece en la conciliación contable como un descuadre de céntimos que nadie sabe explicar. <code>NUMERIC</code> almacena en base 10 y es exacto para estos valores; a cambio, la aritmética es más lenta. Para dinero, esa lentitud es irrelevante y la exactitud no lo es.</p>
+<h3 id="fechas-y-husos-horarios">Fechas y husos horarios</h3>
+<p><code>TIMESTAMP WITHOUT TIME ZONE</code> guarda una pared de reloj sin decir de qué reloj. Dos consecuencias:</p>
 <ul>
-<li><strong>Entidad:</strong> unidad con identidad y estado, que cabe en un nodo y se actualiza atómicamente. Es el agregado.</li>
-<li><strong>Actividad:</strong> coordinación entre entidades, que <strong>no</strong> puede ser atómica y debe tolerar reintentos y llegadas fuera de orden.</li>
+<li>Un evento registrado a las 02:30 durante el retroceso del horario de verano es <strong>ambiguo</strong>: ocurrió dos veces.</li>
+<li>Comparar registros de dos regiones da resultados incorrectos sin conversión explícita.</li>
 </ul>
-<p>De ahí sus dos exigencias para cualquier interacción entre agregados: los mensajes deben ser <strong>idempotentes</strong> (procesar dos veces no cambia el resultado) y <strong>conmutativos</strong> cuando sea posible (el orden de llegada no altera el estado final).</p>
-<p>Ese es exactamente el patrón saga de la clase 047: la actividad se descompone en pasos locales atómicos, cada uno con su compensación.</p>
-<h3 id="cómo-elegir-la-frontera">Cómo elegir la frontera</h3>
+<p><code>TIMESTAMPTZ</code> (en PostgreSQL) guarda un instante absoluto normalizado a UTC y lo presenta en el huso de la sesión. Regla operativa: <strong>almacenar instantes en UTC, convertir solo al presentar</strong>. La excepción legítima es la fecha civil sin instante —un cumpleaños, un feriado—, que es <code>DATE</code> y no tiene huso.</p>
+<h3 id="ddl-transaccional">DDL transaccional</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿<code>CREATE</code>/<code>ALTER</code> dentro de una transacción con reversión?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>Sí, casi todo el DDL</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Sí, en su mayor parte</td>
+</tr>
+<tr>
+<td>MySQL / MariaDB</td>
+<td><strong>No</strong>: cada sentencia DDL confirma implícitamente</td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td>No: confirmación implícita</td>
+</tr>
+</tbody>
+</table></div>
+<p>La consecuencia es enorme para las migraciones. En PostgreSQL, una migración de cinco pasos que falla en el cuarto revierte entera. En MySQL, deja el esquema a medias y hay que escribir el camino de vuelta a mano. Quien despliega sobre MySQL necesita migraciones idempotentes y verificadas paso a paso (clase 049).</p>
 <pre><code class="language-mermaid">flowchart TD
-    A[&quot;Dos datos relacionados&quot;] --&gt; B{&quot;¿Deben cambiar&lt;br/&gt;juntos siempre?&quot;}
-    B -- &quot;Sí&quot; --&gt; C{&quot;¿Crecen sin&lt;br/&gt;límite juntos?&quot;}
-    C -- &quot;No&quot; --&gt; D[&quot;Mismo agregado&quot;]
-    C -- &quot;Sí&quot; --&gt; E[&quot;Agregados separados&lt;br/&gt;+ compensación explícita&quot;]
-    B -- &quot;No&quot; --&gt; F{&quot;¿Se leen&lt;br/&gt;siempre juntos?&quot;}
-    F -- &quot;Sí&quot; --&gt; G{&quot;¿Uno cambia mucho&lt;br/&gt;más que el otro?&quot;}
-    G -- &quot;No&quot; --&gt; D
-    G -- &quot;Sí&quot; --&gt; H[&quot;Separar: evita reescribir&lt;br/&gt;lo estable en cada cambio&quot;]
-    F -- &quot;No&quot; --&gt; H
+    D[&quot;Regla del dominio&quot;] --&gt; T{&quot;¿La limita&lt;br/&gt;el tipo?&quot;}
+    T -- &quot;Sí&quot; --&gt; TY[&quot;Elegir el tipo exacto&quot;]
+    T -- &quot;No&quot; --&gt; N{&quot;¿Puede faltar&lt;br/&gt;el valor?&quot;}
+    N -- &quot;No&quot; --&gt; NN[&quot;NOT NULL&quot;]
+    N -- &quot;Sí&quot; --&gt; NU[&quot;Nulo con semántica documentada&quot;]
+    TY --&gt; C{&quot;¿Hay valores del tipo&lt;br/&gt;que el dominio prohíbe?&quot;}
+    NN --&gt; C
+    C -- &quot;Sí&quot; --&gt; CK[&quot;CHECK&quot;]
+    C -- &quot;No&quot; --&gt; OK[&quot;Listo&quot;]
+    CK --&gt; U{&quot;¿Debe ser único?&quot;}
+    U -- &quot;Sí&quot; --&gt; UQ[&quot;UNIQUE (parcial si aplica)&quot;]
+    U -- &quot;No&quot; --&gt; OK
 </code></pre>
-<p>Tres preguntas, en este orden: ¿cambian juntos?, ¿crecen sin límite?, ¿se leen juntos? La primera manda sobre las otras dos, porque es la única que afecta a la corrección; las otras afectan al rendimiento.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Dominio: inscripciones a cursos, con la regla «el contador de inscritos del curso debe coincidir con el número de inscripciones».</p>
-<p><strong>Diseño A — agregado por curso:</strong></p>
-<pre><code class="language-json">{
-  &quot;_id&quot;: &quot;curso-2026-1-bd&quot;,
-  &quot;nombre&quot;: &quot;Bases de datos&quot;,
-  &quot;periodo&quot;: &quot;2026-1&quot;,
-  &quot;cupo&quot;: 40,
-  &quot;inscritos&quot;: 3,
-  &quot;inscripciones&quot;: [
-    {&quot;student_id&quot;: 11, &quot;nota&quot;: 6.0},
-    {&quot;student_id&quot;: 12, &quot;nota&quot;: null},
-    {&quot;student_id&quot;: 13, &quot;nota&quot;: 5.5}
-  ]
-}
+<p>Esquema laxo, del tipo que se escribe en el primer prototipo y sobrevive tres años:</p>
+<pre><code class="language-sql">CREATE TABLE pagos (
+  id      INTEGER,
+  alumno  TEXT,
+  monto   REAL,
+  fecha   TEXT,
+  estado  TEXT
+);
 </code></pre>
-<p>Inscribir a alguien es <strong>una</strong> escritura atómica: se añade al arreglo y se incrementa el contador en la misma operación. La invariante no puede romperse.</p>
-<p>Problemas, con números:</p>
+<p>Valores que este esquema acepta sin protestar, y que no significan nada:</p>
+<pre><code class="language-sql">INSERT INTO pagos VALUES (1, NULL, -0.1, 'ayer', 'PAGADO');
+INSERT INTO pagos VALUES (1, 'Ana', 1e308, '2026-13-45', 'pagadoo');
+</code></pre>
+<p>Dos filas con <code>id = 1</code>, un monto negativo, otro que desborda cualquier moneda real, dos fechas imposibles y un estado con una errata. Todo dentro del contrato, porque el contrato no dice nada.</p>
+<p>Esquema como contrato:</p>
+<pre><code class="language-sql">CREATE TABLE pagos (
+  id          INTEGER PRIMARY KEY,
+  student_id  INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+  monto_clp   INTEGER NOT NULL CHECK (monto_clp &gt; 0),
+  pagado_en   TEXT    NOT NULL CHECK (pagado_en LIKE '____-__-__T__:__:__Z'),
+  estado      TEXT    NOT NULL DEFAULT 'pendiente'
+              CHECK (estado IN ('pendiente','pagado','anulado')),
+  referencia  TEXT    UNIQUE
+);
+</code></pre>
+<p>Decisiones y su motivo:</p>
 <ul>
-<li><strong>Crecimiento no acotado.</strong> Con 40 inscritos es correcto. Con 5 000, cada lectura del curso trae 5 000 subdocumentos aunque solo se quiera el nombre, y cada inscripción reescribe el documento entero. MongoDB además limita el documento a 16 MB.</li>
-<li><strong>Punto caliente.</strong> Todas las inscripciones al mismo curso se serializan sobre el mismo documento. En un período de matrícula, con 200 inscripciones por segundo al curso más demandado, esa serialización es la cola entera.</li>
-<li><strong>Consulta imposible sin barrido.</strong> «Todos los cursos de un estudiante» exige recorrer todos los cursos, porque el estudiante no es la clave.</li>
+<li><strong><code>monto_clp</code> como entero.</strong> El peso chileno no tiene decimales, así que el entero es exacto y natural. Para monedas con decimales, <code>NUMERIC(12,2)</code> o enteros de centavos con el nombre del campo diciéndolo (<code>monto_centavos</code>).</li>
+<li><strong><code>pagado_en</code> en texto ISO-8601 con <code>Z</code>.</strong> SQLite no tiene tipo de fecha; el patrón fuerza el formato y el sufijo declara UTC. En PostgreSQL sería <code>TIMESTAMPTZ NOT NULL</code>.</li>
+<li><strong><code>estado</code> enumerado con <code>CHECK</code>.</strong> «pagadoo» ahora falla en la inserción, no en el informe trimestral.</li>
+<li><strong><code>referencia UNIQUE</code>.</strong> Impide registrar dos veces el mismo pago del proveedor: es idempotencia declarada en el esquema (clase 037).</li>
+<li><strong><code>ON DELETE RESTRICT</code>.</strong> Un pago es evidencia contable; borrar al estudiante no puede borrarlo.</li>
 </ul>
-<p><strong>Diseño B — agregado por inscripción:</strong></p>
-<pre><code class="language-json">{&quot;_id&quot;: &quot;11:curso-2026-1-bd&quot;, &quot;student_id&quot;: 11, &quot;course_id&quot;: &quot;curso-2026-1-bd&quot;,
- &quot;nota&quot;: 6.0, &quot;estado&quot;: &quot;activa&quot;, &quot;registrada_en&quot;: &quot;2026-03-11T12:00:00Z&quot;}
+<p><strong>Comprobación de que el contrato funciona:</strong></p>
+<pre><code class="language-sql">INSERT INTO pagos (id, student_id, monto_clp, pagado_en, estado)
+VALUES (1, 999, -500, 'ayer', 'pagadoo');
+-- FOREIGN KEY constraint failed  /  CHECK constraint failed
 </code></pre>
-<p>Escala en escritura y permite indexar por estudiante y por curso. A cambio, el contador de inscritos ya <strong>no</strong> puede mantenerse atómicamente: está en otro documento.</p>
-<p>Las tres respuestas honestas a ese hueco:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Respuesta</th>
-<th>Garantía</th>
-<th>Costo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Calcular contando al leer</td>
-<td>Exacta siempre</td>
-<td>Una agregación por lectura</td>
-</tr>
-<tr>
-<td>Transacción multidocumento</td>
-<td>Exacta</td>
-<td>Coordinación; en clúster, latencia y contención</td>
-</tr>
-<tr>
-<td>Contador eventual + reconciliación</td>
-<td>Aproximada entre reconciliaciones</td>
-<td>Barata; exige la invariante auditada</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Diseño C — híbrido, el habitual en producción:</strong></p>
-<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;, &quot;cupo&quot;: 40,
- &quot;inscritos_aprox&quot;: 3812, &quot;actualizado_en&quot;: &quot;2026-03-11T12:00:05Z&quot;}
+<p>Cuatro errores detectados en la inserción en lugar de cuatro incidencias en producción.</p>
+<p><strong>Unicidad condicional.</strong> Regla frecuente: «solo puede haber un pago pendiente por estudiante». Un <code>UNIQUE (student_id)</code> prohibiría también los pagados. La forma correcta es un índice único parcial:</p>
+<pre><code class="language-sql">CREATE UNIQUE INDEX pagos_un_pendiente
+  ON pagos (student_id) WHERE estado = 'pendiente';
 </code></pre>
-<p>Las inscripciones son documentos propios; el curso guarda un contador <strong>declaradamente aproximado</strong>. El nombre del campo comunica su semántica: quien lo lee sabe que no es una verdad transaccional. Para el control de cupo, que sí exige exactitud, se cuenta de verdad en el momento crítico.</p>
-<p><strong>La invariante, obligatoria en B y C:</strong></p>
-<pre><code class="language-javascript">db.enrollments.aggregate([
-  {$match: {estado: &quot;activa&quot;}},
-  {$group: {_id: &quot;$course_id&quot;, real: {$sum: 1}}},
-  {$lookup: {from: &quot;courses&quot;, localField: &quot;_id&quot;, foreignField: &quot;_id&quot;, as: &quot;c&quot;}},
-  {$unwind: &quot;$c&quot;},
-  {$match: {$expr: {$ne: [&quot;$real&quot;, &quot;$c.inscritos_aprox&quot;]}}}
-])
-</code></pre>
-<p>Cero resultados: coherente. Con resultados: la divergencia, cuantificada.</p>
+<p>Disponible en PostgreSQL y SQLite. En MySQL se emula con una columna generada que vale <code>student_id</code> cuando el estado es pendiente y <code>NULL</code> en otro caso, aprovechando que los nulos no colisionan en un índice único.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Diseño</th>
-<th>Atomicidad de la invariante</th>
-<th>Escala en escritura</th>
-<th>Consulta por estudiante</th>
-<th>Tamaño acotado</th>
+<th>Decisión</th>
+<th>Esquema laxo</th>
+<th>Esquema como contrato</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>A: agregado por curso</td>
-<td>Total</td>
-<td>Mala (punto caliente)</td>
-<td>Mala</td>
-<td>No</td>
+<td>Dónde falla un dato malo</td>
+<td>En el informe, semanas después</td>
+<td>En el <code>INSERT</code>, al instante</td>
 </tr>
 <tr>
-<td>B: agregado por inscripción</td>
-<td>Ninguna</td>
-<td>Buena</td>
-<td>Buena</td>
-<td>Sí</td>
+<td>Quién valida</td>
+<td>Cada cliente, si se acuerda</td>
+<td>El motor, siempre</td>
 </tr>
 <tr>
-<td>C: híbrido</td>
-<td>Aproximada, declarada</td>
-<td>Buena</td>
-<td>Buena</td>
-<td>Sí</td>
+<td>Costo de un cliente nuevo</td>
+<td>Reimplementar las validaciones</td>
+<td>Ninguno</td>
 </tr>
 <tr>
-<td>Relacional normalizado</td>
-<td>Total (transacción)</td>
-<td>Buena</td>
-<td>Buena</td>
-<td>Sí</td>
+<td>Migración de datos sucios</td>
+<td>Inevitable</td>
+<td>Innecesaria</td>
+</tr>
+<tr>
+<td>Coste de escritura</td>
+<td>Mínimo</td>
+<td>Comprobaciones por fila (despreciable)</td>
 </tr>
 </tbody>
 </table></div>
-<p>La última fila merece atención: el modelo relacional <strong>no</strong> obliga a elegir entre atomicidad y escalabilidad de escritura mientras quepa en un nodo. Renunciar a él tiene sentido cuando ya no cabe, no antes.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Agregados que crecen sin límite.</strong> Toda lista dentro de un documento necesita una cota conocida.</li>
-<li><strong>Suponer atomicidad entre documentos.</strong> No existe salvo que se pida explícitamente.</li>
-<li><strong>Elegir el agregado por cómo se lee, ignorando cómo se escribe.</strong> El punto caliente aparece después.</li>
-<li><strong>Contadores sin marcar como aproximados.</strong> Quien los lee supone exactitud.</li>
-<li><strong>Copiar el modelo relacional a documentos.</strong> Una colección por tabla con referencias reproduce las reuniones sin tener el motor que las optimiza.</li>
-<li><strong>Usar transacciones multidocumento como si fuesen gratis.</strong> En clúster tienen un costo de coordinación real.</li>
+<li><strong><code>REAL</code> para dinero.</strong> Error garantizado, solo cuestión de volumen.</li>
+<li><strong><code>TEXT</code> para todo.</strong> Traslada el análisis sintáctico a cada consulta y hace imposible ordenar y comparar.</li>
+<li><strong><code>VARCHAR(255)</code> por inercia.</strong> El 255 viene de un límite histórico de MySQL, no del dominio. Si el límite real es 40, escribe 40.</li>
+<li><strong>Guardar horas locales sin huso.</strong> Se descubre en el cambio de horario, con datos ya escritos.</li>
+<li><strong>Enumeraciones sin <code>CHECK</code>.</strong> El estado con errata entra y contamina todos los agregados.</li>
+<li><strong>Suponer DDL transaccional en MySQL.</strong> Una migración a medias en producción.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El punto caliente por agregado demasiado grande no se ve en desarrollo: aparece el día de mayor tráfico, que es el peor día para descubrirlo. Estimar el tamaño máximo del agregado y su tasa de escritura es parte del diseño, no una optimización posterior.</p>
+<p>Los proyectos de «limpieza de datos» existen porque en su día el esquema aceptó lo que no debía. Cada <code>CHECK</code> escrito hoy es un proyecto de limpieza que no ocurrirá.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Elige una entidad de tu dominio y propón dos fronteras de agregado distintas.</li>
-<li>Para cada una, escribe la invariante que se garantiza atómicamente y la que no.</li>
-<li>Estima el tamaño máximo del agregado y la tasa de escritura sobre el más caliente.</li>
-<li>Diseña la reconciliación para la invariante que quedó fuera y su periodicidad.</li>
+<li>Toma una tabla real y lista los valores absurdos que hoy acepta.</li>
+<li>Reescribe su DDL como contrato, con tipos, <code>NOT NULL</code>, <code>CHECK</code> y <code>UNIQUE</code>.</li>
+<li>Demuestra con inserciones fallidas que cada regla se aplica.</li>
+<li>Escribe la consulta que encuentra los datos existentes que el nuevo contrato rechazaría, y decide qué hacer con ellos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué la frontera del agregado es la frontera de la atomicidad?</li>
-<li>Da un agregado de tu dominio que crecería sin límite y propón cómo acotarlo.</li>
-<li>Explica el criterio de Helland de idempotencia con un mensaje concreto de tu sistema.</li>
-<li>¿En qué caso concreto renunciarías al modelo relacional por uno de agregados, y con qué evidencia?</li>
+<li>Demuestra numéricamente por qué <code>REAL</code> no sirve para dinero.</li>
+<li>¿Qué diferencia práctica hay entre <code>TIMESTAMP</code> y <code>TIMESTAMPTZ</code> durante un cambio de horario?</li>
+<li>Escribe la unicidad condicional de tu dominio en dos motores distintos.</li>
+<li>Tu migración falla a mitad en MySQL. Describe el estado del esquema y cómo lo recuperas.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Un pedido y sus líneas que cambian juntos o no cambian</p>
-<p>Un <strong>agregado</strong>, en el sentido de Evans y de Vernon, es el grupo de datos
-que se trata como una unidad: tiene una raíz —el pedido—, un límite —sus
-líneas— y un invariante que debe cumplirse siempre. Aquí el invariante es
-que el total guardado sea igual a la suma de las líneas.</p>
-<p>El caso crea el pedido con dos líneas, añade una tercera y sube el total. La
-consulta devuelve el total guardado y el calculado. Que coincidan es todo el
-ejercicio: lo interesante no es el número, sino <strong>qué mecanismo garantiza
-que nunca se separen</strong> en cada motor, y qué pasa cuando el agregado no cabe
-en la unidad atómica que ese motor ofrece.</p>
+<p><strong>Caso:</strong> Un esquema que rechaza por su cuenta los datos que no cumplen el contrato</p>
+<p>El DDL no describe los datos: los <strong>restringe</strong>. Un esquema es un contrato
+ejecutable, y la forma de comprobar que existe es intentar romperlo.</p>
+<p>El caso intenta guardar cuatro notas. Dos son válidas. Una trae nota 130
+—fuera del rango declarado— y otra trae el nombre del estudiante vacío. El
+programa no comprueba nada; las dos inválidas tienen que rebotar contra el
+esquema. La consulta devuelve lo que quedó guardado, ordenado por
+estudiante: exactamente las dos válidas.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>pedido</th>
-<th>total_guardado</th>
-<th>total_calculado</th>
+<th>estudiante</th>
+<th>nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>P-1</code></td>
-<td><code>300</code></td>
-<td><code>300</code></td>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>58</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 024</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -315,260 +346,255 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_transaction.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/stricttables.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt">código</a></td>
-<td><a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Amazon DynamoDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/schema-validation/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_transaction.html
--- nota: el limite del agregado es una CONVENCION, no una propiedad del
---       esquema. Nada impide un UPDATE suelto que rompa el invariante.
+-- doc: https://sqlite.org/stricttables.html
+-- nota: la clausula STRICT es lo que hace que el tipo se comprueba de verdad.
+--       Sin ella, la afinidad de tipos deja pasar una cadena en una columna
+--       INTEGER si no puede convertirla.
 
 -- === preparacion ===
-CREATE TABLE pedidos (
-    id    TEXT PRIMARY KEY,
-    total INTEGER NOT NULL
-);
-CREATE TABLE lineas (
-    pedido_id TEXT NOT NULL REFERENCES pedidos(id),
-    producto  TEXT NOT NULL,
-    importe   INTEGER NOT NULL,
-    PRIMARY KEY (pedido_id, producto)
-);
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
+) STRICT;
 
--- El agregado nace entero, dentro de UNA transaccion.
-BEGIN;
-INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
-COMMIT;
-
--- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
-BEGIN;
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
-UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
-COMMIT;
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+-- Las dos siguientes rebotan contra el contrato. OR IGNORE deja verlo sin
+-- abortar el guion; sin OR IGNORE, cada una lanza un error.
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
 
 -- === consulta ===
--- El invariante del agregado: el total guardado y la suma de sus lineas. Si
--- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
-SELECT p.id AS pedido,
-       p.total AS total_guardado,
-       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
-FROM pedidos p
-ORDER BY p.id;
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> El agregado se reparte en dos tablas y la transacción lo mantiene entero: <code>BEGIN</code>/<code>COMMIT</code> es la frontera. En un motor relacional el límite del agregado lo decide el diseñador, no el almacén.</li>
-<li><strong>Por qué no:</strong> Precisamente por eso el límite es invisible: nada en el esquema dice que <code>pedidos</code> y <code>lineas</code> son una unidad, y basta un <code>UPDATE</code> suelto sin transacción para romper el invariante sin que nada proteste.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_transaction.html">https://sqlite.org/lang_transaction.html</a></li>
+<li><strong>Por qué sí:</strong> Tiene <code>CHECK</code>, <code>NOT NULL</code>, <code>UNIQUE</code> y claves foráneas, y <code>INSERT OR IGNORE</code> permite ver el rechazo sin abortar el guion: el contrato actúa a la vista.</li>
+<li><strong>Por qué no:</strong> Su tipado es dinámico por afinidad: en una columna <code>INTEGER</code> cabe la cadena <code>'alto'</code> si el motor no la puede convertir. Desde 3.37 existen las tablas <code>STRICT</code>, pero no son las de por omisión, así que casi ninguna base SQLite existente comprueba tipos.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/stricttables.html">https://sqlite.org/stricttables.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE para violaciones de CHECK: la fila
+--       invalida aborta la sentencia. Por eso los dos intentos prohibidos van
+--       comentados; descomentar cualquiera de los dos hace fallar el guion, que
+--       es precisamente la prueba de que el contrato existe.
 
 -- === preparacion ===
-CREATE TABLE pedidos (
-    id    VARCHAR PRIMARY KEY,
-    total INTEGER NOT NULL
-);
-CREATE TABLE lineas (
-    pedido_id VARCHAR NOT NULL,
-    producto  VARCHAR NOT NULL,
-    importe   INTEGER NOT NULL,
-    PRIMARY KEY (pedido_id, producto)
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
 );
 
--- El agregado nace entero, dentro de UNA transaccion.
-BEGIN;
-INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
-COMMIT;
-
--- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
-BEGIN;
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
-UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
-COMMIT;
+INSERT INTO notas VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas VALUES ('Linus', 'DB-101', 58);
+-- INSERT INTO notas VALUES ('Grace', 'DB-101', 130);  -- Constraint Error: CHECK
+-- INSERT INTO notas VALUES ('',      'DB-101', 70);   -- Constraint Error: CHECK
 
 -- === consulta ===
--- El invariante del agregado: el total guardado y la suma de sus lineas. Si
--- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
-SELECT p.id AS pedido,
-       p.total AS total_guardado,
-       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
-FROM pedidos p
-ORDER BY p.id;
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene transacciones ACID sobre el archivo, así que el mismo guion sirve para comprobar el invariante sobre un volcado analítico.</li>
-<li><strong>Por qué no:</strong> Un solo proceso escritor: el agregado está a salvo de una escritura a medias, pero no de dos aplicaciones que quieran escribirlo a la vez, porque esa situación sencillamente no está contemplada.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
+<li><strong>Por qué sí:</strong> El tipado sí es estricto: una nota <code>'alto'</code> en una columna entera falla al insertar, sin conversiones silenciosas. Es el motor donde el contrato de tipos se cumple sin pedirlo.</li>
+<li><strong>Por qué no:</strong> No tiene <code>INSERT OR IGNORE</code> para violaciones de <code>CHECK</code>: la fila inválida aborta la sentencia entera. Para cargar datos sucios hay que filtrarlos antes, que es justo lo que un almacén analítico espera que hayas hecho ya.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
--- nota: el invariante se puede llevar al esquema con una restriccion diferible
---       comprobada al COMMIT, en vez de dejarlo en manos de quien escriba.
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: el dominio da NOMBRE a la restriccion y la hace reutilizable: cualquier
+--       columna declarada `nota_valida` hereda el rango, y cambiarlo en un solo
+--       sitio lo cambia en todas.
 
 -- === preparacion ===
-DROP TABLE IF EXISTS lineas, pedidos;
+DROP TABLE IF EXISTS notas;
+DROP DOMAIN IF EXISTS nota_valida;
 
-CREATE TABLE pedidos (
-    id    text PRIMARY KEY,
-    total integer NOT NULL
+CREATE DOMAIN nota_valida AS integer CHECK (VALUE BETWEEN 0 AND 100);
+
+CREATE TABLE notas (
+    estudiante text NOT NULL CHECK (length(estudiante) &gt; 0),
+    curso      text NOT NULL,
+    nota       nota_valida NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-CREATE TABLE lineas (
-    pedido_id text NOT NULL REFERENCES pedidos(id),
-    producto  text NOT NULL,
-    importe   integer NOT NULL,
-    PRIMARY KEY (pedido_id, producto)
-);
 
--- El agregado nace entero, dentro de UNA transaccion.
-BEGIN;
-INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
-COMMIT;
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
 
--- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
-BEGIN;
-INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
-UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
-COMMIT;
+-- Los dos intentos prohibidos se ejecutan de verdad, capturando el error: la
+-- prueba de que el contrato actua queda en el guion, no en un comentario.
+DO $$
+DECLARE rechazadas integer := 0;
+BEGIN
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    BEGIN
+        INSERT INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
+    END;
+    IF rechazadas &lt;&gt; 2 THEN
+        RAISE EXCEPTION 'el esquema acepto datos que su contrato prohibe';
+    END IF;
+END;
+$$;
 
 -- === consulta ===
--- El invariante del agregado: el total guardado y la suma de sus lineas. Si
--- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
-SELECT p.id AS pedido,
-       p.total AS total_guardado,
-       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
-FROM pedidos p
-ORDER BY p.id;
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La transacción abarca cuantas tablas haga falta, con aislamiento configurable y con restricciones diferibles: el límite del agregado puede ser tan grande como el problema pida, y el invariante se puede comprobar al confirmar en vez de en cada sentencia.</li>
-<li><strong>Por qué no:</strong> Esa libertad invita a agregados enormes: una transacción que toca diez tablas retiene bloqueos y versiones durante todo su recorrido, y en concurrencia alta convierte el invariante en una cola.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
+<li><strong>Por qué sí:</strong> Es el que más lejos lleva la idea de contrato: además de <code>CHECK</code> tiene dominios (<code>CREATE DOMAIN</code>) para dar nombre a una restricción y reutilizarla, tipos enumerados y restricciones de exclusión. La regla se declara una vez y vale para toda tabla que use el tipo.</li>
+<li><strong>Por qué no:</strong> Añadir un <code>CHECK</code> a una tabla grande la bloquea mientras valida las filas existentes, salvo que se declare <code>NOT VALID</code> y se valide después: el contrato se endurece con una ventana de mantenimiento, no con un despliegue.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
-// nota: aqui NO hay transaccion, y no hace falta. El pedido y sus lineas son un
-//       solo documento, y la escritura de un documento es atomica: $push y $inc
-//       en la misma orden se aplican juntos o no se aplica ninguno.
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html
+-- nota: antes de 8.0.16, MySQL analizaba los CHECK y los ignoraba en silencio.
+--       Comprobar la version del servidor es parte de leer el esquema.
 
-// === preparacion ===
-db.pedidos.drop();
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
 
-db.pedidos.insertOne({
-  _id: &quot;P-1&quot;,
-  total: 200,
-  lineas: [
-    { producto: &quot;teclado&quot;, importe: 120 },
-    { producto: &quot;raton&quot;, importe: 80 },
-  ],
-});
-
-// Una sola orden: la linea nueva y el total suben juntos.
-db.pedidos.updateOne(
-  { _id: &quot;P-1&quot; },
-  {
-    $push: { lineas: { producto: &quot;cable&quot;, importe: 100 } },
-    $inc: { total: 100 },
-  },
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL CHECK (CHAR_LENGTH(estudiante) &gt; 0),
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL CHECK (nota BETWEEN 0 AND 100),
+    PRIMARY KEY (estudiante, curso)
 );
 
-// === consulta ===
-db.pedidos
-  .aggregate([
-    { $project: { _id: 0, pedido: &quot;$_id&quot;, total_guardado: &quot;$total&quot;,
-                  total_calculado: { $sum: &quot;$lineas.importe&quot; } } },
-    { $sort: { pedido: 1 } },
-  ])
-  .forEach((d) =&gt; print(d.pedido + &quot;|&quot; + d.total_guardado + &quot;|&quot; + d.total_calculado));
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
+INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
+INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Aquí el agregado es literal: pedido y líneas son <strong>un documento</strong>, y la escritura de un documento es atómica por definición. El límite del agregado deja de ser una convención y pasa a ser una propiedad del almacén, sin transacción que declarar.</li>
-<li><strong>Por qué no:</strong> Ese límite es también una jaula: el documento no puede pasar de 16 MB, un pedido con cien mil líneas no cabe, y todo lo que cruce la frontera del documento vuelve a necesitar transacciones de varios documentos, que aquí cuestan más que en un motor relacional.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">https://www.mongodb.com/docs/manual/core/write-operations-atomicity/</a></li>
+<li><strong>Por qué sí:</strong> Desde 8.0.16 los <code>CHECK</code> se comprueban de verdad, y <code>INSERT IGNORE</code> convierte el rechazo en aviso, lo que permite cargar por lotes sin perder el lote entero.</li>
+<li><strong>Por qué no:</strong> Antes de 8.0.16 el <code>CHECK</code> se analizaba y se <strong>ignoraba en silencio</strong>: hay esquemas heredados llenos de restricciones que nunca comprobaron nada. Y sin el modo estricto, un <code>INSERT</code> con un valor imposible se convertía en un aviso y guardaba un cero.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html</a></li>
 </ul>
-<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/024-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-text"># motor: redis
-# doc: https://redis.io/docs/latest/develop/programmability/eval-intro/
-# nota: el script Lua es la unidad atomica: se ejecuta entero, sin que ninguna
-#       otra orden se cuele en medio. Es lo que permite que la linea nueva y el
-#       total suban juntos. Lo que NO garantiza es durabilidad: atomico y
-#       durable son dos propiedades distintas.
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/schema-validation/
+// nota: validationAction &quot;error&quot; es lo que convierte el esquema en contrato.
+//       Con &quot;warn&quot; el documento invalido se guarda igual y solo queda una
+//       linea en el registro que nadie lee.
 
-# === preparacion ===
-FLUSHDB
-HSET pedido:P-1 total 200
-HSET pedido:P-1:linea teclado 120
-HSET pedido:P-1:linea raton 80
+// === preparacion ===
+db.notas.drop();
+db.createCollection(&quot;notas&quot;, {
+  validator: {
+    $jsonSchema: {
+      bsonType: &quot;object&quot;,
+      required: [&quot;estudiante&quot;, &quot;curso&quot;, &quot;nota&quot;],
+      properties: {
+        estudiante: { bsonType: &quot;string&quot;, minLength: 1 },
+        curso: { bsonType: &quot;string&quot; },
+        nota: { bsonType: &quot;int&quot;, minimum: 0, maximum: 100 },
+      },
+    },
+  },
+  validationAction: &quot;error&quot;,
+  validationLevel: &quot;strict&quot;,
+});
 
-# Anadir la linea y subir el total, sin estado intermedio observable.
-EVAL &quot;redis.call('HSET','pedido:P-1:linea','cable',100) redis.call('HINCRBY','pedido:P-1','total',100) return 1&quot; 0
+db.notas.insertOne({ estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(90) });
+db.notas.insertOne({ estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(58) });
 
-# === consulta ===
-EVAL &quot;local t=redis.call('HGET','pedido:P-1','total') local ls=redis.call('HVALS','pedido:P-1:linea') local s=0 for _,v in ipairs(ls) do s=s+tonumber(v) end return {'P-1|'..t..'|'..s}&quot; 0
+let rechazadas = 0;
+for (const malo of [
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(130) },
+  { estudiante: &quot;&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(70) },
+]) {
+  try {
+    db.notas.insertOne(malo);
+  } catch (e) {
+    rechazadas += 1;
+  }
+}
+if (rechazadas !== 2) throw new Error(&quot;el validador acepto lo que prohibe&quot;);
+
+// === consulta ===
+db.notas
+  .find({}, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Un script Lua se ejecuta entero y sin interrupciones: es la unidad atómica de Redis y permite actualizar varias claves del mismo agregado sin que nadie vea un estado intermedio.</li>
-<li><strong>Por qué no:</strong> La atomicidad no es durabilidad: si el servidor cae antes de volcar, el agregado consistente que se acaba de escribir puede no existir al arrancar. Y en un clúster, las claves del agregado tienen que compartir ranura (<code>hash tag</code>) o el script ni siquiera se puede ejecutar.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">https://redis.io/docs/latest/develop/programmability/eval-intro/</a></li>
+<li><strong>Por qué sí:</strong> <code>$jsonSchema</code> con <code>validationAction: "error"</code> da un contrato equivalente —tipos, rangos, campos obligatorios— sin renunciar a que el documento evolucione: se puede empezar sin esquema y endurecerlo cuando el dominio se entiende.</li>
+<li><strong>Por qué no:</strong> Es opcional y se aplica solo a las escrituras posteriores: con <code>validationLevel: "moderate"</code> los documentos que ya estaban mal siguen estando mal, y nada en el documento delata que hay un contrato detrás.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/schema-validation/">https://www.mongodb.com/docs/manual/core/schema-validation/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -583,23 +609,29 @@ EVAL &quot;local t=redis.call('HGET','pedido:P-1','total') local ls=redis.call('
 </thead>
 <tbody>
 <tr>
-<td>Amazon DynamoDB</td>
-<td>Un elemento es la unidad atómica, y está limitado a 400 KB. Un agregado que no quepa ahí necesita <code>TransactWriteItems</code>, que admite como mucho 100 elementos, cuesta el doble de capacidad de escritura y no admite dos operaciones sobre el mismo elemento.</td>
-<td>Diseñar el agregado para que quepa en un elemento, o repartirlo en la misma clave de partición y aceptar que la coherencia entre sus elementos la comprueba un proceso posterior.</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc</a></td>
+<td>Apache Cassandra</td>
+<td>CQL declara tipos, pero no tiene <code>CHECK</code> ni restricciones de dominio: no hay forma de decir «la nota está entre 0 y 100». Cualquier comprobación de ese tipo exigiría leer o validar en el servidor, y su modelo de escritura no lee nada.</td>
+<td>Validar en la capa de servicio que está delante del clúster, y aceptar que el contrato vive en el código, no en el almacén: si alguien escribe con <code>cqlsh</code>, no hay red de seguridad.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
-<td><code>BATCH</code> no es una transacción: no hay aislamiento entre particiones y no se puede deshacer. Solo dentro de <strong>una</strong> partición la escritura por lotes es atómica y aislada; en cuanto el agregado toca dos particiones, se puede observar a medias.</td>
-<td>Modelar el agregado entero dentro de una sola partición —el pedido como clave, las líneas como filas de agrupamiento— y usar <code>BATCH</code> únicamente dentro de ella.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+<td>Redis</td>
+<td>No hay esquema en absoluto: toda clave admite cualquier valor. La única «restricción» es el tipo de la estructura —no se puede hacer <code>INCR</code> sobre una lista—, y eso no es un contrato de dominio.</td>
+<td>Validar antes de escribir en el cliente, o usar RedisJSON con un esquema comprobado en la aplicación; en cualquier caso, la regla la sostiene el código.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>Un <code>mapping</code> fija tipos, pero su comportamiento por omisión es el contrario al de un contrato: el mapeo dinámico <strong>crea</strong> el campo que aparezca. Y un campo mal tipado no se puede cambiar sin reindexar.</td>
+<td><code>dynamic: strict</code> en el mapeo, que rechaza los documentos con campos no declarados; sigue sin haber rangos ni condiciones sobre los valores.</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -643,22 +675,24 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
-  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
-<li><strong>Pat Helland</strong> (2007). <a href="https://www.cidrdb.org/cidr2007/papers/cidr07p15.pdf">Life beyond Distributed Transactions: An Apostate's Opinion</a>. CIDR.<br />
-  Entidades, actividades y por qué las transacciones distribuidas no escalan.</li>
-<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
-  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="023.html">← Anterior</a> · <a href="025.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="023.html">← Anterior</a> · <a href="025.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="024">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="023.html"><span class="sentido">← Anterior · 023</span>SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a>
-<a class="siguiente" href="025.html"><span class="sentido">Siguiente · 025 →</span>Modelado documental: incrustar o referenciar</a>
+<a class="anterior" href="023.html"><span class="sentido">← Anterior · 023</span>Integridad: restricciones, claves foraneas y acciones referenciales</a>
+<a class="siguiente" href="025.html"><span class="sentido">Siguiente · 025 →</span>SELECT: filtrado, proyección y orden con semántica precisa</a>
 </nav>
 </main>
 <footer>

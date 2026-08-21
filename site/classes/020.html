@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Portabilidad: qué exige la norma y qué añade cada motor. Parte 04: Motores relacionales y dialectos.">
+<meta name="description" content="La relación como conjunto: tuplas, dominios y acceso por valor. Parte 03: Modelo relacional y álgebra.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/020.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="020 — Portabilidad: qué exige la norma y qué añade cada motor · Database Systems Labs">
-<meta property="og:description" content="Portabilidad: qué exige la norma y qué añade cada motor. Parte 04: Motores relacionales y dialectos.">
+<meta property="og:title" content="020 — La relación como conjunto: tuplas, dominios y acceso por valor · Database Systems Labs">
+<meta property="og:description" content="La relación como conjunto: tuplas, dominios y acceso por valor. Parte 03: Modelo relacional y álgebra.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/020.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "020 — Portabilidad: qué exige la norma y qué añade cada motor", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["norma frente a producto", "matriz de portabilidad", "extensión propietaria"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>020 — Portabilidad: qué exige la norma y qué añade cada motor · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "020 — La relación como conjunto: tuplas, dominios y acceso por valor", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["relación", "tupla", "dominio", "acceso por valor", "cierre"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>020 — La relación como conjunto: tuplas, dominios y acceso por valor · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,318 +49,213 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-04.html">Parte 04 · Motores relacionales y dialectos</a>
+  <a href="parte-03.html">Parte 03 · Modelo relacional y álgebra</a>
   <span aria-hidden="true">/</span><span>Clase 020</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="020--portabilidad-qué-exige-la-norma-y-qué-añade-cada-motor">020 — Portabilidad: qué exige la norma y qué añade cada motor</h1>
+<h1 id="020--la-relación-como-conjunto-tuplas-dominios-y-acceso-por-valor">020 — La relación como conjunto: tuplas, dominios y acceso por valor</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 04 — Motores relacionales y dialectos · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>sqlite</code>, <code>sql-server</code>, <code>oracle-database</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>norma frente a producto</code> · <code>matriz de portabilidad</code> · <code>extensión propietaria</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 03 — Modelo relacional y álgebra · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>relación</code> · <code>tupla</code> · <code>dominio</code> · <code>acceso por valor</code> · <code>cierre</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Escribir SQL que sobreviva a un cambio de motor, y saber exactamente dónde se paga por no hacerlo. La portabilidad total no existe; la portabilidad <em>gestionada</em> sí.</p>
+<p>Precisar qué es una relación en el sentido de Codd y en qué se aparta SQL de esa definición. Muchos comportamientos «raros» de SQL —duplicados, orden, nulos— se explican exactamente por ahí.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar por qué ningún motor implementa la norma completa.</li>
-<li>Construir una matriz de portabilidad para tu propio código.</li>
-<li>Aislar las divergencias en una capa en vez de esparcirlas.</li>
-<li>Decidir cuándo usar una extensión propietaria a sabiendas.</li>
-<li>Distinguir divergencia sintáctica de divergencia semántica, que es mucho peor.</li>
+<li>Definir relación, tupla, atributo y dominio sin recurrir a «tabla», «fila» y «columna».</li>
+<li>Enumerar las cuatro propiedades de una relación que SQL no respeta.</li>
+<li>Explicar el acceso por valor y por qué excluye punteros y posiciones.</li>
+<li>Justificar la propiedad de cierre y qué habilita.</li>
+<li>Detectar en código propio dependencias del orden físico.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="qué-es-la-norma-y-qué-no">Qué es la norma y qué no</h3>
-<p>ISO/IEC 9075 define SQL en varias partes y con niveles de conformidad. La realidad es que <strong>ningún producto implementa la norma completa</strong> y todos añaden extensiones. La norma no es un contrato de compatibilidad: es un vocabulario común.</p>
-<p>Lo estable en la práctica —el «núcleo portable»— es aproximadamente:</p>
-<p><code>CREATE TABLE</code> con tipos básicos · <code>PRIMARY KEY</code>, <code>FOREIGN KEY</code>, <code>UNIQUE</code>, <code>CHECK</code>, <code>NOT NULL</code> · <code>SELECT/FROM/WHERE/GROUP BY/HAVING/ORDER BY</code> · <code>INNER</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>FULL JOIN</code> · <code>UNION</code>, <code>INTERSECT</code>, <code>EXCEPT</code> · subconsultas y <code>EXISTS</code> · CTE y <code>WITH RECURSIVE</code> · funciones de ventana · <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> · <code>BEGIN</code>/<code>COMMIT</code>/<code>ROLLBACK</code>.</p>
-<p>Lo que <strong>no</strong> es portable, aunque lo parezca: tipos de fecha y hora, funciones de cadena, autoincremento, <code>LIMIT</code>, <code>UPSERT</code>, tipos JSON, expresiones regulares, <code>TOP</code>/<code>FETCH</code>, y —la peor— la colación.</p>
-<h3 id="sintáctica-frente-a-semántica">Sintáctica frente a semántica</h3>
-<p>Esta distinción es la que decide cuánto duele una migración.</p>
+<h3 id="la-definición">La definición</h3>
+<p>Dada una lista de dominios <code>D1, …, Dn</code>, una <strong>relación</strong> es un subconjunto del producto cartesiano <code>D1 × … × Dn</code>. De ahí, por ser un conjunto matemático, se siguen cuatro propiedades:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Propiedad</th>
+<th>Significado</th>
+<th>¿SQL la respeta?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sin tuplas duplicadas</td>
+<td>Un conjunto no repite elementos</td>
+<td><strong>No.</strong> Una tabla sin clave admite filas idénticas</td>
+</tr>
+<tr>
+<td>Sin orden entre tuplas</td>
+<td>Un conjunto no está ordenado</td>
+<td><strong>No del todo:</strong> <code>ORDER BY</code> produce una lista, no una relación</td>
+</tr>
+<tr>
+<td>Sin orden entre atributos</td>
+<td>Se accede por nombre</td>
+<td><strong>No.</strong> <code>SELECT *</code> y <code>INSERT</code> sin lista de columnas dependen de la posición</td>
+</tr>
+<tr>
+<td>Valores atómicos del dominio</td>
+<td>Cada celda es un valor del dominio</td>
+<td><strong>Parcialmente.</strong> Admite nulos, que no pertenecen a ningún dominio</td>
+</tr>
+</tbody>
+</table></div>
+<p>Date insiste en que SQL implementa «tablas», no relaciones: una tabla es un multiconjunto (<em>bag</em>) con orden de columnas. Todas las sorpresas de la parte 03 —<code>UNION</code> frente a <code>UNION ALL</code>, <code>COUNT(*)</code> frente a <code>COUNT(col)</code>, el resultado de <code>NOT IN</code> con nulos— derivan de esa distancia.</p>
+<h3 id="acceso-por-valor">Acceso por valor</h3>
+<p>Codd exige que todo dato sea localizable por la terna <strong>(nombre de relación, valor de clave, nombre de atributo)</strong>. Nunca por posición física ni por puntero.</p>
+<p>Consecuencias que se usan a diario:</p>
 <ul>
-<li><strong>Divergencia sintáctica:</strong> el mismo concepto se escribe distinto. Falla al ejecutar, se ve enseguida, se arregla una vez.</li>
-<li><strong>Divergencia semántica:</strong> la misma sintaxis hace cosas distintas. <strong>No falla</strong>: devuelve otro resultado. Se descubre en un informe, meses después.</li>
+<li>Se puede reorganizar el almacenamiento sin tocar consultas (independencia física, clase 003).</li>
+<li>Se puede replicar y particionar sin cambiar la semántica.</li>
+<li>No existe «la tercera fila»: sin <code>ORDER BY</code> no hay tercera fila, y con <code>ORDER BY</code> sobre una columna no única tampoco está determinada.</li>
 </ul>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Divergencia</th>
-<th>Tipo</th>
-<th>Consecuencia</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>LIMIT</code> frente a <code>FETCH FIRST</code> frente a <code>TOP</code></td>
-<td>Sintáctica</td>
-<td>Error de sintaxis</td>
-</tr>
-<tr>
-<td><code>AUTO_INCREMENT</code> / <code>SERIAL</code> / <code>IDENTITY</code></td>
-<td>Sintáctica</td>
-<td>Error en DDL</td>
-</tr>
-<tr>
-<td>Concatenación <code>\|\|</code> frente a <code>CONCAT()</code></td>
-<td>Sintáctica</td>
-<td>Error, salvo en MySQL donde <code>\|\|</code> es <code>OR</code></td>
-</tr>
-<tr>
-<td>Comparación de texto sensible o no a mayúsculas</td>
-<td><strong>Semántica</strong></td>
-<td>Resultados distintos, sin error</td>
-</tr>
-<tr>
-<td>División entera frente a decimal</td>
-<td><strong>Semántica</strong></td>
-<td>Números distintos</td>
-</tr>
-<tr>
-<td>Cadena vacía tratada como nulo (Oracle)</td>
-<td><strong>Semántica</strong></td>
-<td>Filas que aparecen o desaparecen</td>
-</tr>
-<tr>
-<td>Redondeo a la mitad</td>
-<td><strong>Semántica</strong></td>
-<td>Descuadres contables</td>
-</tr>
-</tbody>
-</table></div>
-<p>El caso de <code>||</code> en MySQL merece atención: con el modo <code>PIPES_AS_CONCAT</code> desactivado, <code>'a' || 'b'</code> se evalúa como <code>'a' OR 'b'</code> → <code>0</code>. No es un error; es un resultado equivocado.</p>
-<h3 id="estrategias">Estrategias</h3>
-<pre><code class="language-mermaid">flowchart TD
-    S[&quot;SQL de la aplicación&quot;] --&gt; D{&quot;¿La construcción&lt;br/&gt;está en el núcleo portable?&quot;}
-    D -- &quot;Sí&quot; --&gt; OK[&quot;Escribirla directamente&quot;]
-    D -- &quot;No&quot; --&gt; N{&quot;¿Hay equivalente&lt;br/&gt;portable razonable?&quot;}
-    N -- &quot;Sí&quot; --&gt; E[&quot;Usar el equivalente&lt;br/&gt;aunque sea más largo&quot;]
-    N -- &quot;No&quot; --&gt; V{&quot;¿Aporta valor real&lt;br/&gt;(rendimiento, corrección)?&quot;}
-    V -- &quot;No&quot; --&gt; E
-    V -- &quot;Sí&quot; --&gt; A[&quot;Extensión propietaria&lt;br/&gt;aislada tras una función&lt;br/&gt;+ anotada en la matriz&quot;]
+<h3 id="cierre">Cierre</h3>
+<p>Todo operador relacional recibe relaciones y devuelve una relación. Eso permite componer sin límite: el resultado de una consulta puede ser la entrada de otra. En SQL se manifiesta en las subconsultas, las CTE y las vistas. Es lo que hace que el lenguaje sea composicional en lugar de un catálogo de comandos.</p>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph M[&quot;Modelo relacional (Codd)&quot;]
+        R1[&quot;Relación: conjunto&quot;] --&gt; P1[&quot;sin duplicados&quot;]
+        R1 --&gt; P2[&quot;sin orden&quot;]
+        R1 --&gt; P3[&quot;acceso por valor&quot;]
+        R1 --&gt; P4[&quot;cierre&quot;]
+    end
+    subgraph S[&quot;SQL (implementación)&quot;]
+        T1[&quot;Tabla: multiconjunto&quot;] --&gt; Q1[&quot;admite duplicados&quot;]
+        T1 --&gt; Q2[&quot;orden observable&quot;]
+        T1 --&gt; Q3[&quot;posición de columnas&quot;]
+        T1 --&gt; Q4[&quot;cierre conservado&quot;]
+    end
+    M -- &quot;se aparta en 3 de 4&quot; --&gt; S
 </code></pre>
-<p>La regla operativa: <strong>usar extensiones está permitido; esparcirlas por todo el código, no</strong>. Una extensión aislada en un único punto es una decisión reversible; la misma extensión en 200 consultas es una migración de trimestre.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Consulta «los 10 estudiantes con mejor promedio», en cinco dialectos.</p>
-<pre><code class="language-sql">-- Núcleo portable (norma SQL:2008, soportado hoy por PostgreSQL, SQL Server, Oracle, MariaDB 10.6+)
-SELECT s.id, s.nombre, AVG(e.nota) AS promedio
-FROM students s JOIN enrollments e ON e.student_id = s.id
-GROUP BY s.id, s.nombre
-ORDER BY promedio DESC, s.id
-FETCH FIRST 10 ROWS ONLY;
+<p>Creemos una tabla sin clave y observemos las tres desviaciones.</p>
+<pre><code class="language-sql">CREATE TABLE t (a INTEGER, b TEXT);
+INSERT INTO t VALUES (1,'x'), (1,'x'), (2,'y');
+SELECT COUNT(*) FROM t;              -- 3
+SELECT COUNT(*) FROM (SELECT DISTINCT a, b FROM t);  -- 2
 </code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Cláusula de límite</th>
-<th>¿Acepta <code>FETCH FIRST</code>?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL</td>
-<td><code>LIMIT 10</code></td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>MySQL / MariaDB</td>
-<td><code>LIMIT 10</code></td>
-<td>Solo MariaDB reciente</td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td><code>LIMIT 10</code></td>
-<td>No</td>
-</tr>
-<tr>
-<td>SQL Server</td>
-<td><code>TOP 10</code> u <code>OFFSET ... FETCH</code></td>
-<td>Sí, con <code>ORDER BY</code></td>
-</tr>
-<tr>
-<td>Oracle</td>
-<td><code>FETCH FIRST 10 ROWS ONLY</code> (12c+)</td>
-<td>Sí</td>
-</tr>
-</tbody>
-</table></div>
-<p>Como SQLite y MySQL no aceptan <code>FETCH FIRST</code>, el mínimo común denominador real hoy es <code>LIMIT</code>, que <strong>no</strong> está en la norma. Conclusión honesta: la portabilidad se negocia contra el conjunto de motores que uno realmente soporta, no contra la norma.</p>
-<p><strong>Ahora la divergencia semántica</strong>, mucho más peligrosa:</p>
-<pre><code class="language-sql">SELECT * FROM students WHERE email = 'ANA@EJEMPLO.CL';
+<p>Si <code>t</code> fuese una relación, ambas consultas darían <strong>2</strong>. Dan 3 y 2: <code>t</code> es un multiconjunto. La consecuencia inmediata:</p>
+<pre><code class="language-sql">SELECT a, b FROM t
+EXCEPT
+SELECT 1, 'x';
 </code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Colación por defecto</th>
-<th>¿Encuentra <code>ana@ejemplo.cl</code>?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MySQL 8</td>
-<td><code>utf8mb4_0900_ai_ci</code></td>
-<td><strong>Sí</strong></td>
-</tr>
-<tr>
-<td>PostgreSQL</td>
-<td>Del sistema, sensible</td>
-<td><strong>No</strong></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td><code>BINARY</code></td>
-<td><strong>No</strong></td>
-</tr>
-<tr>
-<td>SQL Server</td>
-<td>Suele ser <code>_CI_AS</code></td>
-<td><strong>Sí</strong></td>
-</tr>
-</tbody>
-</table></div>
-<p>Una aplicación desarrollada sobre MySQL y desplegada sobre PostgreSQL deja de encontrar usuarios al iniciar sesión, sin ningún error en los registros. La defensa no es configurar la colación: es <strong>normalizar al escribir</strong>.</p>
-<pre><code class="language-sql">CREATE TABLE students (
-  id     INTEGER PRIMARY KEY,
-  email  TEXT NOT NULL CHECK (email = lower(email)),
-  UNIQUE (email)
-);
+<p>En SQL estándar <code>EXCEPT</code> elimina duplicados, así que el resultado es <code>(2,'y')</code>: se han borrado <strong>las dos</strong> filas <code>(1,'x')</code> con una sola tupla. Con <code>EXCEPT ALL</code> el resultado incluiría una <code>(1,'x')</code> superviviente. Dos operadores distintos porque el modelo subyacente no es un conjunto.</p>
+<p><strong>Desviación de orden.</strong> Sobre el dominio del repositorio:</p>
+<pre><code class="language-sql">SELECT nombre FROM students;
 </code></pre>
-<p>El <code>CHECK</code> convierte una suposición implícita en una regla comprobada por el motor, en cualquier motor.</p>
-<p><strong>Aritmética:</strong></p>
-<pre><code class="language-sql">SELECT 7 / 2;
+<p>El orden que devuelve depende del plan. Si el motor decide un barrido secuencial, sale el orden de inserción; si decide recorrer un índice, sale el orden del índice. Añadir un índice puede cambiar el resultado observado sin cambiar ningún dato. Todo código que dependa de ese orden es un fallo latente que se activa el día que alguien optimiza.</p>
+<p><strong>Desviación de posición.</strong></p>
+<pre><code class="language-sql">INSERT INTO students VALUES (5, 'Ana');    -- depende del orden de columnas
+INSERT INTO students (id, nombre) VALUES (5, 'Ana');  -- acceso por nombre
 </code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Resultado</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL, Oracle, SQL Server</td>
-<td><code>3</code> (división entera)</td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td><code>3.5</code></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td><code>3</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>Escribir <code>7.0 / 2</code> o <code>CAST(7 AS NUMERIC) / 2</code> elimina la ambigüedad en todos.</p>
-<p><strong>Inserción idempotente (<code>UPSERT</code>)</strong>, ninguna forma es portable:</p>
-<pre><code class="language-sql">-- PostgreSQL, SQLite
-INSERT INTO t (id, v) VALUES (1,'x') ON CONFLICT (id) DO UPDATE SET v = excluded.v;
--- MySQL
-INSERT INTO t (id, v) VALUES (1,'x') ON DUPLICATE KEY UPDATE v = VALUES(v);
--- Norma (SQL Server, Oracle): MERGE
-</code></pre>
-<p>Esta es la construcción que más justifica una capa de aislamiento: se usa constantemente y se escribe distinto en todos.</p>
+<p>La primera forma se rompe en silencio si alguien añade una columna en medio. La segunda es la que respeta el acceso por valor.</p>
+<p><strong>Traza del riesgo.</strong> Un <code>INSERT</code> posicional sobre una tabla de 6 columnas, tras insertar una columna nueva en la posición 3, no falla: desplaza los valores y guarda datos incorrectos con tipos compatibles. El error se descubre en un informe semanas después.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Aspecto</th>
-<th>Escribir portable</th>
-<th>Usar extensiones libremente</th>
+<th>Operación</th>
+<th>Semántica de conjunto</th>
+<th>Semántica de multiconjunto (SQL)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Velocidad de desarrollo</td>
-<td>Menor</td>
-<td>Mayor</td>
+<td><code>UNION</code></td>
+<td>Sin duplicados</td>
+<td><code>UNION</code> sin, <code>UNION ALL</code> con</td>
 </tr>
 <tr>
-<td>Costo de migrar</td>
-<td>Bajo</td>
-<td>Alto o prohibitivo</td>
+<td><code>INTERSECT</code></td>
+<td>Sin duplicados</td>
+<td><code>INTERSECT</code> / <code>INTERSECT ALL</code></td>
 </tr>
 <tr>
-<td>Rendimiento</td>
-<td>A veces peor</td>
-<td>Mejor si la extensión existe por algo</td>
+<td><code>EXCEPT</code></td>
+<td>Sin duplicados</td>
+<td><code>EXCEPT</code> / <code>EXCEPT ALL</code></td>
 </tr>
 <tr>
-<td>Riesgo semántico</td>
-<td>Bajo si se normaliza</td>
-<td>Alto</td>
+<td>Proyección</td>
+<td>Elimina duplicados</td>
+<td>Los conserva salvo <code>DISTINCT</code></td>
 </tr>
 <tr>
-<td>Recomendación</td>
-<td>Núcleo portable por defecto</td>
-<td>Extensiones aisladas y documentadas</td>
+<td>Conteo</td>
+<td>Cardinalidad del conjunto</td>
+<td><code>COUNT(*)</code> cuenta repeticiones</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Suponer que «SQL es SQL».</strong> El núcleo común es más pequeño de lo que parece.</li>
-<li><strong>Confiar en la colación por defecto.</strong> Es la divergencia semántica más frecuente y la más silenciosa.</li>
-<li><strong>Depender de la división entera o del redondeo.</strong> Cambia entre motores.</li>
-<li><strong>Usar <code>||</code> en MySQL sin activar <code>PIPES_AS_CONCAT</code>.</strong> Devuelve <code>0</code>.</li>
-<li><strong>Probar solo en el motor de desarrollo.</strong> Si producción usa otro, la matriz no se ha comprobado, se ha imaginado.</li>
-<li><strong>Portabilidad como dogma.</strong> Renunciar a <code>jsonb</code> o a índices parciales «por si acaso» cuesta más de lo que ahorra.</li>
+<li><strong>Suponer que el motor devuelve las filas «en orden».</strong> No hay orden sin <code>ORDER BY</code>, y con <code>ORDER BY</code> sobre columna no única el desempate tampoco está definido.</li>
+<li><strong>Usar <code>SELECT *</code> en código de producción.</strong> Ata el cliente a la posición y al número de columnas.</li>
+<li><strong>Proyectar sin pensar en duplicados.</strong> <code>SELECT ciudad FROM clientes</code> devuelve la ciudad repetida por cada cliente; casi nunca es lo que se quería.</li>
+<li><strong>Confundir <code>NULL</code> con un valor.</strong> No pertenece a ningún dominio: es una marca de información ausente (clase 019).</li>
+<li><strong>Crear tablas sin clave primaria.</strong> Sin ella no hay forma de referirse a una fila concreta ni de borrar un duplicado sin borrar el otro.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La migración de motor rara vez se decide por gusto: llega por licencias, por costo de nube o por una adquisición. El código que la sobrevive es el que aisló las diferencias cuando no había ninguna urgencia.</p>
+<p>Los tres apartamientos de SQL respecto del modelo son la causa de una familia entera de fallos de producción: informes con totales inflados por duplicados, procesos que dependen del orden, migraciones que desplazan columnas. Reconocer la causa común los convierte en un solo problema con una sola disciplina.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma 10 consultas reales de tu proyecto y clasifícalas: núcleo portable, divergencia sintáctica o semántica.</li>
-<li>Ejecuta las 10 en dos motores del <code>docker-compose</code> y captura las diferencias.</li>
-<li>Escribe la matriz de portabilidad resultante, con la construcción y su equivalente en cada motor.</li>
-<li>Aísla la construcción menos portable tras una única función y demuestra que el resto del código no cambia.</li>
+<li>Encuentra en un esquema real una tabla sin clave primaria y demuestra con una consulta que contiene duplicados lógicos.</li>
+<li>Muestra una consulta de tu código que dependa del orden sin <code>ORDER BY</code>.</li>
+<li>Reproduce el efecto de <code>EXCEPT</code> frente a <code>EXCEPT ALL</code> con tus propios datos.</li>
+<li>Convierte un <code>INSERT</code> posicional en uno por nombre y explica qué fallo evitaste.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Da un ejemplo propio de divergencia semántica y explica por qué es peor que una sintáctica.</li>
-<li>¿Por qué <code>LIMIT</code> es más portable en la práctica que <code>FETCH FIRST</code>, pese a no estar en la norma?</li>
-<li>Escribe el <code>UPSERT</code> de tu dominio en tres dialectos.</li>
-<li>Justifica un caso donde usarías una extensión propietaria a sabiendas, y cómo la documentarías.</li>
+<li>Da una consulta cuyo resultado cambie al crear un índice, sin que cambien los datos, y explica por qué.</li>
+<li>¿Por qué <code>COUNT(*)</code> y <code>COUNT(DISTINCT ...)</code> difieren, y qué dice eso del modelo subyacente?</li>
+<li>Explica el acceso por valor y por qué prohíbe exponer identificadores de fila físicos.</li>
+<li>La propiedad de cierre habilita las CTE. Da una consulta tuya que sería imposible sin ella.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Una etiqueta concatenada y las dos primeras filas, escrito de forma portable</p>
-<p>Pedir «los dos mejores de DB-101 con su nombre y su curso en una sola
-cadena» parece trivial hasta que hay que ejecutarlo en cinco motores. Dos
-detalles minúsculos rompen el código al migrar: <strong>cómo se concatenan dos
-cadenas</strong> y <strong>cómo se limita el número de filas</strong>.</p>
-<p>La norma ISO/IEC 9075 define <code>||</code> para lo primero y <code>FETCH FIRST n ROWS
-ONLY</code> para lo segundo. Casi ningún motor implementa exactamente eso: MySQL
-interpreta <code>||</code> como el <code>OR</code> lógico salvo que se cambie el modo, SQL Server
-concatena con <code>+</code> y limita con <code>TOP</code>, y SQLite y PostgreSQL usan <code>LIMIT</code>,
-que no está en la norma pero es el estándar de facto.</p>
-<p>La salida es la misma en todos. Lo que cambia —y esta clase obliga a
-escribir— es cuánto hay que tocar para conseguirla.</p>
+<p><strong>Caso:</strong> Convertir una bolsa de registros en una relación</p>
+<p>En el modelo relacional una relación es un <strong>conjunto</strong>: no tiene filas
+repetidas y no tiene orden. Lo que las tablas guardan de verdad son bolsas
+(<code>multisets</code>): admiten repetidos y llegan en el orden que sea.</p>
+<p>El caso parte de un registro de accesos con repeticiones —Ada entró dos
+veces a DB-101, Linus dos veces también— y devuelve el conjunto de pares
+distintos, ordenado. El <code>DISTINCT</code> es lo que convierte la bolsa en conjunto;
+el <code>ORDER BY</code> es una decisión de presentación, y por eso hay que escribirlo
+siempre: sin él, ningún motor está obligado a devolver nada en un orden
+concreto.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>etiqueta</th>
+<th>estudiante</th>
+<th>curso</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Ada - DB-101</code></td>
+<td><code>Ada</code></td>
+<td><code>DB-101</code></td>
 </tr>
 <tr>
-<td><code>Grace - DB-101</code></td>
+<td><code>Ada</code></td>
+<td><code>SE-201</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>DB-101</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 020</code>: 4 de
-las 6 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 020</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -378,281 +273,202 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/functions-string.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-select.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>MySQL</td>
+<td>Redis</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
 </tr>
 <tr>
-<td>Microsoft SQL Server</td>
+<td>MongoDB</td>
 <td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sql-server/consulta.sql">código</a></td>
-<td><a href="https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql">doc oficial</a></td>
-</tr>
-<tr>
-<td>Oracle Database</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/oracle-database/consulta.sql">código</a></td>
-<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MariaDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_expr.html
--- nota: || es el operador de la norma. LIMIT no lo es, pero lo entienden
---       SQLite, PostgreSQL, MySQL, MariaDB y DuckDB: es el estandar de facto.
+-- doc: https://sqlite.org/lang_select.html
+-- nota: quitar el ORDER BY no rompe la consulta, y ese es el peligro: devuelve
+--       un orden que parece estable hasta que un indice nuevo cambia el plan.
 
 -- === preparacion ===
-CREATE TABLE notas (
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
     estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+    curso      TEXT NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Grace', 'DB-101', 72),
-    ('Linus', 'DB-101', 58),
-    ('Ada',   'SE-201', 66);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
 
 -- === consulta ===
-SELECT estudiante || ' - ' || curso AS etiqueta
-FROM notas
-WHERE curso = 'DB-101'
-ORDER BY nota DESC
-LIMIT 2;
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Implementa <code>||</code> como manda la norma y <code>LIMIT</code> como el estándar de facto: es el subconjunto que más motores entienden sin cambios.</li>
-<li><strong>Por qué no:</strong> Su tolerancia con los tipos hace que expresiones que en otro motor darían error aquí devuelvan algo: el código «funciona» en SQLite y revienta al llegar a PostgreSQL.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_expr.html">https://sqlite.org/lang_expr.html</a></li>
+<li><strong>Por qué sí:</strong> Muestra la diferencia entre bolsa y conjunto en tres líneas, y permite comprobar a mano que sin <code>ORDER BY</code> el orden depende del plan que el motor elija, no de cómo se insertaron las filas.</li>
+<li><strong>Por qué no:</strong> Al ser un archivo pequeño y con planes simples, el orden «casual» suele coincidir con el de inserción: es justo el motor donde más fácil resulta creerse que el orden está garantizado cuando no lo está.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+-- nota: al ejecutar en paralelo por trozos, sin ORDER BY el orden cambia entre
+--       ejecuciones de verdad. Es el motor que mejor demuestra que una relacion
+--       no tiene orden.
 
 -- === preparacion ===
-CREATE TABLE notas (
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         INTEGER PRIMARY KEY,
     estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+    curso      VARCHAR NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Grace', 'DB-101', 72),
-    ('Linus', 'DB-101', 58),
-    ('Ada',   'SE-201', 66);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
 
 -- === consulta ===
-SELECT estudiante || ' - ' || curso AS etiqueta
-FROM notas
-WHERE curso = 'DB-101'
-ORDER BY nota DESC
-LIMIT 2;
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Acepta el dialecto de PostgreSQL casi por completo, así que sirve de banco de pruebas de portabilidad sin levantar un servidor.</li>
-<li><strong>Por qué no:</strong> Añade extensiones cómodas que no existen en ningún otro sitio (<code>SELECT * EXCLUDE</code>, <code>GROUP BY ALL</code>, <code>QUALIFY</code>): probar aquí no garantiza que la consulta sea portable, solo que es válida aquí.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html">https://duckdb.org/docs/stable/sql/dialect/postgresql_compatibility.html</a></li>
+<li><strong>Por qué sí:</strong> Al ejecutar en paralelo por trozos, el orden sin <code>ORDER BY</code> cambia de verdad entre ejecuciones: es el motor que mejor demuestra que una relación no tiene orden.</li>
+<li><strong>Por qué no:</strong> <code>DISTINCT</code> sobre columnas de alta cardinalidad obliga a una tabla hash completa en memoria; barato en el ejemplo, caro en un conjunto real.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">https://duckdb.org/docs/stable/sql/query_syntax/orderby.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/functions-string.html
--- nota: PostgreSQL tambien acepta la forma de la norma,
---         FETCH FIRST 2 ROWS ONLY
---       que es la que hay que usar si el destino puede ser Oracle o SQL Server.
+-- doc: https://www.postgresql.org/docs/current/sql-select.html
+-- nota: la documentacion lo dice sin rodeos: sin ORDER BY el orden de las filas
+--       es indeterminado. No es un descuido del motor; es el modelo.
+
+DROP TABLE IF EXISTS accesos;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS notas;
-
-CREATE TABLE notas (
+-- El registro de accesos es una BOLSA: admite repetidos y tiene orden de
+-- llegada. Una relacion no es eso.
+CREATE TABLE accesos (
+    id         integer PRIMARY KEY,
     estudiante text NOT NULL,
-    curso      text NOT NULL,
-    nota       integer NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+    curso      text NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Grace', 'DB-101', 72),
-    ('Linus', 'DB-101', 58),
-    ('Ada',   'SE-201', 66);
+INSERT INTO accesos (id, estudiante, curso) VALUES
+    (1, 'Linus', 'DB-101'),
+    (2, 'Ada',   'DB-101'),
+    (3, 'Ada',   'DB-101'),
+    (4, 'Ada',   'SE-201'),
+    (5, 'Linus', 'DB-101');
 
 -- === consulta ===
-SELECT estudiante || ' - ' || curso AS etiqueta
-FROM notas
-WHERE curso = 'DB-101'
-ORDER BY nota DESC
-LIMIT 2;
+-- DISTINCT convierte la bolsa en conjunto; ORDER BY impone un orden que la
+-- relacion NO tiene: es una decision de presentacion, no del modelo.
+SELECT DISTINCT estudiante, curso
+FROM accesos
+ORDER BY estudiante, curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es el motor generalista más cercano a la norma y el que más avisa cuando algo no lo es: rechaza conversiones implícitas que otros aceptan en silencio, de modo que el código que pasa aquí suele pasar en el resto.</li>
-<li><strong>Por qué no:</strong> Su catálogo de extensiones propias —tipos de rango, <code>LATERAL</code>, <code>DISTINCT ON</code>, arreglos— es tan cómodo que la portabilidad se pierde sin darse cuenta. La única defensa es decidir de antemano si se quiere y probarlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-string.html">https://www.postgresql.org/docs/current/functions-string.html</a></li>
+<li><strong>Por qué sí:</strong> Además de <code>DISTINCT</code> tiene <code>DISTINCT ON</code>, que resuelve «una fila por grupo» sin ventana ni subconsulta, y su documentación explica que sin <code>ORDER BY</code> el orden es indeterminado por diseño.</li>
+<li><strong>Por qué no:</strong> <code>DISTINCT ON</code> es una extensión propia: usarla ata la consulta a PostgreSQL, y el equivalente portable —una función de ventana— hay que escribirlo desde cero al migrar.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-select.html">https://www.postgresql.org/docs/current/sql-select.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
--- nota: aqui esta la trampa de la clase. Por omision,
---         SELECT estudiante || ' - ' || curso
---       NO concatena: || es el OR logico y la consulta devuelve 0 en cada fila,
---       sin error. Con SET sql_mode = 'PIPES_AS_CONCAT' pasaria a concatenar.
---       CONCAT() evita la ambiguedad y ademas es portable a SQL Server y Oracle.
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: el conjunto no es una operacion sobre los datos, es el tipo de dato.
+#       El precio: el par estudiante-curso hay que serializarlo en una cadena.
 
--- === preparacion ===
-DROP TABLE IF EXISTS notas;
+# === preparacion ===
+FLUSHDB
+SADD accesos Linus|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|DB-101
+SADD accesos Ada|SE-201
+SADD accesos Linus|DB-101
 
-CREATE TABLE notas (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    nota       INT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Grace', 'DB-101', 72),
-    ('Linus', 'DB-101', 58),
-    ('Ada',   'SE-201', 66);
-
--- === consulta ===
-SELECT CONCAT(estudiante, ' - ', curso) AS etiqueta
-FROM notas
-WHERE curso = 'DB-101'
-ORDER BY nota DESC
-LIMIT 2;
+# === consulta ===
+SORT accesos ALPHA
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Con <code>CONCAT()</code> y <code>LIMIT</code> resuelve el caso, y <code>CONCAT</code> sí es portable a SQL Server (2012+) y a Oracle.</li>
-<li><strong>Por qué no:</strong> Por omisión, <code>'a' || 'b'</code> no concatena: devuelve <code>0</code>, porque <code>||</code> es el <code>OR</code> lógico salvo que se active <code>PIPES_AS_CONCAT</code>. Es el error de migración más silencioso de todos, porque no falla: devuelve un número.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html</a></li>
+<li><strong>Por qué sí:</strong> Aquí el conjunto no es una operación sobre los datos: es el tipo de dato. <code>SADD</code> no admite repetidos y no promete orden, que es literalmente la definición de relación de esta clase.</li>
+<li><strong>Por qué no:</strong> Un conjunto de Redis guarda cadenas sueltas, no tuplas con atributos: para representar el par estudiante-curso hay que serializarlo en una sola cadena y perder la estructura.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
 </ul>
-<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: sql-server
--- doc: https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql
--- nota: implementacion declarada. Se escribe con CONCAT y con OFFSET/FETCH
---       —las formas de la norma— en vez de con + y TOP, que es lo que aparece
---       en el codigo heredado. La diferencia importa: `'Ada' + 5` intenta
---       convertir la cadena a numero y falla; CONCAT convierte a texto.
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: $group por la pareja de campos hace de DISTINCT. El $sort explicito
+//       deja claro que el orden se pide; no se hereda del orden de insercion.
 
--- === preparacion ===
-DROP TABLE IF EXISTS dbo.notas;
+// === preparacion ===
+db.accesos.drop();
+db.accesos.insertMany([
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+]);
 
-CREATE TABLE dbo.notas (
-    estudiante NVARCHAR(50) NOT NULL,
-    curso      NVARCHAR(20) NOT NULL,
-    nota       INT NOT NULL,
-    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO dbo.notas (estudiante, curso, nota) VALUES
-    (N'Ada', N'DB-101', 90), (N'Grace', N'DB-101', 72),
-    (N'Linus', N'DB-101', 58), (N'Ada', N'SE-201', 66);
-
--- === consulta ===
-SELECT CONCAT(estudiante, N' - ', curso) AS etiqueta
-FROM dbo.notas
-WHERE curso = N'DB-101'
-ORDER BY nota DESC
-OFFSET 0 ROWS FETCH NEXT 2 ROWS ONLY;
+// === consulta ===
+db.accesos
+  .aggregate([
+    { $group: { _id: { estudiante: &quot;$estudiante&quot;, curso: &quot;$curso&quot; } } },
+    { $sort: { &quot;_id.estudiante&quot;: 1, &quot;_id.curso&quot;: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id.estudiante + &quot;|&quot; + d._id.curso));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde SQL Server 2012 admite <code>CONCAT()</code> y <code>OFFSET ... FETCH NEXT</code>, que es la forma de la norma: escrito así, el mismo código vale para Oracle.</li>
-<li><strong>Por qué no:</strong> El <code>TOP n</code> heredado sigue siendo lo que aparece en todo el código existente, y <code>+</code> sobre una cadena y un número intenta convertir el texto a número y falla, en vez de concatenar.</li>
-<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql">https://learn.microsoft.com/sql/t-sql/functions/concat-transact-sql</a></li>
+<li><strong>Por qué sí:</strong> <code>$group</code> por la pareja de campos elimina los repetidos igual que un <code>DISTINCT</code>, y la etapa <code>$sort</code> deja explícito que el orden se pide, no se hereda.</li>
+<li><strong>Por qué no:</strong> Sin índice que cubra el <code>$sort</code>, la ordenación se hace en memoria con un límite de 100 MB por etapa, y la consulta falla en vez de ir lenta.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
 </ul>
-<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-motores-relacionales-y-dialectos/020-portabilidad-y-matriz-de-dialectos/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: oracle-database
--- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html
--- nota: implementacion declarada. Oracle si implementa || de la norma, y desde
---       12c admite FETCH FIRST. Antes habia que envolver la consulta:
---         SELECT * FROM (SELECT ... ORDER BY nota DESC) WHERE ROWNUM &lt;= 2;
---       Y ojo con la cadena vacia: en Oracle '' ES NULL, asi que concatenar con
---       una columna vacia no da lo mismo que en el resto de motores.
-
--- === preparacion ===
-CREATE TABLE notas (
-    estudiante VARCHAR2(50) NOT NULL,
-    curso      VARCHAR2(20) NOT NULL,
-    nota       NUMBER NOT NULL,
-    CONSTRAINT pk_notas PRIMARY KEY (estudiante, curso)
-);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 72);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'SE-201', 66);
-COMMIT;
-
--- === consulta ===
-SELECT estudiante || ' - ' || curso AS etiqueta
-FROM notas
-WHERE curso = 'DB-101'
-ORDER BY nota DESC
-FETCH FIRST 2 ROWS ONLY;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Implementa <code>||</code> de la norma, y desde la versión 12c admite <code>FETCH FIRST n ROWS ONLY</code>, que sustituye al viejo rodeo con <code>ROWNUM</code> en una subconsulta.</li>
-<li><strong>Por qué no:</strong> Trata la cadena vacía como <code>NULL</code>, así que concatenar con una cadena vacía no siempre hace lo que se espera; y en versiones anteriores a 12c hay que envolver la consulta para poder limitar.</li>
-<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html</a></li>
-</ul>
-<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
-<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Por qué no</th>
-<th>Qué se hace en su lugar</th>
-<th>Fuente</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MariaDB</td>
-<td>Aquí no aporta una fila distinta: comparte el dialecto de MySQL en todo lo que este caso toca, incluida la interpretación de <code>\|\|</code>. Repetirlo sería inflar la matriz sin enseñar nada.</td>
-<td>Se trata donde sí diverge —secuencias, <code>RETURNING</code>, motores de almacenamiento y el catálogo de funciones JSON— en la clase de divergencias entre dialectos.</td>
-<td><a href="https://mariadb.com/docs/server/reference/sql-functions/string-functions/concat">doc</a></td>
-</tr>
-</tbody>
-</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -696,24 +512,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
-  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
-<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
-  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
-<li><strong>Oracle</strong> (2026). <a href="https://dev.mysql.com/doc/">MySQL Reference Manual</a>.<br />
-  Dialecto y comportamiento del motor InnoDB.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="019.html">← Anterior</a> · <a href="021.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="020">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="019.html"><span class="sentido">← Anterior · 019</span>Nulos y lógica de tres valores</a>
-<a class="siguiente" href="021.html"><span class="sentido">Siguiente · 021 →</span>PostgreSQL: tipos, extensiones y modelo de procesos</a>
+<a class="anterior" href="019.html"><span class="sentido">← Anterior · 019</span>Desnormalización deliberada y patrones de acceso</a>
+<a class="siguiente" href="021.html"><span class="sentido">Siguiente · 021 →</span>Álgebra relacional: selección, proyección, producto y reunión</a>
 </nav>
 </main>
 <footer>

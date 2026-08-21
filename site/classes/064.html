@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Proyecto final: diseñar, medir y defender. Parte 13: Arquitectura y proyecto final.">
+<meta name="description" content="OLTP frente a OLAP: por qué se separan. Parte 12: Analítica, integración y streaming.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/064.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="064 — Proyecto final: diseñar, medir y defender · Database Systems Labs">
-<meta property="og:description" content="Proyecto final: diseñar, medir y defender. Parte 13: Arquitectura y proyecto final.">
+<meta property="og:title" content="064 — OLTP frente a OLAP: por qué se separan · Database Systems Labs">
+<meta property="og:description" content="OLTP frente a OLAP: por qué se separan. Parte 12: Analítica, integración y streaming.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/064.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "064 — Proyecto final: diseñar, medir y defender", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT6H", "teaches": ["defensa técnica", "evidencia reproducible", "límite declarado", "plan de evolución"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>064 — Proyecto final: diseñar, medir y defender · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "064 — OLTP frente a OLAP: por qué se separan", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["carga transaccional", "carga analítica", "contención", "formato de almacenamiento"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>064 — OLTP frente a OLAP: por qué se separan · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,280 +49,300 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-13.html">Parte 13 · Arquitectura y proyecto final</a>
+  <a href="parte-12.html">Parte 12 · Analítica, integración y streaming</a>
   <span aria-hidden="true">/</span><span>Clase 064</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="064--proyecto-final-diseñar-medir-y-defender">064 — Proyecto final: diseñar, medir y defender</h1>
+<h1 id="064--oltp-frente-a-olap-por-qué-se-separan">064 — OLTP frente a OLAP: por qué se separan</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="063.html">← Anterior</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="063.html">← Anterior</a> · <a href="065.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 13 — Arquitectura y proyecto final · Avanzado ·
-6 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code>, <code>redis</code>, <code>qdrant</code>, <code>duckdb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>defensa técnica</code> · <code>evidencia reproducible</code> · <code>límite declarado</code> · <code>plan de evolución</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 12 — Analítica, integración y streaming · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>duckdb</code>, <code>clickhouse</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>carga transaccional</code> · <code>carga analítica</code> · <code>contención</code> · <code>formato de almacenamiento</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Integrar todo el programa en un sistema completo, medido y defendible. El entregable no es código que funciona: es un conjunto de afirmaciones respaldadas por evidencia reproducible.</p>
+<p>Explicar por qué las cargas transaccionales y analíticas se separan, qué pasa cuando no se separan y cuándo esa separación es innecesaria.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Diseñar un sistema de datos completo a partir de requisitos.</li>
-<li>Producir evidencia reproducible de cada afirmación de rendimiento y corrección.</li>
-<li>Defender las decisiones con alternativas descartadas y sus cifras.</li>
-<li>Declarar los límites del trabajo con precisión.</li>
-<li>Presentar un plan de evolución con umbrales medibles.</li>
+<li>Caracterizar ambas cargas por su patrón de acceso, no por su nombre.</li>
+<li>Explicar los tres conflictos concretos de ejecutarlas en el mismo motor.</li>
+<li>Ordenar las opciones de separación por costo creciente.</li>
+<li>Reconocer cuándo la separación no compensa.</li>
+<li>Situar HTAP y el enfoque de tabla externa.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="qué-se-evalúa">Qué se evalúa</h3>
-<p>No es «que funcione». Es que <strong>cada afirmación esté respaldada</strong> y que los límites estén declarados.</p>
+<h3 id="dos-cargas-dos-formas">Dos cargas, dos formas</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>Dimensión</th>
-<th style="text-align: right;">Peso</th>
-<th>Evidencia exigida</th>
+<th>OLTP</th>
+<th>OLAP</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Modelo y justificación</td>
-<td style="text-align: right;">20 %</td>
-<td>ERD, diccionario, dependencias funcionales, exclusiones</td>
+<td>Unidad de trabajo</td>
+<td>Transacción de pocas filas</td>
+<td>Consulta que barre millones</td>
 </tr>
 <tr>
-<td>Corrección demostrada</td>
-<td style="text-align: right;">20 %</td>
-<td>Invariantes que fallan al romper el dato</td>
+<td>Columnas por consulta</td>
+<td>Casi todas de pocas filas</td>
+<td>Pocas de casi todas las filas</td>
 </tr>
 <tr>
-<td>Rendimiento medido</td>
-<td style="text-align: right;">20 %</td>
-<td>Planes antes/después, condiciones declaradas</td>
+<td>Concurrencia</td>
+<td>Miles de sesiones</td>
+<td>Decenas</td>
 </tr>
 <tr>
-<td>Operación</td>
-<td style="text-align: right;">20 %</td>
-<td>Restauración cronometrada, control de acceso, observabilidad</td>
+<td>Latencia objetivo</td>
+<td>Milisegundos</td>
+<td>Segundos a minutos</td>
 </tr>
 <tr>
-<td>Decisiones y límites</td>
-<td style="text-align: right;">20 %</td>
-<td>ADR con alternativas y consecuencias negativas</td>
+<td>Escrituras</td>
+<td>Continuas, pequeñas</td>
+<td>Por lotes</td>
+</tr>
+<tr>
+<td>Datos</td>
+<td>Actuales</td>
+<td>Históricos</td>
+</tr>
+<tr>
+<td>Consistencia</td>
+<td>Estricta</td>
+<td>Tolera desfase</td>
+</tr>
+<tr>
+<td>Formato óptimo</td>
+<td>Filas</td>
+<td><strong>Columnas</strong> (clase 032)</td>
+</tr>
+<tr>
+<td>Índices</td>
+<td>Muchos, selectivos</td>
+<td>Pocos, dispersos</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="elegir-el-dominio">Elegir el dominio</h3>
-<p>Uno de los canónicos del repositorio, o uno propio que cumpla cinco condiciones:</p>
-<ol>
-<li>Al menos <strong>cuatro entidades</strong> con relaciones no triviales.</li>
-<li>Al menos <strong>una invariante</strong> que un <code>CHECK</code> no pueda expresar.</li>
-<li>Al menos <strong>una carga</strong> que justifique medir (volumen o concurrencia).</li>
-<li><strong>Datos personales</strong>, para ejercitar retención y control de acceso.</li>
-<li>Una consulta que se beneficie de un modelo no relacional.</li>
-</ol>
-<h3 id="el-error-que-hay-que-evitar">El error que hay que evitar</h3>
-<p>El trabajo que dice «el sistema soporta 10 000 consultas por segundo» sin decir con qué datos, qué máquina, qué estado de caché y qué consulta. Esa frase no es un resultado: es una impresión con un número.</p>
+<p>La incompatibilidad es física, no organizativa: <strong>el mismo dato no puede estar simultáneamente ordenado por filas y por columnas</strong> sin duplicarse.</p>
+<h3 id="los-tres-conflictos">Los tres conflictos</h3>
+<p><strong>1. Contención de recursos.</strong> Una consulta analítica lee millones de páginas y desaloja el conjunto de trabajo transaccional del buffer. Las consultas OLTP que iban a 2 ms pasan a 20 ms hasta que el caché se recalienta.</p>
+<p><strong>2. Bloqueos y versiones.</strong> En un motor MVCC, una consulta analítica de 40 minutos mantiene una instantánea abierta y <strong>bloquea la recolección de versiones muertas</strong> durante ese tiempo (clase 033). Con 2 000 escrituras/s, son 4,8 millones de versiones acumuladas.</p>
+<p><strong>3. Modelos de datos opuestos.</strong> El esquema normalizado que hace correcto el OLTP obliga a reuniones múltiples en el OLAP. El modelo dimensional que hace rápido el OLAP introduce redundancia inaceptable en el OLTP.</p>
+<p>Stonebraker et al. midieron además que un motor OLTP tradicional gasta la mayor parte de sus ciclos en gestión de bloqueos, registro y buffer —trabajo que la carga analítica no necesita en absoluto—.</p>
+<h3 id="las-opciones-de-menor-a-mayor-costo">Las opciones, de menor a mayor costo</h3>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Consultas analíticas&lt;br/&gt;sobre el OLTP&quot;] --&gt; B{&quot;¿Molestan al&lt;br/&gt;transaccional?&quot;}
+    B -- &quot;No&quot; --&gt; OK[&quot;No separar.&lt;br/&gt;Es la opción correcta&quot;]
+    B -- &quot;Sí&quot; --&gt; C[&quot;1. Réplica de solo lectura&lt;br/&gt;mismo motor, mismo esquema&quot;]
+    C --&gt; D{&quot;¿Suficiente?&quot;}
+    D -- &quot;Sí&quot; --&gt; OK2[&quot;Coste: una réplica&quot;]
+    D -- &quot;No&quot; --&gt; E[&quot;2. Exportar a Parquet&lt;br/&gt;+ DuckDB&quot;]
+    E --&gt; F{&quot;¿Suficiente?&quot;}
+    F -- &quot;Sí&quot; --&gt; OK3[&quot;Coste: un proceso de exportación&quot;]
+    F -- &quot;No&quot; --&gt; G[&quot;3. Almacén columnar&lt;br/&gt;+ modelo dimensional (clase 055)&quot;]
+    G --&gt; H[&quot;Coste: sistema, canal,&lt;br/&gt;modelo y equipo&quot;]
+</code></pre>
+<p><strong>La opción 1 resuelve el conflicto 1 y parcialmente el 2</strong>, y no el 3: el esquema sigue siendo el transaccional. Aun así, resuelve la mayoría de los casos reales y cuesta muy poco.</p>
+<p><strong>La opción 2</strong> es la más infravalorada. Una exportación nocturna a Parquet consultada con DuckDB (clase 023) da rendimiento columnar sin ningún servidor nuevo:</p>
+<pre><code class="language-sql">-- Sobre archivos Parquet, sin base de datos analítica
+SELECT periodo, count(*), avg(nota)
+FROM read_parquet('exportacion/enrollments/*.parquet')
+GROUP BY periodo;
+</code></pre>
+<p><strong>La opción 3</strong> se justifica cuando hay varias fuentes que integrar, histórico que conservar más allá del OLTP, o volúmenes que no caben en una máquina.</p>
+<h3 id="cuándo-no-separar">Cuándo no separar</h3>
+<p>Con menos de unos 100 GB y consultas analíticas fuera del horario punta, separar añade un canal que mantener, un desfase que explicar y un sistema que operar, a cambio de poco. La pregunta correcta es <strong>si la carga analítica está degradando la transaccional</strong>, medido, no supuesto.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Estructura completa de un entregable aceptable, con el contenido que debe llevar cada parte.</p>
-<h3 id="1-requisitos-y-alcance">1. Requisitos y alcance</h3>
-<pre><code class="language-markdown">## Dominio
-Plataforma de cursos con inscripciones, evaluación y búsqueda de contenido.
-
-## Requisitos funcionales
-RF1 Inscribir estudiantes respetando el cupo del curso.
-RF2 Registrar y rectificar notas, conservando el histórico de rectificaciones.
-RF3 Buscar contenido por lenguaje natural.
-RF4 Panel de dirección con métricas por período y facultad.
-
-## Requisitos no funcionales
-RNF1 p99 de inscripción &lt; 100 ms con 200 inscripciones/s.
-RNF2 RPO ≤ 5 min, RTO ≤ 2 h.
-RNF3 Un docente solo ve las notas de sus cursos.
-RNF4 Registros de acceso: retención 90 días.
-
-## Fuera de alcance (declarado)
-- Pagos y aranceles.
-- Asistencia.
-- Emisión de certificados con firma electrónica.
+<p>Plataforma: 5 M de inscripciones, 300 consultas OLTP/s, y un panel de dirección que ejecuta 12 consultas analíticas cada mañana.</p>
+<p><strong>Sin separar, medición:</strong></p>
+<pre><code class="language-sql">-- panel de dirección, 08:00
+SELECT c.periodo, count(*), avg(e.nota),
+       count(DISTINCT e.student_id)
+FROM enrollments e JOIN courses c ON c.id = e.course_id
+GROUP BY c.periodo;
 </code></pre>
-<p>Las exclusiones son parte del entregable (clase 005).</p>
-<h3 id="2-modelo-con-su-justificación">2. Modelo, con su justificación</h3>
-<p>ERD, diccionario de datos con origen de cada regla, dependencias funcionales y forma normal alcanzada, con la justificación de cualquier desnormalización.</p>
-<pre><code class="language-markdown">## Decisiones de modelado
-- `enrollments` con clave natural compuesta `(student_id, course_id)`: única,
-  no nula e inmutable (clase 007).
-- `students` separada de `student_identity` para permitir supresión conservando
-  el histórico académico (clase 053).
-- `courses.inscritos` NO se almacena: se cuenta. Relación lecturas/escrituras
-  medida = 12,5 : 1, por debajo del umbral de 100 : 1 (clase 009).
+<pre><code class="language-text">Duración:                       47 s
+Páginas leídas:                 65 790 (barrido completo)
+Efecto medido en el OLTP durante esos 47 s:
+  p99 de lectura:  4 ms  →  38 ms
+  aciertos de buffer:  99,2 %  →  71,4 %
+  filas muertas no recuperables: +94 000
 </code></pre>
-<h3 id="3-invariantes-y-su-verificación">3. Invariantes y su verificación</h3>
-<pre><code class="language-sql">-- INV-1: ninguna inscripción apunta a un curso inexistente
-SELECT e.student_id, e.course_id FROM enrollments e
-LEFT JOIN courses c ON c.id = e.course_id WHERE c.id IS NULL;
-
--- INV-2: ningún curso excede su cupo   (no expresable con CHECK)
-SELECT c.id, c.cupo, count(*) AS inscritos
-FROM courses c JOIN enrollments e ON e.course_id = c.id AND e.estado = 'activa'
-GROUP BY c.id, c.cupo HAVING count(*) &gt; c.cupo;
-
--- INV-3: toda nota está en el rango de la escala o es nula
-SELECT student_id, course_id, nota FROM enrollments
-WHERE nota IS NOT NULL AND nota NOT BETWEEN 1.0 AND 7.0;
-
--- INV-4: todo curso tiene al menos un docente asignado
-SELECT c.id FROM courses c
-LEFT JOIN teaching t ON t.course_id = c.id WHERE t.course_id IS NULL;
+<p>El panel funciona. Y durante 47 segundos, cada mañana, todos los usuarios notan la plataforma lenta. <strong>Ese es el conflicto, cuantificado.</strong></p>
+<p><strong>Opción 1 — réplica de solo lectura:</strong></p>
+<pre><code class="language-text">El panel consulta la réplica. El OLTP no se entera.
+p99 durante el panel: 4 ms (sin cambio)
+Coste: una instancia más
+Nuevo problema: el retraso de réplica crece a 12 s durante el panel
+                → aceptable para un panel; hay que declararlo
 </code></pre>
-<p><strong>Y la demostración de que las invariantes sirven:</strong> romper el dato a propósito y capturar la salida que lo delata. Una invariante que nunca ha fallado puede estar comprobando la nada (clase 004).</p>
-<h3 id="4-evidencia-de-rendimiento">4. Evidencia de rendimiento</h3>
-<pre><code class="language-markdown">## RNF1 — p99 de inscripción &lt; 100 ms con 200 inscripciones/s
-
-Condiciones:
-  PostgreSQL 16.3, 4 vCPU, 16 GB RAM, SSD NVMe
-  5 000 000 inscripciones precargadas, 300 cursos, 200 000 estudiantes
-  Caché caliente (3 min de precalentamiento antes de medir)
-  Cliente: 50 conexiones a través de pgbouncer, 60 s de medición
-
-Resultado:
-  caudal sostenido : 214 inscripciones/s
-  p50 : 11 ms   p95 : 38 ms   p99 : 74 ms   máx : 210 ms
-  errores de serialización: 0,3 % (reintentados con éxito)
-
-Comando:
-  python labs/bench/inscripciones.py --dur 60 --conc 50 --seed 42
-
-NO demuestra:
-  - Comportamiento con caché fría (medido aparte: p99 = 260 ms)
-  - Comportamiento con un curso caliente único (medido aparte: 41/s, cola)
-  - Nada sobre más de 5 M de filas
+<p>Para este caso, <strong>aquí termina el problema</strong>. Es la respuesta correcta y cuesta una instancia.</p>
+<p><strong>Opción 2 — exportación a Parquet</strong>, si la réplica no bastara:</p>
+<pre><code class="language-bash"># Exportación nocturna incremental
+psql -c &quot;\copy (SELECT * FROM enrollments WHERE registrada_en &gt;= current_date - 1)
+         TO PROGRAM 'zstd &gt; exportacion/enrollments/$(date +%F).parquet.zst'&quot;
 </code></pre>
-<p>El bloque «NO demuestra» es obligatorio y es lo que distingue un informe honesto.</p>
-<h3 id="5-operación">5. Operación</h3>
-<pre><code class="language-markdown">## RNF2 — Restauración
-Prueba ejecutada el 2026-08-18 sobre copia de 512 GB.
-  descarga 38 min · restauración 12 min · WAL 24 min · verificación 8 min
-  RTO medido: 82 min  (objetivo: 120 min) ✔
-  Verificación: 5 002 341 filas, INV-1 a INV-4 en cero.
-  RPO medido: 4 min 12 s (archive_timeout = 300 s) ✔
-
-## RNF3 — Control de acceso
-Políticas por fila (clase 050) con pruebas automatizadas que intentan
-leer y escribir fuera del ámbito. 12 pruebas, todas en verde.
-
-## RNF4 — Retención
-Trabajo diario + verificación de que no quedan filas fuera de plazo.
+<pre><code class="language-text">Consulta del panel sobre Parquet con DuckDB:  1,2 s   (frente a 47 s)
+Bytes leídos:                                 0,4 GB  (frente a 20 GB)
+Coste: un trabajo programado; ningún servidor nuevo
+Desfase: hasta 24 h — hay que decidir si es aceptable
 </code></pre>
-<h3 id="6-decisiones">6. Decisiones</h3>
-<p>Los ADR de las decisiones no triviales, con alternativas y consecuencias negativas (clase 063).</p>
-<h3 id="7-límites-y-plan-de-evolución">7. Límites y plan de evolución</h3>
-<pre><code class="language-markdown">## Límites conocidos
-- Probado hasta 5 M de inscripciones. Sin evidencia por encima.
-- Un solo nodo: no hay tolerancia a fallo del primario más allá de la réplica.
-- La búsqueda semántica tiene recall@5 = 0,89: el 11 % de las preguntas puede
-  no recuperar el fragmento correcto.
-- El panel tiene hasta 24 h de desfase.
-
-## Umbrales de revisión
-| Umbral                              | Acción            | Alerta |
-|-------------------------------------|-------------------|--------|
-| &gt; 20 M inscripciones                | Particionar       | Sí     |
-| p99 de inscripción &gt; 80 ms (7 días) | Revisar índices   | Sí     |
-| &gt; 5 M fragmentos de búsqueda        | Evaluar Qdrant    | Sí     |
-| Utilización sostenida &gt; 70 %        | Escalar           | Sí     |
-</code></pre>
-<h3 id="8-la-defensa">8. La defensa</h3>
-<p>Quince minutos. Las preguntas que se harán:</p>
-<ol>
-<li>¿Por qué esta clave primaria y no otra?</li>
-<li>¿Qué invariante no puede garantizar el motor y quién la vigila?</li>
-<li>Enséñame un plan antes y después, y di qué cambió.</li>
-<li>¿Cuánto tardaste en restaurar y qué verificaste?</li>
-<li>¿Qué alternativa descartaste que era mejor en alguna métrica?</li>
-<li>¿Qué <strong>no</strong> demuestra tu evidencia?</li>
-<li>¿Qué se rompe primero al crecer, y cómo lo sabrás?</li>
-</ol>
-<p><strong>La pregunta 6 es la que separa el trabajo maduro del correcto.</strong> Quien sabe qué no ha demostrado, sabe lo que ha demostrado.</p>
+<p><strong>Opción 3 — almacén columnar.</strong> Se justificaría si hubiera que cruzar estas inscripciones con datos de facturación y de una plataforma externa, conservar diez años de histórico y servir a veinte analistas. Entonces el modelo dimensional (clase 055) y el canal de integración (clase 056) valen su costo.</p>
+<p><strong>La regla de decisión, con los números de este caso:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Coste operativo</th>
+<th>Latencia del panel</th>
+<th>Desfase</th>
+<th>¿Resuelve?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No separar</td>
+<td>0</td>
+<td>47 s</td>
+<td>0</td>
+<td>No: degrada el OLTP</td>
+</tr>
+<tr>
+<td>Réplica</td>
+<td>1 instancia</td>
+<td>47 s</td>
+<td>segundos</td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td>Parquet + DuckDB</td>
+<td>1 trabajo</td>
+<td>1,2 s</td>
+<td>horas</td>
+<td>Sí, y más rápido</td>
+</tr>
+<tr>
+<td>Almacén</td>
+<td>Sistema + equipo</td>
+<td>&lt; 1 s</td>
+<td>horas</td>
+<td>Sí, y desproporcionado aquí</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="htap">HTAP</h3>
+<p>Algunos sistemas mantienen ambas representaciones a la vez: filas para el OLTP y un almacén columnar sincronizado para el OLAP (índices columnares de SQL Server, TiFlash de TiDB, <code>pg_analytics</code> y similares). Evita el canal de integración a cambio de más recursos y más complejidad interna. Es una opción real, no una promesa, pero no elimina el compromiso: sigue habiendo dos copias del dato en dos formatos.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Nivel</th>
-<th>Señal</th>
+<th>Situación</th>
+<th>Decisión</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Insuficiente</td>
-<td>Funciona; sin mediciones ni límites</td>
+<td>Consultas analíticas ocasionales, &lt; 100 GB</td>
+<td>No separar</td>
 </tr>
 <tr>
-<td>Suficiente</td>
-<td>Modelo justificado, invariantes, alguna medición</td>
+<td>Panel diario que degrada el OLTP</td>
+<td>Réplica de solo lectura</td>
 </tr>
 <tr>
-<td>Bueno</td>
-<td>Todo lo anterior + restauración cronometrada + ADR</td>
+<td>Analítica pesada, una sola fuente</td>
+<td>Exportar a Parquet + DuckDB</td>
 </tr>
 <tr>
-<td>Excelente</td>
-<td>+ alternativas descartadas con cifras, límites precisos y umbrales con alerta</td>
+<td>Varias fuentes, histórico largo, muchos analistas</td>
+<td>Almacén + modelo dimensional</td>
+</tr>
+<tr>
+<td>Necesidad de analítica sobre datos del segundo</td>
+<td>HTAP, con su costo</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Medir sin declarar condiciones.</strong> El número no significa nada.</li>
-<li><strong>Omitir la sección de límites.</strong> Sugiere que no se han buscado.</li>
-<li><strong>ADR con la opción elegida ganando en todo.</strong> Nadie se lo cree.</li>
-<li><strong>Invariantes que nunca se han visto fallar.</strong> Pueden no comprobar nada.</li>
-<li><strong>Copia de seguridad sin restauración probada</strong> (clase 048).</li>
-<li><strong>Caché caliente presentado como caso general.</strong></li>
-<li><strong>Alcance sin exclusiones.</strong> Se juzga contra expectativas que nadie fijó.</li>
+<li><strong>Montar un almacén sin haber medido la degradación.</strong> Coste alto para un problema que quizá no existe.</li>
+<li><strong>Consultas analíticas contra el primario.</strong> Contención y bloqueo de la recolección.</li>
+<li><strong>Ignorar el retraso de réplica durante el panel.</strong> El panel muestra datos más viejos de lo que cree.</li>
+<li><strong>Copiar el esquema OLTP al almacén.</strong> Se hereda la normalización y las reuniones.</li>
+<li><strong>Separar y no declarar el desfase.</strong> Dos cifras distintas y nadie sabe cuál es la buena.</li>
+<li><strong>Suponer que HTAP elimina el compromiso.</strong> Lo esconde, no lo elimina.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Este entregable es, con muy pocos cambios, el documento que se lleva a una revisión de arquitectura real, a una auditoría o a una entrevista técnica. La diferencia entre una demostración y un sistema es exactamente lo que aquí se exige: evidencia, límites y un plan de evolución con umbrales.</p>
+<p>La conversación productiva no es «¿necesitamos un almacén de datos?», sino «¿cuánto degrada el OLTP nuestra carga analítica, y cuál es la opción más barata que lo resuelve?». Medir primero convierte una decisión de arquitectura en una decisión con evidencia.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
-<p>El proyecto final es el reto. Entrega:</p>
 <ol>
-<li>Requisitos con exclusiones declaradas.</li>
-<li>Modelo con justificación y diccionario de datos.</li>
-<li>Invariantes, con la demostración de que fallan al romper el dato.</li>
-<li>Evidencia de rendimiento con condiciones y sección de «no demuestra».</li>
-<li>Restauración cronometrada y verificada.</li>
-<li>Control de acceso con pruebas automatizadas.</li>
-<li>ADR de las decisiones no triviales.</li>
-<li>Límites y umbrales de revisión con sus alertas.</li>
+<li>Mide el p99 del OLTP con y sin la carga analítica en ejecución.</li>
+<li>Cuantifica el efecto sobre el buffer y sobre las versiones no recuperables.</li>
+<li>Prueba la opción 2 exportando a Parquet y consultando con DuckDB.</li>
+<li>Justifica con cifras qué opción elegirías y qué desfase declararías.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Enuncia una afirmación de tu proyecto y la evidencia exacta que la respalda.</li>
-<li>¿Qué invariante de tu sistema no puede garantizar el motor y cómo la vigilas?</li>
-<li>Da una alternativa que descartaste siendo mejor en alguna métrica, y por qué.</li>
-<li>¿Qué se rompe primero cuando tu sistema crezca diez veces, y cómo te enterarás?</li>
+<li>Explica los tres conflictos con datos de tu propio sistema.</li>
+<li>¿Por qué una consulta analítica larga impide recuperar versiones muertas?</li>
+<li>¿En qué caso la exportación a Parquet supera a una réplica de solo lectura?</li>
+<li>Da una situación donde no separar sea la decisión correcta, y defiéndela.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Qué hay que poder defender de cada motor que entra en el proyecto</p>
-<p>El proyecto final no se aprueba por funcionar: se aprueba por <strong>defenderse</strong>.
-Y defender una decisión de persistencia significa contestar cuatro preguntas
-sobre cada motor que aparezca en la arquitectura, con evidencia y no con
-preferencias:</p>
-<ol>
-<li><strong>Qué carga resuelve</strong> que ningún otro del proyecto resuelve mejor.</li>
-<li><strong>Qué medición lo demuestra</strong>, con protocolo, semilla y límites declarados.</li>
-<li><strong>Qué garantía se pierde</strong> al usarlo, y quién asume esa pérdida.</li>
-<li><strong>Qué evidencia obligaría a sacarlo</strong> de la arquitectura.</li>
-</ol>
-<p>Esta última sección del programa recoge, motor por motor, lo que el tribunal
-va a preguntar. No es una lista de defectos: es la lista de las cosas que hay
-que haber pensado antes de que las pregunte alguien.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Cuatro números que resumen doce meses, y la consulta contraria que ningún motor sirve igual de bien</p>
+<p>Las dos cargas piden cosas opuestas. La <strong>transaccional</strong> toca una fila con
+todas sus columnas, muchas veces por segundo, y necesita que la escritura sea
+inmediata y duradera. La <strong>analítica</strong> toca todas las filas de pocas
+columnas, unas cuantas veces al día, y necesita leer mucho y rápido.</p>
+<p>Un mismo almacenamiento no puede estar optimizado para las dos, y de ahí
+salen las dos consecuencias que organizan esta parte del programa: que
+existan dos sistemas, y que haga falta un proceso que copie del primero al
+segundo.</p>
+<p>El caso es la consulta analítica en su forma mínima: doce meses de ventas
+resumidos en cuatro trimestres. Todos los motores la responden; el «por qué
+no» de cada uno dice qué se rompe cuando se le pide además la otra.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>trimestre</th>
+<th>importe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>T1</code></td>
+<td><code>600</code></td>
+</tr>
+<tr>
+<td><code>T2</code></td>
+<td><code>1500</code></td>
+</tr>
+<tr>
+<td><code>T3</code></td>
+<td><code>2400</code></td>
+</tr>
+<tr>
+<td><code>T4</code></td>
+<td><code>3300</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 064</code>: 3 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -335,91 +355,249 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/data-modeling-introduction/">doc oficial</a></td>
-</tr>
-<tr>
 <td>DuckDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://duckdb.org/docs/stable/">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/why_duckdb">doc oficial</a></td>
 </tr>
 <tr>
-<td>Qdrant</td>
+<td>ClickHouse</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://qdrant.tech/documentation/">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/">doc oficial</a></td>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/rules-materializedviews.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Google BigQuery</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/bigquery/consulta.sql">código</a></td>
+<td><a href="https://cloud.google.com/bigquery/docs/introduction">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/why_duckdb
+-- nota: el lado ANALITICO. Lee dos columnas y ninguna mas, vectorizadas. Y la
+--       misma consulta funciona sobre el fichero exportado por el sistema
+--       transaccional, sin cargarlo:
+--         SELECT ... FROM 'ventas.parquet' GROUP BY ...
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      INTEGER PRIMARY KEY,
+    mes     INTEGER NOT NULL,
+    importe INTEGER NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes &lt;= 3 THEN 'T1'
+            WHEN mes &lt;= 6 THEN 'T2'
+            WHEN mes &lt;= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Hay que defender el <strong>modelo</strong>, no el motor: los invariantes declarados en el esquema, la anomalía de concurrencia reproducida y corregida, el plan de ejecución de la consulta crítica antes y después, y la restauración probada con la comparación de cifras.</li>
-<li><strong>Por qué sí:</strong> Es el motor donde casi todo lo exigible se puede demostrar con evidencia reproducible y sin infraestructura adicional: no hay excusa para no traerla.</li>
-<li><strong>Por qué no:</strong> Que sea la opción por omisión no exime de justificarla: «usamos PostgreSQL porque es lo que sé» es tan poco defendible como adoptar un motor de moda. Hay que decir qué carga tiene y por qué le sirve.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/">https://www.postgresql.org/docs/current/</a></li>
+<li><strong>Por qué sí:</strong> Es analítico puro y embebido: lee solo las columnas <code>mes</code> e <code>importe</code>, las procesa vectorizadas y no necesita servidor. Para el análisis local sobre una copia de los datos, no hay nada más directo.</li>
+<li><strong>Por qué no:</strong> Un solo escritor y sin concurrencia entre procesos: no puede ser el sistema donde se registran las ventas, solo donde se analizan.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/why_duckdb">https://duckdb.org/docs/stable/why_duckdb</a></li>
 </ul>
-<h4 id="redis">Redis</h4>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+-- nota: implementacion declarada. Aqui el informe trimestral no se calcula: se
+--       lee ya calculado, porque la vista materializada agrega AL INSERTAR.
+--       El precio: no es transaccional, y corregir una venta mal registrada no
+--       es un UPDATE sino una mutacion asincrona que reescribe partes.
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      UInt32,
+    mes     UInt8,
+    importe UInt32
+) ENGINE = MergeTree ORDER BY (mes, id);
+
+CREATE MATERIALIZED VIEW ventas_por_trimestre
+ENGINE = SummingMergeTree ORDER BY trimestre
+AS SELECT concat('T', toString(intDiv(mes - 1, 3) + 1)) AS trimestre,
+          SUM(importe) AS importe
+FROM ventas GROUP BY trimestre;
+
+INSERT INTO ventas VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300), (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900), (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+SELECT trimestre, SUM(importe) AS importe
+FROM ventas_por_trimestre
+GROUP BY trimestre
+ORDER BY trimestre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Hay que declarar <strong>qué se pierde si se cae</strong>: qué datos vivían solo ahí, cuánto tarda en reconstruirse la caché y qué le pasa al sistema mientras está fría. Y demostrar que hay política de caducidad.</li>
-<li><strong>Por qué sí:</strong> Es la separación más fácil de justificar y también la más fácil de justificar mal: basta un dato que no se pueda perder para que la defensa se caiga entera.</li>
-<li><strong>Por qué no:</strong> La pregunta que más se falla: «¿qué pasa si Redis arranca vacío en hora punta?». Si la respuesta no está medida, la arquitectura tiene una avería que nadie ha visto todavía.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li><strong>Por qué sí:</strong> La misma arquitectura columnar a escala distribuida, con vistas materializadas que agregan <strong>al insertar</strong>: el informe trimestral no se calcula, se lee ya calculado.</li>
+<li><strong>Por qué no:</strong> No es transaccional y las modificaciones fila a fila son mutaciones asíncronas: corregir una venta mal registrada no es un <code>UPDATE</code>, es una operación de mantenimiento.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree">https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree</a></li>
 </ul>
-<h4 id="mongodb">MongoDB</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/rules-materializedviews.html
+-- nota: el punto intermedio, y el que muchas arquitecturas no necesitan
+--       abandonar. Con una vista materializada, el informe deja de recalcularse:
+--         CREATE MATERIALIZED VIEW ventas_por_trimestre AS SELECT ...;
+--         REFRESH MATERIALIZED VIEW CONCURRENTLY ventas_por_trimestre;
+--       A cambio de que el dato vaya con el retraso del ultimo refresco.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS ventas;
+
+CREATE TABLE ventas (
+    id      integer PRIMARY KEY,
+    mes     integer NOT NULL,
+    importe integer NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes &lt;= 3 THEN 'T1'
+            WHEN mes &lt;= 6 THEN 'T2'
+            WHEN mes &lt;= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Hay que defender el <strong>límite del agregado</strong>: qué documento contiene qué, por qué eso no crece sin techo, y qué operaciones cruzan la frontera del documento y por tanto no son atómicas.</li>
-<li><strong>Por qué sí:</strong> Cuando el agregado está bien elegido, la defensa es sólida y corta: una escritura, una unidad de consistencia, sin transacción.</li>
-<li><strong>Por qué no:</strong> Cuando no lo está, aparecen transacciones de varios documentos por todas partes, y eso es la señal de que se está usando un motor documental para un problema relacional. El tribunal lo verá en el código antes que en la explicación.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/data-modeling-introduction/">https://www.mongodb.com/docs/manual/core/data-modeling-introduction/</a></li>
+<li><strong>Por qué sí:</strong> Es el punto donde muchas arquitecturas empiezan y donde muchas deberían quedarse: con agregación paralela y vistas materializadas resuelve la analítica de tamaño medio <strong>sobre los datos operativos</strong>, sin proceso de copia, sin retraso y sin un sistema más.</li>
+<li><strong>Por qué no:</strong> El informe compite por la misma caché y las mismas conexiones que las transacciones. Un análisis pesado a la hora punta degrada las ventas, y esa es exactamente la razón por la que se separan las dos cargas.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/rules-materializedviews.html">https://www.postgresql.org/docs/current/rules-materializedviews.html</a></li>
 </ul>
-<h4 id="duckdb">DuckDB</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/whentouse.html
+-- nota: el lado TRANSACCIONAL de la comparacion. La consulta contraria —la que
+--       este motor sirve mejor que ningun columnar— es esta:
+--         SELECT * FROM ventas WHERE id = 7;
+--       una fila, todas sus columnas, una sola pagina leida.
+
+-- === preparacion ===
+CREATE TABLE ventas (
+    id      INTEGER PRIMARY KEY,
+    mes     INTEGER NOT NULL,
+    importe INTEGER NOT NULL
+);
+INSERT INTO ventas (id, mes, importe) VALUES
+    (1, 1, 100), (2, 2, 200), (3, 3, 300),
+    (4, 4, 400), (5, 5, 500), (6, 6, 600),
+    (7, 7, 700), (8, 8, 800), (9, 9, 900),
+    (10, 10, 1000), (11, 11, 1100), (12, 12, 1200);
+
+-- === consulta ===
+-- Una consulta ANALITICA: toca TODAS las filas, POCAS columnas, y devuelve
+-- cuatro numeros. La transaccional seria la contraria —«dame la venta 7»— y
+-- toca UNA fila con TODAS sus columnas.
+-- El mismo motor no puede estar optimizado para las dos cosas, y esa es la
+-- razon de que existan dos sistemas y un proceso que copia de uno a otro.
+SELECT CASE WHEN mes &lt;= 3 THEN 'T1'
+            WHEN mes &lt;= 6 THEN 'T2'
+            WHEN mes &lt;= 9 THEN 'T3'
+            ELSE 'T4'
+       END AS trimestre,
+       SUM(importe) AS importe
+FROM ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Hay que declarar el <strong>retraso</strong>: de cuándo son los datos del panel, cómo se exportan, qué pasa si la exportación falla y cómo se nota que el panel está mostrando algo viejo.</li>
-<li><strong>Por qué sí:</strong> Es la forma más barata de separar la analítica de lo transaccional, y defenderla es fácil si el retraso está declarado en el propio panel.</li>
-<li><strong>Por qué no:</strong> Un panel sin fecha de datos es un panel que miente en cuanto la exportación falla una noche. Esa es la pregunta que hay que tener contestada.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/">https://duckdb.org/docs/stable/</a></li>
+<li><strong>Por qué sí:</strong> Sirve para ver el contraste desde el lado transaccional: el mismo SQL, el mismo resultado, y un almacenamiento por filas que tiene que leer los doce registros completos para sumar una columna.</li>
+<li><strong>Por qué no:</strong> Con doce filas da igual; con doce millones, la diferencia es de órdenes de magnitud, y no hay índice que la arregle porque hay que leerlas todas.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/whentouse.html">https://sqlite.org/whentouse.html</a></li>
 </ul>
-<h4 id="qdrant">Qdrant</h4>
+<h4 id="google-bigquery--implementacionesbigqueryconsultasql">Google BigQuery · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/implementaciones/bigquery/consulta.sql"><code>implementaciones/bigquery/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: bigquery
+-- doc: https://cloud.google.com/bigquery/docs/introduction
+-- nota: implementacion declarada. No hay servidor, ni indices, ni ajuste: solo
+--       consultas y una factura. Se paga por BYTES LEIDOS, asi que esta
+--       consulta cuesta dos columnas; con SELECT * costaria la tabla entera y
+--       devolveria lo mismo.
+--         bq query --dry_run   dice cuantos bytes antes de cobrarlos.
+
+-- === preparacion ===
+CREATE OR REPLACE TABLE analitica.ventas AS
+SELECT n AS id, n AS mes, n * 100 AS importe
+FROM UNNEST(GENERATE_ARRAY(1, 12)) AS n;
+
+-- === consulta ===
+SELECT CONCAT('T', CAST(DIV(mes - 1, 3) + 1 AS STRING)) AS trimestre,
+       SUM(importe) AS importe
+FROM analitica.ventas
+GROUP BY trimestre
+ORDER BY trimestre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Hay que traer <strong>recall y latencia medidos</strong> contra la alternativa que no añade un sistema —pgvector—, sobre el mismo conjunto de evaluación, y explicar cómo se mantiene sincronizado con la base de datos.</li>
-<li><strong>Por qué sí:</strong> Si esa medición existe, la decisión es defendible en una frase. Si no existe, no hay decisión: hay una preferencia.</li>
-<li><strong>Por qué no:</strong> La pregunta difícil no es el recall: es qué pasa cuando alguien borra un documento en la base y el vector sigue ahí. Esa incoherencia hay que haberla diseñado.</li>
-<li>📄 Documentación oficial: <a href="https://qdrant.tech/documentation/">https://qdrant.tech/documentation/</a></li>
+<li><strong>Por qué sí:</strong> Elimina la operación por completo: no hay servidor, ni índices, ni ajuste; solo consultas y una factura. Para un informe trimestral sobre volúmenes grandes y esporádicos, es la opción con menos trabajo humano.</li>
+<li><strong>Por qué no:</strong> Es exclusivamente analítico: no admite escrituras fila a fila con latencia baja, y la inserción en flujo tiene su propio costo y sus propias reglas. Nunca es la otra mitad de la pareja.</li>
+<li>📄 Documentación oficial: <a href="https://cloud.google.com/bigquery/docs/introduction">https://cloud.google.com/bigquery/docs/introduction</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -434,23 +612,23 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
-<td>Salvo que el proyecto tenga un volumen de escritura que una máquina no pueda absorber —y eso hay que <strong>medirlo</strong>, no suponerlo—, incluirlo es añadir un modelo sin reuniones, sin transacciones y con reparaciones periódicas para resolver un problema que no se tiene.</td>
-<td>Si aun así entra, hay que defender la tabla por consulta, el tamaño máximo de partición previsto y quién ejecuta las reparaciones. Sin esas tres respuestas, la defensa no se sostiene.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/">doc</a></td>
+<td>MongoDB</td>
+<td>Puede resolver la consulta con <code>$group</code>, pero no aporta una fila distinta a esta comparación: su almacenamiento es orientado a documentos, así que agregar obliga a leer documentos completos, igual que SQLite lee filas completas.</td>
+<td>Exportar a un almacén columnar para la analítica —o usar los servicios analíticos que su propio proveedor ofrece— y dejar la colección para lo transaccional, que es su terreno.</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">doc</a></td>
 </tr>
 <tr>
-<td>SQLite</td>
-<td>Para un proyecto con varios usuarios concurrentes y acceso remoto no es una opción defendible como almacén principal, por mucho que simplifique el desarrollo.</td>
-<td>Sí es defendible —y muy buena— para las <strong>pruebas</strong> del proyecto: un esquema idéntico en memoria hace que la batería de pruebas corra en segundos y sin servicios. Esa decisión también se documenta.</td>
-<td><a href="https://sqlite.org/whentouse.html">doc</a></td>
+<td>Redis</td>
+<td>No hay agregación sobre un conjunto de registros: habría que traerse las doce ventas al cliente y sumarlas allí. Con doce da igual; con doce millones, no hay conversación.</td>
+<td>Mantener los totales por trimestre como contadores actualizados en cada venta: el informe está siempre listo y solo responde la pregunta que se decidió de antemano.</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+python labs/04-indexing/run_indexing_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -494,23 +672,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
-  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
-<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
-  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
-<li><strong>Peter Bailis, Joseph M. Hellerstein, Michael Stonebraker</strong> (2015). <a href="http://www.redbook.io/">Readings in Database Systems</a>. 5.a ed. MIT Press. ISBN 978-0-262-52964-3.<br />
-  Antologia comentada de acceso libre. Cada capitulo situa los papers en su discusión.</li>
+<li><strong>Michael Stonebraker, Samuel Madden, Daniel J. Abadi, Stavros Harizopoulos, Nabil Hachem, Pat Helland</strong> (2007). <a href="https://cs.brown.edu/courses/cs227/archives/2008/Papers/OLTP/hstore.pdf">The End of an Architectural Era (It's Time for a Complete Rewrite)</a>. VLDB.<br />
+  Mide en qué gasta el tiempo realmente un motor OLTP tradicional.</li>
+<li><strong>Ralph Kimball, Margy Ross</strong> (2013). <a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/">The Data Warehouse Toolkit</a>. 3.a ed. Wiley. ISBN 978-1-118-53080-1.<br />
+  Modelado dimensional, tablas de hechos y dimensiones de cambio lento.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="063.html">← Anterior</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="063.html">← Anterior</a> · <a href="065.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="064">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="063.html"><span class="sentido">← Anterior · 063</span>Registro de decisiones de arquitectura y costo total</a>
+<a class="anterior" href="063.html"><span class="sentido">← Anterior · 063</span>Privacidad, retención y gobierno del dato</a>
+<a class="siguiente" href="065.html"><span class="sentido">Siguiente · 065 →</span>Modelado dimensional: hechos, dimensiones y cambios lentos</a>
 </nav>
 </main>
 <footer>

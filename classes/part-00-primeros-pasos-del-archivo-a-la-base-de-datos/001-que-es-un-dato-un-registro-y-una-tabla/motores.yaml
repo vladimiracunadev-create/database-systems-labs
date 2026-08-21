@@ -1,0 +1,99 @@
+---
+caso:
+  titulo: Una fila por hecho, en vez de una lista dentro de una celda
+  contrato: |
+    La hoja de cálculo guardaba los cursos de cada estudiante en una sola celda:
+    `DB-101, SE-201`. Aquí cada inscripción es **una fila**, y esa diferencia lo
+    cambia todo: contar cuántos estudiantes hay en DB-101 pasa de ser una
+    búsqueda de texto —que falla si alguien escribe `DB101` sin guion— a ser un
+    recuento de filas.
+
+    El caso guarda tres inscripciones de dos estudiantes y las devuelve
+    ordenadas. Es la operación más elemental del programa, y sirve para ver que
+    la idea de «un hecho por registro» no es exclusiva del modelo relacional:
+    cada familia de motores la expresa a su manera.
+  columnas: [estudiante, curso]
+  esperado:
+    - [Ada, DB-101]
+    - [Ada, SE-201]
+    - [Linus, DB-101]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Es el motor con menos ceremonia posible: viene con Python, no hay servidor
+      que levantar y una base de datos es un archivo. Para la primera hora de
+      trabajo, no hay nada que estorbe menos.
+    porque_no: >-
+      Esa misma comodidad esconde lo que un motor con servidor aporta —usuarios,
+      permisos, conexiones remotas—, así que conviene no confundir «funciona en
+      mi máquina» con «sirve para un sistema».
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Acepta el mismo SQL y permite comprobar desde el primer día que lo que se
+      aprende no es de un producto: la misma sentencia funciona en otro motor
+      con otra arquitectura por debajo.
+    porque_no: >-
+      Está pensado para analizar datos, no para registrarlos: aquí sirve para
+      comparar, no para guardar la verdad de nada.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_table
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es la misma sentencia contra un servidor real, con usuarios y conexiones:
+      sirve para ver que el SQL no cambia por tener infraestructura detrás.
+    porque_no: >-
+      Para tres filas es maquinaria de sobra: hay que instalarlo, arrancarlo y
+      conectarse. Empezar aquí añade obstáculos que no enseñan nada sobre datos.
+    doc: https://www.postgresql.org/docs/current/sql-createtable.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Muestra que «un hecho por registro» no depende de las tablas: aquí cada
+      inscripción es un documento, sin declarar antes ninguna estructura.
+    porque_no: >-
+      Al no declarar la estructura, nada impide que el documento siguiente traiga
+      otros campos o el curso escrito de otra forma. La disciplina que en una
+      tabla impone el esquema, aquí la tiene que poner el código.
+    doc: https://www.mongodb.com/docs/manual/core/document/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Un conjunto guarda elementos sin repetir, así que la idea de «un hecho, una
+      vez» se ve en su forma más pura: `SADD` del mismo par dos veces no crea dos
+      entradas.
+    porque_no: >-
+      El par estudiante-curso hay que serializarlo en una sola cadena
+      (`Ada|DB-101`), y con eso desaparecen los campos: no se puede pedir «los
+      cursos de Ada» sin volver a partir el texto, que era justo el problema del
+      que se venía huyendo.
+    doc: https://redis.io/docs/latest/develop/data-types/sets/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Resolvería el caso sin dificultad, pero exige decidir de antemano la clave
+      de partición —es decir, por qué pregunta se va a consultar— y esa decisión
+      no se puede tomar en la primera clase, cuando todavía no se sabe qué
+      preguntas habrá.
+    alternativa: >-
+      Se estudia en la parte de columnas anchas, donde la pregunta «¿qué
+      consultas va a tener este dato?» ya se sabe contestar.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Réplica: líder único, multilíder y sin líder. Parte 09: Distribución, réplica y consistencia.">
+<meta name="description" content="ACID: qué garantiza cada letra y quién la implementa. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/043.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="043 — Réplica: líder único, multilíder y sin líder · Database Systems Labs">
-<meta property="og:description" content="Réplica: líder único, multilíder y sin líder. Parte 09: Distribución, réplica y consistencia.">
+<meta property="og:title" content="043 — ACID: qué garantiza cada letra y quién la implementa · Database Systems Labs">
+<meta property="og:description" content="ACID: qué garantiza cada letra y quién la implementa. Parte 08: Transacciones, concurrencia y recuperación.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/043.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "043 — Réplica: líder único, multilíder y sin líder", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["replicación sincrónica", "retraso de réplica", "quórum", "lectura de tu propia escritura"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>043 — Réplica: líder único, multilíder y sin líder · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "043 — ACID: qué garantiza cada letra y quién la implementa", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["atomicidad", "consistencia", "aislamiento", "durabilidad", "unidad de recuperación"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>043 — ACID: qué garantiza cada letra y quién la implementa · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,315 +49,252 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-09.html">Parte 09 · Distribución, réplica y consistencia</a>
+  <a href="parte-08.html">Parte 08 · Transacciones, concurrencia y recuperación</a>
   <span aria-hidden="true">/</span><span>Clase 043</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="043--réplica-líder-único-multilíder-y-sin-líder">043 — Réplica: líder único, multilíder y sin líder</h1>
+<h1 id="043--acid-qué-garantiza-cada-letra-y-quién-la-implementa">043 — ACID: qué garantiza cada letra y quién la implementa</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="042.html">← Anterior</a> · <a href="044.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="042.html">← Anterior</a> · <a href="044.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 09 — Distribución, réplica y consistencia · Avanzado ·
-4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>cassandra</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md"><code>labs/07-replication</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>replicación sincrónica</code> · <code>retraso de réplica</code> · <code>quórum</code> · <code>lectura de tu propia escritura</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 08 — Transacciones, concurrencia y recuperación · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>atomicidad</code> · <code>consistencia</code> · <code>aislamiento</code> · <code>durabilidad</code> · <code>unidad de recuperación</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Replicar datos entendiendo qué se gana (disponibilidad, lectura escalada, cercanía geográfica) y qué se paga (retraso, conflictos, pérdida potencial en la conmutación).</p>
+<p>Precisar qué garantiza cada letra de ACID, quién la implementa y qué queda fuera. «Usamos una base ACID» no significa que el sistema sea correcto: significa que existen unas garantías concretas si se usan bien.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Comparar las tres topologías de replicación y su modelo de fallo.</li>
-<li>Explicar el retraso de réplica y las anomalías que produce.</li>
-<li>Aplicar las garantías de sesión que las corrigen.</li>
-<li>Calcular quórums de lectura y escritura sin líder.</li>
-<li>Decidir entre replicación síncrona y asíncrona con un criterio de negocio.</li>
+<li>Definir con precisión atomicidad, consistencia, aislamiento y durabilidad.</li>
+<li>Explicar por qué la C es distinta de las otras tres.</li>
+<li>Identificar qué mecanismo del motor implementa cada letra.</li>
+<li>Reconocer las garantías que se pierden por configuración.</li>
+<li>Explicar por qué una transacción larga es un problema operativo.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="las-tres-topologías">Las tres topologías</h3>
+<h3 id="la-transacción">La transacción</h3>
+<p>Gray (1981) define la transacción como la unidad de trabajo que lleva la base de un estado consistente a otro, con la propiedad de que o se aplica entera o no se aplica nada. Es simultáneamente unidad de <strong>recuperación</strong>, de <strong>concurrencia</strong> y de <strong>consistencia</strong>.</p>
+<h3 id="las-cuatro-letras-una-por-una">Las cuatro letras, una por una</h3>
+<p><strong>A — Atomicidad.</strong> Todo o nada. Si la transacción falla o el proceso muere, no queda ningún efecto parcial. Lo implementa el registro de deshacer (<em>undo</em>): el motor guarda cómo revertir cada cambio antes de aplicarlo.</p>
+<p><strong>C — Consistencia.</strong> Aquí está la trampa pedagógica. Las otras tres letras son propiedades <strong>del motor</strong>; la C es una propiedad <strong>de la aplicación y del esquema</strong>. El motor solo garantiza las restricciones que alguien declaró (clase 013). Si nadie declaró que el saldo no puede ser negativo, ninguna transacción ACID lo impedirá.</p>
+<p>Formulación honesta: <em>la atomicidad y el aislamiento permiten que la aplicación mantenga sus invariantes; la C es la afirmación de que las mantiene</em>.</p>
+<p><strong>I — Aislamiento.</strong> Las transacciones concurrentes producen un resultado equivalente a <strong>alguna</strong> ejecución en serie. Esa es la definición de serializabilidad, y es el nivel más fuerte. En la práctica casi todos los sistemas funcionan en niveles más débiles que <strong>sí</strong> permiten anomalías, y por defecto (clase 034). Lo implementan el bloqueo en dos fases o el control multiversión (clase 035).</p>
+<p><strong>D — Durabilidad.</strong> Una vez confirmada, la transacción sobrevive a fallos. Lo implementa el registro anticipado (clase 036). El matiz importante: durabilidad <strong>frente a qué fallo</strong>. Sobrevivir a la caída del proceso, a la de la máquina, a la pérdida del disco y a la del centro de datos son cuatro garantías distintas con cuatro costos distintos.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Topología</th>
-<th>Escrituras</th>
-<th>Conflictos</th>
-<th>Ejemplos</th>
+<th>Fallo</th>
+<th>Mecanismo necesario</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Líder único</strong></td>
-<td>Un nodo</td>
-<td>Imposibles</td>
-<td>PostgreSQL, MySQL, SQL Server</td>
+<td>Caída del proceso</td>
+<td>WAL escrito al sistema operativo</td>
 </tr>
 <tr>
-<td><strong>Multilíder</strong></td>
-<td>Varios nodos</td>
-<td>Inevitables, hay que resolverlos</td>
-<td>Multirregión, CouchDB, CRDT</td>
+<td>Caída de la máquina</td>
+<td><code>fsync</code> del WAL al disco</td>
 </tr>
 <tr>
-<td><strong>Sin líder</strong></td>
-<td>Cualquier nodo, por quórum</td>
-<td>Se resuelven al leer</td>
-<td>Dynamo, Cassandra, Riak</td>
+<td>Pérdida del disco</td>
+<td>Réplica o copia externa</td>
+</tr>
+<tr>
+<td>Pérdida del centro de datos</td>
+<td>Réplica geográficamente distante</td>
+</tr>
+<tr>
+<td>Error humano (<code>DROP TABLE</code>)</td>
+<td>Copia con recuperación a un punto en el tiempo</td>
 </tr>
 </tbody>
 </table></div>
-<p>Con líder único no hay conflictos de escritura <strong>por construcción</strong>: todas pasan por el mismo nodo, que las ordena. Es la razón por la que sigue siendo la elección correcta salvo que haya un motivo fuerte para otra cosa.</p>
-<h3 id="síncrona-frente-a-asíncrona">Síncrona frente a asíncrona</h3>
+<p>Ninguna configuración de un solo nodo protege de las tres últimas.</p>
+<h3 id="garantías-que-se-pierden-por-configuración">Garantías que se pierden por configuración</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Modo</th>
-<th>Confirma cuando</th>
-<th>Se pierde en la conmutación</th>
-<th>Latencia de escritura</th>
+<th>Configuración</th>
+<th>Qué se pierde</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Asíncrona</td>
-<td>El líder escribió</td>
-<td>Lo aún no replicado</td>
-<td>Baja</td>
+<td>PostgreSQL <code>synchronous_commit = off</code></td>
+<td>Durabilidad: hasta ~0,2 s de transacciones confirmadas</td>
 </tr>
 <tr>
-<td>Síncrona</td>
-<td>Al menos una réplica confirmó</td>
-<td>Nada</td>
-<td>+1 ida y vuelta</td>
+<td>PostgreSQL <code>fsync = off</code></td>
+<td>Durabilidad y posiblemente la integridad del archivo</td>
 </tr>
 <tr>
-<td>Semisíncrona</td>
-<td>Una réplica de N</td>
-<td>Nada, si esa sobrevive</td>
-<td>+1 ida y vuelta</td>
+<td>MySQL <code>innodb_flush_log_at_trx_commit = 2</code></td>
+<td>Durabilidad ante caída de la máquina</td>
+</tr>
+<tr>
+<td>MySQL con tablas MyISAM</td>
+<td><strong>Todo</strong>: no hay transacciones</td>
+</tr>
+<tr>
+<td>Réplica asíncrona con conmutación</td>
+<td>Las transacciones aún no replicadas</td>
+</tr>
+<tr>
+<td>SQLite <code>synchronous = OFF</code></td>
+<td>Durabilidad e integridad ante corte de energía</td>
 </tr>
 </tbody>
 </table></div>
-<p>La asíncrona es la configuración por defecto casi siempre, y significa que <strong>una conmutación puede perder transacciones ya confirmadas al cliente</strong>. No es un fallo: es el compromiso elegido. Debe estar escrito en el objetivo de punto de recuperación (RPO, clase 048).</p>
-<p>PostgreSQL permite ajustarlo por transacción:</p>
-<pre><code class="language-sql">SET synchronous_commit = 'remote_apply';   -- solo para las operaciones críticas
-</code></pre>
-<p>Patrón útil: asíncrono por defecto, síncrono para pagos.</p>
-<h3 id="el-retraso-y-sus-anomalías">El retraso y sus anomalías</h3>
-<p>El retraso de réplica es el tiempo entre confirmar en el líder y ser visible en la réplica. Con carga normal son milisegundos; durante una carga masiva o un <code>VACUUM</code> pesado, pueden ser minutos.</p>
-<pre><code class="language-sql">SELECT client_addr,
-       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS bytes_de_retraso,
-       replay_lag
-FROM pg_stat_replication;
-</code></pre>
-<p>Tres anomalías, con sus nombres y sus remedios:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Anomalía</th>
-<th>Qué ve el usuario</th>
-<th>Garantía que la corrige</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Lee su propia escritura y no la ve</td>
-<td>Publica un comentario y desaparece</td>
-<td><strong>Lectura de tus escrituras</strong></td>
-</tr>
-<tr>
-<td>Ve datos que retroceden</td>
-<td>Refresca y el comentario vuelve a desaparecer</td>
-<td><strong>Lectura monótona</strong></td>
-</tr>
-<tr>
-<td>Ve un efecto antes que su causa</td>
-<td>La respuesta antes que la pregunta</td>
-<td><strong>Consistencia causal</strong> (clase 046)</td>
-</tr>
-</tbody>
-</table></div>
-<p>Implementaciones habituales:</p>
-<ul>
-<li><strong>Lectura de tus escrituras:</strong> durante N segundos tras escribir, leer del líder. O guardar el LSN de la escritura y exigir que la réplica lo haya alcanzado.</li>
-<li><strong>Lectura monótona:</strong> fijar cada sesión a la misma réplica.</li>
-</ul>
-<h3 id="sin-líder-y-quórums">Sin líder y quórums</h3>
-<p>Dynamo introdujo el modelo: se escribe en N réplicas, se espera confirmación de W, se lee de R.</p>
-<pre><code class="language-text">R + W &gt; N  →  los conjuntos de lectura y escritura se solapan
-              → alguna réplica leída tiene la última escritura
-</code></pre>
-<p>Con N = 3:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>W</th>
-<th>R</th>
-<th>Solapa</th>
-<th>Tolera</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>2</td>
-<td>2</td>
-<td>Sí</td>
-<td>1 nodo caído en ambas operaciones</td>
-</tr>
-<tr>
-<td>3</td>
-<td>1</td>
-<td>Sí</td>
-<td>0 en escritura, 2 en lectura</td>
-</tr>
-<tr>
-<td>1</td>
-<td>3</td>
-<td>Sí</td>
-<td>2 en escritura, 0 en lectura</td>
-</tr>
-<tr>
-<td>1</td>
-<td>1</td>
-<td><strong>No</strong></td>
-<td>Máxima disponibilidad, sin garantía</td>
-</tr>
-</tbody>
-</table></div>
-<p>Advertencia importante: <strong><code>R + W &gt; N</code> no da linealizabilidad</strong>. Garantiza que alguna réplica leída tiene el valor más reciente, no que se sepa distinguirlo si hay escrituras concurrentes, ni protege contra reversiones si un nodo se recupera con datos viejos. Bailis et al. desarrollan qué se puede y qué no se puede garantizar sin coordinación.</p>
-<p>Mecanismos de reparación: reparación en lectura (al detectar réplicas atrasadas, se corrigen), entrega con pista (un nodo vecino acepta la escritura del caído y se la entrega al volver) y reparación anti-entropía periódica.</p>
+<p>La primera y la tercera son decisiones legítimas para datos reconstruibles, y hay que <strong>declararlas</strong>, no heredarlas de un archivo de configuración copiado.</p>
 <pre><code class="language-mermaid">flowchart TD
-    subgraph L[&quot;Líder único&quot;]
-        W1[&quot;Escritura&quot;] --&gt; LD[&quot;Líder&quot;]
-        LD --&gt;|&quot;WAL&quot;| R1[&quot;Réplica 1&quot;]
-        LD --&gt;|&quot;WAL&quot;| R2[&quot;Réplica 2&quot;]
-        R1 --&gt; RD1[&quot;Lectura (con retraso)&quot;]
-    end
-    subgraph S[&quot;Sin líder&quot;]
-        W2[&quot;Escritura&quot;] --&gt; N1[&quot;Nodo 1&quot;]
-        W2 --&gt; N2[&quot;Nodo 2&quot;]
-        W2 --&gt; N3[&quot;Nodo 3&quot;]
-        RD2[&quot;Lectura R=2&quot;] --&gt; N1
-        RD2 --&gt; N2
-        RD2 --&gt; REP[&quot;Reparación en lectura&lt;br/&gt;si divergen&quot;]
-    end
+    T[&quot;BEGIN&quot;] --&gt; W[&quot;Escrituras&quot;]
+    W --&gt; A{&quot;¿COMMIT o fallo?&quot;}
+    A -- &quot;Fallo&quot; --&gt; U[&quot;Registro de deshacer&lt;br/&gt;→ ATOMICIDAD&quot;]
+    A -- &quot;COMMIT&quot; --&gt; V{&quot;¿Se violó alguna&lt;br/&gt;restricción declarada?&quot;}
+    V -- &quot;Sí&quot; --&gt; U
+    V -- &quot;No&quot; --&gt; L[&quot;WAL + fsync&lt;br/&gt;→ DURABILIDAD&quot;]
+    L --&gt; OK[&quot;Confirmado&quot;]
+    W -.-&gt;|&quot;2PL o MVCC&quot;| I[&quot;AISLAMIENTO&quot;]
+    V -.-&gt; C[&quot;CONSISTENCIA&lt;br/&gt;(esquema + aplicación)&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Sistema: un líder y dos réplicas asíncronas; las lecturas se reparten entre las réplicas.</p>
-<p><strong>La anomalía, con traza real:</strong></p>
-<pre><code class="language-text">t0    Cliente escribe la nota  -&gt; líder. COMMIT. Respuesta 200.
-t0+5ms Cliente recarga la ficha -&gt; réplica 2 (retraso: 340 ms)
-t0+5ms Respuesta: la nota no aparece.
-t0+1s  Cliente recarga         -&gt; réplica 1 (retraso: 12 ms)
-t0+1s  Respuesta: la nota aparece.
-t0+2s  Cliente recarga         -&gt; réplica 2 (aún atrasada)
-t0+2s  Respuesta: la nota DESAPARECE otra vez.
+<p>Transferencia entre cuentas, el caso canónico:</p>
+<pre><code class="language-sql">BEGIN;
+UPDATE cuentas SET saldo = saldo - 300 WHERE id = 1;
+UPDATE cuentas SET saldo = saldo + 300 WHERE id = 2;
+COMMIT;
 </code></pre>
-<p>Dos anomalías en cinco segundos: no lee su propia escritura y la lectura no es monótona. Para el usuario, el sistema está roto; para el equipo, todo está «en verde».</p>
-<p><strong>Corrección 1 — leer del líder tras escribir:</strong></p>
-<pre><code class="language-python">def leer_ficha(ctx, student_id):
-    # Tras una escritura propia, leer del líder durante una ventana
-    # holgadamente mayor que el retraso p99 observado.
-    if ctx.escribio_hace_menos_de(seconds=10):
-        return leer(lider, student_id)
-    return leer(replica_de(ctx.session_id), student_id)
+<p><strong>Qué garantiza cada letra aquí:</strong></p>
+<ul>
+<li><strong>A:</strong> si el proceso muere entre los dos <code>UPDATE</code>, ninguno queda aplicado. Los 300 no desaparecen.</li>
+<li><strong>I:</strong> otra transferencia concurrente sobre la cuenta 1 no ve el estado intermedio ni provoca actualización perdida (con el nivel adecuado).</li>
+<li><strong>D:</strong> tras el <code>COMMIT</code>, un corte de energía no deshace la operación.</li>
+<li><strong>C:</strong> <strong>nada</strong>, salvo que se declare. Sin restricciones, esto se acepta:</li>
+</ul>
+<pre><code class="language-sql">BEGIN;
+UPDATE cuentas SET saldo = saldo - 100000 WHERE id = 1;  -- saldo queda en -99 700
+COMMIT;   -- ACID perfecto, negocio roto
 </code></pre>
-<p><strong>Corrección 2 — esperar al LSN</strong>, más precisa y sin cargar el líder:</p>
-<pre><code class="language-python">def escribir_nota(ctx, ...):
-    lsn = lider.execute(&quot;...; SELECT pg_current_wal_lsn()&quot;)
-    ctx.session[&quot;lsn_minimo&quot;] = lsn
-
-def leer_ficha(ctx, student_id):
-    r = replica_de(ctx.session_id)
-    if r.replay_lsn() &lt; ctx.session.get(&quot;lsn_minimo&quot;, 0):
-        return leer(lider, student_id)      # esta réplica aún no alcanza
-    return leer(r, student_id)
+<p>La transacción es atómica, aislada y duradera, y deja un saldo imposible. La C exige escribirla:</p>
+<pre><code class="language-sql">ALTER TABLE cuentas ADD CONSTRAINT saldo_no_negativo CHECK (saldo &gt;= 0);
 </code></pre>
-<p><strong>Corrección 3 — fijar la sesión a una réplica.</strong> Resuelve la lectura monótona (nunca retrocede) pero no la lectura de las propias escrituras si esa réplica va atrasada. Se combina con la 1 o la 2.</p>
-<p><strong>Cálculo de capacidad de lectura.</strong> Con un líder que sostiene 8 000 lecturas/s y dos réplicas iguales:</p>
-<pre><code class="language-text">solo líder:          8 000 lecturas/s
-líder + 2 réplicas: 24 000 lecturas/s teóricas
-con el 10 % desviado al líder por consistencia: ~21 600 útiles
+<p>Ahora sí: el <code>UPDATE</code> falla, la transacción se revierte y la atomicidad garantiza que no queda rastro.</p>
+<p><strong>La invariante que un <code>CHECK</code> no cubre.</strong> «La suma de todos los saldos es constante»: relaciona filas distintas y no hay <code>CHECK</code> estándar que lo exprese. Solo el aislamiento serializable garantiza que dos transferencias concurrentes no la rompan; en niveles más débiles hay que auditarla:</p>
+<pre><code class="language-sql">SELECT SUM(saldo) FROM cuentas;   -- debe coincidir con el total esperado
 </code></pre>
-<p>Y el límite que no se supera: <strong>las escrituras no escalan</strong>. Todas van al líder. Añadir réplicas no aumenta en nada la capacidad de escritura; eso exige particionar (clase 044).</p>
+<p><strong>Transacciones largas: el problema operativo.</strong></p>
+<pre><code class="language-sql">BEGIN;
+SELECT * FROM enrollments;          -- el informe tarda 40 minutos
+-- ... la sesión queda abierta ...
+COMMIT;
+</code></pre>
+<p>Durante esos 40 minutos, en un motor MVCC:</p>
+<ul>
+<li>El motor <strong>no puede</strong> limpiar las versiones antiguas de fila, porque esta transacción podría necesitarlas. Las tablas se hinchan (clase 021).</li>
+<li>Con bloqueo (SQL Server en <code>READ COMMITTED</code> por defecto), además bloquea escritores.</li>
+<li>Si la transacción escribió algo, mantiene sus bloqueos todo ese tiempo.</li>
+</ul>
+<p>Medición típica: una transacción abierta 40 minutos en una base con 2 000 actualizaciones por segundo impide recuperar ~4,8 millones de versiones de fila. La consecuencia se ve como «la base creció 30 GB de la nada».</p>
+<p><strong>Regla operativa:</strong> una transacción abarca las escrituras que deben ser atómicas y nada más. Nunca debe contener llamadas de red a servicios externos, esperas de usuario ni informes largos.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Necesidad</th>
-<th>Topología</th>
+<th>Propiedad</th>
+<th>La garantiza</th>
+<th>Se pierde si</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Escalar lecturas</td>
-<td>Líder único + réplicas</td>
+<td>Atomicidad</td>
+<td>Registro de deshacer</td>
+<td>Casi nunca; el motor la sostiene</td>
 </tr>
 <tr>
-<td>Alta disponibilidad regional</td>
-<td>Líder único con conmutación automática</td>
+<td>Consistencia</td>
+<td>Esquema + aplicación</td>
+<td>No se declaran las restricciones</td>
 </tr>
 <tr>
-<td>Escritura en varias regiones</td>
-<td>Multilíder, con resolución de conflictos</td>
+<td>Aislamiento</td>
+<td>2PL o MVCC</td>
+<td>Nivel por defecto más débil que serializable</td>
 </tr>
 <tr>
-<td>Tolerar la caída de varios nodos</td>
-<td>Sin líder con quórum</td>
-</tr>
-<tr>
-<td>Cero pérdida en la conmutación</td>
-<td>Replicación síncrona</td>
-</tr>
-<tr>
-<td>Latencia mínima de escritura</td>
-<td>Asíncrona, con RPO declarado</td>
+<td>Durabilidad</td>
+<td>WAL + <code>fsync</code></td>
+<td>Configuración de rendimiento; réplica asíncrona</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Conmutación automática con réplica asíncrona sin declarar el RPO.</strong> Se pierden transacciones confirmadas.</li>
-<li><strong>Repartir lecturas sin garantías de sesión.</strong> Aparecen las tres anomalías.</li>
-<li><strong>Suponer que las réplicas escalan la escritura.</strong> No lo hacen.</li>
-<li><strong>Cerebro dividido en multilíder.</strong> Dos líderes aceptando escrituras que después no se pueden reconciliar.</li>
-<li><strong><code>R + W &gt; N</code> interpretado como linealizabilidad.</strong> No lo es.</li>
-<li><strong>No vigilar el retraso.</strong> Una réplica atrasada sirve datos viejos sin ningún error visible.</li>
+<li><strong>Creer que la C la pone el motor.</strong> La pone el esquema que se escribió.</li>
+<li><strong>Suponer serializable por defecto.</strong> Ningún motor de servidor lo hace por omisión.</li>
+<li><strong>Transacciones que envuelven llamadas HTTP.</strong> Un servicio lento hincha la base.</li>
+<li><strong>Confiar en la durabilidad con réplica asíncrona y conmutación automática.</strong> Se pierden transacciones confirmadas.</li>
+<li><strong>Usar MyISAM y hablar de transacciones.</strong> No las hay.</li>
+<li><strong>No probar la restauración.</strong> La durabilidad sin restauración probada es una suposición (clase 048).</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El retraso de réplica es la métrica que más incidencias explica y la que menos se mira. Una alerta sobre el retraso p99 —y la lógica que desvía al líder cuando se supera— evita la clase entera de incidencias «me desaparecen los datos».</p>
+<p>«Somos ACID» es una respuesta incompleta a «¿pueden perder mi pedido?». La respuesta completa enumera: el nivel de aislamiento efectivo, la configuración de <code>fsync</code>, el modo de replicación y el resultado de la última prueba de restauración.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Levanta un líder y una réplica y mide el retraso bajo carga de escritura.</li>
-<li>Reproduce las tres anomalías con un cliente que lea de la réplica.</li>
-<li>Implementa la corrección por LSN y demuestra que desaparecen.</li>
-<li>Calcula el RPO real de tu configuración actual, en segundos y en transacciones.</li>
+<li>Determina el nivel de aislamiento y la configuración de durabilidad reales de tu base.</li>
+<li>Escribe la invariante de negocio más importante y verifica si el esquema la garantiza.</li>
+<li>Provoca un fallo a mitad de una transacción y demuestra la atomicidad.</li>
+<li>Localiza la transacción más larga de tu sistema y estima su efecto sobre las versiones de fila.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Cuántas transacciones se pierden en una conmutación asíncrona con 340 ms de retraso y 2 000 escrituras/s?</li>
-<li>Explica por qué fijar la sesión a una réplica no resuelve la lectura de tus escrituras.</li>
-<li>Con N = 5, enumera las combinaciones <code>R</code>/<code>W</code> que solapan y su tolerancia a fallos.</li>
-<li>Da una operación de tu sistema que justifique replicación síncrona y otra que no.</li>
+<li>¿Por qué la C es de naturaleza distinta a A, I y D?</li>
+<li>Da una invariante de tu dominio que ningún <code>CHECK</code> pueda expresar y di quién la vigila.</li>
+<li>Enumera los cuatro fallos frente a los que puede exigirse durabilidad y el mecanismo de cada uno.</li>
+<li>Explica el efecto de una transacción abierta durante una hora en un motor MVCC.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Quién puede aceptar una escritura, y qué pasa cuando ese nodo cae</p>
-<p>Solo hay tres topologías de réplica y cada una responde distinto a la misma
-pregunta: <strong>¿quién puede aceptar una escritura?</strong></p>
-<p>Con <strong>líder único</strong>, uno solo; los demás copian. Es simple y no hay
-conflictos de escritura, pero el líder es un punto de fallo y su
-conmutación es la operación más delicada del sistema. Con <strong>multilíder</strong>,
-varios; hay conflictos y hay que resolverlos. <strong>Sin líder</strong>, cualquiera: el
-cliente escribe en varias réplicas y lee de varias, y la coherencia se
-arregla por quórum y reparación.</p>
-<p>Esta comparación no tiene salida que verificar: lo que se compara es qué
-ofrece cada motor y, sobre todo, <strong>qué se pierde exactamente cuando el nodo
-que manda deja de contestar</strong>.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Una transferencia que se completa y otra que se deshace sin dejar rastro</p>
+<p>ACID son cuatro promesas distintas y conviene no confundirlas. <strong>A</strong>tomicidad:
+o todo o nada. <strong>C</strong>onsistencia: las reglas declaradas siguen siendo ciertas
+al terminar. <strong>I</strong>slamiento: las transacciones concurrentes no se ven a
+medias. <strong>D</strong>urabilidad: lo confirmado sobrevive a un corte de luz.</p>
+<p>El caso ejercita las dos primeras. Una transferencia de 30 de A a B se
+confirma; otra de 500 se deshace, y con ella la mitad que ya se había
+escrito. Entre las dos sentencias de la transferencia hay un instante en el
+que el dinero está duplicado: la atomicidad es la garantía de que ese
+instante no existe para nadie más, y que al deshacer no queda rastro.</p>
+<p>Al final, A tiene 70 y B tiene 80: la suma sigue siendo 150, que es el
+invariante que ninguna transferencia debe romper.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>cuenta</th>
+<th>saldo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>A</code></td>
+<td><code>70</code></td>
+</tr>
+<tr>
+<td><code>B</code></td>
+<td><code>80</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 043</code>: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -370,98 +307,276 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/transactional.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+</tr>
+<tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/high-availability.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/replication/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/transactions/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">doc oficial</a></td>
-</tr>
-<tr>
-<td>CockroachDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">doc oficial</a></td>
-</tr>
-<tr>
-<td>SQLite</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://sqlite.org/backup.html">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/transactional.html
+-- nota: el CHECK (saldo &gt;= 0) es la «C» de ACID: la regla que sigue siendo
+--       cierta al terminar. El ROLLBACK es la «A». Son dos garantias distintas
+--       y aqui se ven las dos en el mismo archivo.
+
+-- === preparacion ===
+CREATE TABLE cuentas (
+    id    TEXT PRIMARY KEY,
+    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Líder único con réplica física del WAL, síncrona o asíncrona según <code>synchronous_commit</code> y <code>synchronous_standby_names</code>, más réplica lógica por publicación y suscripción desde la versión 10. La conmutación <strong>no</strong> viene incluida: la hace una herramienta externa (Patroni, repmgr).</li>
-<li><strong>Por qué sí:</strong> La réplica es el mismo mecanismo que la durabilidad —el WAL—, así que no añade una pieza conceptual nueva, y con réplica síncrona no se pierde ninguna transacción confirmada.</li>
-<li><strong>Por qué no:</strong> Que la conmutación sea externa significa que <strong>elegir y operar esa herramienta es parte del diseño</strong>, y que un fallo de configuración puede producir dos primarios a la vez. Con réplica asíncrona, promover una réplica pierde las transacciones que no llegaron.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/high-availability.html">https://www.postgresql.org/docs/current/high-availability.html</a></li>
+<li><strong>Por qué sí:</strong> Es ACID completo desde su primera versión, sobre un archivo y sin servidor: la atomicidad se implementa con un diario de reversión o con WAL, y sobrevive a un corte de luz igual que un motor grande.</li>
+<li><strong>Por qué no:</strong> El aislamiento es de grano grueso: en el modo por omisión, un escritor bloquea la base entera. Y la durabilidad depende de <code>PRAGMA synchronous</code>, que muchas aplicaciones bajan a <code>NORMAL</code> para ganar velocidad sin declarar que están cambiando la «D» por rendimiento.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/transactional.html">https://sqlite.org/transactional.html</a></li>
 </ul>
-<h4 id="mysql">MySQL</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+-- === preparacion ===
+CREATE TABLE cuentas (
+    id    VARCHAR PRIMARY KEY,
+    saldo INTEGER NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Líder único clásico con registro binario y, desde 5.7, <strong>Group Replication</strong>: un grupo con consenso basado en Paxos que permite modo de un primario o de varios primarios.</li>
-<li><strong>Por qué sí:</strong> Group Replication trae la conmutación automática dentro del producto, sin herramienta externa, y detecta los conflictos entre primarios con certificación.</li>
-<li><strong>Por qué no:</strong> El modo de varios primarios solo detecta conflictos al certificar y aborta transacciones: sirve para carga repartida, no para escribir la misma fila desde dos sitios. Y la réplica clásica es asíncrona por omisión, con pérdida posible en la conmutación.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication.html</a></li>
+<li><strong>Por qué sí:</strong> También es ACID sobre su archivo, con control de concurrencia por versiones: sirve para comprobar el invariante en el mismo sitio donde se analizan los datos.</li>
+<li><strong>Por qué no:</strong> Un solo proceso escritor: no hay transacciones entre aplicaciones, y por tanto el problema real de la concurrencia no se puede ni plantear aquí.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
 </ul>
-<h4 id="mongodb">MongoDB</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+-- nota: aqui el DDL tambien es transaccional. Esto es legal y se deshace entero:
+--         BEGIN; ALTER TABLE cuentas ADD COLUMN divisa text; ROLLBACK;
+--       En MySQL y en Oracle, ese ALTER confirma la transaccion y no hay vuelta
+--       atras. Es la razon por la que las migraciones de esquema son mucho mas
+--       seguras en PostgreSQL.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cuentas;
+
+CREATE TABLE cuentas (
+    id    text PRIMARY KEY,
+    saldo integer NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Conjunto de réplicas con líder único elegido por votación entre los miembros. La conmutación es automática y está en el producto; el cliente la sigue gracias al controlador, que reconoce el nuevo primario.</li>
-<li><strong>Por qué sí:</strong> Es de los pocos de esta lista donde la alta disponibilidad viene resuelta de fábrica y sin piezas adicionales, y donde <code>writeConcern: "majority"</code> permite exigir que la escritura sobreviva a una conmutación.</li>
-<li><strong>Por qué no:</strong> Con <code>w: 1</code> —el valor por omisión histórico— una escritura confirmada puede <strong>revertirse</strong> al conmutar: el cliente recibió un éxito y el dato no existe. Y las lecturas desde secundarios pueden devolver datos viejos salvo que se pida <code>readConcern</code> adecuado.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/replication/">https://www.mongodb.com/docs/manual/replication/</a></li>
+<li><strong>Por qué sí:</strong> Las cuatro letras están, y además el DDL es transaccional: se puede crear una tabla, cargarla y deshacerlo todo. Esa propiedad —que MySQL y Oracle no tienen— es la que hace seguras las migraciones de esquema.</li>
+<li><strong>Por qué no:</strong> La durabilidad se puede aflojar por sesión con <code>synchronous_commit = off</code>, que multiplica el rendimiento a cambio de poder perder las últimas transacciones confirmadas. Es legítimo y hay que declararlo, porque deja de ser ACID en el sentido estricto.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
 </ul>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html
+-- nota: dos avisos que no estan en el codigo y hay que saber igual:
+--       1) El DDL NO es transaccional: un ALTER TABLE dentro de una transaccion
+--          la confirma implicitamente.
+--       2) innodb_flush_log_at_trx_commit distinto de 1 significa perder hasta
+--          un segundo de transacciones YA CONFIRMADAS tras una caida.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cuentas;
+
+CREATE TABLE cuentas (
+    id    VARCHAR(10) PRIMARY KEY,
+    saldo INT NOT NULL CHECK (saldo &gt;= 0)
+);
+INSERT INTO cuentas (id, saldo) VALUES ('A', 100), ('B', 50);
+
+-- Transferencia valida: las dos escrituras son UNA operacion.
+BEGIN;
+UPDATE cuentas SET saldo = saldo - 30 WHERE id = 'A';
+UPDATE cuentas SET saldo = saldo + 30 WHERE id = 'B';
+COMMIT;
+
+-- Transferencia imposible: A no tiene 500. El abono a B ya se ha escrito
+-- cuando la aplicacion comprueba el origen y decide deshacer. Entre las dos
+-- sentencias existe un instante en el que el dinero esta duplicado; la
+-- atomicidad es la garantia de que ese instante no existe para nadie mas y de
+-- que al deshacer no queda rastro de el.
+BEGIN;
+UPDATE cuentas SET saldo = saldo + 500 WHERE id = 'B';
+-- El cargo a A ni siquiera se intenta: violaria el CHECK (saldo &gt;= 0) y, sin
+-- transaccion, el abono a B se habria quedado escrito para siempre.
+ROLLBACK;
+
+-- === consulta ===
+SELECT id, saldo FROM cuentas ORDER BY id;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Sin líder. Cualquier nodo coordina, escribe en las <code>RF</code> réplicas y espera tantas confirmaciones como pida el nivel de consistencia. La coherencia se recupera con lecturas de reparación, entregas sugeridas y reparaciones periódicas.</li>
-<li><strong>Por qué sí:</strong> No hay conmutación que hacer porque no hay nadie a quien sustituir: la caída de un nodo no interrumpe la escritura si el nivel elegido se puede seguir cumpliendo. Es la topología con mayor disponibilidad de escritura.</li>
-<li><strong>Por qué no:</strong> Los conflictos se resuelven por «la última escritura gana» según la marca de tiempo, lo que <strong>pierde datos en silencio</strong> cuando dos clientes escriben lo mismo a la vez con relojes desajustados. Y las reparaciones periódicas son trabajo de operación que, si se olvida, deja réplicas divergentes.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html</a></li>
+<li><strong>Por qué sí:</strong> InnoDB es ACID: registro de rehacer, registro de deshacer y confirmación en dos fases con el registro binario.</li>
+<li><strong>Por qué no:</strong> Dos trampas históricas. El DDL <strong>no</strong> es transaccional: un <code>ALTER TABLE</code> dentro de una transacción la confirma implícitamente y ya no hay vuelta atrás. Y <code>innodb_flush_log_at_trx_commit</code> distinto de 1 significa perder hasta un segundo de transacciones confirmadas tras una caída.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html</a></li>
 </ul>
-<h4 id="redis">Redis</h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/transactions/
+// nota: implementacion DECLARADA, y el motivo es parte de la leccion: las
+//       transacciones de varios documentos exigen un CONJUNTO DE REPLICAS. En
+//       el servidor suelto que levanta este repositorio, este guion falla con
+//       «Transaction numbers are only allowed on a replica set member or
+//       mongos». No se ejecuta porque no se puede, y decirlo vale mas que
+//       fingir que si.
+//
+//       Con una sola cuenta por documento no haria falta nada de esto: la
+//       escritura de un documento ya es atomica. La transaccion aparece justo
+//       cuando el agregado se reparte en dos documentos, que es la senal de que
+//       el modelo documental se esta usando como si fuera relacional.
+
+// === preparacion ===
+db.cuentas.drop();
+db.cuentas.insertMany([
+  { _id: &quot;A&quot;, saldo: 100 },
+  { _id: &quot;B&quot;, saldo: 50 },
+]);
+
+const sesion = db.getMongo().startSession();
+const cuentas = sesion.getDatabase(db.getName()).cuentas;
+
+// Transferencia valida.
+sesion.startTransaction();
+cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -30 } });
+cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 30 } });
+sesion.commitTransaction();
+
+// Transferencia imposible: se comprueba DENTRO de la transaccion y se aborta.
+sesion.startTransaction();
+cuentas.updateOne({ _id: &quot;B&quot; }, { $inc: { saldo: 500 } });
+const origen = cuentas.findOne({ _id: &quot;A&quot; });
+if (origen.saldo &lt; 500) {
+  sesion.abortTransaction();
+} else {
+  cuentas.updateOne({ _id: &quot;A&quot; }, { $inc: { saldo: -500 } });
+  sesion.commitTransaction();
+}
+sesion.endSession();
+
+// === consulta ===
+db.cuentas
+  .find()
+  .sort({ _id: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.saldo));
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Líder único con réplicas asíncronas, y Sentinel o Cluster para la conmutación automática. En Cluster, cada fragmento tiene su primario y sus réplicas.</li>
-<li><strong>Por qué sí:</strong> La réplica es barata y no frena al primario, que es justo lo que se quiere de una caché: la latencia no puede depender de que otro nodo confirme.</li>
-<li><strong>Por qué no:</strong> Al ser asíncrona, una conmutación pierde las escrituras que no llegaron, y su propia documentación lo dice sin rodeos. Redis no promete consistencia fuerte, y usarlo como si la prometiera es el error de arquitectura más común que se comete con él.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
-</ul>
-<h4 id="cockroachdb">CockroachDB</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Ni líder único por base ni multilíder: <strong>un grupo Raft por cada rango</strong> de datos. Cada rango tiene su propio líder, elegido por consenso, así que el papel de líder está repartido por todo el clúster y por todos los datos.</li>
-<li><strong>Por qué sí:</strong> Da conmutación automática por rango, sin herramienta externa, y sin perder transacciones confirmadas: el consenso garantiza que lo confirmado está en la mayoría antes de contestar.</li>
-<li><strong>Por qué no:</strong> Cada escritura cuesta una ronda de consenso: la latencia mínima es la de llegar a la mayoría, y si las réplicas están en regiones distintas, esa latencia es geográfica y no hay ajuste que la evite.</li>
-<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">https://www.cockroachlabs.com/docs/stable/architecture/replication-layer</a></li>
+<li><strong>Por qué sí:</strong> Desde la versión 4.0 tiene transacciones de varios documentos con la misma semántica: <code>startTransaction</code>, <code>commitTransaction</code>, <code>abortTransaction</code>. Sobre un solo documento, la atomicidad es automática y no hace falta nada.</li>
+<li><strong>Por qué no:</strong> <strong>Exigen un conjunto de réplicas</strong>: en un servidor suelto —como el de este repositorio— sencillamente no se pueden usar, y por eso esta implementación se declara en vez de ejecutarse. Además tienen un límite de 60 segundos por omisión y un costo notable frente a escribir un solo documento, que es la señal de que el modelo debería haberse diseñado para no necesitarlas.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/transactions/">https://www.mongodb.com/docs/manual/core/transactions/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -476,17 +591,23 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>SQLite</td>
-<td>No tiene réplica: es una biblioteca sobre un archivo. Copiar el archivo mientras se escribe produce una copia corrupta, y no hay mecanismo de difusión de cambios.</td>
-<td>Proyectos construidos encima —Litestream para réplica continua del WAL a almacenamiento de objetos, o rqlite y dqlite, que ponen Raft alrededor de SQLite— resuelven casos concretos sin cambiar de motor.</td>
-<td><a href="https://sqlite.org/backup.html">doc</a></td>
+<td>Redis</td>
+<td><code>MULTI</code>/<code>EXEC</code> no es una transacción ACID: garantiza que las órdenes se ejecutan seguidas y sin intercalación, pero <strong>no hay reversión</strong>. Si una orden falla en medio, las anteriores ya se aplicaron y las siguientes se aplican igual. Su documentación lo dice sin rodeos.</td>
+<td>Un script Lua, que sí es atómico y aislado, comprobando las condiciones <strong>antes</strong> de escribir nada: la reversión se sustituye por no llegar a empezar.</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/transactions/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay transacciones entre particiones ni reversión. <code>BATCH</code> solo es atómico y aislado dentro de una partición, y su uso entre particiones lo desaconseja la propia documentación por el costo del registro de lotes.</td>
+<td>Diseñar para que la operación quepa en una partición, o implementar una saga con pasos compensatorios en la aplicación, asumiendo que hay estados intermedios visibles.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/07-replication/run_replication_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -530,22 +651,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
-  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
-<li><strong>Jim Gray, Pat Helland, Patrick O'Neil, Dennis Shasha</strong> (1996). <a href="https://dl.acm.org/doi/10.1145/233269.233330">The Dangers of Replication and a Solution</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/233269.233330">10.1145/233269.233330</a>.<br />
-  Cuantifica cómo crecen los conflictos con el número de réplicas.</li>
-<li><strong>Giuseppe DeCandia, Deniz Hastorun, Madan Jampani</strong> (2007). <a href="https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">Dynamo: Amazon's Highly Available Key-value Store</a>. ACM SOSP. DOI <a href="https://doi.org/10.1145/1294261.1294281">10.1145/1294261.1294281</a>.<br />
-  Hash consistente, quorums ajustables y reconciliación en el cliente.</li>
+<li><strong>Jim Gray</strong> (1981). <a href="https://jimgray.azurewebsites.net/papers/thetransactionconcept.pdf">The Transaction Concept: Virtues and Limitations</a>. VLDB.<br />
+  Define la transacción como unidad de consistencia y recuperación.</li>
+<li><strong>Jim Gray, Andreas Reuter</strong> (1992). <a href="https://www.sciencedirect.com/book/9781558601901/transaction-processing">Transaction Processing: Concepts and Techniques</a>. Morgan Kaufmann. ISBN 978-1-55860-190-1.<br />
+  Obra canónica sobre ACID, bloqueo, registro y recuperación.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="042.html">← Anterior</a> · <a href="044.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="042.html">← Anterior</a> · <a href="044.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="043">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="042.html"><span class="sentido">← Anterior · 042</span>Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a>
-<a class="siguiente" href="044.html"><span class="sentido">Siguiente · 044 →</span>Particionado, rebalanceo y claves calientes</a>
+<a class="anterior" href="042.html"><span class="sentido">← Anterior · 042</span>Analítica columnar: por qué el formato cambia el orden de magnitud</a>
+<a class="siguiente" href="044.html"><span class="sentido">Siguiente · 044 →</span>Anomalías de aislamiento y la crítica a los niveles ANSI</a>
 </nav>
 </main>
 <footer>

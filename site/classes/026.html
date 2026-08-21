@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Consultas, índices y agregación sobre documentos. Parte 05: Documentos y clave-valor.">
+<meta name="description" content="Reuniones: interna, externa, semi y anti. Parte 04: SQL en profundidad.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/026.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="026 — Consultas, índices y agregación sobre documentos · Database Systems Labs">
-<meta property="og:description" content="Consultas, índices y agregación sobre documentos. Parte 05: Documentos y clave-valor.">
+<meta property="og:title" content="026 — Reuniones: interna, externa, semi y anti · Database Systems Labs">
+<meta property="og:description" content="Reuniones: interna, externa, semi y anti. Parte 04: SQL en profundidad.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/026.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "026 — Consultas, índices y agregación sobre documentos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["índice compuesto", "canalización de agregación", "índice multiclave", "cobertura"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>026 — Consultas, índices y agregación sobre documentos · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "026 — Reuniones: interna, externa, semi y anti", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["reunión interna", "reunión externa", "semirreunion", "antirreunion", "multiplicación de filas"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>026 — Reuniones: interna, externa, semi y anti · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,276 +49,336 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-05.html">Parte 05 · Documentos y clave-valor</a>
+  <a href="parte-04.html">Parte 04 · SQL en profundidad</a>
   <span aria-hidden="true">/</span><span>Clase 026</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="026--consultas-índices-y-agregación-sobre-documentos">026 — Consultas, índices y agregación sobre documentos</h1>
+<h1 id="026--reuniones-interna-externa-semi-y-anti">026 — Reuniones: interna, externa, semi y anti</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 05 — Documentos y clave-valor · Intermedio ·
-3 horas estimadas · motores <code>mongodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>índice compuesto</code> · <code>canalización de agregación</code> · <code>índice multiclave</code> · <code>cobertura</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 04 — SQL en profundidad · Intermedio ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>reunión interna</code> · <code>reunión externa</code> · <code>semirreunion</code> · <code>antirreunion</code> · <code>multiplicación de filas</code></p>
+<p><strong>En este caso se comparan 12 motores</strong>: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Consultar documentos con la misma disciplina que se consulta SQL: sabiendo qué índice se usa, cuántos documentos se examinan y por qué una etapa de la canalización es cara.</p>
+<p>Combinar tablas sin multiplicar filas por accidente. La reunión es la operación que más resultados incorrectos produce, y casi siempre en silencio: el informe sale, solo que con números inflados.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Leer un plan de MongoDB y distinguir <code>COLLSCAN</code> de <code>IXSCAN</code>.</li>
-<li>Aplicar la regla ESR para ordenar las claves de un índice compuesto.</li>
-<li>Reconocer una consulta cubierta y qué la habilita.</li>
-<li>Ordenar las etapas de una canalización de agregación para reducir el trabajo.</li>
-<li>Prever el efecto de los índices multiclave y parciales.</li>
+<li>Predecir la cardinalidad de una reunión a partir de las cardinalidades de sus lados.</li>
+<li>Distinguir reunión interna, externa, semi y anti, y elegir la correcta.</li>
+<li>Explicar por qué mover una condición de <code>ON</code> a <code>WHERE</code> convierte una externa en interna.</li>
+<li>Detectar y corregir el doble conteo al agregar sobre varias reuniones.</li>
+<li>Reconocer los tres algoritmos físicos de reunión y cuándo elige cada uno el motor.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="leer-el-plan">Leer el plan</h3>
-<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
-              .explain(&quot;executionStats&quot;)
-</code></pre>
-<p>Los tres números que importan:</p>
+<h3 id="cardinalidad-la-regla-que-evita-el-90--de-los-errores">Cardinalidad: la regla que evita el 90 % de los errores</h3>
+<p>Al reunir <code>A</code> con <code>B</code> por una condición de igualdad, cada fila de <code>A</code> se empareja con <strong>todas</strong> las de <code>B</code> que coincidan.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Campo</th>
-<th>Significa</th>
-<th>Objetivo</th>
+<th>Relación entre los lados</th>
+<th>Filas resultantes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>nReturned</code></td>
-<td>Documentos devueltos</td>
-<td>—</td>
+<td>Clave a clave (1:1)</td>
+<td>≤ min(|A|, |B|)</td>
 </tr>
 <tr>
-<td><code>totalKeysExamined</code></td>
-<td>Entradas de índice leídas</td>
-<td>Cercano a <code>nReturned</code></td>
+<td>Clave a clave foránea (1:N)</td>
+<td>≤ |B|</td>
 </tr>
 <tr>
-<td><code>totalDocsExamined</code></td>
-<td>Documentos leídos</td>
-<td>Cercano a <code>nReturned</code>; <strong>0</strong> si la consulta está cubierta</td>
+<td>N:M sin restricción</td>
+<td>Hasta |A| · |B|</td>
+</tr>
+<tr>
+<td>Sin condición (<code>CROSS JOIN</code>)</td>
+<td>|A| · |B|</td>
 </tr>
 </tbody>
 </table></div>
-<p>Diagnóstico rápido: si <code>totalDocsExamined</code> es mucho mayor que <code>nReturned</code>, falta índice o el que hay no sirve. Es el mismo razonamiento de selectividad de la clase 039, con otro vocabulario.</p>
-<h3 id="la-regla-esr">La regla ESR</h3>
-<p>Para un índice compuesto, el orden de las claves debe ser:</p>
-<ol>
-<li><strong>E</strong>quality — campos comparados por igualdad.</li>
-<li><strong>S</strong>ort — campos por los que se ordena.</li>
-<li><strong>R</strong>ange — campos comparados por rango.</li>
-</ol>
-<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, nota: {$gte: 4.0}}).sort({registrada_en: -1})
-db.enrollments.createIndex({course_id: 1, registrada_en: -1, nota: 1})
-//                          E              S                  R
-</code></pre>
-<p>Poner el rango antes que el orden obliga al motor a ordenar en memoria el resultado del rango. Es la misma razón por la que en un B-Tree relacional el rango «rompe» el uso de las columnas siguientes (clase 039): una vez que se recorre un intervalo, las claves posteriores ya no están ordenadas globalmente.</p>
-<h3 id="consulta-cubierta">Consulta cubierta</h3>
-<p>Si todos los campos que la consulta necesita —filtro, orden y proyección— están en el índice, el motor no toca los documentos:</p>
-<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;}, {_id: 0, student_id: 1, nota: 1})
-db.enrollments.createIndex({course_id: 1, student_id: 1, nota: 1})
-// totalDocsExamined: 0
-</code></pre>
-<p>Hay que excluir <code>_id</code> explícitamente si no está en el índice, porque se devuelve por omisión.</p>
-<h3 id="tipos-de-índice">Tipos de índice</h3>
+<p>Regla práctica: <strong>una reunión solo conserva la cardinalidad de la tabla base si el otro lado está restringido a lo sumo a una fila coincidente</strong>. Si no lo está, la tabla base se multiplica.</p>
+<h3 id="los-cuatro-tipos-semánticos">Los cuatro tipos semánticos</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>Tipo</th>
-<th>Para qué</th>
-<th>Cuidado</th>
+<th>Pregunta que responde</th>
+<th>SQL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Simple / compuesto</td>
-<td>Lo habitual</td>
-<td>Orden ESR</td>
+<td><strong>Interna</strong></td>
+<td>«Los que coinciden, con datos de ambos»</td>
+<td><code>JOIN ... ON</code></td>
 </tr>
 <tr>
-<td><strong>Multiclave</strong></td>
-<td>Campo que es un arreglo</td>
-<td>Una entrada por elemento; solo un campo de arreglo por índice</td>
+<td><strong>Externa</strong></td>
+<td>«Todos los de un lado, con lo que haya del otro»</td>
+<td><code>LEFT/RIGHT/FULL JOIN</code></td>
 </tr>
 <tr>
-<td><strong>Parcial</strong></td>
-<td>Subconjunto de documentos</td>
-<td>Solo se usa si la consulta implica el filtro del índice</td>
+<td><strong>Semi</strong></td>
+<td>«¿Existe al menos una coincidencia?» — sin traer columnas</td>
+<td><code>WHERE EXISTS (...)</code></td>
 </tr>
 <tr>
-<td><strong>TTL</strong></td>
-<td>Expiración automática</td>
-<td>Borra en segundo plano, con retraso</td>
-</tr>
-<tr>
-<td>Texto</td>
-<td>Búsqueda léxica básica</td>
-<td>Uno por colección; para búsqueda seria, parte 06</td>
+<td><strong>Anti</strong></td>
+<td>«¿No existe ninguna coincidencia?»</td>
+<td><code>WHERE NOT EXISTS (...)</code></td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="canalización-de-agregación">Canalización de agregación</h3>
-<p>El orden de las etapas determina cuánto trabajo se hace:</p>
-<pre><code class="language-javascript">// MAL: agrupa 5 millones y luego descarta
-db.enrollments.aggregate([
-  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}},
-  {$match: {_id: &quot;curso-bd&quot;}}
-])
+<p>La distinción crucial: <strong>semi y anti no multiplican filas</strong>. Si solo necesitas saber si hay coincidencia, una semirreunión da el resultado correcto sin <code>DISTINCT</code> y suele ser más rápida, porque el motor se detiene en la primera coincidencia.</p>
+<pre><code class="language-sql">-- MAL: multiplica si hay varias inscripciones
+SELECT DISTINCT s.* FROM students s JOIN enrollments e ON e.student_id = s.id;
 
-// BIEN: filtra primero, con índice
-db.enrollments.aggregate([
-  {$match: {course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;}},
-  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}}
-])
+-- BIEN: semirreunión, sin multiplicación ni DISTINCT
+SELECT s.* FROM students s
+WHERE EXISTS (SELECT 1 FROM enrollments e WHERE e.student_id = s.id);
 </code></pre>
-<p>Es la equivalencia E2 de la clase 011 —empujar el filtro— aplicada a mano. El optimizador de MongoDB reordena algunos casos, pero no todos: cualquier etapa que calcule campos nuevos (<code>$addFields</code>, <code>$project</code>) bloquea el movimiento de las etapas posteriores.</p>
-<p>Regla: <strong><code>$match</code> y <code>$limit</code> lo antes posible; <code>$lookup</code> y <code>$unwind</code> lo más tarde posible.</strong></p>
-<pre><code class="language-mermaid">flowchart LR
-    M[&quot;$match&lt;br/&gt;usa índice&quot;] --&gt; S[&quot;$sort&lt;br/&gt;usa índice si sigue al match&quot;]
-    S --&gt; L[&quot;$limit&quot;]
-    L --&gt; P[&quot;$project&lt;br/&gt;reduce el tamaño&quot;]
-    P --&gt; G[&quot;$group&lt;br/&gt;en memoria&quot;]
-    G --&gt; LK[&quot;$lookup&lt;br/&gt;lo más tarde posible&quot;]
+<h3 id="on-frente-a-where-en-reuniones-externas"><code>ON</code> frente a <code>WHERE</code> en reuniones externas</h3>
+<p>En una reunión externa, el lugar de la condición cambia el resultado:</p>
+<ul>
+<li>Una condición en <code>ON</code> se aplica <strong>al emparejar</strong>: las filas no emparejadas del lado izquierdo sobreviven con nulos.</li>
+<li>Una condición en <code>WHERE</code> se aplica <strong>después</strong>: como los nulos no cumplen ninguna comparación, elimina las filas no emparejadas y la reunión se vuelve interna de hecho.</li>
+</ul>
+<pre><code class="language-sql">-- Todos los estudiantes; los que no tienen nota alta salen con NULL
+SELECT s.nombre, e.nota
+FROM students s
+LEFT JOIN enrollments e ON e.student_id = s.id AND e.nota &gt; 6.0;
+
+-- Solo los que tienen nota alta: el LEFT es decorativo
+SELECT s.nombre, e.nota
+FROM students s
+LEFT JOIN enrollments e ON e.student_id = s.id
+WHERE e.nota &gt; 6.0;
+</code></pre>
+<p>En reuniones <strong>internas</strong> da igual dónde vaya la condición: son equivalentes y el optimizador las trata igual (equivalencia E2 de la clase 011).</p>
+<h3 id="los-tres-algoritmos-físicos">Los tres algoritmos físicos</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Algoritmo</th>
+<th>Cómo funciona</th>
+<th>Cuándo lo elige el motor</th>
+<th>Coste aproximado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bucle anidado</td>
+<td>Por cada fila del externo, buscar en el interno</td>
+<td>Externo pequeño e índice en el interno</td>
+<td>|A| · log|B|</td>
+</tr>
+<tr>
+<td>Hash</td>
+<td>Construir tabla hash del menor, sondear con el mayor</td>
+<td>Sin índice útil, cabe en memoria</td>
+<td>|A| + |B|</td>
+</tr>
+<tr>
+<td>Fusión</td>
+<td>Ordenar ambos y recorrerlos a la vez</td>
+<td>Ya ordenados o hay índices</td>
+<td>|A|log|A| + |B|log|B|</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ver un bucle anidado sobre dos tablas grandes en un plan es casi siempre la señal de un índice ausente o de una estimación de cardinalidad equivocada (clase 042).</p>
+<pre><code class="language-mermaid">flowchart TD
+    N[&quot;Necesito datos de otra tabla&quot;] --&gt; Q{&quot;¿Necesito sus&lt;br/&gt;columnas?&quot;}
+    Q -- &quot;No, solo saber si existe&quot; --&gt; S{&quot;¿Existe o no existe?&quot;}
+    S -- &quot;Existe&quot; --&gt; SE[&quot;EXISTS · semirreunión&quot;]
+    S -- &quot;No existe&quot; --&gt; AN[&quot;NOT EXISTS · antirreunión&quot;]
+    Q -- &quot;Sí&quot; --&gt; C{&quot;¿Debo conservar las filas&lt;br/&gt;sin coincidencia?&quot;}
+    C -- &quot;Sí&quot; --&gt; L[&quot;LEFT JOIN&lt;br/&gt;filtros en ON&quot;]
+    C -- &quot;No&quot; --&gt; I[&quot;INNER JOIN&quot;]
+    I --&gt; M{&quot;¿El otro lado puede&lt;br/&gt;coincidir varias veces?&quot;}
+    M -- &quot;Sí&quot; --&gt; W[&quot;¡Se multiplican las filas!&lt;br/&gt;Agregar o usar semi&quot;]
+    M -- &quot;No&quot; --&gt; OK[&quot;Cardinalidad conservada&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Consulta: <em>«las 20 inscripciones activas más recientes del curso, con nota, ordenadas por fecha»</em>, sobre 5 millones de documentos.</p>
-<p><strong>Sin índice adecuado:</strong></p>
-<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
-              .sort({registrada_en: -1}).limit(20).explain(&quot;executionStats&quot;)
+<p>Objetivo: <em>«por cada curso, número de inscritos y número de profesores»</em>.</p>
+<p>Intento directo:</p>
+<pre><code class="language-sql">SELECT c.id,
+       COUNT(DISTINCT e.student_id) AS inscritos,
+       COUNT(DISTINCT t.teacher_id) AS profesores
+FROM courses c
+LEFT JOIN enrollments e ON e.course_id = c.id
+LEFT JOIN teaching    t ON t.course_id = c.id
+GROUP BY c.id;
 </code></pre>
-<pre><code class="language-text">stage:                COLLSCAN
-totalDocsExamined:    5 000 000
-totalKeysExamined:    0
-nReturned:            20
-executionTimeMillis:  4 210
-SORT: in-memory, 38 MB    ← cerca del límite de 100 MB
+<p><strong>Traza del problema.</strong> Para un curso con 40 inscritos y 3 profesores, la primera reunión produce 40 filas y la segunda multiplica cada una por 3: <strong>120 filas</strong> para ese curso. Sin <code>DISTINCT</code>, <code>COUNT(e.student_id)</code> daría 120 en lugar de 40, y <code>COUNT(t.teacher_id)</code> daría 120 en lugar de 3. Es el <strong>doble conteo</strong>, el error de reunión más caro porque el resultado es plausible.</p>
+<p>El <code>DISTINCT</code> corrige el número, pero no el trabajo: el motor sigue materializando 120 filas por curso. Con 300 cursos y esa proporción, 36 000 filas intermedias para producir 300.</p>
+<p><strong>Forma correcta: agregar antes de reunir.</strong></p>
+<pre><code class="language-sql">SELECT c.id,
+       COALESCE(i.inscritos, 0)  AS inscritos,
+       COALESCE(p.profesores, 0) AS profesores
+FROM courses c
+LEFT JOIN (SELECT course_id, COUNT(*) AS inscritos
+           FROM enrollments GROUP BY course_id) i ON i.course_id = c.id
+LEFT JOIN (SELECT course_id, COUNT(*) AS profesores
+           FROM teaching   GROUP BY course_id) p ON p.course_id = c.id;
 </code></pre>
-<p>Cinco millones de documentos leídos para devolver 20. Además el ordenamiento se hace en memoria; superados los 100 MB, MongoDB aborta la consulta salvo que se permita el uso de disco.</p>
-<p><strong>Con índice ESR:</strong></p>
-<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1})
+<p>Cada subconsulta devuelve <strong>una fila por curso</strong>, así que ninguna reunión multiplica. Además <code>COALESCE</code> convierte el nulo de los cursos sin inscritos en 0, que es lo que un informe espera.</p>
+<p><strong>Comprobación numérica:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Enfoque</th>
+<th style="text-align: right;">Filas intermedias</th>
+<th>Resultado correcto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Doble <code>LEFT JOIN</code> sin <code>DISTINCT</code></td>
+<td style="text-align: right;">36 000</td>
+<td>No (120 / 120)</td>
+</tr>
+<tr>
+<td>Doble <code>LEFT JOIN</code> con <code>DISTINCT</code></td>
+<td style="text-align: right;">36 000</td>
+<td>Sí (40 / 3)</td>
+</tr>
+<tr>
+<td>Agregación previa</td>
+<td style="text-align: right;">600</td>
+<td>Sí (40 / 3)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Antirreunión con la trampa de los nulos.</strong> «Estudiantes sin ninguna inscripción»:</p>
+<pre><code class="language-sql">-- correcto en cualquier caso
+SELECT s.* FROM students s
+WHERE NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.student_id = s.id);
+
+-- también correcto, forma clásica
+SELECT s.* FROM students s
+LEFT JOIN enrollments e ON e.student_id = s.id
+WHERE e.student_id IS NULL;
+
+-- ROTO si enrollments.student_id admite nulos
+SELECT * FROM students
+WHERE id NOT IN (SELECT student_id FROM enrollments);
 </code></pre>
-<pre><code class="language-text">stage:                IXSCAN → FETCH → LIMIT
-totalKeysExamined:    20
-totalDocsExamined:    20
-nReturned:            20
-executionTimeMillis:  1
-SORT: ninguno    ← el índice ya entrega el orden
-</code></pre>
-<p>De 5 000 000 a 20 documentos examinados. La desaparición de la etapa <code>SORT</code> es tan importante como la reducción de lecturas: el índice ya está ordenado por <code>registrada_en</code> dentro de cada <code>(course_id, estado)</code>.</p>
-<p><strong>Hacerla cubierta.</strong> Si la interfaz solo necesita <code>student_id</code> y <code>nota</code>:</p>
-<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1, student_id: 1, nota: 1})
-db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;},
-                    {_id: 0, student_id: 1, nota: 1, registrada_en: 1})
-              .sort({registrada_en: -1}).limit(20)
-// totalDocsExamined: 0
-</code></pre>
-<p>El índice es más ancho —más espacio y más costo por escritura— y a cambio la consulta no toca la colección. Compensa cuando esa consulta domina el tráfico; no compensa si es una de veinte.</p>
-<p><strong>Índice parcial.</strong> Si el 90 % de las inscripciones están activas, un índice parcial no aporta mucho. Si solo el 5 % está en estado <code>pendiente</code> y esa es la consulta caliente:</p>
-<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, registrada_en: -1},
-                           {partialFilterExpression: {estado: &quot;pendiente&quot;}})
-</code></pre>
-<p>El índice pasa de 5 millones de entradas a 250 000: cabe en memoria y se mantiene más barato. Requisito: la consulta debe incluir <code>estado: "pendiente"</code> explícitamente, o el motor no puede usarlo.</p>
+<p>La tercera devuelve cero filas si existe un solo <code>student_id</code> nulo (clase 012).</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Situación</th>
-<th>Señal en el plan</th>
-<th>Corrección</th>
+<th>Necesidad</th>
+<th>Construcción</th>
+<th>Multiplica filas</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Sin índice útil</td>
-<td><code>COLLSCAN</code></td>
-<td>Crear índice siguiendo ESR</td>
+<td>Datos de ambos lados</td>
+<td><code>INNER JOIN</code></td>
+<td>Sí, si el otro lado repite</td>
 </tr>
 <tr>
-<td>Índice mal ordenado</td>
-<td><code>IXSCAN</code> + <code>SORT</code> en memoria</td>
-<td>Reordenar claves</td>
+<td>Conservar los sin pareja</td>
+<td><code>LEFT JOIN</code>, filtro en <code>ON</code></td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>Muchos documentos por resultado</td>
-<td><code>totalDocsExamined ≫ nReturned</code></td>
-<td>Añadir campos del filtro al índice</td>
+<td>Saber si existe</td>
+<td><code>EXISTS</code></td>
+<td>No</td>
 </tr>
 <tr>
-<td>Proyección pequeña y repetida</td>
-<td><code>totalDocsExamined &gt; 0</code></td>
-<td>Índice cubriente</td>
+<td>Saber si no existe</td>
+<td><code>NOT EXISTS</code></td>
+<td>No</td>
 </tr>
 <tr>
-<td>Filtro muy selectivo y raro</td>
-<td>Índice enorme</td>
-<td>Índice parcial</td>
+<td>Contar de dos hijos a la vez</td>
+<td>Agregación previa por hijo</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Traer una fila «la más reciente»</td>
+<td><code>LATERAL</code> / ventana con filtro</td>
+<td>No</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Un índice por campo.</strong> Los índices compuestos sirven a más consultas; el motor rara vez combina dos índices con eficacia.</li>
-<li><strong>Ignorar el orden ESR.</strong> Provoca ordenamientos en memoria y el límite de 100 MB.</li>
-<li><strong><code>$lookup</code> al principio de la canalización.</strong> Multiplica el trabajo de todas las etapas siguientes.</li>
-<li><strong>Índices que nadie usa.</strong> Revisa <code>$indexStats</code>; cada índice se mantiene en cada escritura.</li>
-<li><strong>Índice multiclave sobre arreglos largos.</strong> Multiplica las entradas por la longitud del arreglo.</li>
-<li><strong>Olvidar <code>_id: 0</code> en una consulta que se quiere cubierta.</strong> Basta para que deje de serlo.</li>
+<li><strong><code>DISTINCT</code> para tapar una reunión que multiplica.</strong> Arregla el número y esconde la causa; el costo sigue ahí.</li>
+<li><strong>Poner el filtro del lado derecho en <code>WHERE</code> con <code>LEFT JOIN</code>.</strong> Anula la externa sin avisar.</li>
+<li><strong>Reunir dos tablas hijas y agregar.</strong> Doble conteo asegurado.</li>
+<li><strong><code>NOT IN</code> con subconsulta que admite nulos.</strong> Resultado vacío.</li>
+<li><strong>Olvidar <code>COALESCE</code> tras una externa.</strong> Los nulos se propagan a las sumas y aparecen totales nulos.</li>
+<li><strong><code>NATURAL JOIN</code>.</strong> Reúne por <em>todas</em> las columnas de igual nombre; añadir una columna <code>created_at</code> a ambas tablas cambia el resultado.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El síntoma habitual —«MongoDB se puso lento al crecer»— casi siempre significa que los índices dejaron de caber en memoria. Vigilar el tamaño total de los índices frente a la RAM disponible es más predictivo que cualquier métrica de CPU.</p>
+<p>Un informe con totales inflados es más peligroso que uno que falla: nadie lo revisa porque «funciona». Contrastar siempre un agregado con un conteo independiente es la práctica que los detecta.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma la consulta más frecuente de tu dominio y captura su <code>explain</code> sin índice.</li>
-<li>Diseña el índice con la regla ESR y vuelve a capturar.</li>
-<li>Conviértela en consulta cubierta y compara los tres números del plan.</li>
-<li>Mide el tamaño de los índices con <code>$indexStats</code> y elimina los que no se usan.</li>
+<li>Localiza en tu código una consulta con <code>DISTINCT</code> sobre una reunión y determina por qué está ahí.</li>
+<li>Reescríbela con agregación previa o semirreunión, y compara filas intermedias y tiempo.</li>
+<li>Construye el caso de doble conteo con datos tuyos y muestra los dos totales.</li>
+<li>Demuestra con una traza el cambio de resultado al mover una condición de <code>ON</code> a <code>WHERE</code>.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué el rango va al final en la regla ESR?</li>
-<li>¿Qué condiciones exactas debe cumplir una consulta cubierta?</li>
-<li>Explica el efecto de un <code>$lookup</code> colocado antes de un <code>$match</code> selectivo.</li>
-<li>Da un caso de tu dominio donde un índice parcial reduzca el tamaño más de un 80 %.</li>
+<li>Con <code>A</code> de 1 000 filas y <code>B</code> de 50 000 con clave foránea a <code>A</code>, ¿cuántas filas produce <code>A JOIN B</code>? ¿Y <code>A LEFT JOIN B</code>?</li>
+<li>Explica por qué <code>EXISTS</code> no necesita <code>DISTINCT</code>.</li>
+<li>Da una consulta tuya donde el doble conteo pasaría desapercibido, e indica cómo lo detectarías.</li>
+<li>¿Por qué un bucle anidado sobre dos tablas grandes es una señal de alarma en un plan?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Cuánto se vendió por categoría, con las líneas dentro de los documentos</p>
-<p>Agregar sobre documentos obliga a hacer algo que en una tabla no hace falta:
-<strong>desanidar</strong> antes de agrupar. Las líneas viven dentro del pedido, así que
-primero hay que abrirlas en filas y después sumarlas por categoría.</p>
-<p>El caso parte de dos pedidos con sus líneas incrustadas y pide el importe
-total por categoría, ordenado alfabéticamente. La comparación deja a la
-vista dos cosas: que la tubería de agregación de MongoDB y una consulta SQL
-sobre <code>jsonb</code> son la misma idea con distinta sintaxis, y que el índice que
-hace rápida esta consulta no es el mismo en los dos.</p>
+<p><strong>Caso:</strong> Cada estudiante con el curso en que está inscrito, sin perder a los que no tienen ninguno</p>
+<p>Con tres estudiantes (Ada, Linus, Grace), dos cursos (DB-101, SE-201) y tres
+inscripciones (Ada en ambos, Linus en DB-101, Grace en ninguno), devolver una
+fila por pareja estudiante-curso, ordenada por nombre y luego por código.
+Los estudiantes sin ninguna inscripción aparecen con el literal <code>sin-curso</code>:
+un centinela explícito en vez de un nulo, porque cada cliente de línea de
+órdenes imprime el nulo de una forma distinta y lo que aquí se compara entre
+motores es el resultado, no el formato.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>categoria</th>
-<th>importe</th>
+<th>nombre</th>
+<th>codigo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>accesorios</code></td>
-<td><code>180</code></td>
+<td><code>Ada</code></td>
+<td><code>DB-101</code></td>
 </tr>
 <tr>
-<td><code>perifericos</code></td>
-<td><code>120</code></td>
+<td><code>Ada</code></td>
+<td><code>SE-201</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>sin-curso</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>DB-101</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 026</code>: 4 de
-las 6 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 026</code>: 6 de
+las 9 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -333,263 +393,460 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">doc oficial</a></td>
-</tr>
-<tr>
-<td>PostgreSQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/functions-json.html">doc oficial</a></td>
-</tr>
-<tr>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/json1.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/unnest.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/current/sql/query_syntax/from.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>OpenSearch</td>
+<td>PostgreSQL</td>
 <td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/opensearch/consulta.json">código</a></td>
-<td><a href="https://docs.opensearch.org/latest/aggregations/bucket/terms/">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/queries-table-expressions.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache CouchDB</td>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/join.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
 <td>sí</td>
 <td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/couchdb/consulta.json">código</a></td>
-<td><a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/sql-server/consulta.sql">código</a></td>
+<td><a href="https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql">doc oficial</a></td>
+</tr>
+<tr>
+<td>Oracle Database</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/oracle-database/consulta.sql">código</a></td>
+<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Neo4j</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/supported-field-types/join/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
-// nota: el indice multiclave sobre lineas.categoria acelera el FILTRO, no el
-//       $group: agrupar siempre recorre los documentos que pasen el filtro, con
-//       un limite de 100 MB por etapa salvo que se permita usar disco.
-
-// === preparacion ===
-db.pedidos.drop();
-db.pedidos.insertMany([
-  { _id: &quot;P-1&quot;, lineas: [
-    { producto: &quot;teclado&quot;, categoria: &quot;perifericos&quot;, importe: 120 },
-    { producto: &quot;raton&quot;, categoria: &quot;accesorios&quot;, importe: 80 },
-  ] },
-  { _id: &quot;P-2&quot;, lineas: [
-    { producto: &quot;cable&quot;, categoria: &quot;accesorios&quot;, importe: 100 },
-  ] },
-]);
-db.pedidos.createIndex({ &quot;lineas.categoria&quot;: 1 });
-
-// === consulta ===
-db.pedidos
-  .aggregate([
-    { $unwind: &quot;$lineas&quot; },
-    { $group: { _id: &quot;$lineas.categoria&quot;, importe: { $sum: &quot;$lineas.importe&quot; } } },
-    { $sort: { _id: 1 } },
-  ])
-  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.importe));
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>$unwind</code> seguido de <code>$group</code> es la forma canónica, y <code>explain("executionStats")</code> dice si la etapa inicial usó índice o recorrió la colección. Con un índice multiclave sobre <code>lineas.categoria</code>, el filtro previo se resuelve sin abrir los documentos que no interesan.</li>
-<li><strong>Por qué no:</strong> El índice ayuda a <strong>filtrar</strong>, no a agrupar: el <code>$group</code> siempre procesa documento a documento en memoria, con el límite de 100 MB por etapa. Para agregaciones grandes hay que permitir disco o precalcular.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">https://www.mongodb.com/docs/manual/core/aggregation-pipeline/</a></li>
-</ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/functions-json.html
--- nota: lo que aqui se puede hacer y en un almacen documental puro no: esta
---       misma consulta podria reunir los documentos con tablas normales del
---       mismo esquema, en la misma transaccion.
-
--- === preparacion ===
-DROP TABLE IF EXISTS pedidos;
-
-CREATE TABLE pedidos (
-    id     text PRIMARY KEY,
-    lineas jsonb NOT NULL
-);
-CREATE INDEX pedidos_lineas ON pedidos USING GIN (lineas);
-
-INSERT INTO pedidos (id, lineas) VALUES
-    ('P-1', '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;categoria&quot;:&quot;perifericos&quot;,&quot;importe&quot;:120},
-              {&quot;producto&quot;:&quot;raton&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:80}]'::jsonb),
-    ('P-2', '[{&quot;producto&quot;:&quot;cable&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:100}]'::jsonb);
-
--- === consulta ===
-SELECT l-&gt;&gt;'categoria' AS categoria,
-       SUM((l-&gt;&gt;'importe')::int) AS importe
-FROM pedidos p
-CROSS JOIN LATERAL jsonb_array_elements(p.lineas) AS l
-GROUP BY l-&gt;&gt;'categoria'
-ORDER BY categoria;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>jsonb_array_elements</code> desanida y el <code>GROUP BY</code> de siempre agrupa: la misma consulta puede reunir documentos con tablas normales, que es justamente lo que un almacén documental puro no puede hacer.</li>
-<li><strong>Por qué no:</strong> El índice GIN acelera la búsqueda dentro del <code>jsonb</code>, pero no evita desanidar en la agregación; y cada elemento extraído se convierte de texto a número en tiempo de consulta, lo que en volúmenes grandes se nota.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-json.html">https://www.postgresql.org/docs/current/functions-json.html</a></li>
-</ul>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/json1.html
--- nota: json_each se comporta como una tabla virtual, asi que desanidar y
---       agrupar se escribe como cualquier otra consulta. Lo que no hay es
---       indice: esto recorre la tabla entera siempre.
+-- doc: https://sqlite.org/lang_select.html
+-- nota: el LEFT JOIN es la forma portable; RIGHT y FULL solo existen desde 3.39.
 
 -- === preparacion ===
-CREATE TABLE pedidos (
-    id     TEXT PRIMARY KEY,
-    lineas TEXT NOT NULL
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo TEXT NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO pedidos (id, lineas) VALUES
-    ('P-1', '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;categoria&quot;:&quot;perifericos&quot;,&quot;importe&quot;:120},
-              {&quot;producto&quot;:&quot;raton&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:80}]'),
-    ('P-2', '[{&quot;producto&quot;:&quot;cable&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:100}]');
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT json_extract(l.value, '$.categoria') AS categoria,
-       SUM(json_extract(l.value, '$.importe')) AS importe
-FROM pedidos p, json_each(p.lineas) l
-GROUP BY categoria
-ORDER BY categoria;
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>json_each</code> se comporta como una tabla virtual, así que desanidar y agrupar se escribe como cualquier otra consulta: sirve para entender el mecanismo sin levantar nada.</li>
-<li><strong>Por qué no:</strong> No hay ningún índice posible sobre el contenido del JSON salvo que se extraiga a una columna generada e indexada: toda agregación recorre la tabla completa.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/json1.html">https://sqlite.org/json1.html</a></li>
+<li><strong>Por qué sí:</strong> Es el motor relacional que ya está instalado: viene con Python, no pide servidor y ejecuta el <code>LEFT JOIN</code> estándar. Para aprender la operación sin que la infraestructura estorbe, no hay nada más corto.</li>
+<li><strong>Por qué no:</strong> El planificador es deliberadamente simple: hasta la versión 3.39 no tenía <code>RIGHT JOIN</code> ni <code>FULL JOIN</code>, y solo dispone de bucle anidado —no hay reunión hash ni por fusión—, así que las lecciones de rendimiento de una reunión grande no se transfieren desde aquí.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/query_syntax/unnest.html
--- nota: la misma consulta funciona sobre un fichero anidado sin cargarlo:
---         SELECT ... FROM read_json_auto('pedidos.json'), UNNEST(lineas) ...
+-- doc: https://duckdb.org/docs/current/sql/query_syntax/from.html
+-- nota: misma consulta estandar; lo que cambia es el motor que la ejecuta
+--       (columnar y vectorizado), no el SQL.
 
 -- === preparacion ===
-CREATE TABLE pedidos (
-    id     VARCHAR PRIMARY KEY,
-    lineas STRUCT(producto VARCHAR, categoria VARCHAR, importe INTEGER)[]
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE cursos (
+    id     INTEGER PRIMARY KEY,
+    codigo VARCHAR NOT NULL
+);
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL,
+    curso_id      INTEGER NOT NULL
 );
 
-INSERT INTO pedidos VALUES
-    ('P-1', [{'producto': 'teclado', 'categoria': 'perifericos', 'importe': 120},
-             {'producto': 'raton',   'categoria': 'accesorios',  'importe': 80}]),
-    ('P-2', [{'producto': 'cable',   'categoria': 'accesorios',  'importe': 100}]);
+INSERT INTO estudiantes VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT l.categoria, SUM(l.importe) AS importe
-FROM (SELECT UNNEST(lineas) AS l FROM pedidos)
-GROUP BY l.categoria
-ORDER BY l.categoria;
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>UNNEST</code> sobre tipos anidados nativos y agregación vectorizada: es el motor donde esta forma de consulta escala mejor sin cambiar de sintaxis, y puede leer directamente un fichero JSON o Parquet anidado.</li>
-<li><strong>Por qué no:</strong> No hay índices que valgan aquí: la velocidad viene de leer menos columnas, no de saltar filas. Si la consulta filtra por un valor muy selectivo, un motor con índice gana.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/unnest.html">https://duckdb.org/docs/stable/sql/query_syntax/unnest.html</a></li>
+<li><strong>Por qué sí:</strong> Misma sintaxis estándar, pero ejecutada por un motor columnar vectorizado: la misma reunión sobre millones de filas termina en un portátil. Es el motor donde comprobar que el resultado no cambia y el tiempo sí.</li>
+<li><strong>Por qué no:</strong> Está pensado para analítica de un proceso a la vez: no hay control de concurrencia entre escritores ni servicio al que se conecten cien aplicaciones, así que no sustituye al motor transaccional del que salen los datos.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/current/sql/query_syntax/from.html">https://duckdb.org/docs/current/sql/query_syntax/from.html</a></li>
 </ul>
-<h4 id="opensearch--implementacionesopensearchconsultajson">OpenSearch · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/opensearch/consulta.json"><code>implementaciones/opensearch/consulta.json</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-json">{
-  &quot;_comentario&quot;: [
-    &quot;motor: opensearch&quot;,
-    &quot;doc: https://docs.opensearch.org/latest/aggregations/bucket/terms/&quot;,
-    &quot;nota: implementacion declarada. Para que el desanidado sea CORRECTO, el&quot;,
-    &quot;arreglo `lineas` tiene que estar mapeado como `nested`; si no, OpenSearch&quot;,
-    &quot;aplana los campos y pierde la correlacion entre categoria e importe de la&quot;,
-    &quot;misma linea. Ese mapeo convierte cada linea en un documento oculto con su&quot;,
-    &quot;propio costo de indexacion.&quot;,
-    &quot;Se aplica con:  PUT /pedidos  con el bloque `mappings`&quot;,
-    &quot;y se consulta:  POST /pedidos/_search  con el bloque `busqueda`&quot;
-  ],
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/queries-table-expressions.html
+-- nota: EXPLAIN (ANALYZE, BUFFERS) sobre esta misma consulta dice cual de los
+--       tres algoritmos de reunion eligio el planificador.
 
-  &quot;mappings&quot;: {
-    &quot;properties&quot;: {
-      &quot;lineas&quot;: {
-        &quot;type&quot;: &quot;nested&quot;,
-        &quot;properties&quot;: {
-          &quot;producto&quot;: { &quot;type&quot;: &quot;keyword&quot; },
-          &quot;categoria&quot;: { &quot;type&quot;: &quot;keyword&quot; },
-          &quot;importe&quot;: { &quot;type&quot;: &quot;integer&quot; }
-        }
-      }
-    }
-  },
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
 
-  &quot;busqueda&quot;: {
-    &quot;size&quot;: 0,
-    &quot;aggs&quot;: {
-      &quot;lineas&quot;: {
-        &quot;nested&quot;: { &quot;path&quot;: &quot;lineas&quot; },
-        &quot;aggs&quot;: {
-          &quot;por_categoria&quot;: {
-            &quot;terms&quot;: { &quot;field&quot;: &quot;lineas.categoria&quot;, &quot;order&quot;: { &quot;_key&quot;: &quot;asc&quot; } },
-            &quot;aggs&quot;: { &quot;importe&quot;: { &quot;sum&quot;: { &quot;field&quot;: &quot;lineas.importe&quot; } } }
-          }
-        }
-      }
-    }
-  }
-}
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE cursos (
+    id     integer PRIMARY KEY,
+    codigo text NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso_id      integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Las agregaciones por término son su especialidad: calcula el total por categoría sobre millones de documentos en milisegundos, porque el índice invertido y los <code>doc_values</code> columnares ya tienen los datos agrupados por valor.</li>
-<li><strong>Por qué no:</strong> Para que el desanidado sea correcto hay que declarar <code>nested</code>, y eso convierte cada línea en un documento oculto con su propio costo de indexación; sin <code>nested</code>, los campos del arreglo se aplanan y las correlaciones entre ellos se pierden.</li>
-<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/aggregations/bucket/terms/">https://docs.opensearch.org/latest/aggregations/bucket/terms/</a></li>
+<li><strong>Por qué sí:</strong> Es la referencia práctica del SQL de reuniones: tiene los tres algoritmos físicos (bucle anidado, hash y fusión), <code>FULL OUTER JOIN</code>, <code>LATERAL</code> y un <code>EXPLAIN (ANALYZE, BUFFERS)</code> que dice cuál eligió y por qué. Lo que se aprende aquí se lee después en cualquier motor.</li>
+<li><strong>Por qué no:</strong> Cada conexión es un proceso del sistema operativo: sin un agrupador delante (PgBouncer), unas pocas centenas de conexiones ociosas cuestan más memoria que la propia consulta. La reunión no es el problema; el modelo de conexiones sí.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-table-expressions.html">https://www.postgresql.org/docs/current/queries-table-expressions.html</a></li>
 </ul>
-<h4 id="apache-couchdb--implementacionescouchdbconsultajson">Apache CouchDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-documentos-y-clave-valor/026-consultas-e-indices-sobre-documentos/implementaciones/couchdb/consulta.json"><code>implementaciones/couchdb/consulta.json</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-json">{
-  &quot;_comentario&quot;: [
-    &quot;motor: couchdb&quot;,
-    &quot;doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html&quot;,
-    &quot;nota: implementacion declarada. La vista se calcula de forma INCREMENTAL al&quot;,
-    &quot;escribir y se guarda en un arbol B, asi que la consulta solo lee el&quot;,
-    &quot;resultado ya agregado. El precio: hay que decidir la agregacion antes de&quot;,
-    &quot;necesitarla, y una pregunta nueva es una vista nueva sobre toda la base.&quot;,
-    &quot;Se consulta con: _view/por_categoria?group=true&quot;
-  ],
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/join.html
+-- nota: desde 8.0.18 MySQL tiene reunion hash; antes, un LEFT JOIN sin indice
+--       degradaba a bucle anidado sobre la tabla completa.
 
-  &quot;_id&quot;: &quot;_design/ventas&quot;,
-  &quot;language&quot;: &quot;javascript&quot;,
-  &quot;views&quot;: {
-    &quot;por_categoria&quot;: {
-      &quot;map&quot;: &quot;function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit(l.categoria, l.importe); }); } }&quot;,
-      &quot;reduce&quot;: &quot;_sum&quot;
-    }
-  }
-}
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE cursos (
+    id     INT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+CREATE TABLE inscripciones (
+    estudiante_id INT NOT NULL,
+    curso_id      INT NOT NULL,
+    PRIMARY KEY (estudiante_id, curso_id),
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
+    FOREIGN KEY (curso_id) REFERENCES cursos(id)
+) ENGINE=InnoDB;
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Su modelo de vistas <code>map</code>/<code>reduce</code> está pensado exactamente para esto: el resultado se calcula de forma incremental al escribir, así que la consulta solo lee un árbol B ya agregado.</li>
-<li><strong>Por qué no:</strong> Hay que decidir la agregación <strong>antes</strong> de necesitarla: una pregunta nueva es una vista nueva que hay que construir sobre toda la base. No existe la consulta ad hoc.</li>
-<li>📄 Documentación oficial: <a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">https://docs.couchdb.org/en/stable/ddocs/views/intro.html</a></li>
+<li><strong>Por qué sí:</strong> Es el motor relacional más desplegado en aplicaciones web y resuelve la misma consulta con el mismo estándar; desde 8.0.18 tiene reunión hash, de modo que el <code>LEFT JOIN</code> sin índice ya no degrada a bucle anidado.</li>
+<li><strong>Por qué no:</strong> No tiene <code>FULL OUTER JOIN</code> —hay que emularlo con <code>UNION</code>— y su optimizador históricamente materializa subconsultas que PostgreSQL aplana, así que las consultas con reuniones anidadas hay que medirlas, no suponerlas.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/join.html">https://dev.mysql.com/doc/refman/8.4/en/join.html</a></li>
+</ul>
+<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql
+-- nota: implementacion declarada. El repositorio no la ejecuta en CI porque no
+--       distribuye la imagen con licencia; se revisa a mano contra la
+--       documentacion citada.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS dbo.inscripciones;
+DROP TABLE IF EXISTS dbo.cursos;
+DROP TABLE IF EXISTS dbo.estudiantes;
+
+CREATE TABLE dbo.estudiantes (
+    id     INT PRIMARY KEY,
+    nombre NVARCHAR(50) NOT NULL
+);
+CREATE TABLE dbo.cursos (
+    id     INT PRIMARY KEY,
+    codigo NVARCHAR(20) NOT NULL UNIQUE
+);
+CREATE TABLE dbo.inscripciones (
+    estudiante_id INT NOT NULL REFERENCES dbo.estudiantes(id),
+    curso_id      INT NOT NULL REFERENCES dbo.cursos(id),
+    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO dbo.estudiantes (id, nombre) VALUES (1, N'Ada'), (2, N'Linus'), (3, N'Grace');
+INSERT INTO dbo.cursos (id, codigo) VALUES (10, N'DB-101'), (20, N'SE-201');
+INSERT INTO dbo.inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+
+-- === consulta ===
+SELECT e.nombre,
+       COALESCE(c.codigo, N'sin-curso') AS codigo
+FROM dbo.estudiantes e
+LEFT JOIN dbo.inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN dbo.cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El optimizador basado en costos y las sugerencias explícitas de reunión (<code>OPTION (HASH JOIN)</code>) lo hacen el mejor sitio para ver el efecto de cada algoritmo físico, y el plan gráfico de SSMS enseña la reunión mejor que cualquier diagrama.</li>
+<li><strong>Por qué no:</strong> Licencia por núcleo y una edición gratuita (Express) limitada a 10 GB por base y a un socket: la decisión de usarlo casi nunca la toma la consulta, la toma el contrato.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql">https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql</a></li>
+</ul>
+<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: oracle-database
+-- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html
+-- nota: implementacion declarada. Se escribe con la sintaxis estandar de
+--       reunion, no con el operador heredado (+), que Oracle sigue aceptando
+--       pero que no se puede combinar con ANSI JOIN en la misma consulta.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     NUMBER PRIMARY KEY,
+    nombre VARCHAR2(50) NOT NULL
+);
+CREATE TABLE cursos (
+    id     NUMBER PRIMARY KEY,
+    codigo VARCHAR2(20) NOT NULL UNIQUE
+);
+CREATE TABLE inscripciones (
+    estudiante_id NUMBER NOT NULL REFERENCES estudiantes(id),
+    curso_id      NUMBER NOT NULL REFERENCES cursos(id),
+    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada');
+INSERT INTO estudiantes (id, nombre) VALUES (2, 'Linus');
+INSERT INTO estudiantes (id, nombre) VALUES (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101');
+INSERT INTO cursos (id, codigo) VALUES (20, 'SE-201');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10);
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 20);
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (2, 10);
+COMMIT;
+
+-- === consulta ===
+SELECT e.nombre,
+       NVL(c.codigo, 'sin-curso') AS codigo
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+LEFT JOIN cursos c        ON c.id = i.curso_id
+ORDER BY e.nombre, codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde viven los sistemas transaccionales grandes y antiguos, y su optimizador tiene el catálogo de transformaciones más amplio (<code>STAR TRANSFORMATION</code>, reescritura de vistas materializadas) sobre reuniones de muchas tablas.</li>
+<li><strong>Por qué no:</strong> Sintaxis heredada <code>(+)</code> conviviendo con la estándar, cadena vacía tratada como nulo —lo que rompe el centinela <code>COALESCE</code> de otros motores— y un costo de licencia que solo un sistema muy grande justifica.</li>
+<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/
+// nota: $unwind con preserveNullAndEmptyArrays es lo que convierte el $lookup
+//       en una reunion EXTERNA; sin esa opcion, Grace desaparece del resultado.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot; },
+  { _id: 2, nombre: &quot;Linus&quot; },
+  { _id: 3, nombre: &quot;Grace&quot; },
+]);
+db.cursos.insertMany([
+  { _id: 10, codigo: &quot;DB-101&quot; },
+  { _id: 20, codigo: &quot;SE-201&quot; },
+]);
+db.inscripciones.insertMany([
+  { estudiante_id: 1, curso_id: 10 },
+  { estudiante_id: 1, curso_id: 20 },
+  { estudiante_id: 2, curso_id: 10 },
+]);
+
+// === consulta ===
+db.estudiantes
+  .aggregate([
+    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
+                 foreignField: &quot;estudiante_id&quot;, as: &quot;inscripcion&quot; } },
+    { $unwind: { path: &quot;$inscripcion&quot;, preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: &quot;cursos&quot;, localField: &quot;inscripcion.curso_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;curso&quot; } },
+    { $unwind: { path: &quot;$curso&quot;, preserveNullAndEmptyArrays: true } },
+    { $project: { _id: 0, nombre: 1,
+                  codigo: { $ifNull: [&quot;$curso.codigo&quot;, &quot;sin-curso&quot;] } } },
+    { $sort: { nombre: 1, codigo: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.codigo));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Desde la versión 3.2 <code>$lookup</code> hace la reunión izquierda dentro del motor, así que un modelo documental normalizado no obliga a reunir en la aplicación. Con <code>preserveNullAndEmptyArrays</code> el <code>$unwind</code> conserva a quien no tiene pareja: es literalmente un <code>LEFT JOIN</code>.</li>
+<li><strong>Por qué no:</strong> <code>$lookup</code> no usa índices del lado interno con la misma libertad que un motor relacional y no hay reunión hash ni por fusión entre colecciones: cuando el patrón de acceso pide reunir todo el rato, el modelo está mal y lo que tocaba era incrustar el curso en el documento del estudiante.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/</a></li>
+</ul>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/
+// nota: implementacion declarada. OPTIONAL MATCH es la reunion externa: si el
+//       patron no encuentra pareja, las variables del patron quedan en null y
+//       la fila del estudiante sobrevive.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (g:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (a)-[:INSCRITO_EN]-&gt;(db),
+       (a)-[:INSCRITO_EN]-&gt;(se),
+       (l)-[:INSCRITO_EN]-&gt;(db);
+
+// === consulta ===
+MATCH (e:Estudiante)
+OPTIONAL MATCH (e)-[:INSCRITO_EN]-&gt;(c:Curso)
+RETURN e.nombre AS nombre, coalesce(c.codigo, 'sin-curso') AS codigo
+ORDER BY nombre, codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La reunión externa se llama <code>OPTIONAL MATCH</code> y no hay tabla intermedia que declarar: la inscripción es una arista. Cuando el recorrido tiene varios saltos —estudiante, curso, prerrequisito, profesor— el costo no crece con el tamaño del grafo, sino con el del vecindario recorrido.</li>
+<li><strong>Por qué no:</strong> Ese mismo modelo penaliza lo tabular: contar y agregar sobre todos los nodos de una etiqueta es más caro que en una tabla, y mantener un grafo solo para reunir dos entidades que ya son tablas añade un sistema entero sin resolver nada.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/">https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada, y deliberadamente distinta. CQL no tiene
+--       JOIN: la reunion se paga en la escritura y se guarda ya resuelta la
+--       tabla que la consulta necesita. El precio esta en el comentario final.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.cursos_por_estudiante;
+
+-- La tabla es la consulta: una particion por estudiante, los codigos ordenados
+-- dentro de ella. No modela entidades, modela una pregunta.
+CREATE TABLE escuela.cursos_por_estudiante (
+    nombre text,
+    codigo text,
+    PRIMARY KEY (nombre, codigo)
+) WITH CLUSTERING ORDER BY (codigo ASC);
+
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'DB-101');
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'SE-201');
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Linus', 'DB-101');
+-- Grace no tiene inscripciones: el centinela tambien se escribe a mano, porque
+-- aqui no hay reunion externa que lo genere.
+INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Grace', 'sin-curso');
+
+-- === consulta ===
+-- El ORDER BY solo ordena DENTRO de una particion. Al recorrer varias, el orden
+-- lo fija el token de la clave, no el nombre: por eso este SELECT lleva el
+-- ordenamiento final del lado del cliente en cualquier uso serio.
+SELECT nombre, codigo FROM escuela.cursos_por_estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> CQL no tiene <code>JOIN</code>, y aun así el caso se resuelve: se paga la reunión en la escritura y se guarda ya resuelta la tabla que la consulta necesita. Es la lección de modelado más importante de las columnas anchas —se modela desde la consulta, no desde las entidades— y da lecturas de una sola partición a latencia predecible.</li>
+<li><strong>Por qué no:</strong> Cada consulta nueva es una tabla nueva que hay que llenar y mantener coherente sin transacciones entre tablas; y el orden total del resultado no está garantizado al recorrer varias particiones, porque el orden entre particiones lo fija el token, no el <code>ORDER BY</code>.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -605,16 +862,28 @@ ORDER BY l.categoria;
 <tbody>
 <tr>
 <td>Redis</td>
-<td>No hay desanidado ni agrupación: los documentos serían cadenas opacas y todo el cálculo tendría que hacerse en el cliente después de traérselos.</td>
-<td>Mantener el total por categoría en un hash actualizado con <code>HINCRBY</code> en cada venta: el resultado está siempre listo, y a cambio solo responde la pregunta que se decidió de antemano.</td>
-<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc</a></td>
+<td>Redis no tiene reuniones ni un lenguaje de consulta sobre relaciones: es un servidor de estructuras de datos donde el acceso es por clave. Reunir exigiría traer las claves de los estudiantes, luego las de sus inscripciones y luego las de los cursos —tres viajes por estudiante— y hacer la reunión en la aplicación, que es exactamente lo que un motor relacional evita.</td>
+<td>Guardar el resultado ya reunido como valor de una clave (<code>estudiante:1:cursos</code>) y recalcularlo cuando cambie el origen: Redis como caché de la reunión que hace otro motor, no como sustituto.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>El modelo de DynamoDB parte de que no hay reuniones en tiempo de consulta: solo se puede acceder por clave de partición y ordenación. Una reunión de tres entidades se traduce en varias <code>Query</code> o en un <code>Scan</code>, y el <code>Scan</code> lee y cobra la tabla entera.</td>
+<td>Diseño de tabla única: estudiante e inscripciones comparten clave de partición (<code>ESTUDIANTE#1</code>) y se distinguen por la de ordenación (<code>PERFIL</code>, <code>CURSO#DB-101</code>), de modo que una sola <code>Query</code> devuelve lo que aquí es una reunión.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html">doc</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>Es un índice invertido para buscar y puntuar documentos, no para relacionar entidades. El campo <code>join</code> existe, pero obliga a que padre e hijo vivan en el mismo fragmento y penaliza cada consulta; la propia documentación recomienda desnormalizar antes que usarlo.</td>
+<td>Indexar el documento ya desnormalizado (estudiante con la lista de sus cursos dentro) y reindexar cuando cambie, aceptando que el índice va por detrás del origen.</td>
+<td><a href="https://docs.opensearch.org/latest/field-types/supported-field-types/join/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -658,22 +927,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>MongoDB, Inc.</strong> (2026). <a href="https://www.mongodb.com/docs/manual/">MongoDB Manual</a>.<br />
-  Modelo documental, índices, agregación y transacciones multi-documento.</li>
-<li><strong>Shannon Bradshaw, Eoin Brazil, Kristina Chodorow</strong> (2019). <a href="https://www.oreilly.com/library/view/mongodb-the-definitive/9781491954454/">MongoDB: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-5446-1.<br />
-  Modelado documental, índices y canalización de agregación.</li>
 <li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
   Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="025.html">← Anterior</a> · <a href="027.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="026">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="025.html"><span class="sentido">← Anterior · 025</span>Modelado documental: incrustar o referenciar</a>
-<a class="siguiente" href="027.html"><span class="sentido">Siguiente · 027 →</span>Clave-valor, caché y expiración: qué se pierde exactamente</a>
+<a class="anterior" href="025.html"><span class="sentido">← Anterior · 025</span>SELECT: filtrado, proyección y orden con semántica precisa</a>
+<a class="siguiente" href="027.html"><span class="sentido">Siguiente · 027 →</span>Agregación, GROUP BY y HAVING sin duplicar filas</a>
 </nav>
 </main>
 <footer>

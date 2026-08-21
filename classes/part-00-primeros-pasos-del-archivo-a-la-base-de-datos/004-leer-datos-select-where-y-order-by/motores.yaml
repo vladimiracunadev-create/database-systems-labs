@@ -1,0 +1,96 @@
+---
+caso:
+  titulo: Quién aprobó DB-101, con su nota y en orden alfabético
+  contrato: |
+    Un `SELECT` toma tres decisiones y conviene separarlas: **qué filas**
+    (`WHERE`), **qué columnas** (`SELECT`) y **en qué orden** (`ORDER BY`). El
+    caso las usa las tres: de las cuatro notas registradas, se piden las de
+    DB-101 con 60 o más, con el nombre y la nota, ordenadas por nombre.
+
+    Linus queda fuera por no llegar a 60 y la nota de SE-201 queda fuera por no
+    ser de ese curso. El orden alfabético hay que pedirlo: sin `ORDER BY`,
+    ningún motor está obligado a devolver nada en un orden concreto, por mucho
+    que en una tabla pequeña lo parezca.
+  columnas: [estudiante, nota]
+  esperado:
+    - [Ada, "90"]
+    - [Grace, "72"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Implementa `WHERE`, `ORDER BY` y `LIMIT` con la sintaxis que comparten
+      PostgreSQL, MySQL y DuckDB: es el subconjunto que de verdad se transfiere.
+    porque_no: >-
+      Con tablas pequeñas devuelve casi siempre las filas en el orden de
+      inserción aunque no se pida, lo que refuerza justo la creencia equivocada
+      que esta clase intenta corregir.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Al ejecutar en paralelo, el orden sin `ORDER BY` cambia de verdad entre
+      ejecuciones: es el motor que mejor demuestra que el orden hay que pedirlo.
+    porque_no: >-
+      Añade atajos propios muy cómodos que no existen en ningún otro sitio, así
+      que una consulta que funciona aquí no siempre es portable.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Su documentación afirma explícitamente que sin `ORDER BY` el orden es
+      indeterminado; y con un índice adecuado, `ORDER BY ... LIMIT` no ordena
+      nada: lee las primeras entradas del índice y para.
+    porque_no: >-
+      La paginación con `OFFSET` grande obliga a leer y descartar todo lo
+      anterior: la página mil cuesta mil veces la primera, y hay que sustituirla
+      por paginación por clave.
+    doc: https://www.postgresql.org/docs/current/queries-order.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `find(filtro, proyección).sort()` son las mismas tres decisiones con otra
+      sintaxis: sirve para ver que el concepto no es de SQL.
+    porque_no: >-
+      Sin un índice que cubra el `sort`, la ordenación en memoria está limitada a
+      32 MB y la consulta **falla** en vez de ir lenta: un fallo honesto, y una
+      sorpresa en producción.
+    doc: https://www.mongodb.com/docs/manual/reference/method/cursor.sort/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Un conjunto ordenado mantiene el orden **al escribir**, así que pedir los
+      aprobados de un curso es leer un rango: no hay nada que ordenar en el
+      momento de la consulta.
+    porque_no: >-
+      Ese orden es el único disponible y hay que haberlo previsto: ordenar por
+      nombre en vez de por nota exigiría otra estructura, mantenida a mano en
+      cada escritura.
+    doc: https://redis.io/docs/latest/commands/zrangebyscore/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      El filtro `nota >= 60` solo sería legal si `nota` fuera columna de
+      agrupamiento; sobre cualquier otra columna exige `ALLOW FILTERING`, que es
+      la forma que tiene Cassandra de avisar de que va a escanear.
+    alternativa: >-
+      Modelar la tabla con el curso como partición y la nota como agrupamiento,
+      de forma que el filtro por rango sea el orden físico. Se estudia en la
+      parte de columnas anchas.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

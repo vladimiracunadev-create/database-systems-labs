@@ -62,7 +62,7 @@ Cuentas, asientos de doble entrada, transferencias, conciliación y auditoría.
 - **Dato sensible:** todo. Además, el histórico no se corrige: se compensa con un asiento nuevo.
 - **Dificultad real:** un reintento no puede crear valor. La idempotencia aquí no es una buena
   práctica: es la diferencia entre un sistema contable y un fraude accidental.
-- **Dónde se trabaja:** [transacciones](../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md)
+- **Dónde se trabaja:** [transacciones](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
   y [recuperación](../labs/08-recovery/README.md), donde el instante al que restauras decide
   qué operaciones existieron.
 
@@ -78,7 +78,7 @@ Usuarios, publicaciones, comentarios, reacciones, seguidores, moderación y reco
   personal por sí mismo.
 - **Dificultad real:** el feed. Calcularlo al leer no escala; calcularlo al escribir multiplica
   el trabajo de las cuentas con millones de seguidores. La respuesta real es híbrida.
-- **Dónde se trabaja:** [grafos](../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md),
+- **Dónde se trabaja:** [grafos](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md),
   [claves calientes](../labs/05-nosql-workloads/README.md) y
   [réplica](../labs/07-replication/README.md).
 
@@ -94,7 +94,7 @@ Fuentes, fragmentos, permisos, embeddings, sesiones, herramientas y trazas.
   lo que cree.
 - **Dificultad real:** la procedencia. Cuando el sistema responde, hay que poder decir de qué
   documento salió cada afirmación y con qué versión del índice.
-- **Dónde se trabaja:** [vectores y RAG](../classes/part-12-vectores-recuperacion-y-rag/README.md)
+- **Dónde se trabaja:** [vectores y RAG](../classes/part-13-vectores-recuperacion-y-rag/README.md)
   y el [laboratorio 06](../labs/06-vector-search/README.md).
 
 ---

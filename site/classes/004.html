@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Entorno reproducible y evidencia comprobable. Parte 00: Fundamentos, sistemas y método.">
+<meta name="description" content="Leer datos: SELECT, WHERE y ORDER BY. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/004.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="004 — Entorno reproducible y evidencia comprobable · Database Systems Labs">
-<meta property="og:description" content="Entorno reproducible y evidencia comprobable. Parte 00: Fundamentos, sistemas y método.">
+<meta property="og:title" content="004 — Leer datos: SELECT, WHERE y ORDER BY · Database Systems Labs">
+<meta property="og:description" content="Leer datos: SELECT, WHERE y ORDER BY. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/004.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "004 — Entorno reproducible y evidencia comprobable", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["reproducibilidad", "semilla", "contenedor", "invariante", "evidencia"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>004 — Entorno reproducible y evidencia comprobable · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "004 — Leer datos: SELECT, WHERE y ORDER BY", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["filtrado", "proyección", "orden", "LIMIT", "IS NULL"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>004 — Leer datos: SELECT, WHERE y ORDER BY · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,216 +49,262 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-00.html">Parte 00 · Fundamentos, sistemas y método</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 004</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="004--entorno-reproducible-y-evidencia-comprobable">004 — Entorno reproducible y evidencia comprobable</h1>
+<h1 id="004--leer-datos-select-where-y-order-by">004 — Leer datos: SELECT, WHERE y ORDER BY</h1>
 <blockquote>
 <p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="003.html">← Anterior</a> · <a href="005.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
-3 horas estimadas · motores <code>sqlite</code>, <code>postgresql</code>, <code>mongodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>reproducibilidad</code> · <code>semilla</code> · <code>contenedor</code> · <code>invariante</code> · <code>evidencia</code></p>
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mongodb</code>, <code>redis</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>filtrado</code> · <code>proyección</code> · <code>orden</code> · <code>LIMIT</code> · <code>IS NULL</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Montar un entorno donde toda afirmación sobre datos pueda comprobarse por otra persona. En bases de datos, «a mí me funciona» es una afirmación especialmente débil: el resultado depende de la versión, la configuración, los datos previos y el estado del caché.</p>
+<p>Aprender a hacer preguntas. Un <code>SELECT</code> tiene tres decisiones —qué filas, qué
+columnas y en qué orden— y separarlas mentalmente es lo que permite escribir
+consultas que hacen lo que se cree que hacen.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Ejecutar el laboratorio base sin instalar ningún servidor.</li>
-<li>Levantar motores por perfiles con Docker Compose, sin arrancarlos todos.</li>
-<li>Distinguir evidencia de captura de pantalla, y saber qué debe acompañar a un resultado.</li>
-<li>Escribir una comprobación de invariante que falle cuando el dato está mal.</li>
-<li>Explicar por qué una medición sin condiciones declaradas no sirve para decidir.</li>
+<li>Filtrar filas con <code>WHERE</code> usando comparaciones y operadores lógicos.</li>
+<li>Elegir columnas y darles nombres legibles.</li>
+<li>Ordenar el resultado y explicar por qué sin <code>ORDER BY</code> no hay orden.</li>
+<li>Limitar el número de filas devueltas sin caer en la trampa del <code>LIMIT</code> sin
+   orden.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-núcleo-sin-dependencias">El núcleo sin dependencias</h3>
-<p>SQLite permite estudiar un gestor completo sin instalar nada: es una biblioteca que se enlaza al proceso, con soporte para transacciones, índices, planes de ejecución y registro anticipado. La biblioteca estándar de Python la expone en <code>sqlite3</code>, conforme a la especificación PEP 249.</p>
-<p>Eso da una propiedad valiosa para un programa formativo: <strong>el primer laboratorio no puede fallar por instalación</strong>. Si <code>python labs/01-sql-foundations/run_lab.py</code> no corre, el problema está en el código, no en el entorno.</p>
-<h3 id="los-motores-con-contenedores">Los motores con contenedores</h3>
-<p>El resto de los motores llega por Docker Compose, organizado en <strong>perfiles</strong> para no levantar diez servicios a la vez:</p>
-<pre><code class="language-bash">docker compose --profile relational up -d
-docker compose --profile document   up -d
-docker compose --profile cache      up -d
-</code></pre>
-<p>Dos reglas del repositorio, ambas de seguridad:</p>
-<ul>
-<li>Las credenciales del <code>compose</code> son locales y están escritas a la vista. Nunca se copian a otro entorno.</li>
-<li>Los servicios no publican puertos hacia fuera de la máquina más allá de lo necesario para el laboratorio.</li>
-</ul>
-<h3 id="qué-es-evidencia">Qué es evidencia</h3>
-<p>El libro de SRE de Google formula el criterio que aquí adoptamos: una afirmación operativa vale lo que vale su medición, y una medición vale lo que valen sus condiciones declaradas. Aplicado a este programa, una evidencia válida incluye:</p>
+<h3 id="las-tres-decisiones-en-el-orden-en-que-las-toma-el-motor">Las tres decisiones, en el orden en que las toma el motor</h3>
+<p>Aunque se escriba <code>SELECT ... FROM ... WHERE ... ORDER BY</code>, el motor las aplica
+en otro orden, y entenderlo evita la mitad de las confusiones:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Elemento</th>
-<th>Por qué sin él la evidencia se cae</th>
+<th>Paso</th>
+<th>Cláusula</th>
+<th>Decide</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Comando exacto</td>
-<td>Sin él, nadie puede repetir</td>
+<td>1</td>
+<td><code>FROM</code></td>
+<td>De dónde salen las filas</td>
 </tr>
 <tr>
-<td>Versión del motor</td>
-<td>El plan y la semántica cambian entre versiones</td>
+<td>2</td>
+<td><code>WHERE</code></td>
+<td><strong>Cuáles</strong> sobreviven</td>
 </tr>
 <tr>
-<td>Datos de entrada (o su semilla)</td>
-<td>Un resultado sobre otros datos no es el mismo resultado</td>
+<td>3</td>
+<td><code>SELECT</code></td>
+<td><strong>Qué columnas</strong> se ven</td>
 </tr>
 <tr>
-<td>Salida literal, no resumida</td>
-<td>El resumen ya es una interpretación</td>
+<td>4</td>
+<td><code>ORDER BY</code></td>
+<td>En qué <strong>orden</strong> se leen</td>
 </tr>
 <tr>
-<td>Estado previo (caché frío o caliente)</td>
-<td>Cambia el tiempo en órdenes de magnitud</td>
-</tr>
-<tr>
-<td>Qué <strong>no</strong> demuestra</td>
-<td>Evita extrapolar una demo a producción</td>
+<td>5</td>
+<td><code>LIMIT</code></td>
+<td><strong>Cuántas</strong> se devuelven</td>
 </tr>
 </tbody>
 </table></div>
-<p>Una captura de pantalla sin comando no es evidencia: no se puede repetir.</p>
-<pre><code class="language-mermaid">flowchart LR
-    H[&quot;Hipótesis&lt;br/&gt;«el índice mejora esta consulta»&quot;] --&gt; C[&quot;Condiciones declaradas&lt;br/&gt;versión, datos, caché&quot;]
-    C --&gt; E[&quot;Ejecución&lt;br/&gt;comando reproducible&quot;]
-    E --&gt; S[&quot;Salida literal&quot;]
-    S --&gt; I{&quot;¿La salida&lt;br/&gt;respalda la hipótesis?&quot;}
-    I -- &quot;Sí&quot; --&gt; A[&quot;Conclusión + límites&quot;]
-    I -- &quot;No&quot; --&gt; R[&quot;Refutación:&lt;br/&gt;también es resultado&quot;]
-    R --&gt; H
+<p>De ahí sale, por ejemplo, que un alias definido en el <code>SELECT</code> no siempre se
+pueda usar en el <code>WHERE</code>: cuando el <code>WHERE</code> se evalúa, ese alias todavía no
+existe.</p>
+<h3 id="where-quedarse-con-unas-filas"><code>WHERE</code>: quedarse con unas filas</h3>
+<pre><code class="language-sql">SELECT nombre, nota FROM notas WHERE nota &gt;= 60;
 </code></pre>
-<h3 id="invariantes-la-prueba-que-sí-falla">Invariantes: la prueba que sí falla</h3>
-<p>Una prueba que siempre pasa no informa. En datos, la forma útil es la <strong>invariante</strong>: una propiedad que debe cumplirse siempre y que se comprueba con una consulta que devuelve cero filas cuando todo está bien.</p>
-<pre><code class="language-sql">-- Invariante: ninguna inscripción apunta a un curso inexistente.
-SELECT e.id
-FROM enrollments e
-LEFT JOIN courses c ON c.id = e.course_id
-WHERE c.id IS NULL;
+<p>Los operadores son los esperables —<code>=</code>, <code>&lt;&gt;</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>— y se combinan
+con <code>AND</code>, <code>OR</code> y <code>NOT</code>. Tres formas que ahorran paréntesis:</p>
+<pre><code class="language-sql">WHERE nota BETWEEN 60 AND 90          -- ambos extremos incluidos
+WHERE curso IN ('DB-101', 'SE-201')   -- uno de la lista
+WHERE nombre LIKE 'A%'                -- empieza por A
 </code></pre>
-<p>Si esa consulta devuelve filas, el dato está mal y el nombre de la invariante dice exactamente qué se rompió.</p>
+<p><strong>El nulo no se compara con <code>=</code>.</strong> <code>WHERE correo = NULL</code> no devuelve las filas
+sin correo: no devuelve ninguna, porque comparar con una ausencia no da ni
+verdadero ni falso. La forma correcta es <code>WHERE correo IS NULL</code>. Esta es la
+primera aparición de un tema que tiene clase propia más adelante, y conviene
+aprenderla ya.</p>
+<h3 id="select-elegir-columnas-y-nombrarlas"><code>SELECT</code>: elegir columnas y nombrarlas</h3>
+<pre><code class="language-sql">SELECT nombre AS estudiante, nota * 2 AS nota_sobre_100 FROM notas;
+</code></pre>
+<p>Un alias con <code>AS</code> no cambia los datos: cambia el nombre de la columna en el
+resultado. Sirve para que quien lea el informe entienda qué está mirando, y para
+poner nombre a una expresión calculada.</p>
+<h3 id="order-by-el-orden-es-una-decisión-no-una-propiedad"><code>ORDER BY</code>: el orden es una decisión, no una propiedad</h3>
+<p>Una tabla <strong>no tiene orden</strong>. Es un conjunto de filas, y el motor las devuelve
+como le resulte más barato: puede cambiar al añadir un índice, al crecer la
+tabla o al ejecutar la consulta en paralelo.</p>
+<pre><code class="language-sql">SELECT nombre, nota FROM notas ORDER BY nota DESC, nombre;
+</code></pre>
+<p><code>DESC</code> es de mayor a menor; sin él, de menor a mayor. Y el segundo criterio
+—<code>nombre</code>— es el <strong>desempate</strong>: sin él, dos estudiantes con la misma nota pueden
+salir en cualquier orden, y ese orden puede cambiar entre dos ejecuciones.</p>
+<h3 id="limit-la-trampa"><code>LIMIT</code>: la trampa</h3>
+<pre><code class="language-sql">SELECT nombre, nota FROM notas ORDER BY nota DESC LIMIT 3;
+</code></pre>
+<p><code>LIMIT</code> sin <code>ORDER BY</code> devuelve <strong>tres filas cualesquiera</strong>. En una tabla
+pequeña suelen ser «las correctas» por casualidad, y por eso el error sobrevive
+hasta producción, donde la tabla ya no es pequeña y las filas devueltas dejan de
+tener sentido.</p>
+<pre><code class="language-mermaid">flowchart TD
+    F[&quot;FROM: todas las filas&quot;] --&gt; W[&quot;WHERE: solo las que cumplen&quot;]
+    W --&gt; S[&quot;SELECT: solo estas columnas&quot;]
+    S --&gt; O[&quot;ORDER BY: en este orden&quot;]
+    O --&gt; L[&quot;LIMIT: solo las tres primeras&quot;]
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Comprobemos que el dominio canónico del repositorio cumple lo que promete.</p>
-<pre><code class="language-bash">python scripts/validate_repository.py
-python labs/01-sql-foundations/run_lab.py
-</code></pre>
-<p>El laboratorio carga el esquema y los datos en SQLite <strong>en memoria</strong>, ejecuta consultas y comprueba invariantes. Tres decisiones de diseño, con su razón:</p>
-<ol>
-<li><strong>En memoria.</strong> No deja archivos entre ejecuciones, así que la ejecución número 20 es idéntica a la número 1. Un laboratorio que acumula estado produce resultados que dependen del historial de quien lo ejecuta.</li>
-<li><strong>Datos fijos, no aleatorios.</strong> Con 4 estudiantes conocidos, el resultado esperado se puede escribir a mano y contrastar. Los datos aleatorios sin semilla producen fallos irreproducibles.</li>
-<li><strong>Comprobación de claves foráneas.</strong> <code>PRAGMA foreign_key_check</code> detecta referencias colgantes que un <code>SELECT</code> normal no muestra.</li>
-</ol>
-<p>Ejemplo de traza de evidencia bien formada:</p>
-<pre><code class="language-text">Comando   : python labs/01-sql-foundations/run_lab.py
-Python    : 3.12.9
-SQLite    : 3.45.1   (SELECT sqlite_version();)
-Datos     : reference-data/school/seed.sqlite.sql (4 estudiantes, 3 cursos)
-Estado    : base en memoria, recién creada
-Salida    : LAB_OK  filas=4  invariantes=3/3
-No demuestra: nada sobre concurrencia ni sobre volumen; el conjunto cabe en una página
-</code></pre>
-<p>La última línea es la que distingue un informe honesto de uno vendedor. El laboratorio demuestra que las consultas son correctas sobre datos pequeños; <strong>no</strong> demuestra nada sobre rendimiento, concurrencia ni durabilidad.</p>
-<h2 id="comparación">Comparación</h2>
+<p>Con esta tabla:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Enfoque</th>
-<th>Reproducible</th>
-<th>Coste de arranque</th>
-<th>Qué permite estudiar</th>
+<th>estudiante</th>
+<th>curso</th>
+<th>nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SQLite en memoria</td>
-<td>Total</td>
-<td>Ninguno</td>
-<td>SQL, planes, transacciones de una sesión</td>
+<td>Ada</td>
+<td>DB-101</td>
+<td>90</td>
 </tr>
 <tr>
-<td>SQLite en archivo</td>
-<td>Alto</td>
-<td>Ninguno</td>
-<td>Además: WAL, durabilidad, recuperación</td>
+<td>Linus</td>
+<td>DB-101</td>
+<td>58</td>
 </tr>
 <tr>
-<td>Contenedor con perfil</td>
-<td>Alto si se fija la etiqueta</td>
-<td>Minutos</td>
-<td>Concurrencia real, réplica, dialectos</td>
+<td>Grace</td>
+<td>DB-101</td>
+<td>72</td>
 </tr>
 <tr>
-<td>Servidor instalado a mano</td>
-<td>Bajo</td>
-<td>Alto</td>
-<td>Nada que no permitan los anteriores</td>
+<td>Ada</td>
+<td>SE-201</td>
+<td>66</td>
 </tr>
 <tr>
-<td>Servicio gestionado en la nube</td>
-<td>Bajo, y con costo</td>
-<td>Variable</td>
-<td>Operación real; mal sitio para aprender</td>
+<td>Grace</td>
+<td>SE-201</td>
+<td>78</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Pregunta:</strong> los dos mejores de DB-101 que aprobaron, con su nota.</p>
+<pre><code class="language-sql">SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY nota DESC
+LIMIT 2;
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ada</td>
+<td>90</td>
+</tr>
+<tr>
+<td>Grace</td>
+<td>72</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Traza, paso a paso.</strong> <code>FROM</code> entrega las cinco filas. <code>WHERE</code> descarta las de
+SE-201 y a Linus, que no llega a 60: quedan dos. <code>SELECT</code> se queda con dos
+columnas. <code>ORDER BY</code> las coloca de mayor a menor. <code>LIMIT</code> corta a dos, que en
+este caso ya eran dos.</p>
+<p><strong>El mismo ejercicio, mal escrito.</strong> Si se quita el <code>ORDER BY</code>, el motor puede
+devolver <code>Grace, 72</code> y <code>Ada, 90</code> —o solo una de las dos, según el plan— y la
+consulta seguirá pareciendo correcta mientras la tabla tenga cinco filas.</p>
+<p><strong>Y una trampa más.</strong> Para pedir «los que no tienen nota registrada», esto está
+mal:</p>
+<pre><code class="language-sql">SELECT estudiante FROM notas WHERE nota = NULL;   -- devuelve cero filas
+SELECT estudiante FROM notas WHERE nota IS NULL;  -- correcto
+</code></pre>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Usar la etiqueta <code>latest</code> en el <code>compose</code>.</strong> El mismo archivo produce entornos distintos según el día. Fija la versión.</li>
-<li><strong>Medir sobre una base con caché caliente y llamarlo mejora.</strong> Declara siempre si la ejecución fue en frío.</li>
-<li><strong>Datos aleatorios sin semilla.</strong> El fallo aparece una vez y no vuelve; es el peor tipo de fallo.</li>
-<li><strong>Confundir «la prueba pasa» con «el sistema es correcto».</strong> Una prueba que nunca ha fallado puede estar comprobando la nada. Rómpela a propósito una vez.</li>
-<li><strong>Copiar las credenciales del laboratorio a otro entorno.</strong> Son públicas: están en un archivo versionado.</li>
+<li><strong><code>= NULL</code> en vez de <code>IS NULL</code>.</strong> No falla: devuelve vacío, que es peor.</li>
+<li><strong><code>LIMIT</code> sin <code>ORDER BY</code>.</strong> Devuelve filas arbitrarias con aspecto de
+   respuesta.</li>
+<li><strong><code>ORDER BY</code> sin desempate.</strong> Con valores repetidos, el orden puede cambiar
+   entre ejecuciones y nadie sabrá por qué.</li>
+<li><strong>Mezclar <code>AND</code> y <code>OR</code> sin paréntesis.</strong> <code>WHERE a = 1 AND b = 2 OR c = 3</code> no
+   significa lo que parece: <code>AND</code> se evalúa antes que <code>OR</code>.</li>
+<li><strong><code>LIKE '%texto%'</code> sobre tablas grandes.</strong> Funciona y no puede usar el índice:
+   es la consulta que se vuelve lenta sin que nada haya cambiado.</li>
+<li><strong>Suponer que el orden de la tabla es el de inserción.</strong></li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El mismo criterio de evidencia sirve en un incidente real: quien afirma «la consulta empeoró tras el despliegue» necesita el plan antes, el plan después, la versión y el volumen. Sin eso, la conversación se decide por antigüedad en la empresa y no por datos.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p><code>WHERE</code>, <code>ORDER BY</code> y <code>LIMIT</code> son casi idénticos en todos los motores
+relacionales, con una excepción que conviene conocer desde ahora: SQL Server usa
+<code>TOP</code> y Oracle antiguo usaba <code>ROWNUM</code>. La norma define <code>FETCH FIRST n ROWS
+ONLY</code>, que PostgreSQL, Oracle moderno y SQL Server aceptan. Se estudia en la
+clase de portabilidad.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Añade al laboratorio una invariante nueva que hoy no se comprueba y que sea cierta en el dominio.</li>
-<li>Rómpela a propósito modificando los datos y captura la salida que la delata.</li>
-<li>Restaura y vuelve a ejecutar, mostrando que la salida vuelve al estado correcto.</li>
-<li>Escribe el informe de evidencia con las seis filas de la tabla de la sección de fundamentos.</li>
+<li>Sobre la tabla que creaste en la clase anterior, escribe cinco consultas: una
+   con <code>WHERE</code> simple, una con <code>AND</code>, una con <code>IN</code>, una con <code>IS NULL</code> y una con
+   <code>ORDER BY</code> y <code>LIMIT</code>.</li>
+<li>Escribe una consulta con <code>LIMIT</code> <strong>sin</strong> <code>ORDER BY</code>, ejecútala varias veces y
+   anota si el resultado cambia.</li>
+<li>Escribe una consulta con <code>= NULL</code> y explica por qué devuelve lo que devuelve.</li>
+<li>Añade un desempate a tu <code>ORDER BY</code> y explica qué caso concreto resuelve.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué una base en memoria produce ejecuciones más comparables que una en archivo?</li>
-<li>Un compañero muestra un tiempo de 3 ms como prueba de que su índice funciona. ¿Qué tres datos le pedirías antes de aceptarlo?</li>
-<li>Escribe una invariante del dominio que no pueda expresarse como clave foránea, y la consulta que la comprueba.</li>
-<li>¿Qué afirmación <em>no</em> puede sostenerse con el laboratorio base, por bien que se ejecute?</li>
+<li>¿En qué orden aplica el motor <code>FROM</code>, <code>WHERE</code>, <code>SELECT</code>, <code>ORDER BY</code> y <code>LIMIT</code>?</li>
+<li>¿Por qué <code>WHERE nota = NULL</code> devuelve cero filas?</li>
+<li>¿Qué problema concreto resuelve añadir un segundo criterio al <code>ORDER BY</code>?</li>
+<li>Explica por qué <code>LIMIT 3</code> sin <code>ORDER BY</code> puede dar un resultado distinto en dos
+   ejecuciones seguidas.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> La misma semilla, la misma cifra, en cualquier motor</p>
-<p>Una medición sin semilla ni protocolo no es evidencia: es una anécdota. El
-caso carga un conjunto de datos fijo —seis inscripciones con su nota— y
-devuelve dos cifras que resumen el estado del conjunto: cuántas filas hay y
-cuánto suman las notas.</p>
-<p>La prueba no es que el número sea interesante, sino que <strong>es el mismo en
-seis motores distintos y en dos ejecuciones seguidas</strong>. Cuando esas dos
-cifras coinciden, comparar tiempos entre motores empieza a significar algo;
-mientras no coincidan, no se está midiendo lo mismo.</p>
+<p><strong>Caso:</strong> Quién aprobó DB-101, con su nota y en orden alfabético</p>
+<p>Un <code>SELECT</code> toma tres decisiones y conviene separarlas: <strong>qué filas</strong>
+(<code>WHERE</code>), <strong>qué columnas</strong> (<code>SELECT</code>) y <strong>en qué orden</strong> (<code>ORDER BY</code>). El
+caso las usa las tres: de las cuatro notas registradas, se piden las de
+DB-101 con 60 o más, con el nombre y la nota, ordenadas por nombre.</p>
+<p>Linus queda fuera por no llegar a 60 y la nota de SE-201 queda fuera por no
+ser de ese curso. El orden alfabético hay que pedirlo: sin <code>ORDER BY</code>,
+ningún motor está obligado a devolver nada en un orden concreto, por mucho
+que en una tabla pequeña lo parezca.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>filas</th>
-<th>suma_notas</th>
+<th>estudiante</th>
+<th>nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>6</code></td>
-<td><code>402</code></td>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 004</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -278,207 +324,203 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/inmemorydb.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/datatype-numeric.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/queries-order.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/commands/zrangebyscore/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/inmemorydb.html
--- nota: el verificador abre la base en memoria, asi que cada ejecucion parte
---       del mismo estado exacto. Esa es la condicion de una medicion repetible.
+-- doc: https://sqlite.org/lang_select.html
+-- nota: probar a quitar el ORDER BY. Con cuatro filas el resultado parecera
+--       correcto igualmente, y esa casualidad es la que hace que el error
+--       sobreviva hasta produccion.
 
 -- === preparacion ===
 CREATE TABLE notas (
-    inscripcion INTEGER PRIMARY KEY,
-    estudiante  TEXT NOT NULL,
-    nota        INTEGER NOT NULL
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
--- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
-INSERT INTO notas (inscripcion, estudiante, nota) VALUES
-    (1, 'Ada',   90),
-    (2, 'Ada',   58),
-    (3, 'Linus', 78),
-    (4, 'Linus', 66),
-    (5, 'Grace', 55),
-    (6, 'Grace', 55);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+-- Tres decisiones separadas: que filas (WHERE), que columnas (SELECT) y en que
+-- orden se leen (ORDER BY). El orden hay que PEDIRLO: una tabla no lo tiene.
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Una base de datos en memoria se crea y se destruye con el proceso: cada ejecución parte exactamente del mismo estado, que es la condición de toda medición repetible.</li>
-<li><strong>Por qué no:</strong> Precisamente por partir siempre de cero, no reproduce lo que más afecta a un sistema real: cachés calientes, archivos fragmentados y estadísticas envejecidas.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/inmemorydb.html">https://sqlite.org/inmemorydb.html</a></li>
+<li><strong>Por qué sí:</strong> Implementa <code>WHERE</code>, <code>ORDER BY</code> y <code>LIMIT</code> con la sintaxis que comparten PostgreSQL, MySQL y DuckDB: es el subconjunto que de verdad se transfiere.</li>
+<li><strong>Por qué no:</strong> Con tablas pequeñas devuelve casi siempre las filas en el orden de inserción aunque no se pida, lo que refuerza justo la creencia equivocada que esta clase intenta corregir.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/data_types/numeric.html
--- nota: la nota se guarda como entero a proposito. Con coma flotante, dos
---       motores pueden dar 402 y 401.99999999999994 para la misma suma, y la
---       comparacion entre ellos dejaria de significar nada.
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby
+-- nota: aqui quitar el ORDER BY si cambia el orden entre ejecuciones, porque el
+--       motor lee en paralelo por trozos. Es la mejor demostracion de que una
+--       tabla no tiene orden.
 
 -- === preparacion ===
 CREATE TABLE notas (
-    inscripcion INTEGER PRIMARY KEY,
-    estudiante  VARCHAR NOT NULL,
-    nota        INTEGER NOT NULL
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
--- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
-INSERT INTO notas (inscripcion, estudiante, nota) VALUES
-    (1, 'Ada',   90),
-    (2, 'Ada',   58),
-    (3, 'Linus', 78),
-    (4, 'Linus', 66),
-    (5, 'Grace', 55),
-    (6, 'Grace', 55);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+-- Tres decisiones separadas: que filas (WHERE), que columnas (SELECT) y en que
+-- orden se leen (ORDER BY). El orden hay que PEDIRLO: una tabla no lo tiene.
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Además de la misma reproducibilidad en memoria, tiene tipos exactos: la nota se guarda como entero a propósito, porque una suma en coma flotante puede devolver 402 en un motor y 401.99999999999994 en otro y arruinar la comparación.</li>
-<li><strong>Por qué no:</strong> Su velocidad puede ocultar el problema que se quería medir: una consulta que aquí tarda milisegundos puede tardar segundos en el motor transaccional del que salieron los datos.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">https://duckdb.org/docs/stable/sql/data_types/numeric.html</a></li>
+<li><strong>Por qué sí:</strong> Al ejecutar en paralelo, el orden sin <code>ORDER BY</code> cambia de verdad entre ejecuciones: es el motor que mejor demuestra que el orden hay que pedirlo.</li>
+<li><strong>Por qué no:</strong> Añade atajos propios muy cómodos que no existen en ningún otro sitio, así que una consulta que funciona aquí no siempre es portable.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby">https://duckdb.org/docs/stable/sql/query_syntax/orderby</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/datatype-numeric.html
--- nota: acompanar la cifra con EXPLAIN (ANALYZE, BUFFERS) convierte el
---       resultado en evidencia: dice tambien cuanto trabajo costo obtenerlo.
-
-DROP TABLE IF EXISTS notas;
+-- doc: https://www.postgresql.org/docs/current/queries-order.html
+-- nota: la documentacion lo dice sin rodeos: sin ORDER BY, el orden de las
+--       filas es indeterminado. No es un descuido del motor, es el modelo.
 
 -- === preparacion ===
-CREATE TABLE notas (
-    inscripcion integer PRIMARY KEY,
-    estudiante  text NOT NULL,
-    nota        integer NOT NULL
-);
-
--- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
-INSERT INTO notas (inscripcion, estudiante, nota) VALUES
-    (1, 'Ada',   90),
-    (2, 'Ada',   58),
-    (3, 'Linus', 78),
-    (4, 'Linus', 66),
-    (5, 'Grace', 55),
-    (6, 'Grace', 55);
-
--- === consulta ===
-SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Con tipos exactos (<code>integer</code>, <code>numeric</code>) la suma es reproducible dígito a dígito, y <code>EXPLAIN (ANALYZE, BUFFERS)</code> permite acompañar la cifra con el trabajo que costó obtenerla: número y costo en la misma evidencia.</li>
-<li><strong>Por qué no:</strong> El estado del servidor forma parte del resultado: sin <code>VACUUM ANALYZE</code> y sin declarar si la caché estaba caliente, dos mediciones del mismo día no son comparables.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/datatype-numeric.html">https://www.postgresql.org/docs/current/datatype-numeric.html</a></li>
-</ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html
--- nota: al declarar la evidencia hay que declarar tambien la version del
---       servidor y los parametros que importan; la configuracion por omision
---       varia mucho entre imagenes y distribuciones.
-
 DROP TABLE IF EXISTS notas;
 
--- === preparacion ===
 CREATE TABLE notas (
-    inscripcion INT PRIMARY KEY,
-    estudiante  VARCHAR(50) NOT NULL,
-    nota        INT NOT NULL
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-
--- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
-INSERT INTO notas (inscripcion, estudiante, nota) VALUES
-    (1, 'Ada',   90),
-    (2, 'Ada',   58),
-    (3, 'Linus', 78),
-    (4, 'Linus', 66),
-    (5, 'Grace', 55),
-    (6, 'Grace', 55);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66);
 
 -- === consulta ===
-SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
+-- Tres decisiones separadas: que filas (WHERE), que columnas (SELECT) y en que
+-- orden se leen (ORDER BY). El orden hay que PEDIRLO: una tabla no lo tiene.
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota &gt;= 60
+ORDER BY estudiante;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> El conjunto de datos se carga con las mismas órdenes en cualquier instalación, así que la evidencia se puede repetir en la máquina de otra persona sin negociar nada.</li>
-<li><strong>Por qué no:</strong> La configuración por omisión varía mucho entre distribuciones e imágenes (tamaño del buffer pool, modo estricto, intercalación), así que la versión no basta: hay que declarar también los parámetros que importan.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html</a></li>
+<li><strong>Por qué sí:</strong> Su documentación afirma explícitamente que sin <code>ORDER BY</code> el orden es indeterminado; y con un índice adecuado, <code>ORDER BY ... LIMIT</code> no ordena nada: lee las primeras entradas del índice y para.</li>
+<li><strong>Por qué no:</strong> La paginación con <code>OFFSET</code> grande obliga a leer y descartar todo lo anterior: la página mil cuesta mil veces la primera, y hay que sustituirla por paginación por clave.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-order.html">https://www.postgresql.org/docs/current/queries-order.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/004-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
-// nota: $group sin _id agrega sobre toda la coleccion. Los enteros de mongosh
-//       son de doble precision salvo que se use NumberInt o NumberDecimal: por
-//       eso las notas se escriben como enteros exactos y no como decimales.
+// doc: https://www.mongodb.com/docs/manual/reference/method/cursor.sort/
+// nota: las mismas tres decisiones con otra sintaxis: el primer argumento de
+//       find() es el WHERE, el segundo es el SELECT, y sort() es el ORDER BY.
 
 // === preparacion ===
 db.notas.drop();
 db.notas.insertMany([
-  { _id: 1, estudiante: &quot;Ada&quot;, nota: NumberInt(90) },
-  { _id: 2, estudiante: &quot;Ada&quot;, nota: NumberInt(58) },
-  { _id: 3, estudiante: &quot;Linus&quot;, nota: NumberInt(78) },
-  { _id: 4, estudiante: &quot;Linus&quot;, nota: NumberInt(66) },
-  { _id: 5, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
-  { _id: 6, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
 ]);
 
 // === consulta ===
 db.notas
-  .aggregate([
-    { $group: { _id: null, filas: { $sum: 1 }, suma_notas: { $sum: &quot;$nota&quot; } } },
-  ])
-  .forEach((d) =&gt; print(d.filas + &quot;|&quot; + d.suma_notas));
+  .find({ curso: &quot;DB-101&quot;, nota: { $gte: 60 } }, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Permite comprobar que el conjunto de datos es el mismo aunque el modelo no lo sea: seis documentos y la misma suma, con la tubería de agregación haciendo el papel del <code>GROUP BY</code>.</li>
-<li><strong>Por qué no:</strong> Los números son de coma flotante salvo que se use <code>NumberDecimal</code> explícitamente, y esa diferencia aparece justo cuando se compara con un motor relacional y las sumas no cuadran en el último decimal.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
+<li><strong>Por qué sí:</strong> <code>find(filtro, proyección).sort()</code> son las mismas tres decisiones con otra sintaxis: sirve para ver que el concepto no es de SQL.</li>
+<li><strong>Por qué no:</strong> Sin un índice que cubra el <code>sort</code>, la ordenación en memoria está limitada a 32 MB y la consulta <strong>falla</strong> en vez de ir lenta: un fallo honesto, y una sorpresa en producción.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/method/cursor.sort/">https://www.mongodb.com/docs/manual/reference/method/cursor.sort/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/commands/zrangebyscore/
+# nota: el orden se paga en la ESCRITURA, no en la consulta: ZADD mantiene el
+#       conjunto ordenado por puntuacion. Por eso «los aprobados de DB-101» es
+#       leer un rango y no ordenar nada.
+#       El precio: ese es el UNICO orden disponible. Ordenar por nombre exigiria
+#       otra estructura, mantenida a mano en cada escritura. Aqui el resultado
+#       se reordena por nombre en el script para poder compararlo con los demas
+#       motores, y eso mismo es la prueba de la limitacion.
+
+# === preparacion ===
+FLUSHDB
+ZADD notas:DB-101 90 Ada
+ZADD notas:DB-101 58 Linus
+ZADD notas:DB-101 72 Grace
+ZADD notas:SE-201 66 Ada
+
+# === consulta ===
+EVAL &quot;local t=redis.call('ZRANGEBYSCORE','notas:DB-101','60','+inf','WITHSCORES') local m={} for i=1,#t,2 do m[#m+1]={t[i],t[i+1]} end table.sort(m,function(a,b) return a[1]&lt;b[1] end) local r={} for _,v in ipairs(m) do r[#r+1]=v[1]..'|'..v[2] end return r&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un conjunto ordenado mantiene el orden <strong>al escribir</strong>, así que pedir los aprobados de un curso es leer un rango: no hay nada que ordenar en el momento de la consulta.</li>
+<li><strong>Por qué no:</strong> Ese orden es el único disponible y hay que haberlo previsto: ordenar por nombre en vez de por nota exigiría otra estructura, mantenida a mano en cada escritura.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/zrangebyscore/">https://redis.io/docs/latest/commands/zrangebyscore/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -493,10 +535,10 @@ db.notas
 </thead>
 <tbody>
 <tr>
-<td>Redis</td>
-<td>No hay agregación sobre un conjunto de registros: habría que traerse los seis valores al cliente y sumarlos allí, con lo que la cifra ya no la calcula el almacén y deja de ser evidencia sobre él.</td>
-<td>Mantener el contador y la suma como claves que se actualizan en cada escritura (<code>INCRBYFLOAT</code>), asumiendo que son un resumen mantenido a mano y no un cálculo sobre los datos.</td>
-<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc</a></td>
+<td>Apache Cassandra</td>
+<td>El filtro <code>nota &gt;= 60</code> solo sería legal si <code>nota</code> fuera columna de agrupamiento; sobre cualquier otra columna exige <code>ALLOW FILTERING</code>, que es la forma que tiene Cassandra de avisar de que va a escanear.</td>
+<td>Modelar la tabla con el curso como partición y la nota como agrupamiento, de forma que el filtro por rango sea el orden físico. Se estudia en la parte de columnas anchas.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -547,14 +589,12 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
 <li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
   Motor embebido usado por los laboratorios sin dependencias del programa.</li>
-<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
-  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
-<li><strong>Docker, Inc.</strong> (2026). <a href="https://docs.docker.com/compose/">Docker Compose Documentation</a>.<br />
-  Perfiles y comprobaciones de salud usados por los laboratorios con contenedores.</li>
-<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
-  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
 </ul>
 <hr />
 <blockquote>
@@ -563,8 +603,8 @@ enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="004">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="003.html"><span class="sentido">← Anterior · 003</span>Independencia de datos y los tres niveles de esquema</a>
-<a class="siguiente" href="005.html"><span class="sentido">Siguiente · 005 →</span>De requisitos ambiguos a entidades defendibles</a>
+<a class="anterior" href="003.html"><span class="sentido">← Anterior · 003</span>Tu primera base de datos: crear, insertar y leer</a>
+<a class="siguiente" href="005.html"><span class="sentido">Siguiente · 005 →</span>Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva</a>
 </nav>
 </main>
 <footer>

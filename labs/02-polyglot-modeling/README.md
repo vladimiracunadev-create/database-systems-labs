@@ -5,10 +5,10 @@
 
 **Duración:** 120 minutos · **Dependencias:** un editor de texto (contenedores, opcionales)
 · **Entrega:** documento con los tres modelos y la decisión razonada
-· **Partes:** [01](../../classes/part-01-modelado-conceptual-y-requisitos/README.md) ·
-[05](../../classes/part-05-documentos-y-clave-valor/README.md) ·
-[06](../../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md) ·
-[13](../../classes/part-13-arquitectura-y-proyecto-final/README.md)
+· **Partes:** [01](../../classes/part-02-modelado-conceptual-y-requisitos/README.md) ·
+[05](../../classes/part-06-documentos-y-clave-valor/README.md) ·
+[06](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) ·
+[13](../../classes/part-14-arquitectura-y-proyecto-final/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -79,9 +79,9 @@ aprende.
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [024–027](../../classes/part-05-documentos-y-clave-valor/README.md),
-  [028](../../classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/README.md),
-  [062 — Persistencia políglota por evidencia](../../classes/part-13-arquitectura-y-proyecto-final/062-persistencia-poliglota-por-evidencia/README.md).
+- **Clases:** [024–027](../../classes/part-06-documentos-y-clave-valor/README.md),
+  [028](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/README.md),
+  [062 — Persistencia políglota por evidencia](../../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md).
 - **Rutas:** [Arquitecto de datos](../../rutas/arquitectura.md),
   [Ingeniero de datos](../../rutas/ingenieria-de-datos.md).
 - **Certificaciones:** el dominio de datos no relacionales del

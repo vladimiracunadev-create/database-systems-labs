@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Observabilidad, objetivos de servicio y capacidad. Parte 10: Operación, seguridad y gobierno.">
+<meta name="description" content="Planes de ejecución: leer EXPLAIN y refutar una hipótesis. Parte 09: Almacenamiento, índices y planes.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/052.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="052 — Observabilidad, objetivos de servicio y capacidad · Database Systems Labs">
-<meta property="og:description" content="Observabilidad, objetivos de servicio y capacidad. Parte 10: Operación, seguridad y gobierno.">
+<meta property="og:title" content="052 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis · Database Systems Labs">
+<meta property="og:description" content="Planes de ejecución: leer EXPLAIN y refutar una hipótesis. Parte 09: Almacenamiento, índices y planes.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/052.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "052 — Observabilidad, objetivos de servicio y capacidad", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["percentil", "presupuesto de error", "saturación", "consulta lenta"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>052 — Observabilidad, objetivos de servicio y capacidad · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "052 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["optimizador por costos", "estadística", "estimación de cardinalidad", "costo frente a tiempo"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>052 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,287 +49,293 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-10.html">Parte 10 · Operación, seguridad y gobierno</a>
+  <a href="parte-09.html">Parte 09 · Almacenamiento, índices y planes</a>
   <span aria-hidden="true">/</span><span>Clase 052</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="052--observabilidad-objetivos-de-servicio-y-capacidad">052 — Observabilidad, objetivos de servicio y capacidad</h1>
+<h1 id="052--planes-de-ejecución-leer-explain-y-refutar-una-hipótesis">052 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="051.html">← Anterior</a> · <a href="053.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="051.html">← Anterior</a> · <a href="053.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 10 — Operación, seguridad y gobierno · Avanzado ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code> · laboratorio
+<p>Parte 09 — Almacenamiento, índices y planes · Avanzado ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>percentil</code> · <code>presupuesto de error</code> · <code>saturación</code> · <code>consulta lenta</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>optimizador por costos</code> · <code>estadística</code> · <code>estimación de cardinalidad</code> · <code>costo frente a tiempo</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Saber cómo está la base antes de que alguien se queje, y expresar «está bien» como un número acordado en lugar de una impresión.</p>
+<p>Leer un plan de ejecución como evidencia y no como adorno. El plan permite convertir «va lento» en una hipótesis concreta, comprobable y refutable.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Definir un SLI y un SLO de base de datos y derivar el presupuesto de error.</li>
-<li>Explicar por qué la latencia se mide en percentiles y nunca en medias.</li>
-<li>Instrumentar las cuatro señales de un almacén de datos.</li>
-<li>Identificar las consultas que consumen el tiempo total, no las más lentas.</li>
-<li>Estimar capacidad con un criterio de saturación.</li>
+<li>Explicar cómo el optimizador por costos elige un plan.</li>
+<li>Distinguir costo estimado de tiempo real y filas estimadas de filas devueltas.</li>
+<li>Diagnosticar los cuatro fallos habituales de estimación.</li>
+<li>Refutar una hipótesis de rendimiento con evidencia.</li>
+<li>Saber cuándo el problema es la estadística y no el índice.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="sli-slo-y-presupuesto-de-error">SLI, SLO y presupuesto de error</h3>
-<ul>
-<li><strong>SLI:</strong> lo que se mide (<code>% de consultas por debajo de 100 ms</code>).</li>
-<li><strong>SLO:</strong> el objetivo acordado (<code>99,9 % de las consultas por debajo de 100 ms en 30 días</code>).</li>
-<li><strong>Presupuesto de error:</strong> lo que se permite fallar. Con un SLO del 99,9 % son <strong>43 minutos al mes</strong>.</li>
-</ul>
-<p>El presupuesto es una herramienta de decisión: mientras quede, se puede desplegar y experimentar; si se agota, se para y se estabiliza. Convierte una discusión de opiniones en una regla.</p>
-<h3 id="percentiles-no-medias">Percentiles, no medias</h3>
-<p>Dean y Barroso lo demuestran: la media oculta exactamente lo que importa.</p>
-<pre><code class="language-text">1 000 consultas: 990 de 5 ms, 10 de 2 000 ms
-media   = (990·5 + 10·2000) / 1000 = 24,95 ms      ← «todo bien»
-p50     = 5 ms
-p99     = 2 000 ms                                  ← 10 usuarios esperaron 2 s
+<h3 id="el-optimizador-por-costos">El optimizador por costos</h3>
+<p>Selinger et al. (1979) definieron el método que siguen todos los motores relacionales:</p>
+<ol>
+<li>Enumerar planes equivalentes (equivalencias E1–E6 de la clase 011).</li>
+<li>Estimar, para cada uno, cuántas filas produce cada operador a partir de las <strong>estadísticas</strong> del catálogo.</li>
+<li>Asignar un costo mediante un modelo (páginas secuenciales, páginas aleatorias, CPU por fila).</li>
+<li>Elegir el más barato.</li>
+</ol>
+<p>El eslabón débil es el paso 2: <strong>si la estimación de cardinalidad es mala, la elección será mala</strong>, por bueno que sea el modelo de costos. Casi todos los planes malos son fallos de estimación.</p>
+<h3 id="las-dos-parejas-de-números">Las dos parejas de números</h3>
+<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) SELECT ...;
 </code></pre>
-<p>Y el efecto se <strong>amplifica</strong> cuando una petición hace varias consultas. Si una página lanza 20 consultas en serie con p99 de 100 ms:</p>
-<pre><code class="language-text">P(al menos una consulta cae en el p99) = 1 - 0,99²⁰ = 18,2 %
+<pre><code class="language-text">Seq Scan on enrollments  (cost=0.00..91234.00 rows=12 width=32)
+                         (actual time=0.03..842.11 rows=3841022 loops=1)
+  Filter: (nota &gt; 4.0)
+  Rows Removed by Filter: 1158978
+  Buffers: shared hit=1204 read=64586
 </code></pre>
-<p>Casi una de cada cinco cargas de página sufre la latencia del p99. Por eso la cola alta importa mucho más de lo que su porcentaje sugiere, y por eso reducir el número de consultas por petición suele mejorar más que optimizar cada una.</p>
-<h3 id="las-cuatro-señales">Las cuatro señales</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Señal</th>
-<th>Qué medir en una base de datos</th>
+<th>Pareja</th>
+<th>Qué comparar</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Latencia</strong></td>
-<td>p50, p95, p99 por tipo de consulta; separando errores de aciertos</td>
+<td><code>cost</code> frente a <code>actual time</code></td>
+<td>El costo es una unidad interna, <strong>no</strong> milisegundos. Solo sirve para comparar planes entre sí</td>
 </tr>
 <tr>
-<td><strong>Tráfico</strong></td>
-<td>Consultas/s, transacciones/s, filas devueltas/s</td>
-</tr>
-<tr>
-<td><strong>Errores</strong></td>
-<td>Fallos de serialización, interbloqueos, tiempos agotados, conexiones rechazadas</td>
-</tr>
-<tr>
-<td><strong>Saturación</strong></td>
-<td>Conexiones usadas / máximo, retraso de réplica, filas muertas, espacio, aciertos de caché</td>
+<td><code>rows</code> estimadas frente a <code>rows</code> reales</td>
+<td><strong>Aquí está el diagnóstico.</strong> Una desviación de más de 10× explica casi cualquier plan malo</td>
 </tr>
 </tbody>
 </table></div>
-<p>La saturación es la que <strong>predice</strong>; las otras tres describen el presente.</p>
-<h3 id="las-consultas-que-importan">Las consultas que importan</h3>
-<p>El error habitual es optimizar la consulta más lenta. Lo correcto es optimizar la que consume <strong>más tiempo total</strong>:</p>
-<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-
-SELECT substring(query, 1, 70) AS consulta,
-       calls,
-       round(mean_exec_time::numeric, 2)  AS media_ms,
-       round(total_exec_time::numeric)    AS total_ms,
-       round(100 * total_exec_time / sum(total_exec_time) OVER (), 1) AS pct
-FROM pg_stat_statements
-ORDER BY total_exec_time DESC LIMIT 10;
+<p>En el ejemplo: estimó 12 filas y devolvió 3 841 022. Un factor de 320 000. Con esa estimación el planificador eligió un bucle anidado que, con 3,8 millones de filas, es catastrófico.</p>
+<h3 id="los-cuatro-fallos-de-estimación">Los cuatro fallos de estimación</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Fallo</th>
+<th>Síntoma</th>
+<th>Corrección</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Estadísticas obsoletas</strong></td>
+<td>Estimaciones lejanas tras una carga masiva</td>
+<td><code>ANALYZE tabla</code></td>
+</tr>
+<tr>
+<td><strong>Columnas correlacionadas</strong></td>
+<td>Subestimación con varios <code>AND</code></td>
+<td><code>CREATE STATISTICS ... (dependencies)</code></td>
+</tr>
+<tr>
+<td><strong>Distribución sesgada</strong></td>
+<td>Bien para valores comunes, mal para los raros</td>
+<td>Subir <code>default_statistics_target</code></td>
+</tr>
+<tr>
+<td><strong>Expresión opaca</strong></td>
+<td>Estimación fija del 0,5 % o similar</td>
+<td>Índice de expresión, o reescribir el predicado</td>
+</tr>
+</tbody>
+</table></div>
+<p>El segundo merece detalle. El planificador supone <strong>independencia</strong> entre predicados:</p>
+<pre><code class="language-text">sel(ciudad='Santiago') = 0,30
+sel(region='Metropolitana') = 0,35
+estimación combinada = 0,30 · 0,35 = 0,105  → 10,5 %
+realidad: casi toda Santiago está en la Metropolitana → ~30 %
 </code></pre>
-<pre><code class="language-text">consulta                              calls    media_ms   total_ms   pct
-SELECT ... FROM enrollments WHERE ... 4 200 000     2,10  8 820 000  61,2   ← aquí
-SELECT ... FROM courses c JOIN ...           40  8 100,00   324 000   2,2   ← no aquí
+<p>Subestima por un factor de 3. Con varias columnas correlacionadas, el error se multiplica. PostgreSQL 10+ permite corregirlo:</p>
+<pre><code class="language-sql">CREATE STATISTICS est_ciudad_region (dependencies, ndistinct)
+  ON ciudad, region FROM direcciones;
+ANALYZE direcciones;
 </code></pre>
-<p>Una consulta de 2 ms ejecutada cuatro millones de veces consume 27 veces más tiempo que una de 8 segundos ejecutada 40 veces. Bajarla de 2,1 ms a 0,8 ms libera más capacidad que cualquier trabajo sobre la lenta.</p>
-<h3 id="consultas-en-curso">Consultas en curso</h3>
-<pre><code class="language-sql">SELECT pid, now() - query_start AS duracion, state, wait_event_type, wait_event,
-       substring(query, 1, 80)
-FROM pg_stat_activity
-WHERE state &lt;&gt; 'idle' ORDER BY duracion DESC LIMIT 10;
-</code></pre>
-<p><code>wait_event</code> dice <strong>por qué</strong> espera: bloqueo, E/S, red o cliente. Un <code>Client:ClientRead</code> prolongado significa que el motor terminó y la aplicación no lee: el problema no está en la base.</p>
+<h3 id="método-de-refutación">Método de refutación</h3>
+<p>Un plan no se «mejora»: se formula una hipótesis y se intenta <strong>refutarla</strong>.</p>
 <pre><code class="language-mermaid">flowchart TD
-    M[&quot;Métricas&quot;] --&gt; L[&quot;Latencia p50/p95/p99&quot;]
-    M --&gt; T[&quot;Tráfico&quot;]
-    M --&gt; E[&quot;Errores&quot;]
-    M --&gt; S[&quot;Saturación&quot;]
-    S --&gt; S1[&quot;conexiones / máx&quot;]
-    S --&gt; S2[&quot;retraso de réplica&quot;]
-    S --&gt; S3[&quot;filas muertas&quot;]
-    S --&gt; S4[&quot;espacio en disco&quot;]
-    L --&gt; SLO{&quot;¿Dentro del SLO?&quot;}
-    SLO -- &quot;Sí&quot; --&gt; PB[&quot;Queda presupuesto:&lt;br/&gt;se puede desplegar&quot;]
-    SLO -- &quot;No&quot; --&gt; A[&quot;Alerta → diagnóstico&quot;]
-    A --&gt; D1[&quot;pg_stat_statements:&lt;br/&gt;¿qué consume el tiempo total?&quot;]
-    A --&gt; D2[&quot;pg_stat_activity:&lt;br/&gt;¿qué está esperando ahora?&quot;]
-    A --&gt; D3[&quot;EXPLAIN ANALYZE (clase 042)&quot;]
+    S[&quot;Síntoma: consulta lenta&quot;] --&gt; P[&quot;EXPLAIN ANALYZE&lt;br/&gt;capturar el plan completo&quot;]
+    P --&gt; D{&quot;¿rows estimadas ≈&lt;br/&gt;rows reales?&quot;}
+    D -- &quot;No, &gt;10×&quot; --&gt; E[&quot;Hipótesis: fallo de estimación&quot;]
+    E --&gt; E1[&quot;ANALYZE · estadísticas extendidas ·&lt;br/&gt;subir el objetivo&quot;]
+    E1 --&gt; M[&quot;Volver a medir&quot;]
+    D -- &quot;Sí&quot; --&gt; O{&quot;¿Qué operador&lt;br/&gt;consume el tiempo?&quot;}
+    O --&gt; O1[&quot;Barrido: ¿falta índice?&quot;]
+    O --&gt; O2[&quot;Orden: ¿work_mem o índice ordenado?&quot;]
+    O --&gt; O3[&quot;Reunión: ¿algoritmo adecuado?&quot;]
+    O1 --&gt; H[&quot;Hipótesis concreta&quot;]
+    O2 --&gt; H
+    O3 --&gt; H
+    H --&gt; T[&quot;Aplicar el cambio&lt;br/&gt;en un entorno comparable&quot;]
+    T --&gt; M
+    M --&gt; R{&quot;¿Mejoró en&lt;br/&gt;condiciones iguales?&quot;}
+    R -- &quot;No&quot; --&gt; RF[&quot;Hipótesis refutada:&lt;br/&gt;revertir y volver a P&quot;]
+    R -- &quot;Sí&quot; --&gt; OK[&quot;Documentar: antes, después,&lt;br/&gt;condiciones y límite&quot;]
 </code></pre>
+<p>El paso que casi nadie da es <strong>revertir cuando la hipótesis se refuta</strong>. Los índices que no sirvieron se quedan, y al cabo de dos años la tabla tiene once índices de los que se usan cuatro.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Plataforma con SLO: <em>«99,5 % de las consultas de lectura por debajo de 200 ms, medido en ventanas de 30 días»</em>.</p>
-<p><strong>Presupuesto de error:</strong></p>
-<pre><code class="language-text">0,5 % de 30 días = 3 h 39 min de incumplimiento permitido
-con 50 M de consultas mensuales: 250 000 consultas pueden exceder 200 ms
+<p>Síntoma: el panel del curso tarda 8 s.</p>
+<pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
+SELECT c.nombre, count(*) AS inscritos, avg(e.nota) AS promedio
+FROM courses c JOIN enrollments e ON e.course_id = c.id
+WHERE c.periodo = '2026-1' AND e.estado = 'activa'
+GROUP BY c.id, c.nombre;
 </code></pre>
-<p><strong>Panel mínimo:</strong></p>
-<pre><code class="language-sql">-- Latencia por tipo, desde pg_stat_statements (media; los percentiles reales
--- vienen del cliente, que es donde se percibe la latencia de verdad)
-SELECT queryid, calls, mean_exec_time, max_exec_time FROM pg_stat_statements
-ORDER BY total_exec_time DESC LIMIT 20;
-
--- Saturación de conexiones
-SELECT count(*) FILTER (WHERE state = 'active')          AS activas,
-       count(*)                                          AS totales,
-       current_setting('max_connections')::int           AS maximo,
-       round(100.0 * count(*) / current_setting('max_connections')::int, 1) AS pct
-FROM pg_stat_activity;
-
--- Retraso de réplica en segundos
-SELECT client_addr, extract(epoch FROM replay_lag) AS retraso_s FROM pg_stat_replication;
-
--- Deuda de vacuum
-SELECT relname, n_dead_tup,
-       round(100.0*n_dead_tup/NULLIF(n_live_tup+n_dead_tup,0),1) AS pct_muertas
-FROM pg_stat_user_tables WHERE n_dead_tup &gt; 100000 ORDER BY n_dead_tup DESC;
+<p><strong>Plan inicial:</strong></p>
+<pre><code class="language-text">HashAggregate  (cost=... rows=40) (actual time=8123.4..8124.1 rows=40 loops=1)
+  -&gt;  Nested Loop  (cost=... rows=53) (actual time=0.4..7890.2 rows=1521044 loops=1)
+        -&gt;  Seq Scan on courses c  (rows=40) (actual rows=40 loops=1)
+              Filter: (periodo = '2026-1')
+        -&gt;  Index Scan using enr_course_idx on enrollments e
+              (cost=... rows=1) (actual rows=38026 loops=40)
+              Index Cond: (course_id = c.id)
+              Filter: (estado = 'activa')
+              Rows Removed by Filter: 6710
+        Buffers: shared hit=201 read=182304
 </code></pre>
-<p><strong>Alertas, con la distinción que importa:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Alerta</th>
-<th>Umbral</th>
-<th>Tipo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>p99 de lectura &gt; 200 ms durante 10 min</td>
-<td>SLO</td>
-<td><strong>Página</strong>: afecta a usuarios</td>
-</tr>
-<tr>
-<td>Conexiones &gt; 80 % del máximo</td>
-<td>Saturación</td>
-<td><strong>Página</strong>: precede a un rechazo</td>
-</tr>
-<tr>
-<td>Retraso de réplica &gt; 30 s</td>
-<td>Saturación</td>
-<td>Página</td>
-</tr>
-<tr>
-<td>Espacio libre &lt; 20 %</td>
-<td>Saturación</td>
-<td>Página</td>
-</tr>
-<tr>
-<td>Filas muertas &gt; 30 % en tabla grande</td>
-<td>Saturación</td>
-<td><strong>Ticket</strong>: degradación lenta</td>
-</tr>
-<tr>
-<td>Interbloqueos &gt; 10/h</td>
-<td>Errores</td>
-<td>Ticket</td>
-</tr>
-<tr>
-<td>Sin restauración verificada en 35 días</td>
-<td>Proceso</td>
-<td>Ticket</td>
-</tr>
-</tbody>
-</table></div>
-<p>La distinción página/ticket es la que hace sostenible la guardia: solo despierta a alguien lo que afecta a usuarios o lo que va a hacerlo pronto.</p>
-<p><strong>Capacidad.</strong> La regla operativa más útil para una base transaccional:</p>
-<pre><code class="language-text">Con utilización &gt; 70 % sostenida, la latencia crece de forma no lineal
-(teoría de colas: el tiempo de espera tiende a infinito al acercarse a 1)
-
-utilización actual: 45 %
-crecimiento:        8 % mensual
-meses hasta el 70 %: ln(70/45) / ln(1,08) ≈ 5,7 meses
+<p><strong>Diagnóstico, leyendo los números:</strong></p>
+<ol>
+<li>El bucle anidado estimó <strong>53</strong> filas y produjo <strong>1 521 044</strong>: factor 28 700.</li>
+<li>El origen: el índice interno estimó <code>rows=1</code> por iteración y devolvió 38 026.</li>
+<li>Con <code>rows=1</code> estimado, el bucle anidado parecía barato. Con 38 026, es la peor elección posible.</li>
+</ol>
+<p><strong>Hipótesis 1:</strong> las estadísticas de <code>enrollments</code> están obsoletas.</p>
+<pre><code class="language-sql">ANALYZE enrollments;
 </code></pre>
-<p>Ese número —cinco meses y medio— es lo que convierte «hay que crecer en algún momento» en una tarea con fecha.</p>
-<p><strong>Contraejemplo instructivo.</strong> Un servicio reportaba latencia alta; el panel de la base mostraba p99 de 3 ms y utilización del 30 %.</p>
-<pre><code class="language-sql">SELECT wait_event_type, wait_event, count(*)
-FROM pg_stat_activity WHERE state &lt;&gt; 'idle' GROUP BY 1,2 ORDER BY 3 DESC;
+<p>Nueva ejecución: la estimación interna pasa de 1 a 16 800. El planificador cambia a reunión por hash:</p>
+<pre><code class="language-text">HashAggregate  (actual time=612.3..613.0 rows=40 loops=1)
+  -&gt;  Hash Join  (actual time=88.1..520.7 rows=1521044 loops=1)
+        -&gt;  Seq Scan on enrollments e   (actual rows=4250000)
+              Filter: (estado = 'activa')
+        -&gt;  Hash  -&gt;  Seq Scan on courses c  (actual rows=40)
 </code></pre>
-<pre><code class="language-text">Client   ClientRead    47
+<p><strong>8 123 ms → 613 ms</strong> sin crear un solo índice. El problema nunca fue el índice: era la estadística.</p>
+<p><strong>Hipótesis 2:</strong> todavía se barren 4,25 millones de inscripciones. Un índice parcial evitaría el barrido.</p>
+<pre><code class="language-sql">CREATE INDEX enr_activas ON enrollments (course_id) INCLUDE (nota)
+WHERE estado = 'activa';
 </code></pre>
-<p>Cuarenta y siete conexiones esperando a que la aplicación <strong>leyera</strong> el resultado. El motor había terminado. El cuello de botella estaba en el cliente, que procesaba fila a fila. La base estaba sana y el panel de la base lo decía; sin esa consulta, el equipo habría pasado días optimizando consultas que ya eran rápidas.</p>
+<pre><code class="language-text">HashAggregate  (actual time=214.8..215.2 rows=40 loops=1)
+  -&gt;  Nested Loop  (actual rows=1521044 loops=1)
+        -&gt;  Seq Scan on courses c  (actual rows=40)
+        -&gt;  Index Only Scan using enr_activas  (actual rows=38026 loops=40)
+              Heap Fetches: 0
+</code></pre>
+<p><strong>613 ms → 215 ms.</strong> <code>Heap Fetches: 0</code> confirma que el índice cubre la consulta.</p>
+<p><strong>Registro de evidencia, que es el entregable:</strong></p>
+<pre><code class="language-text">Consulta      : panel del curso, período 2026-1
+Antes         : 8 123 ms · bucle anidado · estimación 53 / real 1 521 044
+Intervención 1: ANALYZE enrollments        → 613 ms (reunión por hash)
+Intervención 2: índice parcial cubriente   → 215 ms (Heap Fetches: 0)
+Costo añadido : índice de 92 MB, mantenido en cada escritura de fila activa
+Condiciones   : PostgreSQL 16, 5 M inscripciones, caché caliente en las tres medidas
+No demuestra  : nada sobre concurrencia; una sola sesión
+</code></pre>
+<p>La penúltima línea —caché caliente en las tres medidas— es lo que hace comparables los números. La última evita que alguien extrapole.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Pregunta</th>
-<th>Fuente</th>
+<th>Señal en el plan</th>
+<th>Causa probable</th>
+<th>Acción</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>¿Qué consume el tiempo total?</td>
-<td><code>pg_stat_statements</code> por <code>total_exec_time</code></td>
+<td><code>rows</code> estimadas ≪ reales</td>
+<td>Estadísticas obsoletas o correlación</td>
+<td><code>ANALYZE</code>, estadísticas extendidas</td>
 </tr>
 <tr>
-<td>¿Qué pasa ahora mismo?</td>
-<td><code>pg_stat_activity</code></td>
+<td><code>Rows Removed by Filter</code> alto</td>
+<td>Índice sin la columna del filtro</td>
+<td>Añadirla al índice</td>
 </tr>
 <tr>
-<td>¿Por qué esta consulta es lenta?</td>
-<td><code>EXPLAIN ANALYZE</code> (clase 042)</td>
+<td><code>Sort Method: external merge</code></td>
+<td><code>work_mem</code> insuficiente</td>
+<td>Subirlo o indexar el orden</td>
 </tr>
 <tr>
-<td>¿Estamos saturando?</td>
-<td>Conexiones, retraso, espacio, filas muertas</td>
+<td>Bucle anidado con <code>loops</code> alto</td>
+<td>Estimación baja del interno</td>
+<td>Corregir estadística</td>
 </tr>
 <tr>
-<td>¿Cumplimos lo prometido?</td>
-<td>SLI frente a SLO, con percentiles del cliente</td>
+<td><code>Heap Fetches</code> alto en barrido de índice</td>
+<td>Mapa de visibilidad desactualizado</td>
+<td><code>VACUUM</code></td>
 </tr>
 <tr>
-<td>¿Cuánto aguantamos?</td>
-<td>Utilización + tasa de crecimiento</td>
+<td><code>read</code> ≫ <code>hit</code> en <code>Buffers</code></td>
+<td>El conjunto de trabajo no cabe</td>
+<td>Más memoria o menos datos</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Medir la media.</strong> Oculta la cola, que es lo que sufre el usuario.</li>
-<li><strong>Optimizar la consulta más lenta.</strong> Casi nunca es la que consume el tiempo.</li>
-<li><strong>Alertar sobre CPU.</strong> Rara vez es la causa en una base de datos.</li>
-<li><strong>Medir la latencia solo en el servidor.</strong> El usuario percibe la del cliente, con red y agrupador incluidos.</li>
-<li><strong>Alertas sin distinguir página de ticket.</strong> Fatiga de alertas y guardias que se ignoran.</li>
-<li><strong>SLO sin acuerdo con el negocio.</strong> Un objetivo que nadie firmó no dirige ninguna decisión.</li>
-<li><strong>No medir la saturación.</strong> Se descubre el límite cuando se cruza.</li>
+<li><strong>Leer <code>cost</code> como milisegundos.</strong> Es una unidad interna sin significado absoluto.</li>
+<li><strong>Usar <code>EXPLAIN</code> sin <code>ANALYZE</code>.</strong> No hay filas reales que comparar.</li>
+<li><strong>Crear índices antes de mirar la estimación.</strong> La mitad de los planes malos se arreglan con <code>ANALYZE</code>.</li>
+<li><strong>Medir una vez en frío y otra en caliente.</strong> Los números dejan de ser comparables.</li>
+<li><strong>Forzar el plan con pistas.</strong> Tapa el síntoma y estorba cuando los datos cambian.</li>
+<li><strong>No revertir lo que no funcionó.</strong> Los índices inútiles se acumulan.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La instrumentación se instala <strong>antes</strong> del incidente. Durante uno, no hay tiempo de crear un panel, y las decisiones se toman con la intuición de quien habla más fuerte. <code>pg_stat_statements</code> activado desde el primer día es la inversión de menor costo y mayor retorno.</p>
+<p>Un plan que degrada tras un despliegue suele deberse a una carga masiva sin <code>ANALYZE</code> o a un cambio en la distribución de datos. Guardar los planes de las consultas críticas como referencia permite detectar el cambio en minutos en vez de en días.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Define un SLI y un SLO para una operación crítica y calcula su presupuesto de error.</li>
-<li>Instala <code>pg_stat_statements</code> y ordena por tiempo total; identifica la consulta dominante.</li>
-<li>Construye el panel con las cuatro señales y clasifica cada alerta en página o ticket.</li>
-<li>Calcula los meses que faltan hasta el 70 % de utilización con tu crecimiento real.</li>
+<li>Captura el plan de tu consulta más lenta con <code>ANALYZE</code> y <code>BUFFERS</code>.</li>
+<li>Identifica el operador con mayor desviación entre estimación y realidad.</li>
+<li>Formula una hipótesis, aplícala y vuelve a medir en las mismas condiciones.</li>
+<li>Escribe el registro de evidencia completo, incluida la línea de «no demuestra».</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Con p99 de 100 ms y 20 consultas por petición, ¿qué fracción de peticiones sufre la cola?</li>
-<li>¿Por qué una consulta de 2 ms puede ser más urgente que una de 8 s?</li>
-<li>Da tres métricas de saturación de tu base y el umbral que elegirías para cada una.</li>
-<li>Interpreta un <code>wait_event</code> de <code>Client:ClientRead</code> sostenido en 50 conexiones.</li>
+<li>¿Por qué una subestimación de cardinalidad lleva a elegir bucle anidado?</li>
+<li>Explica por qué el planificador subestima con columnas correlacionadas y cómo se corrige.</li>
+<li>¿Qué significa <code>Heap Fetches</code> distinto de cero en un barrido de índice?</li>
+<li>Da una hipótesis tuya que resultó refutada y qué hiciste con el cambio.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Qué mirar cuando la base va lenta, y desde dónde</p>
-<p>«La base de datos va lenta» no es un diagnóstico: es una queja. Convertirla
-en un diagnóstico exige tres cosas distintas, y cada motor las expone en
-sitios distintos: <strong>qué consultas</strong> consumen el tiempo, <strong>en qué esperan</strong>
-las sesiones, y <strong>cuánta capacidad</strong> queda antes de que deje de aguantar.</p>
-<p>Y antes de mirar nada, hay que haber decidido <strong>qué se promete</strong>: un
-objetivo de nivel de servicio expresado en percentiles —«el 99 % de las
-lecturas en menos de 50 ms»— y no en medias, porque la media esconde
-justamente la cola que sufre el usuario.</p>
-<p>Esta comparación no ejecuta nada: enumera, motor por motor, dónde está cada
-una de esas tres respuestas.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Tres consultas que devuelven lo mismo y no cuestan lo mismo</p>
+<p>Un plan de ejecución no se lee para admirarlo: se lee para <strong>refutar una
+hipótesis</strong>. «Esta consulta es lenta porque falta un índice» es una hipótesis,
+y el plan es lo que la confirma o la tumba. Sin esa disciplina, optimizar
+consiste en añadir índices hasta que algo mejore.</p>
+<p>El caso pregunta quién tiene al menos una inscripción, y admite tres
+formulaciones equivalentes: reunión con <code>DISTINCT</code>, <code>IN</code> con subconsulta y
+semirreunión con <code>EXISTS</code>. Las tres devuelven las mismas dos filas —eso lo
+garantiza el álgebra relacional— y ninguna cuesta lo mismo. Cuál gana no se
+decide leyendo el SQL: se decide midiendo, y cada implementación trae al lado
+la orden exacta con la que se mide en ese motor.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>nombre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 052</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -344,96 +350,358 @@ afirmación.</p>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/pgstatstatements.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/using-explain.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/slowlog-get/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/explain.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>SQLite</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://sqlite.org/c3ref/profile.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/eqp.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/guides/meta/explain_analyze.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/explain-results/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://duckdb.org/docs/stable/dev/profiling">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/commands/slowlog-get/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/using-explain.html
+-- nota: como se mide aqui:
+--         EXPLAIN (ANALYZE, BUFFERS) SELECT ...
+--       Lo que hay que mirar, en este orden:
+--         1. «rows=X ... actual rows=Y»: si X e Y difieren en un orden de
+--            magnitud, el problema son las ESTADISTICAS, no el indice.
+--         2. «Rows Removed by Filter»: trabajo hecho y tirado.
+--         3. «shared read» frente a «shared hit»: cuanto vino del disco.
+--       Y un aviso: ANALYZE EJECUTA la consulta. Sobre un UPDATE o un DELETE
+--       hay que envolverlo en BEGIN ... ROLLBACK.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -&gt; el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> <code>pg_stat_statements</code> acumula tiempo total, llamadas y filas por consulta normalizada: es la respuesta a «qué consume el tiempo». <code>pg_stat_activity</code> con la columna <code>wait_event</code> responde «en qué esperan». Y <code>pg_stat_user_tables</code> con <code>n_dead_tup</code> y la antigüedad de transacción avisan de la capacidad que queda antes de que el vacío se convierta en un incidente.</li>
-<li><strong>Por qué sí:</strong> Es la instrumentación más completa y <strong>consultable con SQL</strong>: los mismos paneles se construyen con las mismas consultas, sin agente ni producto.</li>
-<li><strong>Por qué no:</strong> <code>pg_stat_statements</code> es una extensión que hay que activar y que cuesta un poco de sobrecarga, y sus contadores son acumulados desde el arranque: sin tomar diferencias entre dos instantes, no dicen nada del último minuto.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/pgstatstatements.html">https://www.postgresql.org/docs/current/pgstatstatements.html</a></li>
+<li><strong>Por qué sí:</strong> <code>EXPLAIN (ANALYZE, BUFFERS)</code> es el mejor instrumento de esta lista: da coste estimado <strong>y</strong> tiempo real, filas estimadas <strong>y</strong> filas reales —cuando divergen mucho, el problema son las estadísticas y no el índice— y cuántos bloques vinieron de la caché y cuántos del disco.</li>
+<li><strong>Por qué no:</strong> <code>ANALYZE</code> <strong>ejecuta la consulta</strong>: sobre un <code>UPDATE</code> o un <code>DELETE</code> hay que envolverlo en una transacción y deshacerla, o se aplica de verdad. Es un error que se comete una sola vez en producción.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/using-explain.html">https://www.postgresql.org/docs/current/using-explain.html</a></li>
 </ul>
-<h4 id="mysql">MySQL</h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/explain.html
+-- nota: como se mide aqui:
+--         EXPLAIN ANALYZE SELECT ...        (8.0.18 y posteriores, con tiempos)
+--         EXPLAIN FORMAT=JSON SELECT ...    (el coste que calculo el optimizador)
+--       La columna `rows` del EXPLAIN clasico es una ESTIMACION, no un hecho:
+--       se lee como si fuera un dato medido y no lo es.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -&gt; el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> El esquema <code>performance_schema</code> y las vistas de <code>sys</code> —<code>sys.statement_analysis</code>, <code>sys.schema_table_statistics</code>— dan el mismo trío, y el registro de consultas lentas sigue siendo la vía más directa para encontrar las peores.</li>
-<li><strong>Por qué sí:</strong> <code>sys</code> presenta la información ya interpretada y con unidades legibles, que es exactamente lo que falta cuando hay que diagnosticar deprisa.</li>
-<li><strong>Por qué no:</strong> <code>performance_schema</code> tiene un costo notable y viene con parte de la instrumentación desactivada: decidir qué activar es un compromiso entre visibilidad y rendimiento que hay que tomar antes del incidente, no durante.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html</a></li>
+<li><strong>Por qué sí:</strong> Desde 8.0.18 tiene <code>EXPLAIN ANALYZE</code> con tiempos reales, y <code>EXPLAIN FORMAT=JSON</code> expone el coste que calculó el optimizador para cada alternativa.</li>
+<li><strong>Por qué no:</strong> La columna <code>rows</code> del <code>EXPLAIN</code> clásico es una <strong>estimación</strong> que la gente lee como si fuera un hecho, y sus estadísticas son mucho más pobres que las de PostgreSQL: se muestrean pocas páginas del índice y se recalculan en momentos difíciles de predecir.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/explain.html">https://dev.mysql.com/doc/refman/8.4/en/explain.html</a></li>
 </ul>
-<h4 id="mongodb">MongoDB</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/eqp.html
+-- nota: como se mide aqui:
+--         EXPLAIN QUERY PLAN SELECT ...
+--       Dos lineas y una pregunta: SCAN o SEARCH. No hay coste ni tiempo, asi
+--       que no se pueden comparar dos planes por numero; solo por forma.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -&gt; el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> El perfilador de base de datos guarda las operaciones lentas en una colección consultable, <code>db.currentOp()</code> muestra lo que está corriendo ahora, y <code>db.serverStatus()</code> da los contadores globales.</li>
-<li><strong>Por qué sí:</strong> Que el perfil sea una <strong>colección</strong> significa que se analiza con las mismas herramientas que los datos: se puede agregar, ordenar y filtrar sin exportar nada.</li>
-<li><strong>Por qué no:</strong> El perfilador tiene costo y por eso viene desactivado; activarlo al 100 % en producción es una mala idea, y activarlo solo por encima de un umbral hace que se pierdan justo las operaciones que aún no eran lentas y estaban a punto de serlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/">https://www.mongodb.com/docs/manual/tutorial/manage-the-database-profiler/</a></li>
+<li><strong>Por qué sí:</strong> <code>EXPLAIN QUERY PLAN</code> cabe en dos líneas y dice lo único que suele importar: si hubo <code>SCAN</code> o <code>SEARCH ... USING INDEX</code>. Para aprender a leer planes es el mejor punto de partida, porque no hay ruido.</li>
+<li><strong>Por qué no:</strong> No da coste ni tiempo ni filas: no se puede comparar dos planes por número, solo por forma. Y como el planificador tiene pocas opciones, no enseña a diagnosticar los casos difíciles.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/eqp.html">https://sqlite.org/eqp.html</a></li>
 </ul>
-<h4 id="redis">Redis</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/guides/meta/explain_analyze.html
+-- nota: como se mide aqui:
+--         EXPLAIN ANALYZE SELECT ...
+--       Dibuja el arbol con el tiempo de cada operador. Aviso: el optimizador
+--       reescribe tanto que este EXISTS acabara convertido en una reunion, y el
+--       plan no se parecera a lo escrito.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Ada', 'SE-201'), ('Linus', 'DB-101');
+
+-- === consulta ===
+-- «Quien tiene al menos una inscripcion» se puede escribir de tres formas que
+-- devuelven LO MISMO y cuestan cosas distintas:
+--
+--   A) SELECT DISTINCT e.nombre FROM estudiantes e
+--      JOIN inscripciones i ON i.estudiante = e.nombre;
+--      -&gt; multiplica filas y luego las deduplica: trabajo hecho y deshecho.
+--
+--   B) SELECT nombre FROM estudiantes
+--      WHERE nombre IN (SELECT estudiante FROM inscripciones);
+--      -&gt; el optimizador suele convertirlo en semirreunion; suele.
+--
+--   C) la de abajo: semirreunion explicita. El motor se detiene en la primera
+--      coincidencia y no multiplica nada.
+--
+-- Que las tres den lo mismo es una propiedad del algebra relacional. Cual es
+-- mas barata NO se decide leyendo: se decide midiendo con EXPLAIN, y por eso
+-- esta clase se llama «refutacion».
+SELECT e.nombre
+FROM estudiantes e
+WHERE EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> <code>SLOWLOG GET</code> guarda las órdenes que superaron un umbral —y en un servidor de un solo hilo, esas son las que bloquearon a todos—, <code>INFO</code> da memoria, conexiones y aciertos de caché, y <code>LATENCY DOCTOR</code> interpreta los picos.</li>
-<li><strong>Por qué sí:</strong> La métrica que importa es una y es evidente: cuánto tiempo estuvo bloqueado el hilo único. El registro de lentas la responde directamente.</li>
-<li><strong>Por qué no:</strong> <code>INFO</code> no da percentiles ni series temporales: solo el estado actual y contadores acumulados. Cualquier objetivo de servicio en percentiles hay que medirlo desde el cliente, no desde Redis.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/slowlog-get/">https://redis.io/docs/latest/commands/slowlog-get/</a></li>
+<li><strong>Por qué sí:</strong> <code>EXPLAIN ANALYZE</code> dibuja el árbol de operadores con el tiempo de cada uno y las filas que pasaron: es la forma más legible de ver dónde se va el tiempo de una consulta analítica.</li>
+<li><strong>Por qué no:</strong> Su optimizador reescribe tanto —descorrelación, empuje de filtros, reordenación de reuniones— que el plan casi nunca se parece a la consulta escrita, y eso confunde a quien está aprendiendo a relacionar ambas cosas.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/guides/meta/explain_analyze.html">https://duckdb.org/docs/stable/guides/meta/explain_analyze.html</a></li>
 </ul>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/explain-results/
+// nota: como se mide aqui:
+//         db.estudiantes.aggregate([...]).explain(&quot;executionStats&quot;)
+//       Las tres cifras que resuelven casi todo:
+//         nReturned            lo que devolvio
+//         totalKeysExamined    entradas de indice leidas
+//         totalDocsExamined    documentos leidos
+//       Si los dos ultimos son mucho mayores que el primero, se lee de mas.
+//       Y recordar que el plan ganador queda CACHEADO: la consulta puede
+//       degradarse meses despues sin que el codigo haya cambiado.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.inscripciones.drop();
+db.estudiantes.insertMany([
+  { _id: &quot;Ada&quot; }, { _id: &quot;Linus&quot; }, { _id: &quot;Grace&quot; },
+]);
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+]);
+db.inscripciones.createIndex({ estudiante: 1 });
+
+// === consulta ===
+// La forma barata: agrupar por estudiante en la coleccion PEQUENA de las
+// inscripciones, en vez de recorrer los estudiantes buscando cada uno.
+db.inscripciones
+  .aggregate([
+    { $group: { _id: &quot;$estudiante&quot; } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id));
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> <code>nodetool tpstats</code> muestra las colas de hilos y las tareas descartadas —la señal más clara de saturación—, <code>nodetool tablehistograms</code> da percentiles reales de latencia por tabla, y <code>nodetool tablestats</code> avisa de particiones grandes y de lápidas por lectura.</li>
-<li><strong>Por qué sí:</strong> Es de los pocos que expone <strong>percentiles</strong> directamente, en vez de medias, y por tabla: es la información que un objetivo de servicio necesita.</li>
-<li><strong>Por qué no:</strong> Todo es por nodo: no hay una vista del clúster sin una herramienta que agregue. Diagnosticar un clúster de treinta nodos con <code>nodetool</code> es inviable sin recolección centralizada.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html">https://cassandra.apache.org/doc/latest/cassandra/managing/tools/nodetool/nodetool.html</a></li>
+<li><strong>Por qué sí:</strong> <code>explain("executionStats")</code> da las tres cifras que resuelven casi todo: <code>nReturned</code>, <code>totalKeysExamined</code> y <code>totalDocsExamined</code>. Si el segundo o el tercero son mucho mayores que el primero, se está leyendo de más, y ahí está el diagnóstico.</li>
+<li><strong>Por qué no:</strong> Su planificador prueba varios planes y <strong>cachea el ganador</strong>: la consulta puede ir bien meses y degradarse cuando la distribución cambia, sin que nada haya cambiado en el código. Diagnosticarlo exige acordarse de que la caché de planes existe.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/explain-results/">https://www.mongodb.com/docs/manual/reference/explain-results/</a></li>
 </ul>
-<h4 id="sqlite">SQLite</h4>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html
+-- nota: implementacion declarada. Aqui no hay plan que leer porque no hay
+--       optimizador que elija: la consulta hace lo que el modelo permite. Lo que
+--       si hay es TRACING, que muestra la traza DISTRIBUIDA:
+--         - que nodo coordino la consulta
+--         - a que replicas pregunto y cuanto tardo cada una
+--         - cuantas SSTables se abrieron
+--         - cuantas lapidas se recorrieron  &lt;- el diagnostico mas util del motor
+--
+--       Y la consecuencia incomoda: si va lenta, la culpa es del modelo de
+--       datos. El diagnostico es barato; la correccion es crear otra tabla y
+--       migrar los datos.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.inscripciones_por_estudiante;
+
+CREATE TABLE escuela.inscripciones_por_estudiante (
+    estudiante text,
+    curso      text,
+    PRIMARY KEY (estudiante, curso)
+);
+
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'DB-101');
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Ada', 'SE-201');
+INSERT INTO escuela.inscripciones_por_estudiante (estudiante, curso) VALUES ('Linus', 'DB-101');
+
+-- === consulta ===
+TRACING ON;
+SELECT DISTINCT estudiante FROM escuela.inscripciones_por_estudiante;
+TRACING OFF;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> No hay vistas de estadísticas ni sesiones que observar: la instrumentación es del proceso que lo enlaza. <code>sqlite3_profile</code>, <code>sqlite3_status</code> y <code>PRAGMA compile_options</code> dan lo que hay.</li>
-<li><strong>Por qué sí:</strong> Al vivir dentro de la aplicación, se instrumenta con las mismas herramientas que el resto del código: no hay un sistema aparte que monitorizar.</li>
-<li><strong>Por qué no:</strong> Tampoco hay nada que consultar desde fuera: si el proceso no publica la métrica, la métrica no existe. La observabilidad hay que construirla entera.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/c3ref/profile.html">https://sqlite.org/c3ref/profile.html</a></li>
+<li><strong>Por qué sí:</strong> <code>TRACING ON</code> no muestra un plan —no hay optimizador que elija— sino la <strong>traza distribuida</strong> de la consulta: qué nodo coordinó, a qué réplicas preguntó, cuántas SSTables se abrieron y cuántas lápidas se recorrieron. Para diagnosticar este motor, esa información vale más que un plan.</li>
+<li><strong>Por qué no:</strong> Precisamente porque no hay optimizador, no hay nada que refutar sobre la consulta: si va lenta, la culpa es del modelo de datos, y arreglarlo significa crear otra tabla y migrar. El diagnóstico es barato; la corrección, no.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html">https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -448,10 +716,10 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
-<td>Se ejecuta como parte de un análisis, no como un servicio que atienda tráfico: no hay sesiones que vigilar, ni saturación que anticipar, ni objetivo de servicio que cumplir.</td>
-<td>Su instrumentación útil es por consulta —<code>EXPLAIN ANALYZE</code> y <code>PRAGMA enable_profiling</code>— y sirve para optimizar un informe, no para operar un sistema.</td>
-<td><a href="https://duckdb.org/docs/stable/dev/profiling">doc</a></td>
+<td>Redis</td>
+<td>No hay planes: cada orden tiene una complejidad fija y documentada, y está escrita en su página de referencia. <code>SMEMBERS</code> es O(N) y siempre lo será; no hay optimizador que pueda cambiarlo.</td>
+<td>La disciplina equivalente es leer la complejidad en la documentación antes de usar la orden, y vigilar el registro de órdenes lentas (<code>SLOWLOG GET</code>), que delata las que bloquearon el hilo único.</td>
+<td><a href="https://redis.io/docs/latest/commands/slowlog-get/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -502,22 +770,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
-  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
-<li><strong>Jeffrey Dean, Luiz Andre Barroso</strong> (2013). <a href="https://dl.acm.org/doi/10.1145/2408776.2408794">The Tail at Scale</a>. Communications of the ACM 56(2). DOI <a href="https://doi.org/10.1145/2408776.2408794">10.1145/2408776.2408794</a>.<br />
-  Por qué la latencia se mide en percentiles altos y no en promedio.</li>
-<li><strong>Laine Campbell, Charity Majors</strong> (2017). <a href="https://www.oreilly.com/library/view/database-reliability-engineering/9781491925935/">Database Reliability Engineering</a>. O'Reilly. ISBN 978-1-4919-2594-2.<br />
-  Operación, respaldos, objetivos de servicio y gestion de cambios.</li>
+<li><strong>P. Griffiths Selinger, M. M. Astrahan, D. D. Chamberlin, R. A. Lorie, T. G. Price</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/582095.582099">Access Path Selection in a Relational Database Management System</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/582095.582099">10.1145/582095.582099</a>.<br />
+  Base del optimizador por costos que siguen usando los motores actuales.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/using-explain.html">PostgreSQL: Using EXPLAIN</a>.<br />
+  Lectura de planes de ejecución y diferencia entre costo estimado y tiempo real.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/optoverview.html">SQLite: Query Optimizer Overview</a>.<br />
+  Como decide SQLite usar un índice; útil para leer EXPLAIN QUERY PLAN.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="051.html">← Anterior</a> · <a href="053.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="051.html">← Anterior</a> · <a href="053.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="052">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="051.html"><span class="sentido">← Anterior · 051</span>Inyección SQL y el contrato de parametrización</a>
-<a class="siguiente" href="053.html"><span class="sentido">Siguiente · 053 →</span>Privacidad, retención y gobierno del dato</a>
+<a class="anterior" href="051.html"><span class="sentido">← Anterior · 051</span>Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a>
+<a class="siguiente" href="053.html"><span class="sentido">Siguiente · 053 →</span>Réplica: líder único, multilíder y sin líder</a>
 </nav>
 </main>
 <footer>

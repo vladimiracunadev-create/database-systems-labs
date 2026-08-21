@@ -56,9 +56,9 @@ Cuenta las respuestas que has escrito **sin dudar** y que mencionan lo que pide 
 
 | Respuestas sólidas | Por dónde empezar |
 |---|---|
-| 0–3 | [Parte 00](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md) completa, sin saltarte nada. Es el cimiento y se nota en todo lo demás. |
-| 4–6 | [Parte 00](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md) en lectura rápida y [Parte 01](../classes/part-01-modelado-conceptual-y-requisitos/README.md) completa; refuerza [SQL](../classes/part-03-sql-en-profundidad/README.md) con el [laboratorio 01](../labs/01-sql-foundations/README.md). |
-| 7–8 | Empieza por la [Parte 03](../classes/part-03-sql-en-profundidad/README.md) y haz los [laboratorios 03 y 04](../labs/README.md) pronto: ahí suele estar la brecha de quien ya escribe SQL. |
+| 0–3 | [Parte 01](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) completa, sin saltarte nada. Es el cimiento y se nota en todo lo demás. |
+| 4–6 | [Parte 01](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) en lectura rápida y [Parte 02](../classes/part-02-modelado-conceptual-y-requisitos/README.md) completa; refuerza [SQL](../classes/part-04-sql-en-profundidad/README.md) con el [laboratorio 01](../labs/01-sql-foundations/README.md). |
+| 7–8 | Empieza por la [Parte 04](../classes/part-04-sql-en-profundidad/README.md) y haz los [laboratorios 03 y 04](../labs/README.md) pronto: ahí suele estar la brecha de quien ya escribe SQL. |
 | 9–10 | Elige tu [ruta por rol](../rutas/README.md) y ve a las partes avanzadas, **sin saltarte** transacciones, seguridad ni recuperación. Son las que más gente da por sabidas. |
 
 Si has fallado la 6 o la 7 —respaldo frente a réplica, idempotencia—, no importa cuánto sepas

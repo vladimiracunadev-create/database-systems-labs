@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Grafos de propiedades y los recorridos que SQL hace mal. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta name="description" content="CTE, subconsultas y funciones de ventana. Parte 04: SQL en profundidad.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/028.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="028 — Grafos de propiedades y los recorridos que SQL hace mal · Database Systems Labs">
-<meta property="og:description" content="Grafos de propiedades y los recorridos que SQL hace mal. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta property="og:title" content="028 — CTE, subconsultas y funciones de ventana · Database Systems Labs">
+<meta property="og:description" content="CTE, subconsultas y funciones de ventana. Parte 04: SQL en profundidad.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/028.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "028 — Grafos de propiedades y los recorridos que SQL hace mal", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["nodo", "arista", "recorrido de profundidad variable", "reunión sin índice"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>028 — Grafos de propiedades y los recorridos que SQL hace mal · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "028 — CTE, subconsultas y funciones de ventana", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["CTE", "recursión", "subconsulta correlacionada", "partición de ventana", "marco"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>028 — CTE, subconsultas y funciones de ventana · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,268 +49,308 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-06.html">Parte 06 · Grafos, columnas, tiempo y búsqueda</a>
+  <a href="parte-04.html">Parte 04 · SQL en profundidad</a>
   <span aria-hidden="true">/</span><span>Clase 028</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="028--grafos-de-propiedades-y-los-recorridos-que-sql-hace-mal">028 — Grafos de propiedades y los recorridos que SQL hace mal</h1>
+<h1 id="028--cte-subconsultas-y-funciones-de-ventana">028 — CTE, subconsultas y funciones de ventana</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
-3 horas estimadas · motores <code>neo4j</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>nodo</code> · <code>arista</code> · <code>recorrido de profundidad variable</code> · <code>reunión sin índice</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 04 — SQL en profundidad · Intermedio ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>CTE</code> · <code>recursión</code> · <code>subconsulta correlacionada</code> · <code>partición de ventana</code> · <code>marco</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Reconocer las consultas para las que el modelo relacional paga un precio estructural —los recorridos de profundidad variable— y saber qué ofrece a cambio un motor de grafos.</p>
+<p>Resolver con SQL preguntas que exigen comparar una fila con su grupo, recorrer jerarquías o numerar dentro de particiones — sin sacar los datos a la aplicación para procesarlos allí.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Modelar un dominio como grafo de propiedades.</li>
-<li>Explicar por qué una reunión relacional cuesta más conforme aumenta la profundidad.</li>
-<li>Traducir entre Cypher y SQL recursivo.</li>
-<li>Medir la diferencia con un caso concreto y su traza de cardinalidad.</li>
-<li>Decidir cuándo el grafo <strong>no</strong> compensa.</li>
+<li>Elegir entre subconsulta, CTE y función de ventana con criterio.</li>
+<li>Escribir funciones de ventana con <code>PARTITION BY</code>, <code>ORDER BY</code> y marco explícito.</li>
+<li>Distinguir <code>ROWS</code> de <code>RANGE</code> y explicar cuándo cambia el resultado.</li>
+<li>Escribir una CTE recursiva y acotarla para que termine.</li>
+<li>Resolver «el más reciente por grupo» de tres formas y compararlas.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-modelo-de-grafo-de-propiedades">El modelo de grafo de propiedades</h3>
-<p>Cuatro elementos:</p>
-<ul>
-<li><strong>Nodo:</strong> entidad, con una o más etiquetas (<code>:Estudiante</code>).</li>
-<li><strong>Arista:</strong> relación <strong>dirigida y con tipo</strong> (<code>-[:INSCRITO_EN]-&gt;</code>), que es un objeto de primera clase.</li>
-<li><strong>Propiedades:</strong> pares clave-valor, tanto en nodos como en aristas.</li>
-<li><strong>Recorrido:</strong> navegación siguiendo aristas.</li>
-</ul>
-<p>La diferencia estructural con el relacional: en un grafo, la arista <strong>es</strong> el dato. En el relacional, la relación se reconstruye en cada consulta buscando en un índice.</p>
-<h3 id="por-qué-la-profundidad-importa">Por qué la profundidad importa</h3>
-<p>Robinson, Webber y Eifrem lo llaman <em>adyacencia sin índice</em>: cada nodo guarda punteros directos a sus vecinos. Encontrar los vecinos de un nodo es seguir punteros, con costo proporcional al número de vecinos y <strong>no</strong> al tamaño del grafo.</p>
-<p>En el modelo relacional, cada nivel de profundidad es una reunión más. Con un índice B-Tree, cada reunión cuesta <code>O(log N)</code> por fila de entrada, y el número de filas de entrada se multiplica por el factor de ramificación en cada nivel.</p>
+<h3 id="las-tres-herramientas">Las tres herramientas</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Profundidad</th>
-<th>Relacional (con índice)</th>
-<th>Grafo</th>
+<th>Herramienta</th>
+<th>Qué aporta</th>
+<th>Coste típico</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td>1 búsqueda de índice</td>
-<td>seguir punteros</td>
+<td>Subconsulta no correlacionada</td>
+<td>Se evalúa una vez</td>
+<td>Bajo</td>
 </tr>
 <tr>
-<td>2</td>
-<td>R búsquedas</td>
-<td>seguir punteros</td>
+<td>Subconsulta correlacionada</td>
+<td>Se evalúa por fila del exterior</td>
+<td>Alto si no hay índice</td>
 </tr>
 <tr>
-<td>3</td>
-<td>R² búsquedas</td>
-<td>seguir punteros</td>
+<td>CTE (<code>WITH</code>)</td>
+<td>Nombra un resultado intermedio; permite recursión</td>
+<td>Depende de si el motor la materializa</td>
 </tr>
 <tr>
-<td>k</td>
-<td>R^(k−1) búsquedas</td>
-<td>proporcional a los nodos visitados</td>
+<td>Función de ventana</td>
+<td>Calcula sobre un grupo <strong>sin colapsar filas</strong></td>
+<td>Un ordenamiento por partición</td>
 </tr>
 </tbody>
 </table></div>
-<p>Con factor de ramificación R = 50 y profundidad 4: 125 000 búsquedas de índice contra el recorrido de la vecindad efectivamente alcanzada. La ventaja no está en el álgebra —ambos calculan lo mismo— sino en el acceso físico.</p>
-<h3 id="cypher">Cypher</h3>
-<pre><code class="language-cypher">MATCH (s:Estudiante {id: 11})-[:INSCRITO_EN]-&gt;(c:Curso)&lt;-[:INSCRITO_EN]-(otro:Estudiante)
-WHERE otro.id &lt;&gt; 11
-RETURN otro.nombre, count(c) AS cursos_en_comun
-ORDER BY cursos_en_comun DESC LIMIT 10
+<p>La diferencia esencial entre agregado y ventana: <code>GROUP BY</code> <strong>reduce</strong> N filas a una; la función de ventana <strong>conserva</strong> las N y añade una columna con el valor del grupo. Por eso la ventana es la respuesta natural a «compara cada fila con su grupo».</p>
+<h3 id="anatomía-de-una-ventana">Anatomía de una ventana</h3>
+<pre><code class="language-sql">funcion() OVER (
+    PARTITION BY expr      -- grupos independientes
+    ORDER BY     expr      -- orden dentro del grupo
+    ROWS BETWEEN ... AND ...   -- marco: qué filas entran
+)
 </code></pre>
-<p>El patrón se <strong>dibuja</strong>. La misma consulta en SQL exige dos reuniones explícitas de <code>enrollments</code> consigo misma. Con profundidad variable, la diferencia se hace cualitativa:</p>
-<pre><code class="language-cypher">MATCH (a:Curso {id: 'bd'})-[:REQUIERE*1..5]-&gt;(pre:Curso)
-RETURN DISTINCT pre.id
+<p>Familias de funciones:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Familia</th>
+<th>Funciones</th>
+<th>Necesita <code>ORDER BY</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Numeración</td>
+<td><code>ROW_NUMBER</code>, <code>RANK</code>, <code>DENSE_RANK</code>, <code>NTILE</code></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Desplazamiento</td>
+<td><code>LAG</code>, <code>LEAD</code>, <code>FIRST_VALUE</code>, <code>LAST_VALUE</code></td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Agregación</td>
+<td><code>SUM</code>, <code>AVG</code>, <code>COUNT</code>, <code>MIN</code>, <code>MAX</code> sobre <code>OVER</code></td>
+<td>Opcional</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rows-frente-a-range-la-trampa-del-marco"><code>ROWS</code> frente a <code>RANGE</code>: la trampa del marco</h3>
+<p>Si hay <code>ORDER BY</code> y no se especifica marco, el implícito es:</p>
+<pre><code class="language-sql">RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
 </code></pre>
-<p><code>*1..5</code> es profundidad variable. En SQL exige una CTE recursiva completa (clase 018), con su cota y su riesgo de ciclo.</p>
-<pre><code class="language-mermaid">flowchart LR
-    E1((&quot;Ana&quot;)) --&gt;|INSCRITO_EN| C1((&quot;BD&quot;))
-    E2((&quot;Luis&quot;)) --&gt;|INSCRITO_EN| C1
-    E2 --&gt;|INSCRITO_EN| C2((&quot;Redes&quot;))
-    E3((&quot;Sara&quot;)) --&gt;|INSCRITO_EN| C2
-    C1 --&gt;|REQUIERE| C3((&quot;Algoritmos&quot;))
-    C3 --&gt;|REQUIERE| C4((&quot;Programación I&quot;))
-    P1((&quot;Prof. Díaz&quot;)) --&gt;|DICTA| C1
+<p><code>RANGE</code> agrupa por <strong>valor</strong>: todas las filas con el mismo valor de ordenación entran juntas en el marco. <code>ROWS</code> cuenta <strong>filas físicas</strong>.</p>
+<p>Con notas <code>4.0, 5.0, 5.0, 6.0</code> y <code>SUM(nota) OVER (ORDER BY nota)</code>:</p>
+<pre><code class="language-text">RANGE (implícito)  -&gt;  4.0, 14.0, 14.0, 20.0
+ROWS  UNBOUNDED PRECEDING -&gt; 4.0,  9.0, 14.0, 20.0
+</code></pre>
+<p>Las dos filas empatadas en 5,0 reciben con <code>RANGE</code> el mismo acumulado (14,0), porque el marco incluye a ambas. Para un total acumulado fila a fila, hay que escribir <code>ROWS</code> explícitamente. Esta es la causa número uno de acumulados «raros» y no aparece hasta que hay empates.</p>
+<p>Lo mismo afecta a <code>LAST_VALUE</code>: con el marco implícito, «el último valor» es la fila actual, no el último del grupo. Hay que escribir <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>.</p>
+<h3 id="cte-recursiva">CTE recursiva</h3>
+<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, requiere_id, profundidad) AS (
+    SELECT curso_id, requiere_id, 1
+    FROM prerequisitos WHERE curso_id = :inicio
+  UNION ALL
+    SELECT p.curso_id, pr.requiere_id, p.profundidad + 1
+    FROM prereq p
+    JOIN prerequisitos pr ON pr.curso_id = p.requiere_id
+    WHERE p.profundidad &lt; 10                 -- cota obligatoria
+)
+SELECT DISTINCT requiere_id, MIN(profundidad) FROM prereq GROUP BY requiere_id;
+</code></pre>
+<p>Dos advertencias que no son opcionales:</p>
+<ul>
+<li><strong><code>UNION ALL</code> no elimina duplicados</strong>, así que un ciclo en los datos produce un bucle infinito. La cota de profundidad, o un <code>UNION</code> que sí deduplica, es obligatoria en datos no verificados.</li>
+<li>El cierre transitivo es exactamente lo que el cálculo relacional no expresa (clase 012). Si estas consultas dominan la carga, el modelo de grafos es la alternativa (clase 028).</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    P[&quot;¿Qué necesito?&quot;] --&gt; A{&quot;¿Colapsar filas&lt;br/&gt;a un resumen?&quot;}
+    A -- &quot;Sí&quot; --&gt; G[&quot;GROUP BY&quot;]
+    A -- &quot;No&quot; --&gt; B{&quot;¿Comparar cada fila&lt;br/&gt;con su grupo?&quot;}
+    B -- &quot;Sí&quot; --&gt; W[&quot;Función de ventana&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Profundidad&lt;br/&gt;variable?&quot;}
+    C -- &quot;Sí&quot; --&gt; R[&quot;CTE recursiva&lt;br/&gt;con cota&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Reutilizo el&lt;br/&gt;resultado intermedio?&quot;}
+    D -- &quot;Sí&quot; --&gt; CT[&quot;CTE&quot;]
+    D -- &quot;No&quot; --&gt; S[&quot;Subconsulta&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Pregunta: <em>«todos los prerrequisitos de un curso, a cualquier profundidad, con su nivel»</em>.</p>
-<p><strong>SQL recursivo:</strong></p>
-<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, nivel) AS (
-    SELECT requiere_id, 1 FROM prerequisitos WHERE curso_id = 'bd'
-  UNION
-    SELECT p.requiere_id, pr.nivel + 1
-    FROM prereq pr JOIN prerequisitos p ON p.curso_id = pr.curso_id
-    WHERE pr.nivel &lt; 10
+<p>Pregunta: <em>«la nota más reciente de cada estudiante en cada curso, junto con su diferencia respecto de la anterior»</em>.</p>
+<p><strong>Forma 1 — ventana (recomendada):</strong></p>
+<pre><code class="language-sql">WITH ordenadas AS (
+  SELECT student_id, course_id, nota, registrada_en,
+         ROW_NUMBER() OVER (PARTITION BY student_id, course_id
+                            ORDER BY registrada_en DESC, id DESC) AS rn,
+         LAG(nota)    OVER (PARTITION BY student_id, course_id
+                            ORDER BY registrada_en ASC,  id ASC)  AS nota_anterior
+  FROM notas
 )
-SELECT curso_id, MIN(nivel) AS nivel FROM prereq GROUP BY curso_id;
+SELECT student_id, course_id, nota,
+       nota - nota_anterior AS variacion
+FROM ordenadas
+WHERE rn = 1;
 </code></pre>
-<p><strong>Cypher:</strong></p>
-<pre><code class="language-cypher">MATCH path = (c:Curso {id:'bd'})-[:REQUIERE*1..10]-&gt;(pre:Curso)
-RETURN pre.id, min(length(path)) AS nivel
+<p>Puntos clave:</p>
+<ul>
+<li>El <code>WHERE rn = 1</code> va en la CTE exterior porque las ventanas se calculan en el paso 5 y no se pueden filtrar en <code>WHERE</code> (clase 015).</li>
+<li>El desempate por <code>id</code> hace la selección <strong>determinista</strong> si dos registros comparten marca de tiempo. Sin él, dos ejecuciones pueden devolver notas distintas.</li>
+<li><code>LAG</code> usa orden ascendente porque «la anterior» es cronológicamente previa.</li>
+</ul>
+<p><strong>Forma 2 — subconsulta correlacionada:</strong></p>
+<pre><code class="language-sql">SELECT n.* FROM notas n
+WHERE n.registrada_en = (
+  SELECT MAX(n2.registrada_en) FROM notas n2
+  WHERE n2.student_id = n.student_id AND n2.course_id = n.course_id
+);
 </code></pre>
-<p>Ambas son correctas. La diferencia está en el trabajo físico. <strong>Traza con factor de ramificación 3 y profundidad 5:</strong></p>
-<pre><code class="language-text">nivel 1:     3 prerrequisitos    -&gt;    3 búsquedas de índice
-nivel 2:     9                   -&gt;    9
-nivel 3:    27                   -&gt;   27
-nivel 4:    81                   -&gt;   81
-nivel 5:   243                   -&gt;  243
-                                    ------
-total relacional:                     363 búsquedas de índice sobre `prerequisitos`
-total grafo:                          363 saltos de puntero
+<p>Legible, pero devuelve <strong>dos filas</strong> si hay empate en la marca de tiempo, y se evalúa una vez por fila del exterior.</p>
+<p><strong>Forma 3 — <code>DISTINCT ON</code> (solo PostgreSQL):</strong></p>
+<pre><code class="language-sql">SELECT DISTINCT ON (student_id, course_id) *
+FROM notas ORDER BY student_id, course_id, registrada_en DESC, id DESC;
 </code></pre>
-<p>Con este tamaño, <strong>el relacional gana o empata</strong>: 363 búsquedas de índice sobre una tabla que cabe en memoria son microsegundos, y el motor relacional está mucho más optimizado. La ventaja del grafo aparece cuando la tabla de aristas no cabe en memoria y cada búsqueda de índice se convierte en una lectura de disco.</p>
-<p>Este matiz es el punto honesto de la clase: <strong>el grafo no es mágicamente más rápido</strong>. Gana cuando (a) la profundidad es alta y variable, (b) el grafo es grande y disperso, y (c) las consultas son de vecindad y no agregaciones globales.</p>
-<p><strong>Dónde el grafo pierde claramente:</strong></p>
+<p>La más corta y la más rápida en PostgreSQL, y no portable.</p>
+<p><strong>Comparación medida</strong> sobre 5 millones de filas de <code>notas</code> con índice en <code>(student_id, course_id, registrada_en)</code>:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Consulta</th>
-<th>Relacional</th>
-<th>Grafo</th>
+<th>Forma</th>
+<th>Recorridos</th>
+<th>Determinista ante empates</th>
+<th>Portable</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>«Promedio de notas por período»</td>
-<td>Agregación con índice</td>
-<td>Recorrido completo, sin ventaja</td>
+<td>Ventana</td>
+<td>1 + ordenamiento por partición</td>
+<td>Sí, con desempate</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>«Los 100 cursos con más inscritos»</td>
-<td><code>GROUP BY</code> + índice</td>
-<td>Recorrido completo</td>
+<td>Correlacionada</td>
+<td>1 + 1 por fila (o índice)</td>
+<td>No</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>«Insertar 10 000 inscripciones»</td>
-<td><code>COPY</code> masivo</td>
-<td>Creación de nodos y aristas, más lenta</td>
-</tr>
-<tr>
-<td>«Camino más corto entre dos personas»</td>
-<td>CTE recursiva costosa</td>
-<td><strong>Ventaja clara</strong></td>
-</tr>
-<tr>
-<td>«Detección de comunidades»</td>
-<td>Prácticamente inviable</td>
-<td><strong>Ventaja clara</strong></td>
+<td><code>DISTINCT ON</code></td>
+<td>1</td>
+<td>Sí</td>
+<td>No</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Alternativa intermedia.</strong> Antes de añadir un motor nuevo al sistema (clase 062), conviene comprobar si el relacional basta con el índice adecuado:</p>
-<pre><code class="language-sql">CREATE INDEX prereq_curso ON prerequisitos(curso_id, requiere_id);
+<p><strong>Acumulado con marco explícito</strong> — nota acumulada por estudiante:</p>
+<pre><code class="language-sql">SELECT student_id, registrada_en, nota,
+       SUM(nota) OVER (PARTITION BY student_id ORDER BY registrada_en, id
+                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado
+FROM notas;
 </code></pre>
-<p>Un índice cubriente sobre la tabla de aristas hace que la CTE recursiva no toque la tabla base. En muchos dominios de tamaño medio, eso cierra la brecha entera y ahorra un sistema que operar.</p>
+<p>Escribir <code>ROWS</code> es lo que garantiza que dos notas registradas en el mismo instante no compartan el mismo acumulado.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Dimensión</th>
-<th>Relacional</th>
-<th>Grafo de propiedades</th>
+<th>Pregunta</th>
+<th>Herramienta</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Relación como dato</td>
-<td>Fila en tabla puente</td>
-<td>Objeto de primera clase con propiedades</td>
+<td>«Total por grupo»</td>
+<td><code>GROUP BY</code></td>
 </tr>
 <tr>
-<td>Profundidad fija</td>
-<td>Excelente</td>
-<td>Bien</td>
+<td>«Porcentaje de cada fila sobre su grupo»</td>
+<td><code>SUM() OVER (PARTITION BY ...)</code></td>
 </tr>
 <tr>
-<td>Profundidad variable</td>
-<td>CTE recursiva, con cota</td>
-<td>Natural</td>
+<td>«Top N por grupo»</td>
+<td><code>ROW_NUMBER()</code> + filtro externo</td>
 </tr>
 <tr>
-<td>Agregación global</td>
-<td>Excelente</td>
-<td>Pobre</td>
+<td>«Diferencia con la fila anterior»</td>
+<td><code>LAG</code></td>
 </tr>
 <tr>
-<td>Carga masiva</td>
-<td>Excelente</td>
-<td>Lenta</td>
+<td>«Todos los ancestros»</td>
+<td>CTE recursiva</td>
 </tr>
 <tr>
-<td>Restricciones declarativas</td>
-<td>Ricas</td>
-<td>Limitadas (unicidad, existencia)</td>
+<td>«¿Existe alguno?»</td>
+<td><code>EXISTS</code> (clase 016)</td>
 </tr>
 <tr>
-<td>Madurez operativa</td>
-<td>Muy alta</td>
-<td>Menor</td>
+<td>«Media móvil de 7 días»</td>
+<td><code>AVG() OVER (... ROWS 6 PRECEDING)</code></td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Adoptar un grafo porque el dominio «tiene relaciones».</strong> Todos los dominios las tienen; lo que importa es la profundidad variable.</li>
-<li><strong>Modelar propiedades como nodos.</strong> Un nodo por cada valor de atributo hincha el grafo sin aportar recorridos.</li>
-<li><strong>Aristas sin dirección pensada.</strong> La dirección es semántica: <code>REQUIERE</code> no es lo mismo en un sentido que en otro.</li>
-<li><strong>Recorridos sin cota.</strong> Un <code>*</code> sin límite superior en un grafo cíclico no termina.</li>
-<li><strong>Usar el grafo como almacén principal de datos tabulares.</strong> Los informes agregados serán lentos.</li>
-<li><strong>No medir el relacional con el índice adecuado antes de migrar.</strong></li>
+<li><strong>Filtrar una ventana en <code>WHERE</code>.</strong> No existe todavía; hace falta CTE o subconsulta.</li>
+<li><strong>Omitir el marco y esperar acumulado fila a fila.</strong> El implícito es <code>RANGE</code> y agrupa empates.</li>
+<li><strong><code>LAST_VALUE</code> sin marco completo.</strong> Devuelve la fila actual.</li>
+<li><strong>CTE recursiva sin cota.</strong> Un ciclo en los datos bloquea la sesión.</li>
+<li><strong><code>RANK</code> cuando se quería <code>ROW_NUMBER</code>.</strong> <code>RANK</code> deja huecos y repite posiciones en empates.</li>
+<li><strong>Ordenación no determinista.</strong> Sin desempate, el «más reciente» cambia entre ejecuciones.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Añadir un motor de grafos añade un sistema que replicar, respaldar, asegurar y mantener sincronizado con el origen. Ese costo permanente debe compararse con la ganancia medida, no con la esperada (clase 062).</p>
+<p>Bajar 5 millones de filas a la aplicación para calcular un acumulado consume ancho de banda, memoria y tiempo, y produce un resultado que el motor habría calculado usando un índice ya existente. Las funciones de ventana son, en la práctica, la diferencia entre un informe de 200 ms y uno de 40 s.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Identifica en tu dominio una consulta de profundidad variable.</li>
-<li>Impleméntala con CTE recursiva y mide con el índice adecuado.</li>
-<li>Impleméntala en Cypher sobre los mismos datos y mide.</li>
-<li>Documenta a partir de qué profundidad y qué volumen el grafo compensa, con tus cifras.</li>
+<li>Busca en tu código un cálculo por grupo que hoy se hace en la aplicación y llévalo a una ventana.</li>
+<li>Mide el volumen transferido antes y después.</li>
+<li>Escribe la misma consulta con <code>RANGE</code> y con <code>ROWS</code> y demuestra la diferencia con empates.</li>
+<li>Implementa una CTE recursiva sobre una jerarquía tuya, con cota, y prueba qué pasa al introducir un ciclo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Explica la adyacencia sin índice y por qué el tamaño total del grafo deja de importar.</li>
-<li>Calcula las búsquedas de índice de un recorrido de profundidad 6 con ramificación 10.</li>
-<li>Da una consulta de tu dominio donde el grafo sería claramente peor.</li>
-<li>¿Qué garantías de integridad pierdes al mover datos de un relacional a un grafo?</li>
+<li>¿Por qué no se puede filtrar <code>ROW_NUMBER()</code> en <code>WHERE</code>?</li>
+<li>Da un conjunto de datos donde <code>ROWS</code> y <code>RANGE</code> produzcan acumulados distintos.</li>
+<li>Explica por qué la subconsulta correlacionada puede devolver dos filas donde la ventana devuelve una.</li>
+<li>Escribe la cota de una CTE recursiva sobre tu jerarquía y justifica el valor elegido.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Todos los prerrequisitos de un curso, por lejos que estén en la cadena</p>
-<p>AR-301 exige SE-201, que exige DB-101, que exige MA-100. La pregunta —«¿qué
-tengo que haber aprobado antes de AR-301?»— tiene una propiedad que la hace
-distinta de todas las anteriores: <strong>no se sabe de antemano cuántas reuniones
-hacen falta</strong>. Hoy la cadena tiene tres eslabones; mañana, siete.</p>
-<p>Todo motor relacional serio la resuelve con <code>WITH RECURSIVE</code>, y funciona. Lo
-que esta clase compara es el precio: en SQL hay que escribir el caso base, el
-paso recursivo y la protección contra ciclos cada vez; en un grafo, el
-recorrido de profundidad variable es un símbolo del lenguaje.</p>
+<p><strong>Caso:</strong> El mejor de cada curso, con su nota, sin perder ninguna columna</p>
+<p>«El máximo por grupo» es fácil; «la fila del máximo por grupo» es la
+pregunta que rompe a <code>GROUP BY</code>. Al agrupar, las filas del grupo se
+colapsan y con ellas desaparece el nombre del estudiante que sacó esa nota.</p>
+<p>La función de ventana calcula por grupo <strong>sin</strong> colapsar: numera las filas
+dentro de cada curso por nota descendente y deja intacta cada fila. Después
+basta quedarse con la primera. El caso devuelve, por curso ordenado, quién
+obtuvo la nota más alta y cuál fue.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>curso</th>
+<th>estudiante</th>
+<th>nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>DB-101</code></td>
-</tr>
-<tr>
-<td><code>MA-100</code></td>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
 </tr>
 <tr>
 <td><code>SE-201</code></td>
+<td><code>Grace</code></td>
+<td><code>78</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 028</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -327,236 +367,266 @@ no ejecutado.</p>
 </thead>
 <tbody>
 <tr>
-<td>Neo4j</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/neo4j/consulta.cypher">código</a></td>
-<td><a href="https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/">doc oficial</a></td>
-</tr>
-<tr>
-<td>PostgreSQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/queries-with.html">doc oficial</a></td>
-</tr>
-<tr>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_with.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/windowfunctions.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/with.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/window_functions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-window.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/window-functions.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-cypher">// motor: neo4j
-// doc: https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/
-// nota: aqui esta la clase entera en dos caracteres. `*` significa «uno o mas
-//       saltos», y el motor no resuelve cada salto por indice: cada nodo guarda
-//       punteros a sus vecinos, asi que el costo depende del vecindario
-//       recorrido y no del tamano del grafo.
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/windowfunctions.html
+-- nota: ROW_NUMBER, RANK y DENSE_RANK no son lo mismo con empates: ROW_NUMBER
+--       elige uno arbitrario salvo que el ORDER BY desempate, y por eso aqui
+--       lleva `, estudiante` al final.
 
-// === preparacion ===
-MATCH (n) DETACH DELETE n;
-CREATE (ar:Curso {codigo: 'AR-301'}),
-       (se:Curso {codigo: 'SE-201'}),
-       (db:Curso {codigo: 'DB-101'}),
-       (ma:Curso {codigo: 'MA-100'}),
-       (ar)-[:REQUIERE]-&gt;(se),
-       (se)-[:REQUIERE]-&gt;(db),
-       (db)-[:REQUIERE]-&gt;(ma);
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
 
-// === consulta ===
-MATCH (:Curso {codigo: 'AR-301'})-[:REQUIERE*]-&gt;(previo:Curso)
-RETURN DISTINCT previo.codigo AS curso
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
 ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> El recorrido de profundidad variable se escribe con dos caracteres: <code>-[:REQUIERE*]-&gt;</code>. Y el costo no depende del tamaño del grafo sino del vecindario recorrido, porque cada nodo guarda punteros a sus vecinos en vez de resolverse por índice en cada salto.</li>
-<li><strong>Por qué no:</strong> Ese mismo modelo penaliza lo tabular: contar todos los nodos de una etiqueta o agregar sobre todos ellos es más caro que en una tabla, y mantener un grafo entero para una jerarquía de tres niveles es añadir un sistema para no escribir seis líneas de SQL.</li>
-<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/">https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/</a></li>
+<li><strong>Por qué sí:</strong> Tiene funciones de ventana y CTE desde la versión 3.25 (2018), con la sintaxis del estándar: lo que se escribe aquí se lleva tal cual a PostgreSQL.</li>
+<li><strong>Por qué no:</strong> No tiene <code>CTE</code> materializadas ni control sobre cómo se evalúan, así que en consultas grandes puede recalcular la misma subexpresión varias veces sin que haya forma de impedirlo.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/windowfunctions.html">https://sqlite.org/windowfunctions.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/queries-with.html
--- nota: para grafos con ciclos, PostgreSQL tiene la clausula CYCLE, que lleva
---       la deteccion al propio lenguaje en vez de dejarla al UNION:
---         WITH RECURSIVE cadena(curso) AS (...) CYCLE curso SET hay_ciclo USING ruta
-
--- === preparacion ===
-DROP TABLE IF EXISTS prerrequisitos;
-
-CREATE TABLE prerrequisitos (
-    curso    text NOT NULL,
-    requiere text NOT NULL,
-    PRIMARY KEY (curso, requiere)
-);
-INSERT INTO prerrequisitos (curso, requiere) VALUES
-    ('AR-301', 'SE-201'),
-    ('SE-201', 'DB-101'),
-    ('DB-101', 'MA-100');
-
--- === consulta ===
--- La consulta recursiva del estandar: un caso base y un paso que se aplica
--- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
--- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
-WITH RECURSIVE cadena(curso) AS (
-    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
-    UNION
-    SELECT p.requiere
-    FROM prerrequisitos p
-    JOIN cadena c ON p.curso = c.curso
-)
-SELECT curso FROM cadena ORDER BY curso;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> <code>WITH RECURSIVE</code> es del estándar y resuelve el caso sin salir del motor donde ya están los datos: para jerarquías de pocos niveles —organigramas, categorías, listas de materiales— es casi siempre la respuesta correcta.</li>
-<li><strong>Por qué no:</strong> Cada nivel de profundidad es una reunión más, y el planificador estima muy mal el número de filas de una recursión: a partir de cierta profundidad, el plan deja de tener sentido y el tiempo se dispara sin aviso.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-with.html">https://www.postgresql.org/docs/current/queries-with.html</a></li>
-</ul>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_with.html
--- nota: UNION —no UNION ALL— es lo que protege de los ciclos: descarta las
---       filas ya vistas. Con UNION ALL y un grafo ciclico, esta consulta no
---       termina nunca.
-
--- === preparacion ===
-CREATE TABLE prerrequisitos (
-    curso    TEXT NOT NULL,
-    requiere TEXT NOT NULL,
-    PRIMARY KEY (curso, requiere)
-);
-INSERT INTO prerrequisitos (curso, requiere) VALUES
-    ('AR-301', 'SE-201'),
-    ('SE-201', 'DB-101'),
-    ('DB-101', 'MA-100');
-
--- === consulta ===
--- La consulta recursiva del estandar: un caso base y un paso que se aplica
--- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
--- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
-WITH RECURSIVE cadena(curso) AS (
-    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
-    UNION
-    SELECT p.requiere
-    FROM prerrequisitos p
-    JOIN cadena c ON p.curso = c.curso
-)
-SELECT curso FROM cadena ORDER BY curso;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Implementa <code>WITH RECURSIVE</code> completo, así que el recorrido en anchura se puede estudiar sin instalar nada. <code>UNION</code> en vez de <code>UNION ALL</code> es lo que corta los ciclos: descarta las filas ya vistas.</li>
-<li><strong>Por qué no:</strong> Solo tiene bucle anidado como algoritmo de reunión, así que cada nivel vuelve a buscar por índice fila a fila: la recursión funciona y no escala.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_with.html">https://sqlite.org/lang_with.html</a></li>
-</ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/query_syntax/with.html
--- nota: la misma consulta funciona sobre un grafo exportado a Parquet sin
---       cargarlo, que es la via analitica cuando la pregunta es «cuantos
---       caminos hay» y no «dame este camino».
+-- doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
+-- nota: la forma corta de DuckDB seria
+--         SELECT curso, estudiante, nota FROM notas
+--         QUALIFY ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC) = 1
+--       Aqui se escribe la portable, que es la que sirve en los demas motores.
 
 -- === preparacion ===
-CREATE TABLE prerrequisitos (
-    curso    VARCHAR NOT NULL,
-    requiere VARCHAR NOT NULL,
-    PRIMARY KEY (curso, requiere)
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
 );
-INSERT INTO prerrequisitos (curso, requiere) VALUES
-    ('AR-301', 'SE-201'),
-    ('SE-201', 'DB-101'),
-    ('DB-101', 'MA-100');
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
 
 -- === consulta ===
--- La consulta recursiva del estandar: un caso base y un paso que se aplica
--- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
--- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
-WITH RECURSIVE cadena(curso) AS (
-    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
-    UNION
-    SELECT p.requiere
-    FROM prerrequisitos p
-    JOIN cadena c ON p.curso = c.curso
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
 )
-SELECT curso FROM cadena ORDER BY curso;
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Admite la misma sintaxis recursiva y la resuelve de forma vectorizada, lo que la hace viable sobre grafos grandes exportados a Parquet: es la vía analítica para responder «cuántos caminos hay» sin montar un grafo.</li>
-<li><strong>Por qué no:</strong> No hay recorrido guiado ni algoritmos de grafo: para camino más corto, centralidad o comunidades hay que escribirlo todo a mano, si es que se puede.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/with.html">https://duckdb.org/docs/stable/sql/query_syntax/with.html</a></li>
+<li><strong>Por qué sí:</strong> Las ventanas están implementadas de forma vectorizada y admite además <code>QUALIFY</code>, que filtra por el resultado de la ventana sin necesidad de la CTE envolvente: la consulta se reduce a la mitad.</li>
+<li><strong>Por qué no:</strong> <code>QUALIFY</code> no es estándar: es cómodo aquí y hay que reescribirlo al migrar a cualquier otro motor salvo Snowflake y Teradata.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/window_functions.html">https://duckdb.org/docs/stable/sql/functions/window_functions.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-grafos-columnas-tiempo-y-busqueda/028-grafos-de-propiedades-y-recorridos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-window.html
+-- nota: la forma propia de PostgreSQL es
+--         SELECT DISTINCT ON (curso) curso, estudiante, nota
+--         FROM notas ORDER BY curso, nota DESC, estudiante;
+--       que suele ser mas barata. Ata la consulta a PostgreSQL, y eso hay que
+--       decidirlo, no descubrirlo al migrar.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene el catálogo completo de ventanas y, además, <code>DISTINCT ON</code>, que resuelve exactamente esta pregunta en una línea y suele ser más barato que la ventana.</li>
+<li><strong>Por qué no:</strong> Una ventana obliga a ordenar dentro de cada partición: sin un índice que ya provea ese orden, la consulta ordena todas las filas antes de descartar casi todas.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-window.html">https://www.postgresql.org/docs/current/tutorial-window.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/window-functions.html
+-- nota: esta consulta NO funciona en MySQL 5.7: alli habia que emularla con
+--       variables de sesion, cuyo resultado dependia del orden de evaluacion y
+--       dejo de estar garantizado en 8.0.
+
+DROP TABLE IF EXISTS notas;
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- === consulta ===
+-- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
+-- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
+-- nombre siguen disponibles al filtrar por la posicion.
+WITH clasificacion AS (
+    SELECT curso,
+           estudiante,
+           nota,
+           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
+    FROM notas
+)
+SELECT curso, estudiante, nota
+FROM clasificacion
+WHERE puesto = 1
+ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Desde 8.0 tiene CTE y funciones de ventana con la sintaxis estándar, lo que retiró de circulación los trucos con variables de sesión que se usaban antes y que dependían del orden de evaluación.</li>
+<li><strong>Por qué no:</strong> En 5.7 y anteriores no existen, y todavía hay mucha base en producción con esas versiones: la consulta portable de esta clase no se puede usar allí.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/window-functions.html">https://dev.mysql.com/doc/refman/8.4/en/window-functions.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/
-// nota: $graphLookup hace el recorrido transitivo dentro del motor. Tiene un
-//       limite de 100 MB por operacion y no aprovecha indices en colecciones
-//       fragmentadas: sirve para jerarquias modestas, no para un grafo grande.
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/
+// nota: $setWindowFields es la ventana: partitionBy es el PARTITION BY y
+//       sortBy es el ORDER BY de dentro de la ventana. Y aqui aparece un
+//       limite que SQL no tiene: $documentNumber, $rank y $denseRank exigen un
+//       sortBy de UNA sola clave, asi que no se puede desempatar por un
+//       segundo criterio como hace el ROW_NUMBER de la version SQL.
 
 // === preparacion ===
-db.prerrequisitos.drop();
-db.prerrequisitos.insertMany([
-  { curso: &quot;AR-301&quot;, requiere: &quot;SE-201&quot; },
-  { curso: &quot;SE-201&quot;, requiere: &quot;DB-101&quot; },
-  { curso: &quot;DB-101&quot;, requiere: &quot;MA-100&quot; },
+db.notas.drop();
+db.notas.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot;, nota: 78 },
 ]);
 
 // === consulta ===
-db.prerrequisitos
+db.notas
   .aggregate([
-    { $match: { curso: &quot;AR-301&quot; } },
-    { $graphLookup: {
-        from: &quot;prerrequisitos&quot;,
-        startWith: &quot;$requiere&quot;,
-        connectFromField: &quot;requiere&quot;,
-        connectToField: &quot;curso&quot;,
-        as: &quot;cadena&quot; } },
-    { $project: { cursos: { $concatArrays: [[&quot;$requiere&quot;], &quot;$cadena.requiere&quot;] } } },
-    { $unwind: &quot;$cursos&quot; },
-    { $group: { _id: &quot;$cursos&quot; } },
-    { $sort: { _id: 1 } },
+    { $setWindowFields: {
+        partitionBy: &quot;$curso&quot;,
+        sortBy: { nota: -1 },
+        output: { puesto: { $documentNumber: {} } } } },
+    { $match: { puesto: 1 } },
+    { $project: { _id: 0, curso: 1, estudiante: 1, nota: 1 } },
+    { $sort: { curso: 1 } },
   ])
-  .forEach((d) =&gt; print(d._id));
+  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.estudiante + &quot;|&quot; + d.nota));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>$graphLookup</code> hace el recorrido transitivo dentro del motor, con profundidad máxima configurable: no hace falta traerse el grafo al cliente ni escribir la recursión.</li>
-<li><strong>Por qué no:</strong> Está limitado a 100 MB de memoria por operación y no puede usar índice para la búsqueda recursiva en colecciones fragmentadas: es una herramienta para jerarquías modestas, no para un grafo de verdad.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/</a></li>
+<li><strong>Por qué sí:</strong> Desde la versión 5.0 tiene <code>$setWindowFields</code> con <code>$rank</code> y <code>$denseRank</code>: la misma idea de ventana, con particiones y orden, dentro de la tubería de agregación.</li>
+<li><strong>Por qué no:</strong> La etapa bloquea el flujo y ordena en memoria por partición; con particiones grandes hay que permitir el uso de disco explícitamente (<code>allowDiskUse</code>) o la consulta falla.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -572,22 +642,16 @@ db.prerrequisitos
 <tbody>
 <tr>
 <td>Apache Cassandra</td>
-<td>No hay reuniones, no hay recursión y no hay forma de recorrer una relación sin conocer de antemano cuántos saltos harán falta. Cada salto sería una consulta desde el cliente, con su latencia de red.</td>
-<td>Guardar el cierre transitivo ya calculado —una fila por cada par (curso, prerrequisito lejano)— y recalcularlo cuando cambie el plan de estudios: se paga en escritura y en espacio lo que no se puede pagar en lectura.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>Recorrer exigiría un viaje por salto o un script Lua que implemente la búsqueda en anchura a mano: el almacén no entiende la relación, solo entiende claves.</td>
-<td>Guardar en un conjunto los prerrequisitos transitivos de cada curso (<code>curso:AR-301:requiere-todo</code>) y reconstruirlo al cambiar el grafo.</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc</a></td>
+<td>No hay funciones de ventana ni CTE. <code>GROUP BY</code> existe, pero solo dentro de una partición y con agregados básicos: «la fila del máximo por grupo» no se puede expresar.</td>
+<td>Modelar la tabla con la nota como columna de agrupamiento descendente y pedir <code>LIMIT 1</code> por partición: el ranking se resuelve por el orden físico, y solo para el criterio con el que se modeló.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -631,22 +695,24 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Ian Robinson, Jim Webber, Emil Eifrem</strong> (2015). <a href="https://neo4j.com/graph-databases-book/">Graph Databases</a>. 2.a ed. O'Reilly. ISBN 978-1-4919-3089-2.<br />
-  Descarga gratuita. Modelado de grafos de propiedades y recorridos.</li>
-<li><strong>Neo4j, Inc.</strong> (2026). <a href="https://neo4j.com/docs/">Neo4j Documentation</a>.<br />
-  Cypher y modelo de grafo de propiedades.</li>
 <li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
   Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="027.html">← Anterior</a> · <a href="029.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="028">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="027.html"><span class="sentido">← Anterior · 027</span>Clave-valor, caché y expiración: qué se pierde exactamente</a>
-<a class="siguiente" href="029.html"><span class="sentido">Siguiente · 029 →</span>Columnas anchas: modelar desde la consulta</a>
+<a class="anterior" href="027.html"><span class="sentido">← Anterior · 027</span>Agregación, GROUP BY y HAVING sin duplicar filas</a>
+<a class="siguiente" href="029.html"><span class="sentido">Siguiente · 029 →</span>Nulos y lógica de tres valores</a>
 </nav>
 </main>
 <footer>

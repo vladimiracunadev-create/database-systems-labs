@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="LSM-Tree, compactación y amplificación de escritura. Parte 08: Almacenamiento, índices y planes.">
+<meta name="description" content="Series temporales: cardinalidad, retención y agregados continuos. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/040.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="040 — LSM-Tree, compactación y amplificación de escritura · Database Systems Labs">
-<meta property="og:description" content="LSM-Tree, compactación y amplificación de escritura. Parte 08: Almacenamiento, índices y planes.">
+<meta property="og:title" content="040 — Series temporales: cardinalidad, retención y agregados continuos · Database Systems Labs">
+<meta property="og:description" content="Series temporales: cardinalidad, retención y agregados continuos. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/040.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "040 — LSM-Tree, compactación y amplificación de escritura", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["memtable", "SSTable", "compactación", "amplificación de escritura", "filtro de Bloom"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>040 — LSM-Tree, compactación y amplificación de escritura · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "040 — Series temporales: cardinalidad, retención y agregados continuos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["cardinalidad de etiquetas", "submuestreo", "retención", "agregado continuo"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>040 — Series temporales: cardinalidad, retención y agregados continuos · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,258 +49,294 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-08.html">Parte 08 · Almacenamiento, índices y planes</a>
+  <a href="parte-07.html">Parte 07 · Grafos, columnas, tiempo y búsqueda</a>
   <span aria-hidden="true">/</span><span>Clase 040</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="040--lsm-tree-compactación-y-amplificación-de-escritura">040 — LSM-Tree, compactación y amplificación de escritura</h1>
+<h1 id="040--series-temporales-cardinalidad-retención-y-agregados-continuos">040 — Series temporales: cardinalidad, retención y agregados continuos</h1>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 08 — Almacenamiento, índices y planes · Avanzado ·
-3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code>, <code>redis</code> · laboratorio
+<p>Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
+3 horas estimadas · motores <code>timescaledb</code>, <code>influxdb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>memtable</code> · <code>SSTable</code> · <code>compactación</code> · <code>amplificación de escritura</code> · <code>filtro de Bloom</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>cardinalidad de etiquetas</code> · <code>submuestreo</code> · <code>retención</code> · <code>agregado continuo</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender la otra gran familia de estructuras de almacenamiento. El LSM-Tree sostiene Cassandra, RocksDB, ScyllaDB y LevelDB, y su compromiso es el inverso al del B-Tree.</p>
+<p>Diseñar almacenamiento para datos que llegan continuamente y se consultan por ventanas de tiempo, sin que la cardinalidad de las etiquetas destruya el sistema.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Describir el camino de una escritura y de una lectura en un LSM.</li>
-<li>Definir y calcular las tres amplificaciones: escritura, lectura y espacio.</li>
-<li>Explicar el papel del filtro de Bloom y calcular su tasa de falsos positivos.</li>
-<li>Comparar compactación por niveles y por tamaños.</li>
-<li>Elegir entre B-Tree y LSM según la carga.</li>
+<li>Calcular la cardinalidad de una serie y detectar cuándo es insostenible.</li>
+<li>Diseñar una política de retención por niveles con su ahorro estimado.</li>
+<li>Explicar qué son las hipertablas y los agregados continuos.</li>
+<li>Distinguir tiempo de evento de tiempo de ingesta y sus consecuencias.</li>
+<li>Elegir entre una extensión sobre el relacional y un motor especializado.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-camino-de-la-escritura">El camino de la escritura</h3>
-<pre><code class="language-text">1. Registro de confirmación (append secuencial, para durabilidad)
-2. Memtable: estructura ordenada en memoria
-3. Cuando la memtable se llena → se vuelca como SSTable inmutable, ordenada
-4. Las SSTables se fusionan periódicamente (compactación)
+<h3 id="la-cardinalidad-es-el-número-que-decide">La cardinalidad es el número que decide</h3>
+<p>Una serie temporal se identifica por su métrica y el conjunto de sus etiquetas. La <strong>cardinalidad</strong> es el número de combinaciones distintas:</p>
+<pre><code class="language-text">cardinalidad = ∏ (valores distintos de cada etiqueta)
 </code></pre>
-<p>Todo lo que toca el disco es <strong>secuencial</strong>. No hay escritura aleatoria en el camino crítico, y ahí está la ventaja: una escritura secuencial es órdenes de magnitud más barata que una aleatoria.</p>
-<p>Comparación con el B-Tree, que debe localizar la página correcta, modificarla en su sitio y posiblemente dividirla: escritura <strong>aleatoria</strong>, más el registro.</p>
-<h3 id="el-camino-de-la-lectura">El camino de la lectura</h3>
-<pre><code class="language-text">1. Buscar en la memtable
-2. Si no está, buscar en cada SSTable, de la más nueva a la más antigua
-3. Filtro de Bloom por SSTable para descartar sin leer
-4. Índice disperso dentro de la SSTable elegida
+<p>Ejemplo de laboratorio:</p>
+<pre><code class="language-text">métrica: latencia_consulta
+etiquetas: servicio(20) × endpoint(50) × region(3) × metodo(4)
+cardinalidad = 20 · 50 · 3 · 4 = 12 000 series      ← perfectamente manejable
 </code></pre>
-<p>Aquí está el precio: una clave inexistente puede exigir consultar <strong>todas</strong> las SSTables. El filtro de Bloom es lo que hace viable el modelo.</p>
-<h3 id="filtro-de-bloom">Filtro de Bloom</h3>
-<p>Estructura probabilística que responde «seguro que no está» o «puede que esté», nunca «seguro que sí».</p>
-<pre><code class="language-text">tasa de falsos positivos ≈ (1 - e^(-kn/m))^k
-
-con 10 bits por clave y k = 7 funciones hash:  ≈ 0,82 %
+<p>Ahora alguien añade <code>user_id</code> como etiqueta, con 500 000 usuarios:</p>
+<pre><code class="language-text">cardinalidad = 12 000 · 500 000 = 6 000 000 000 series
 </code></pre>
-<p>Con 10 SSTables y 0,82 % de falsos positivos, una lectura de clave inexistente lee de media 0,082 SSTables en vez de 10. Un 1,25 % de memoria adicional elimina el 99 % del trabajo inútil.</p>
-<h3 id="las-tres-amplificaciones">Las tres amplificaciones</h3>
+<p>Seis mil millones de series. El sistema no se pone lento: <strong>deja de funcionar</strong>, porque los índices de series no caben en memoria.</p>
+<p><strong>Regla:</strong> una etiqueta debe tener cardinalidad acotada y conocida. Identificadores de usuario, de petición, de sesión o marcas de tiempo <strong>nunca</strong> son etiquetas. Si hace falta ese detalle, corresponde a un registro de eventos, no a una serie temporal.</p>
+<h3 id="tiempo-de-evento-frente-a-tiempo-de-ingesta">Tiempo de evento frente a tiempo de ingesta</h3>
+<ul>
+<li><strong>Tiempo de evento:</strong> cuándo ocurrió realmente.</li>
+<li><strong>Tiempo de ingesta:</strong> cuándo llegó al sistema.</li>
+</ul>
+<p>Difieren por latencia de red, colas y dispositivos que estuvieron desconectados. Las consecuencias son concretas: un agregado por hora calculado al cerrar la hora pierde los datos que lleguen tarde; si se recalcula al llegar, un panel puede mostrar cifras distintas para la misma hora en dos momentos.</p>
+<p>Se decide explícitamente: cuánto se espera a los rezagados y qué se hace con los que llegan después de ese plazo. Es el mismo problema de las marcas de agua de la clase 057.</p>
+<h3 id="retención-por-niveles">Retención por niveles</h3>
+<p>Nadie necesita resolución de un segundo sobre datos de hace dos años. La política habitual:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Amplificación</th>
-<th>Definición</th>
-<th>B-Tree</th>
-<th>LSM</th>
+<th>Antigüedad</th>
+<th>Resolución</th>
+<th>Tamaño relativo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Escritura</strong></td>
-<td>Bytes escritos al disco / bytes lógicos</td>
-<td>~2–3×</td>
-<td>10–30× (por niveles)</td>
+<td>0 – 7 días</td>
+<td>1 s (bruto)</td>
+<td>100 %</td>
 </tr>
 <tr>
-<td><strong>Lectura</strong></td>
-<td>Páginas leídas / mínimo necesario</td>
-<td>~1×</td>
-<td>1–N según SSTables</td>
+<td>7 – 90 días</td>
+<td>1 min</td>
+<td>1,7 %</td>
 </tr>
 <tr>
-<td><strong>Espacio</strong></td>
-<td>Espacio ocupado / datos vivos</td>
-<td>1,3–2× (fragmentación)</td>
-<td>1,1× (niveles) a 2× (tamaños)</td>
+<td>90 días – 2 años</td>
+<td>1 h</td>
+<td>0,03 %</td>
+</tr>
+<tr>
+<td>&gt; 2 años</td>
+<td>1 día</td>
+<td>0,001 %</td>
 </tr>
 </tbody>
 </table></div>
-<p>El dato contraintuitivo: <strong>el LSM amplifica más la escritura</strong>, porque cada dato se reescribe en cada compactación que lo mueve de nivel. Su ventaja no es escribir menos bytes: es escribirlos <strong>secuencialmente</strong>, lo que en la práctica rinde mucho más.</p>
-<h3 id="estrategias-de-compactación">Estrategias de compactación</h3>
+<p><strong>Cálculo real</strong> para 12 000 series a 1 medición/s y 16 bytes por punto:</p>
+<pre><code class="language-text">bruto 1 año:   12 000 · 31 536 000 · 16 B  ≈  6,0 PB      ← inviable
+con niveles:
+  7 días a 1s:   12 000 ·   604 800 · 16 B ≈  116 GB
+  83 días a 1m:  12 000 ·   119 520 · 16 B ≈   23 GB
+  275 días a 1h: 12 000 ·     6 600 · 16 B ≈  1,3 GB
+  total                                     ≈  140 GB
+</code></pre>
+<p>De 6 petabytes a 140 gigabytes conservando lo que se consulta de verdad. La compresión específica de series (delta-of-delta para marcas de tiempo, XOR para valores) reduce eso otro orden de magnitud.</p>
+<h3 id="hipertablas-y-agregados-continuos">Hipertablas y agregados continuos</h3>
+<p>TimescaleDB extiende PostgreSQL: una <strong>hipertabla</strong> se ve como una tabla y por dentro es un conjunto de fragmentos particionados por tiempo.</p>
+<pre><code class="language-sql">CREATE TABLE mediciones (
+  medido_en TIMESTAMPTZ NOT NULL,
+  sensor_id INTEGER     NOT NULL,
+  valor     DOUBLE PRECISION NOT NULL
+);
+SELECT create_hypertable('mediciones', 'medido_en', chunk_time_interval =&gt; INTERVAL '1 day');
+</code></pre>
+<p>Ventajas de fragmentar por tiempo:</p>
+<ul>
+<li>Una consulta con filtro temporal descarta fragmentos enteros sin mirarlos (poda).</li>
+<li>Borrar datos antiguos es eliminar fragmentos, no un <code>DELETE</code> masivo que deja filas muertas.</li>
+<li>Los fragmentos antiguos se comprimen; los recientes se mantienen sin comprimir para escritura rápida.</li>
+</ul>
+<pre><code class="language-sql">ALTER TABLE mediciones SET (timescaledb.compress,
+                            timescaledb.compress_segmentby = 'sensor_id');
+SELECT add_compression_policy('mediciones', INTERVAL '7 days');
+SELECT add_retention_policy('mediciones',   INTERVAL '2 years');
+</code></pre>
+<p><strong>Agregado continuo:</strong> vista materializada que se refresca de forma incremental, solo sobre los fragmentos que cambiaron.</p>
+<pre><code class="language-sql">CREATE MATERIALIZED VIEW mediciones_hora
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', medido_en) AS hora,
+       sensor_id, avg(valor) AS media, max(valor) AS maximo, count(*) AS n
+FROM mediciones GROUP BY hora, sensor_id;
+
+SELECT add_continuous_aggregate_policy('mediciones_hora',
+  start_offset =&gt; INTERVAL '3 hours',   -- reprocesa 3 h: margen para rezagados
+  end_offset   =&gt; INTERVAL '10 minutes',
+  schedule_interval =&gt; INTERVAL '10 minutes');
+</code></pre>
+<p>El <code>start_offset</code> <strong>es</strong> la decisión sobre los rezagados: tres horas de margen antes de considerar cerrada una ventana.</p>
+<pre><code class="language-mermaid">flowchart LR
+    I[&quot;Ingesta&quot;] --&gt; H[&quot;Hipertabla&lt;br/&gt;fragmentos por día&quot;]
+    H --&gt; C1[&quot;Fragmentos recientes&lt;br/&gt;sin comprimir&quot;]
+    H --&gt; C2[&quot;Fragmentos antiguos&lt;br/&gt;comprimidos&quot;]
+    H --&gt; A[&quot;Agregado continuo&lt;br/&gt;1 hora&quot;]
+    A --&gt; A2[&quot;Agregado continuo&lt;br/&gt;1 día&quot;]
+    C2 --&gt; R[&quot;Política de retención:&lt;br/&gt;eliminar fragmento&quot;]
+    A --&gt; P[&quot;Paneles&quot;]
+    A2 --&gt; P
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Dominio: 800 sensores, una medición cada 10 s, consultas de panel sobre las últimas 24 h y comparativas anuales.</p>
+<pre><code class="language-text">puntos por día = 800 · 8 640 = 6 912 000
+puntos por año ≈ 2 523 millones
+</code></pre>
+<p><strong>Sin diseño:</strong> una tabla plana con índice en <code>(sensor_id, medido_en)</code>. La consulta de panel de 24 h sobre un sensor lee 8 640 filas: rápido. La comparativa anual sobre todos los sensores lee 2 523 millones: minutos, y el índice pesa más que los datos.</p>
+<p><strong>Con hipertabla y agregados:</strong></p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Estrategia</th>
-<th>Amplificación de escritura</th>
-<th>De lectura</th>
-<th>De espacio</th>
+<th>Consulta</th>
+<th>Sobre</th>
+<th style="text-align: right;">Filas leídas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Panel 24 h, un sensor, bruto</td>
+<td>hipertabla, 1 fragmento</td>
+<td style="text-align: right;">8 640</td>
+</tr>
+<tr>
+<td>Panel 30 días, un sensor</td>
+<td><code>mediciones_hora</code></td>
+<td style="text-align: right;">720</td>
+</tr>
+<tr>
+<td>Comparativa anual, todos</td>
+<td><code>mediciones_dia</code></td>
+<td style="text-align: right;">292 000</td>
+</tr>
+<tr>
+<td>Comparativa anual, bruto</td>
+<td>hipertabla</td>
+<td style="text-align: right;">2 523 000 000</td>
+</tr>
+</tbody>
+</table></div>
+<p>La última fila es la que justifica todo lo anterior: <strong>cuatro órdenes de magnitud</strong> por consultar el agregado adecuado.</p>
+<p><strong>El error de cardinalidad, cuantificado.</strong> Si se añadiera <code>numero_de_serie_del_lote</code> como etiqueta, con 200 000 valores distintos al año:</p>
+<pre><code class="language-text">antes:  800 series
+después: 800 · 200 000 = 160 000 000 series
+</code></pre>
+<p>El índice de series pasa de kilobytes a decenas de gigabytes solo en metadatos. El dato del lote debe ir como <strong>campo</strong> (columna de valor), no como etiqueta: se guarda y se consulta, pero no multiplica el número de series.</p>
+<p>Esta distinción entre etiqueta (indexada, define la serie) y campo (dato, no indexado) es la decisión de modelado central en InfluxDB y equivalentes.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Ingesta</th>
+<th>Consulta por ventana</th>
+<th>Operación</th>
 <th>Cuándo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Por niveles</strong></td>
-<td>Alta (~10–30×)</td>
-<td>Baja (~1 SSTable por nivel)</td>
-<td>Baja (~1,1×)</td>
-<td>Predomina la lectura</td>
+<td>PostgreSQL con índice</td>
+<td>Buena</td>
+<td>Degrada con el volumen</td>
+<td>Simple</td>
+<td>&lt; 100 M puntos</td>
 </tr>
 <tr>
-<td><strong>Por tamaños</strong></td>
-<td>Baja (~4–10×)</td>
-<td>Alta (varias SSTables)</td>
-<td>Alta (~2×)</td>
-<td>Predomina la escritura</td>
+<td>TimescaleDB</td>
+<td>Muy buena</td>
+<td>Excelente con agregados</td>
+<td>Simple: es PostgreSQL</td>
+<td>Hasta miles de millones</td>
 </tr>
 <tr>
-<td><strong>Temporal</strong></td>
-<td>Muy baja</td>
-<td>Baja con filtro temporal</td>
-<td>Baja</td>
-<td>Series temporales con TTL</td>
-</tr>
-</tbody>
-</table></div>
-<p>La estrategia temporal es la correcta para datos con expiración: las SSTables agrupan por ventana temporal y expirar es eliminar archivos enteros, sin compactar nada.</p>
-<h3 id="lápidas">Lápidas</h3>
-<p>Borrar en un LSM no borra: escribe una <strong>lápida</strong> (marca de borrado). El dato desaparece de verdad cuando una compactación fusiona la lápida con el valor original.</p>
-<p>Consecuencia práctica y frecuente: una tabla de la que se borra mucho puede <strong>crecer</strong> tras los borrados, y las lecturas se vuelven más lentas porque hay que leer y descartar lápidas. En Cassandra, una consulta de rango que atraviesa miles de lápidas es una causa habitual de tiempos agotados.</p>
-<pre><code class="language-mermaid">flowchart TD
-    W[&quot;Escritura&quot;] --&gt; CL[&quot;Registro de confirmación&lt;br/&gt;(secuencial)&quot;]
-    W --&gt; MT[&quot;Memtable&lt;br/&gt;(memoria, ordenada)&quot;]
-    MT --&gt;|&quot;se llena&quot;| L0[&quot;SSTable nivel 0&quot;]
-    L0 --&gt;|&quot;compactación&quot;| L1[&quot;Nivel 1&quot;]
-    L1 --&gt;|&quot;compactación&quot;| L2[&quot;Nivel 2&quot;]
-    R[&quot;Lectura&quot;] --&gt; MT
-    R --&gt; BF{&quot;Filtro de Bloom&lt;br/&gt;por SSTable&quot;}
-    BF -- &quot;seguro que no&quot; --&gt; SK[&quot;Saltar&quot;]
-    BF -- &quot;puede que sí&quot; --&gt; IX[&quot;Índice disperso&lt;br/&gt;→ leer bloque&quot;]
-</code></pre>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Carga: 50 000 escrituras/s de eventos, lecturas por clave puntual y consultas de rango por tiempo.</p>
-<p><strong>Con B-Tree</strong> (PostgreSQL, tabla con índice sobre <code>(sensor_id, medido_en)</code>):</p>
-<pre><code class="language-text">Por cada inserción:
-  - registro WAL:                     secuencial
-  - página de datos:                  aleatoria (o al final si hay correlación)
-  - página de hoja del índice:        ALEATORIA
-  - división de página ocasional:     escrituras extra
-Amplificación ≈ 2-3×, pero con componente ALEATORIO dominante
-</code></pre>
-<p>Con 50 000 inserciones/s y claves dispersas, las hojas del índice se tocan en posiciones aleatorias: el cuello de botella son las IOPS aleatorias.</p>
-<p><strong>Con LSM</strong> (RocksDB o Cassandra):</p>
-<pre><code class="language-text">Por cada inserción:
-  - registro de confirmación:         secuencial
-  - memtable:                         memoria
-Compactación en segundo plano:        SECUENCIAL, fuera del camino crítico
-Amplificación ≈ 15×, todo secuencial
-</code></pre>
-<p>Escribe <strong>cinco veces más bytes</strong> y aun así sostiene mucho más caudal, porque la escritura secuencial en un SSD rinde varios GB/s frente a las decenas de miles de IOPS aleatorias.</p>
-<p><strong>El precio, en la lectura de una clave inexistente:</strong></p>
-<pre><code class="language-text">niveles: L0 (4 SSTables) + L1 (10) + L2 (100) = 114 SSTables
-sin filtro de Bloom: 114 comprobaciones, muchas con lectura de disco
-con filtro (0,82 %):  114 · 0,0082 ≈ 0,93 lecturas de media
-</code></pre>
-<p><strong>Cálculo de espacio con lápidas.</strong> 10 millones de filas de 100 B, se borra el 30 %:</p>
-<pre><code class="language-text">datos vivos                        700 MB
-lápidas (30 %, ~50 B cada una)     150 MB
-valores aún no compactados         300 MB
-total antes de compactar         1 150 MB   ← 64 % más que los datos vivos
-tras compactación completa         700 MB
-</code></pre>
-<p>Por eso <code>gc_grace_seconds</code> en Cassandra —el plazo antes de eliminar lápidas— es un parámetro operativo delicado: bajarlo libera espacio antes, y arriesga que un nodo que estuvo caído resucite datos borrados.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Dimensión</th>
-<th>B-Tree</th>
-<th>LSM-Tree</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Escritura aleatoria</td>
-<td>Cara</td>
-<td>Convertida en secuencial</td>
+<td>InfluxDB</td>
+<td>Excelente</td>
+<td>Excelente</td>
+<td>Sistema aparte</td>
+<td>Métricas puras</td>
 </tr>
 <tr>
-<td>Lectura puntual</td>
-<td>Óptima (log N)</td>
-<td>Buena con filtro de Bloom</td>
+<td>ClickHouse</td>
+<td>Excelente</td>
+<td>Excelente</td>
+<td>Sistema aparte</td>
+<td>Analítica + series</td>
 </tr>
 <tr>
-<td>Consulta de rango</td>
-<td>Excelente (hojas enlazadas)</td>
-<td>Buena, requiere fusionar SSTables</td>
-</tr>
-<tr>
-<td>Amplificación de escritura</td>
-<td>2–3×</td>
-<td>10–30×</td>
-</tr>
-<tr>
-<td>Espacio</td>
-<td>Fragmentación interna</td>
-<td>Lápidas y duplicados</td>
-</tr>
-<tr>
-<td>Latencia</td>
-<td>Predecible</td>
-<td>Picos durante la compactación</td>
-</tr>
-<tr>
-<td>Motores</td>
-<td>PostgreSQL, InnoDB, SQLite</td>
-<td>Cassandra, RocksDB, ScyllaDB, LevelDB</td>
+<td>Archivos Parquet + DuckDB</td>
+<td>Por lotes</td>
+<td>Muy buena</td>
+<td>Mínima</td>
+<td>Histórico frío</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Borrar masivamente en un LSM y esperar que libere espacio.</strong> Hasta la compactación, ocupa más.</li>
-<li><strong>Consultas de rango sobre zonas con muchas lápidas.</strong> Tiempos agotados difíciles de diagnosticar.</li>
-<li><strong>Estrategia de compactación por defecto para cualquier carga.</strong> Series temporales y cargas de lectura piden estrategias distintas.</li>
-<li><strong>Filtros de Bloom mal dimensionados.</strong> Pocos bits por clave disparan los falsos positivos.</li>
-<li><strong>Ignorar los picos de latencia por compactación.</strong> El percentil 99 es peor que la media.</li>
-<li><strong>Elegir LSM «porque escala».</strong> Si la carga es de lectura por rango, el B-Tree suele ganar.</li>
+<li><strong>Etiquetas de cardinalidad no acotada.</strong> El fallo más grave y el más común.</li>
+<li><strong>Guardar todo en resolución máxima para siempre.</strong> El costo crece linealmente y el valor no.</li>
+<li><strong><code>DELETE</code> masivo para purgar.</strong> Deja filas muertas; hay que eliminar fragmentos.</li>
+<li><strong>Ignorar los datos rezagados.</strong> Los agregados quedan incompletos sin que nadie lo note.</li>
+<li><strong>Consultar los datos brutos desde el panel.</strong> Existiendo el agregado, es trabajo desperdiciado.</li>
+<li><strong>Confundir etiqueta con campo.</strong> Determina si el dato multiplica la cardinalidad.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las incidencias de un LSM se ven como picos de latencia y de espacio, no como lentitud constante. Vigilar la deuda de compactación pendiente es la métrica que anticipa el problema, igual que la hinchazón lo es en un motor MVCC.</p>
+<p>El fallo por cardinalidad no avisa: el sistema funciona bien hasta que una versión nueva del emisor añade una etiqueta y, en horas, el almacén se satura. Un límite de cardinalidad vigilado y con alerta es tan necesario como el de espacio en disco.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Calcula la amplificación de escritura de tu carga con compactación por niveles y por tamaños.</li>
-<li>Estima la tasa de falsos positivos de tu filtro de Bloom con la configuración actual.</li>
-<li>Reproduce el crecimiento de espacio tras un borrado masivo y mide antes y después de compactar.</li>
-<li>Argumenta con cifras si tu carga encaja mejor en B-Tree o en LSM.</li>
+<li>Calcula la cardinalidad de una serie real tuya y la que tendría al añadir una etiqueta candidata.</li>
+<li>Diseña la política de retención por niveles y calcula el ahorro en bytes.</li>
+<li>Implementa una hipertabla con agregado continuo y compara la consulta anual antes y después.</li>
+<li>Define el margen para rezagados y justifícalo con la latencia real de tu ingesta.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué un LSM escribe más bytes y aun así sostiene más caudal de escritura?</li>
-<li>Calcula la tasa de falsos positivos con 8 bits por clave y 5 funciones hash.</li>
-<li>Explica por qué borrar puede aumentar el espacio ocupado y ralentizar las lecturas.</li>
-<li>¿Qué estrategia de compactación elegirías para datos con TTL de 30 días, y por qué?</li>
+<li>¿Por qué un identificador de usuario nunca debe ser etiqueta?</li>
+<li>Calcula el almacenamiento anual de tu serie con y sin retención por niveles.</li>
+<li>Explica la diferencia entre tiempo de evento y de ingesta con un caso de tu sistema.</li>
+<li>¿Qué ventaja tiene eliminar un fragmento frente a un <code>DELETE</code> con filtro temporal?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Escribir rápido y pagarlo después, o escribir despacio y no pagarlo</p>
-<p>Un árbol B modifica la página donde está la fila: la escritura es una
-lectura, un cambio y una escritura en un sitio concreto del disco. Un árbol
-LSM no modifica nada: acumula en memoria, vuelca archivos <strong>inmutables</strong>
-ordenados y los fusiona después en segundo plano. La escritura se vuelve
-secuencial y barata; la lectura puede tener que mirar en varios archivos, y
-la fusión consume entrada y salida para siempre.</p>
-<p>De ahí las tres amplificaciones que hay que saber nombrar: de <strong>escritura</strong>
-(cada byte se reescribe varias veces al compactar), de <strong>lectura</strong> (una
-consulta toca varios archivos) y de <strong>espacio</strong> (conviven versiones y datos
-borrados que aún no se han retirado). Ninguna estructura las minimiza las
-tres: elegir es decidir cuál se paga.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> Sumar las lecturas por hora, que es lo único que se mira de una serie</p>
+<p>Nadie consulta una serie temporal lectura a lectura: se consulta por
+ventanas. Sumar, promediar o contar por intervalos —el <em>bucketing</em>— es la
+operación central, y todos los motores la resuelven; lo que cambia es si hay
+que escribirla cada vez, si el resultado se mantiene solo y qué pasa con los
+datos viejos.</p>
+<p>El caso tiene cinco lecturas repartidas en dos horas y pide el total por
+hora, ordenado. Las tres preguntas que la clase pone encima de la mesa —la
+cardinalidad de las series, la retención de lo viejo y el agregado que se
+mantiene al día— aparecen en el «por qué no» de cada motor, que es donde se
+decide.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>hora</th>
+<th>total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2026-08-19 10:00</code></td>
+<td><code>66</code></td>
+</tr>
+<tr>
+<td><code>2026-08-19 11:00</code></td>
+<td><code>45</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 040</code>: 3 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -313,98 +349,289 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
+<td>TimescaleDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/timescaledb/consulta.sql">código</a></td>
+<td><a href="https://docs.timescale.com/use-timescale/latest/time-buckets/">doc oficial</a></td>
 </tr>
 <tr>
-<td>ScyllaDB</td>
+<td>InfluxDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/influxdb/consulta.txt">código</a></td>
+<td><a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-datetime.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>SQLite</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://sqlite.org/lang_vacuum.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_datefunc.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>DuckDB</td>
+<td>ClickHouse</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/clickhouse/consulta.sql">código</a></td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
+<h4 id="timescaledb--implementacionestimescaledbconsultasql">TimescaleDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/timescaledb/consulta.sql"><code>implementaciones/timescaledb/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: timescaledb
+-- doc: https://docs.timescale.com/use-timescale/latest/time-buckets/
+-- nota: implementacion declarada. Es PostgreSQL con la parte temporal resuelta:
+--       hipertabla que particiona sola, time_bucket con ventanas arbitrarias,
+--       agregado continuo que se mantiene al dia y politicas declarativas de
+--       retencion y compresion. Todo lo de abajo sigue siendo SQL, y se puede
+--       reunir con el resto del esquema.
+
+-- === preparacion ===
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+DROP TABLE IF EXISTS lecturas CASCADE;
+
+CREATE TABLE lecturas (
+    momento timestamptz NOT NULL,
+    valor   integer NOT NULL
+);
+SELECT create_hypertable('lecturas', by_range('momento'));
+
+INSERT INTO lecturas (momento, valor) VALUES
+    ('2026-08-19 10:00:00+00', 20),
+    ('2026-08-19 10:15:00+00', 21),
+    ('2026-08-19 10:45:00+00', 25),
+    ('2026-08-19 11:05:00+00', 22),
+    ('2026-08-19 11:30:00+00', 23);
+
+-- El agregado que NO hay que recalcular: se mantiene solo al llegar datos.
+CREATE MATERIALIZED VIEW lecturas_por_hora
+WITH (timescaledb.continuous) AS
+SELECT time_bucket(INTERVAL '1 hour', momento) AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora;
+
+-- Y la retencion, declarada en vez de programada a mano:
+SELECT add_retention_policy('lecturas', INTERVAL '90 days');
+
+-- === consulta ===
+SELECT to_char(hora, 'YYYY-MM-DD HH24:MI') AS hora, total
+FROM lecturas_por_hora
+ORDER BY hora;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> LSM puro. Escribe en el registro de compromiso y en una tabla en memoria, vuelca SSTables inmutables y las compacta con la estrategia que se elija: por tamaño (<code>STCS</code>), por niveles (<code>LCS</code>) o por ventana temporal (<code>TWCS</code>). Esa elección es la decisión de operación más importante del motor.</li>
-<li><strong>Por qué sí:</strong> La escritura no lee nada antes: es secuencial y de latencia muy predecible, y por eso Cassandra ingiere volúmenes que un árbol B no aguantaría en una sola máquina.</li>
-<li><strong>Por qué no:</strong> Se paga en lectura y en fusión. Con <code>STCS</code> la amplificación de espacio puede llegar a exigir el doble de disco libre para compactar; con <code>LCS</code> baja la amplificación de lectura y sube mucho la de escritura. Y los datos borrados no desaparecen: son lápidas que hay que recorrer hasta la compactación.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/</a></li>
+<li><strong>Por qué sí:</strong> Es PostgreSQL con la parte temporal resuelta: <code>time_bucket</code> para ventanas arbitrarias, hipertablas que particionan por tiempo sin que nadie lo administre, agregados continuos que se actualizan solos y políticas de retención y compresión declarativas. Y sigue siendo SQL, con reuniones contra el resto del esquema.</li>
+<li><strong>Por qué no:</strong> Es una extensión: en un servicio administrado hay que comprobar que está disponible, y añade su propio ciclo de versiones sobre el de PostgreSQL. La compresión, además, hace las filas comprimidas más caras de modificar.</li>
+<li>📄 Documentación oficial: <a href="https://docs.timescale.com/use-timescale/latest/time-buckets/">https://docs.timescale.com/use-timescale/latest/time-buckets/</a></li>
 </ul>
-<h4 id="scylladb">ScyllaDB</h4>
+<h4 id="influxdb--implementacionesinfluxdbconsultatxt">InfluxDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/influxdb/consulta.txt"><code>implementaciones/influxdb/consulta.txt</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-text"># motor: influxdb
+# doc: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/
+# nota: implementacion declarada. Lo importante de este archivo no es la
+#       consulta: es la linea de escritura de arriba.
+#
+#       En el protocolo de linea, lo que va antes del primer espacio son
+#       ETIQUETAS (indexadas) y lo que va despues son CAMPOS (no indexados).
+#       Cada combinacion distinta de valores de etiqueta crea una SERIE, y el
+#       indice de series vive en memoria. Poner como etiqueta algo con muchos
+#       valores distintos —un id de usuario, un id de peticion, una traza— es
+#       el error que tumba servidores de InfluxDB, y no avisa: simplemente deja
+#       de arrancar cuando el indice no cabe.
+#
+#       Regla: etiqueta lo que tenga POCOS valores distintos y sirva para
+#       filtrar; deja como campo todo lo demas.
+
+# === preparacion ===
+# Escritura con el protocolo de linea (measurement,tags fields timestamp):
+#   lecturas,sensor=sensor-1 valor=20 1787133600000000000
+#   lecturas,sensor=sensor-1 valor=21 1787134500000000000
+#   lecturas,sensor=sensor-1 valor=25 1787136300000000000
+#   lecturas,sensor=sensor-1 valor=22 1787137500000000000
+#   lecturas,sensor=sensor-1 valor=23 1787139000000000000
+
+# === consulta ===
+# Flux. La ventana es una primitiva del lenguaje, no una funcion sobre la fecha.
+from(bucket: &quot;telemetria&quot;)
+  |&gt; range(start: 2026-08-19T10:00:00Z, stop: 2026-08-19T12:00:00Z)
+  |&gt; filter(fn: (r) =&gt; r._measurement == &quot;lecturas&quot; and r._field == &quot;valor&quot;)
+  |&gt; aggregateWindow(every: 1h, fn: sum, createEmpty: false)
+  |&gt; keep(columns: [&quot;_time&quot;, &quot;_value&quot;])
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> El mismo modelo LSM con las mismas estrategias, más una propia (<code>Incremental</code>) pensada para reducir el espacio libre necesario, y con la compactación planificada por su propio programador de entrada y salida en vez de competir con las consultas.</li>
-<li><strong>Por qué sí:</strong> Controlar el reparto de entrada y salida entre consultas y compactación es justo lo que evita el síntoma clásico: la latencia que se dispara cada vez que empieza una compactación grande.</li>
-<li><strong>Por qué no:</strong> Sigue siendo un LSM: las tres amplificaciones están ahí. Lo que cambia es quién decide cuándo se paga, no si se paga.</li>
-<li>📄 Documentación oficial: <a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">https://opensource.docs.scylladb.com/stable/kb/compaction.html</a></li>
+<li><strong>Por qué sí:</strong> Está construido solo para esto: escritura por lotes muy alta, compresión específica de series, retención por <em>bucket</em> y ventanas como primitiva del lenguaje. Para telemetría pura, el ajuste es directo.</li>
+<li><strong>Por qué no:</strong> Aquí la cardinalidad manda: cada combinación distinta de etiquetas crea una serie, y un identificador único como etiqueta —un id de usuario, una traza— hace explotar la memoria del índice. Es el error clásico, y no avisa hasta que el servidor deja de arrancar. Además ha cambiado de lenguaje de consulta entre versiones mayores.</li>
+<li>📄 Documentación oficial: <a href="https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/">https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/</a></li>
 </ul>
-<h4 id="redis">Redis</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-datetime.html
+-- nota: la retencion barata no es DELETE, es DROP de una particion. Con
+--       particionado declarativo por rango, tirar un mes entero cuesta lo mismo
+--       que borrar un archivo:
+--         CREATE TABLE lecturas (...) PARTITION BY RANGE (momento);
+--         DROP TABLE lecturas_2026_07;
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lecturas;
+
+CREATE TABLE lecturas (
+    momento timestamptz NOT NULL,
+    valor   integer NOT NULL
+);
+INSERT INTO lecturas (momento, valor) VALUES
+    (TIMESTAMPTZ '2026-08-19 10:00:00+00', 20),
+    (TIMESTAMPTZ '2026-08-19 10:15:00+00', 21),
+    (TIMESTAMPTZ '2026-08-19 10:45:00+00', 25),
+    (TIMESTAMPTZ '2026-08-19 11:05:00+00', 22),
+    (TIMESTAMPTZ '2026-08-19 11:30:00+00', 23);
+
+-- === consulta ===
+-- `AT TIME ZONE 'UTC'` fija la zona en la EXPRESION en vez de en la sesion. Si
+-- dependiera de la sesion, la misma consulta agruparia en horas distintas segun
+-- quien la lanzara, y ese es un error de informe muy dificil de ver.
+SELECT to_char(date_trunc('hour', momento AT TIME ZONE 'UTC'),
+               'YYYY-MM-DD HH24:MI') AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY 1
+ORDER BY 1;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> No tiene ninguna de las dos estructuras: los datos viven en memoria. Su persistencia AOF, sin embargo, <strong>es</strong> un registro que crece y que hay que reescribir periódicamente para compactarlo, con el mismo dilema de fondo.</li>
-<li><strong>Por qué sí:</strong> Enseña la idea desnuda: un registro que solo crece necesita, tarde o temprano, un proceso que lo reescriba. Eso es la compactación, sin árbol de por medio.</li>
-<li><strong>Por qué no:</strong> La reescritura del AOF la hace un proceso hijo que duplica memoria por copia al escribir: en el peor momento —mucha escritura— es cuando más memoria hace falta, que es exactamente cuando menos hay.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li><strong>Por qué sí:</strong> <code>date_trunc</code> con <code>GROUP BY</code> resuelve el caso sin extensiones, y el particionado declarativo por rango permite tirar un mes entero con un <code>DROP TABLE</code> de la partición, que es la forma barata de la retención: borrar filas una a una es lo caro.</li>
+<li><strong>Por qué no:</strong> Sin extensión no hay agregados que se mantengan solos ni compresión por columnas: una tabla de telemetría normal ocupa varias veces lo que ocuparía en un motor especializado, y el agregado se recalcula en cada consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-datetime.html">https://www.postgresql.org/docs/current/functions-datetime.html</a></li>
 </ul>
-<h4 id="mongodb">MongoDB</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/timestamp.html
+-- nota: aqui la marca SI es un TIMESTAMP de verdad, y time_bucket admite
+--       ventanas arbitrarias:
+--         time_bucket(INTERVAL '15 minutes', momento)
+--       La misma consulta funciona sobre un Parquet sin cargarlo.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento TIMESTAMP NOT NULL,
+    valor   INTEGER NOT NULL
+);
+INSERT INTO lecturas VALUES
+    ('2026-08-19 10:00:00', 20),
+    ('2026-08-19 10:15:00', 21),
+    ('2026-08-19 10:45:00', 25),
+    ('2026-08-19 11:05:00', 22),
+    ('2026-08-19 11:30:00', 23);
+
+-- === consulta ===
+SELECT strftime(time_bucket(INTERVAL '1 hour', momento), '%Y-%m-%d %H:%M') AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> WiredTiger usa un árbol B con escritura en un espacio nuevo: los bloques modificados no se sobrescriben en su sitio, se escriben en otro y se publican en el siguiente punto de control. Es un punto intermedio entre las dos familias.</li>
-<li><strong>Por qué sí:</strong> Evita la escritura parcial de páginas sin necesitar un búfer de doble escritura, y permite comprimir cada bloque por separado.</li>
-<li><strong>Por qué no:</strong> Deja bloques huérfanos que hay que recuperar, así que el espacio en disco no baja al borrar datos hasta que se compacta: la amplificación de espacio del LSM reaparece con otro nombre.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
+<li><strong>Por qué sí:</strong> Tiene <code>time_bucket</code> propio y agrega sobre millones de puntos en memoria: es la forma más rápida de explorar un histórico exportado a Parquet sin montar nada.</li>
+<li><strong>Por qué no:</strong> No ingiere: no hay escritura continua, ni retención, ni agregados mantenidos. Analiza la serie; no la guarda.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/timestamp.html">https://duckdb.org/docs/stable/sql/functions/timestamp.html</a></li>
 </ul>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_datefunc.html
+-- nota: SQLite NO tiene tipo de fecha. Estas marcas son texto ISO-8601, que se
+--       ordena y se compara bien por casualidad del formato. Mezclar texto ISO
+--       con segundos desde la epoca en la misma columna no da error: da un
+--       resultado equivocado.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento TEXT NOT NULL,
+    valor   INTEGER NOT NULL
+);
+INSERT INTO lecturas (momento, valor) VALUES
+    ('2026-08-19T10:00:00Z', 20),
+    ('2026-08-19T10:15:00Z', 21),
+    ('2026-08-19T10:45:00Z', 25),
+    ('2026-08-19T11:05:00Z', 22),
+    ('2026-08-19T11:30:00Z', 23);
+
+-- === consulta ===
+SELECT strftime('%Y-%m-%d %H:00', momento) AS hora,
+       SUM(valor) AS total
+FROM lecturas
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio, y MVCC encima: un <code>UPDATE</code> no modifica la fila, escribe una versión nueva y deja la vieja muerta. La limpieza la hace <code>VACUUM</code>.</li>
-<li><strong>Por qué sí:</strong> La lectura por clave toca un solo camino del árbol: la amplificación de lectura es la mínima posible, y el plan es fácil de predecir.</li>
-<li><strong>Por qué no:</strong> Su amplificación de escritura es alta y poco visible: un <code>UPDATE</code> puede escribir en todos los índices de la tabla, y si la página está limpia desde el último punto de control, el WAL guarda la <strong>página entera</strong> (<code>full_page_writes</code>), no solo el cambio.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">https://www.postgresql.org/docs/current/routine-vacuuming.html</a></li>
+<li><strong>Por qué sí:</strong> Con <code>strftime</code> se agrupa por hora sin nada más, lo que lo hace perfecto para telemetría <strong>en el dispositivo</strong>: guardar localmente lo que se mide y enviar solo el agregado.</li>
+<li><strong>Por qué no:</strong> No tiene tipo de fecha: las marcas de tiempo son texto, números o segundos desde la época, y comparar dos formatos distintos no da error, da un resultado equivocado. La zona horaria hay que gestionarla entera a mano.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_datefunc.html">https://sqlite.org/lang_datefunc.html</a></li>
 </ul>
-<h4 id="sqlite">SQLite</h4>
+<h4 id="clickhouse--implementacionesclickhouseconsultasql">ClickHouse · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/implementaciones/clickhouse/consulta.sql"><code>implementaciones/clickhouse/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: clickhouse
+-- doc: https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions
+-- nota: implementacion declarada. La vista materializada de ClickHouse no es
+--       una copia que se refresca: es un disparador de insercion que agrega al
+--       llegar los datos. El agregado nunca se recalcula.
+--       El precio: corregir una lectura mal enviada no es un UPDATE, es una
+--       mutacion asincrona que reescribe partes enteras.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    momento DateTime,
+    valor   Int32
+) ENGINE = MergeTree ORDER BY momento;
+
+CREATE MATERIALIZED VIEW lecturas_por_hora
+ENGINE = SummingMergeTree ORDER BY hora
+AS SELECT toStartOfHour(momento) AS hora, SUM(valor) AS total
+FROM lecturas GROUP BY hora;
+
+INSERT INTO lecturas VALUES
+    ('2026-08-19 10:00:00', 20),
+    ('2026-08-19 10:15:00', 21),
+    ('2026-08-19 10:45:00', 25),
+    ('2026-08-19 11:05:00', 22),
+    ('2026-08-19 11:30:00', 23);
+
+-- === consulta ===
+SELECT formatDateTime(hora, '%Y-%m-%d %H:%M') AS hora, SUM(total) AS total
+FROM lecturas_por_hora
+GROUP BY hora
+ORDER BY hora;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio y sin recolección de versiones: al borrar, el espacio queda en una lista de páginas libres que se reutiliza, y solo <code>VACUUM</code> devuelve el archivo a su tamaño mínimo.</li>
-<li><strong>Por qué sí:</strong> Es el modelo más simple y predecible: sin compactación de fondo, sin procesos auxiliares y sin sorpresas de latencia.</li>
-<li><strong>Por qué no:</strong> Sin compactación de fondo, la fragmentación se acumula y el archivo no encoge solo. En dispositivos con almacenamiento limitado, ese <code>VACUUM</code> olvidado es una avería real.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_vacuum.html">https://sqlite.org/lang_vacuum.html</a></li>
+<li><strong>Por qué sí:</strong> <code>toStartOfHour</code> y las vistas materializadas que agregan al <strong>insertar</strong> dan el mismo resultado sin recalcular, y su compresión por columnas sobre datos temporales ordenados es de las mejores que existen. Es la opción cuando la serie tiene miles de millones de puntos.</li>
+<li><strong>Por qué no:</strong> Actualizar o borrar puntos concretos es una operación pesada y asíncrona: corregir una lectura mal enviada no es un <code>UPDATE</code>, es una mutación que reescribe partes enteras.</li>
+<li>📄 Documentación oficial: <a href="https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions">https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -419,10 +646,10 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
-<td>Su almacenamiento no pertenece a ninguna de las dos familias: guarda grupos de filas por columnas, comprimidos, pensados para escribirse una vez y leerse muchas. La pregunta de esta clase —cómo se absorbe la escritura aleatoria constante— no es la suya.</td>
-<td>Se estudia donde le corresponde, en la parte de analítica columnar, donde la pregunta es cuántos bytes hay que leer y no cuántas veces se reescriben.</td>
-<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc</a></td>
+<td>MongoDB</td>
+<td>Sus colecciones de series temporales resuelven bien el almacenamiento, pero para este caso concreto la comparación no aporta: la agregación por ventana se escribe con <code>$dateTrunc</code> y <code>$group</code>, que ya se estudió en la clase de agregación sobre documentos.</td>
+<td>Se compara donde sí aporta —en el modelado por dispositivo y ventana, en la clase de columnas anchas— en vez de repetir aquí la misma tubería.</td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -473,22 +700,22 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Patrick O'Neil, Edward Cheng, Dieter Gawlick, Elizabeth O'Neil</strong> (1996). <a href="https://link.springer.com/article/10.1007/s002360050048">The Log-Structured Merge-Tree (LSM-Tree)</a>. Acta Informatica 33(4). DOI <a href="https://doi.org/10.1007/s002360050048">10.1007/s002360050048</a>.<br />
-  Estructura que sostiene RocksDB, Cassandra, ScyllaDB y LevelDB.</li>
-<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
-  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
-<li><strong>Burton H. Bloom</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362686.362692">Space/Time Trade-offs in Hash Coding with Allowable Errors</a>. Communications of the ACM 13(7). DOI <a href="https://doi.org/10.1145/362686.362692">10.1145/362686.362692</a>.<br />
-  Filtro de Bloom: clave para evitar lecturas de disco en motores LSM.</li>
+<li><strong>Timescale, Inc.</strong> (2026). <a href="https://docs.timescale.com/">TimescaleDB Documentation</a>.<br />
+  Hipertablas, compresión y agregados continuos sobre PostgreSQL.</li>
+<li><strong>InfluxData</strong> (2026). <a href="https://docs.influxdata.com/">InfluxDB Documentation</a>.<br />
+  Modelo de medición, etiquetas y campos para series temporales.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="039.html">← Anterior</a> · <a href="041.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="040">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="039.html"><span class="sentido">← Anterior · 039</span>B-Tree: estructura, orden de columnas y selectividad</a>
-<a class="siguiente" href="041.html"><span class="sentido">Siguiente · 041 →</span>Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a>
+<a class="anterior" href="039.html"><span class="sentido">← Anterior · 039</span>Columnas anchas: modelar desde la consulta</a>
+<a class="siguiente" href="041.html"><span class="sentido">Siguiente · 041 →</span>Búsqueda de texto: índice invertido, análisis y relevancia</a>
 </nav>
 </main>
 <footer>

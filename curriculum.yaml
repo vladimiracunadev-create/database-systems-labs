@@ -57,7 +57,7 @@ evaluacion:
         2: Invariantes declarados, pero ninguno comprobado por código.
         3: Invariantes declarados, priorizados y comprobados al menos por una prueba.
         4: Invariantes medibles y trazables hasta la consulta o restricción que los sostiene.
-      clases: ["005", "013"]
+      clases: ["015", "023"]
 
     - id: modelado
       nombre: Modelado
@@ -70,7 +70,7 @@ evaluacion:
         2: Modelo correcto pero desconectado de las consultas que tendrá que servir.
         3: Modelo coherente con los accesos, con normalización justificada.
         4: Coherente en los tres niveles, con la desnormalización deliberada y su costo declarado.
-      clases: ["006", "008", "009"]
+      clases: ["016", "018", "019"]
 
     - id: consultas
       nombre: Consultas y contratos
@@ -83,7 +83,7 @@ evaluacion:
         2: Consultas correctas, sin parametrizar o sin probar límites.
         3: Consultas parametrizadas y probadas con nulos, vacíos y duplicados.
         4: Además, contrato de esquema versionado y probado ante cambios.
-      clases: ["014", "016", "019", "051"]
+      clases: ["024", "026", "029", "061"]
 
     - id: transacciones
       nombre: Transacciones y concurrencia
@@ -97,7 +97,7 @@ evaluacion:
         3: Una anomalía reproducida y corregida, con el mecanismo explicado.
         4: Anomalías reproducidas, corregidas y protegidas por una prueba automática.
       laboratorios: ["03"]
-      clases: ["034", "037"]
+      clases: ["044", "047"]
 
     - id: rendimiento
       nombre: Rendimiento y planes
@@ -111,7 +111,7 @@ evaluacion:
         3: Protocolo reproducible, plan de ejecución leído y conclusión acotada a la carga.
         4: Además, costo de escritura del índice medido y decisión justificada con números.
       laboratorios: ["04"]
-      clases: ["042"]
+      clases: ["052"]
 
     - id: distribucion
       nombre: Distribución y consistencia
@@ -125,7 +125,7 @@ evaluacion:
         3: Se observa el efecto de la réplica en una lectura y se declara la garantía de sesión.
         4: Además, se mide el retraso y se elige la corrección con su costo.
       laboratorios: ["07"]
-      clases: ["045", "046"]
+      clases: ["055", "056"]
 
     - id: seguridad
       nombre: Seguridad y privacidad
@@ -138,7 +138,7 @@ evaluacion:
         2: Roles separados, sin prueba de que restringen.
         3: Privilegio mínimo demostrado con una consulta que falla como debe, y datos sintéticos.
         4: Además, retención implementada, minimización declarada y secretos fuera del repositorio.
-      clases: ["050", "051", "053"]
+      clases: ["060", "061", "063"]
 
     - id: recuperacion
       nombre: Respaldo y recuperación
@@ -152,7 +152,7 @@ evaluacion:
         3: Restauración ejecutada y verificada, con RPO y RTO declarados.
         4: Además, restauración a un punto en el tiempo y prueba de que el archivo está íntegro.
       laboratorios: ["08"]
-      clases: ["048", "036"]
+      clases: ["058", "046"]
 
     - id: operacion
       nombre: Operación y observabilidad
@@ -165,7 +165,7 @@ evaluacion:
         2: Métricas del sistema sin objetivo declarado.
         3: Objetivo de servicio con las métricas que lo miden y una alerta accionable.
         4: Además, capacidad proyectada y runbook probado por otra persona.
-      clases: ["052"]
+      clases: ["062"]
 
     - id: decisiones
       nombre: Decisiones y comunicación
@@ -178,7 +178,7 @@ evaluacion:
         2: Decisión documentada sin alternativas ni consecuencias.
         3: ADR completo, con alternativas descartadas y su porqué.
         4: Además, costo total estimado, criterio de revisión y plan de vuelta atrás.
-      clases: ["063", "064"]
+      clases: ["073", "074"]
 
   # Lo que suspende sin importar la nota: no son errores, son incumplimientos
   # del contrato del programa.
@@ -231,8 +231,8 @@ rutas:
     foco: >-
       La base de datos vista desde el código que la usa: esquema como contrato,
       consultas correctas, concurrencia y despliegues sin caída.
-    partes: ["00", "01", "02", "03", "04", "05", "07", "08", "10", "13"]
-    clases_clave: ["007", "014", "016", "019", "037", "049", "051"]
+    partes: ["00", "01", "02", "03", "04", "05", "06", "08", "09", "11", "14"]
+    clases_clave: ["017", "024", "026", "029", "047", "059", "061"]
     laboratorios: ["01", "03", "04"]
     cargos: [Desarrollador backend, Desarrollador full-stack, Ingeniero de software]
     guia: rutas/desarrollo-de-aplicaciones.md
@@ -245,8 +245,8 @@ rutas:
     foco: >-
       Tuberías que otros usan para decidir: integración, captura de cambios,
       modelado analítico y streaming con semántica declarada.
-    partes: ["00", "01", "02", "03", "06", "09", "11", "12", "13"]
-    clases_clave: ["030", "032", "054", "055", "056", "057"]
+    partes: ["00", "01", "02", "03", "04", "07", "10", "12", "13", "14"]
+    clases_clave: ["040", "042", "064", "065", "066", "067"]
     laboratorios: ["01", "02", "05"]
     cargos: [Ingeniero de datos, Ingeniero de plataforma de datos, Ingeniero de streaming]
     guia: rutas/ingenieria-de-datos.md
@@ -259,8 +259,8 @@ rutas:
     foco: >-
       Que el sistema siga en pie y se pueda volver atrás: respaldo restaurado,
       planes de ejecución, réplica, objetivos de servicio y migraciones.
-    partes: ["00", "01", "03", "04", "07", "08", "09", "10", "13"]
-    clases_clave: ["036", "038", "042", "048", "049", "052"]
+    partes: ["00", "01", "02", "04", "05", "08", "09", "10", "11", "14"]
+    clases_clave: ["046", "048", "052", "058", "059", "062"]
     laboratorios: ["01", "03", "04"]
     cargos: [Administrador de bases de datos, SRE de datos, Ingeniero de fiabilidad]
     guia: rutas/fiabilidad-y-operacion.md
@@ -273,8 +273,8 @@ rutas:
     foco: >-
       Decidir qué motor, qué modelo y qué garantías, con la medición y el
       registro de decisión que permiten defenderlo y revertirlo.
-    partes: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"]
-    clases_clave: ["045", "046", "047", "062", "063", "064"]
+    partes: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14"]
+    clases_clave: ["055", "056", "057", "072", "073", "074"]
     laboratorios: ["02", "04", "06"]
     cargos: [Arquitecto de datos, Arquitecto de soluciones, Ingeniero de staff]
     guia: rutas/arquitectura.md
@@ -287,8 +287,8 @@ rutas:
     foco: >-
       SQL analítico serio, modelado dimensional, transformaciones versionadas y
       la frontera entre la carga transaccional y la analítica.
-    partes: ["00", "01", "02", "03", "04", "08", "11", "13"]
-    clases_clave: ["017", "018", "032", "054", "055", "056"]
+    partes: ["00", "01", "02", "03", "04", "05", "09", "12", "14"]
+    clases_clave: ["027", "028", "042", "064", "065", "066"]
     laboratorios: ["01", "04"]
     cargos: [Analytics engineer, Ingeniero de BI, Analista de datos sénior]
     guia: rutas/analitica-y-bi.md
@@ -301,8 +301,8 @@ rutas:
     foco: >-
       Embeddings, índices aproximados, búsqueda híbrida y evaluación de la
       recuperación: la parte del RAG que decide si la respuesta es defendible.
-    partes: ["00", "01", "02", "03", "05", "06", "08", "12", "13"]
-    clases_clave: ["031", "041", "058", "059", "060", "061"]
+    partes: ["00", "01", "02", "03", "04", "06", "07", "09", "13", "14"]
+    clases_clave: ["041", "051", "068", "069", "070", "071"]
     laboratorios: ["01", "05", "06"]
     cargos: [Ingeniero de IA aplicada, Ingeniero de búsqueda y recuperación, ML engineer de producto]
     guia: rutas/ia-y-recuperacion.md
@@ -315,8 +315,8 @@ rutas:
     foco: >-
       Control de acceso, minimización, retención, trazabilidad y la evidencia
       que exige una auditoría o un regulador.
-    partes: ["00", "01", "03", "07", "09", "10", "11", "13"]
-    clases_clave: ["013", "048", "050", "051", "053", "063"]
+    partes: ["00", "01", "02", "04", "08", "10", "11", "12", "14"]
+    clases_clave: ["023", "058", "060", "061", "063", "073"]
     laboratorios: ["01", "03"]
     cargos: [Responsable de gobierno del dato, Especialista en cumplimiento de datos, Delegado de protección de datos técnico]
     guia: rutas/gobierno-y-privacidad.md
@@ -452,13 +452,114 @@ laboratorios:
 
 parts:
   - id: "00"
+    slug: primeros-pasos-del-archivo-a-la-base-de-datos
+    title: "Primeros pasos: del archivo a la base de datos"
+    summary: >-
+      La rampa de entrada. Qué es un dato, por qué una hoja de cálculo deja de
+      servir, y las primeras órdenes de SQL —crear, insertar, leer, cambiar—
+      hasta llegar a dos tablas relacionadas. Termina con las dos preguntas que
+      hay que saber contestar antes de seguir: cuándo NO hace falta una base de
+      datos y qué familias de motores existen.
+    classes:
+      - id: "001"
+        slug: que-es-un-dato-un-registro-y-una-tabla
+        title: Qué es un dato, un registro y una tabla
+        hours: 2
+        level: fundamentos
+        concepts: [dato, información, registro, campo, tabla]
+        engines: [sqlite, duckdb, postgresql, mongodb, redis]
+        lab: labs/01-sql-foundations
+        sources: [kent-data-and-reality, hernandez-mere-mortals, elmasri-navathe7]
+      - id: "002"
+        slug: del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos
+        title: Del archivo y la hoja de cálculo a la base de datos
+        hours: 2
+        level: fundamentos
+        concepts: [integridad declarada, concurrencia, consulta declarativa, durabilidad]
+        engines: [sqlite, duckdb, postgresql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [silberschatz-dsc7, hernandez-mere-mortals, docs-sqlite]
+      - id: "003"
+        slug: tu-primera-base-de-datos
+        title: "Tu primera base de datos: crear, insertar y leer"
+        hours: 2
+        level: fundamentos
+        concepts: [CREATE TABLE, INSERT, SELECT, definición frente a manipulación, NULL]
+        engines: [sqlite, duckdb, postgresql, mysql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [docs-sqlite, docs-python-sqlite3, iso-9075]
+      - id: "004"
+        slug: leer-datos-select-where-y-order-by
+        title: "Leer datos: SELECT, WHERE y ORDER BY"
+        hours: 2
+        level: fundamentos
+        concepts: [filtrado, proyección, orden, LIMIT, IS NULL]
+        engines: [sqlite, duckdb, postgresql, mongodb, redis]
+        lab: labs/01-sql-foundations
+        sources: [iso-9075, date-sql-relational-theory, docs-sqlite]
+      - id: "005"
+        slug: cambiar-datos-insert-update-delete
+        title: "Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva"
+        hours: 2
+        level: fundamentos
+        concepts: [UPDATE, DELETE, alcance del cambio, filas afectadas, transacción como red]
+        engines: [sqlite, duckdb, postgresql, mysql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [karwin-sql-antipatterns, docs-sqlite, iso-9075]
+      - id: "006"
+        slug: tipos-de-datos-un-numero-no-es-un-texto
+        title: "Tipos de datos: por qué un número no es un texto"
+        hours: 2
+        level: fundamentos
+        concepts: [tipo, decimal exacto, coma flotante, fecha ISO-8601, afinidad de tipos]
+        engines: [sqlite, duckdb, postgresql, mysql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [date-sql-relational-theory, karwin-sql-antipatterns, docs-sqlite]
+      - id: "007"
+        slug: la-clave-primaria
+        title: "La clave primaria: cómo se distingue una fila de otra"
+        hours: 2
+        level: fundamentos
+        concepts: [clave primaria, clave natural, clave sustituta, clave compuesta, UNIQUE]
+        engines: [sqlite, duckdb, postgresql, mysql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [hernandez-mere-mortals, date-sql-relational-theory, karwin-sql-antipatterns]
+      - id: "008"
+        slug: dos-tablas-y-una-relacion
+        title: "Dos tablas y una relación: la clave foránea"
+        hours: 2
+        level: fundamentos
+        concepts: [clave foránea, tabla de relación, reunión, anomalías de repetición]
+        engines: [sqlite, duckdb, postgresql, mysql, mongodb]
+        lab: labs/01-sql-foundations
+        sources: [chen-1976, hernandez-mere-mortals, elmasri-navathe7]
+      - id: "009"
+        slug: cuando-no-necesitas-una-base-de-datos
+        title: Cuándo NO necesitas una base de datos
+        hours: 2
+        level: fundamentos
+        concepts: [criterio de decisión, motor embebido, costo de operación, alternativas]
+        engines: [sqlite, duckdb, postgresql, redis]
+        lab: labs/01-sql-foundations
+        sources: [docs-sqlite, docs-duckdb, kleppmann-ddia]
+      - id: "010"
+        slug: el-mapa-de-los-motores
+        title: "El mapa de los motores: seis familias y un criterio"
+        hours: 2
+        level: fundamentos
+        concepts: [familias de motores, modelo de agregado, patrón de acceso, multimodelo]
+        engines: [postgresql, mongodb, redis, cassandra, neo4j, duckdb, opensearch, qdrant]
+        lab: labs/02-polyglot-modeling
+        sources: [sadalage-fowler-nosql, kleppmann-ddia, db-engines-ranking]
+
+  - id: "01"
     slug: fundamentos-datos-sistemas-y-metodo
     title: Fundamentos, sistemas y método
     summary: >-
       Qué problema resuelve un gestor de bases de datos, qué hay dentro de él y
       cómo se monta un entorno donde cada afirmación pueda comprobarse.
     classes:
-      - id: "001"
+      - id: "011"
         slug: que-resuelve-un-sistema-de-bases-de-datos
         title: Qué resuelve un sistema de bases de datos y qué no
         hours: 3
@@ -467,7 +568,7 @@ parts:
         engines: [sqlite]
         lab: labs/01-sql-foundations
         sources: [silberschatz-dsc7, hellerstein-architecture, kent-data-and-reality, codd-1970]
-      - id: "002"
+      - id: "012"
         slug: arquitectura-interna-de-un-gestor
         title: Arquitectura interna de un gestor, del cliente al disco
         hours: 3
@@ -476,7 +577,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [hellerstein-architecture, petrov-database-internals, rogov-postgresql-internals]
-      - id: "003"
+      - id: "013"
         slug: independencia-de-datos-y-niveles-de-esquema
         title: Independencia de datos y los tres niveles de esquema
         hours: 3
@@ -485,7 +586,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [codd-1970, silberschatz-dsc7, date-sql-relational-theory]
-      - id: "004"
+      - id: "014"
         slug: entorno-reproducible-y-evidencia
         title: Entorno reproducible y evidencia comprobable
         hours: 3
@@ -495,14 +596,14 @@ parts:
         lab: labs/01-sql-foundations
         sources: [docs-sqlite, docs-python-sqlite3, docs-docker-compose, google-sre-book]
 
-  - id: "01"
+  - id: "02"
     slug: modelado-conceptual-y-requisitos
     title: Modelado conceptual y requisitos
     summary: >-
       Del enunciado ambiguo al esquema defendible: entidades, claves,
       dependencias funcionales y la decisión consciente de desnormalizar.
     classes:
-      - id: "005"
+      - id: "015"
         slug: de-requisitos-a-entidades
         title: De requisitos ambiguos a entidades defendibles
         hours: 3
@@ -511,7 +612,7 @@ parts:
         engines: [sqlite]
         lab: labs/01-sql-foundations
         sources: [hernandez-mere-mortals, elmasri-navathe7, kent-data-and-reality]
-      - id: "006"
+      - id: "016"
         slug: entidad-relacion-cardinalidad-y-participacion
         title: Entidad-relación, cardinalidad y participación
         hours: 3
@@ -520,7 +621,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [chen-1976, elmasri-navathe7, silberschatz-dsc7]
-      - id: "007"
+      - id: "017"
         slug: claves-identidad-natural-y-sustituta
         title: Claves, identidad y el debate natural frente a sustituta
         hours: 3
@@ -529,7 +630,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [date-sql-relational-theory, karwin-sql-antipatterns, silberschatz-dsc7]
-      - id: "008"
+      - id: "018"
         slug: normalizacion-y-dependencias-funcionales
         title: Normalización de 1FN a BCFN con dependencias funcionales
         hours: 4
@@ -538,7 +639,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [codd-1970, gmuw-complete-book, silberschatz-dsc7, ramakrishnan-gehrke3]
-      - id: "009"
+      - id: "019"
         slug: desnormalizacion-deliberada
         title: Desnormalización deliberada y patrones de acceso
         hours: 3
@@ -548,14 +649,14 @@ parts:
         lab: labs/02-polyglot-modeling
         sources: [sadalage-fowler-nosql, kleppmann-ddia, karwin-sql-antipatterns]
 
-  - id: "02"
+  - id: "03"
     slug: modelo-relacional-y-algebra
     title: Modelo relacional y álgebra
     summary: >-
       La teoría que SQL implementa a medias: relaciones como conjuntos,
       operadores del álgebra, cálculo relacional e integridad declarada.
     classes:
-      - id: "010"
+      - id: "020"
         slug: la-relacion-como-conjunto
         title: "La relación como conjunto: tuplas, dominios y acceso por valor"
         hours: 3
@@ -564,7 +665,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [codd-1970, date-sql-relational-theory, ramakrishnan-gehrke3]
-      - id: "011"
+      - id: "021"
         slug: algebra-relacional-operadores
         title: "Álgebra relacional: selección, proyección, producto y reunión"
         hours: 4
@@ -573,7 +674,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [ramakrishnan-gehrke3, gmuw-complete-book, silberschatz-dsc7]
-      - id: "012"
+      - id: "022"
         slug: calculo-relacional-y-equivalencia
         title: Cálculo relacional y su equivalencia con el álgebra
         hours: 3
@@ -582,7 +683,7 @@ parts:
         engines: [postgresql]
         lab: labs/01-sql-foundations
         sources: [gmuw-complete-book, ramakrishnan-gehrke3, date-sql-relational-theory]
-      - id: "013"
+      - id: "023"
         slug: integridad-restricciones-y-acciones-referenciales
         title: "Integridad: restricciones, claves foraneas y acciones referenciales"
         hours: 3
@@ -592,14 +693,14 @@ parts:
         lab: labs/01-sql-foundations
         sources: [codd-1979, date-sql-relational-theory, docs-postgresql, iso-9075]
 
-  - id: "03"
+  - id: "04"
     slug: sql-en-profundidad
     title: SQL en profundidad
     summary: >-
       Escribir SQL cuya semántica se pueda defender: definición del esquema,
       reuniones, agregación, ventanas y el comportamiento real de los nulos.
     classes:
-      - id: "014"
+      - id: "024"
         slug: ddl-el-esquema-como-contrato
         title: "DDL: el esquema como contrato ejecutable"
         hours: 3
@@ -608,7 +709,7 @@ parts:
         engines: [postgresql, sqlite, mysql]
         lab: labs/01-sql-foundations
         sources: [iso-9075, docs-postgresql, date-sql-relational-theory, docs-sqlite]
-      - id: "015"
+      - id: "025"
         slug: select-filtrado-proyeccion-y-orden
         title: "SELECT: filtrado, proyección y orden con semántica precisa"
         hours: 3
@@ -617,7 +718,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/01-sql-foundations
         sources: [date-sql-relational-theory, molinaro-sql-cookbook, docs-sqlite]
-      - id: "016"
+      - id: "026"
         slug: reuniones-inner-outer-semi-y-anti
         title: "Reuniones: interna, externa, semi y anti"
         hours: 4
@@ -626,7 +727,7 @@ parts:
         engines: [postgresql, sqlite, mysql]
         lab: labs/01-sql-foundations
         sources: [winand-sql-performance, molinaro-sql-cookbook, date-sql-relational-theory]
-      - id: "017"
+      - id: "027"
         slug: agregacion-group-by-y-having
         title: Agregación, GROUP BY y HAVING sin duplicar filas
         hours: 3
@@ -635,7 +736,7 @@ parts:
         engines: [postgresql, sqlite, duckdb]
         lab: labs/01-sql-foundations
         sources: [celko-smarties, molinaro-sql-cookbook, gmuw-complete-book]
-      - id: "018"
+      - id: "028"
         slug: cte-subconsultas-y-funciones-de-ventana
         title: CTE, subconsultas y funciones de ventana
         hours: 4
@@ -644,7 +745,7 @@ parts:
         engines: [postgresql, sqlite, duckdb]
         lab: labs/01-sql-foundations
         sources: [celko-smarties, molinaro-sql-cookbook, iso-9075, docs-postgresql]
-      - id: "019"
+      - id: "029"
         slug: nulos-y-logica-de-tres-valores
         title: Nulos y lógica de tres valores
         hours: 3
@@ -654,14 +755,14 @@ parts:
         lab: labs/01-sql-foundations
         sources: [codd-1979, date-sql-relational-theory, docs-postgresql]
 
-  - id: "04"
+  - id: "05"
     slug: motores-relacionales-y-dialectos
     title: Motores relacionales y dialectos
     summary: >-
       Que exige la norma, que añade cada producto y como se escribe código que
       sobrevive a un cambio de motor.
     classes:
-      - id: "020"
+      - id: "030"
         slug: portabilidad-y-matriz-de-dialectos
         title: "Portabilidad: qué exige la norma y qué añade cada motor"
         hours: 3
@@ -670,7 +771,7 @@ parts:
         engines: [postgresql, mysql, sqlite, sql-server, oracle-database]
         lab: labs/03-transactions
         sources: [iso-9075, molinaro-sql-cookbook, docs-mysql, docs-postgresql]
-      - id: "021"
+      - id: "031"
         slug: postgresql-tipos-extensiones-y-procesos
         title: "PostgreSQL: tipos, extensiones y modelo de procesos"
         hours: 3
@@ -679,7 +780,7 @@ parts:
         engines: [postgresql]
         lab: labs/03-transactions
         sources: [docs-postgresql, rogov-postgresql-internals, hellerstein-architecture]
-      - id: "022"
+      - id: "032"
         slug: mysql-sqlserver-y-oracle-divergencias
         title: "MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código"
         hours: 3
@@ -688,7 +789,7 @@ parts:
         engines: [mysql, mariadb, sql-server, oracle-database]
         lab: labs/03-transactions
         sources: [docs-mysql, docs-mariadb, docs-sqlserver, docs-oracle]
-      - id: "023"
+      - id: "033"
         slug: sqlite-y-duckdb-motores-embebidos
         title: "SQLite y DuckDB: motores embebidos, transaccional frente a analítico"
         hours: 3
@@ -698,14 +799,14 @@ parts:
         lab: labs/01-sql-foundations
         sources: [docs-sqlite, docs-duckdb, docs-sqlite-optoverview]
 
-  - id: "05"
+  - id: "06"
     slug: documentos-y-clave-valor
     title: Documentos y clave-valor
     summary: >-
       Modelos sin reunión en el servidor: el agregado como frontera de
       consistencia, cuando incrustar y que se pierde en una caché.
     classes:
-      - id: "024"
+      - id: "034"
         slug: el-agregado-como-unidad-de-consistencia
         title: El agregado como unidad de consistencia
         hours: 3
@@ -714,7 +815,7 @@ parts:
         engines: [mongodb, redis, dynamodb]
         lab: labs/02-polyglot-modeling
         sources: [sadalage-fowler-nosql, helland-life-beyond-2007, kleppmann-ddia]
-      - id: "025"
+      - id: "035"
         slug: modelado-documental-incrustar-o-referenciar
         title: "Modelado documental: incrustar o referenciar"
         hours: 4
@@ -723,7 +824,7 @@ parts:
         engines: [mongodb]
         lab: labs/05-nosql-workloads
         sources: [docs-mongodb-modeling, mongodb-definitive-3ed, sadalage-fowler-nosql]
-      - id: "026"
+      - id: "036"
         slug: consultas-e-indices-sobre-documentos
         title: Consultas, índices y agregación sobre documentos
         hours: 3
@@ -732,7 +833,7 @@ parts:
         engines: [mongodb]
         lab: labs/05-nosql-workloads
         sources: [docs-mongodb, mongodb-definitive-3ed, winand-sql-performance]
-      - id: "027"
+      - id: "037"
         slug: clave-valor-cache-y-expiracion
         title: "Clave-valor, caché y expiración: qué se pierde exactamente"
         hours: 3
@@ -742,14 +843,14 @@ parts:
         lab: labs/05-nosql-workloads
         sources: [docs-redis, docs-redis-persistence, kleppmann-ddia]
 
-  - id: "06"
+  - id: "07"
     slug: grafos-columnas-tiempo-y-busqueda
     title: Grafos, columnas, tiempo y búsqueda
     summary: >-
       Modelos especializados y el criterio para saber cuando la carga de
       trabajo justifica salir del relacional.
     classes:
-      - id: "028"
+      - id: "038"
         slug: grafos-de-propiedades-y-recorridos
         title: Grafos de propiedades y los recorridos que SQL hace mal
         hours: 3
@@ -758,7 +859,7 @@ parts:
         engines: [neo4j, postgresql]
         lab: labs/02-polyglot-modeling
         sources: [graph-databases-2ed, docs-neo4j, celko-smarties]
-      - id: "029"
+      - id: "039"
         slug: columnas-anchas-modelar-desde-la-consulta
         title: "Columnas anchas: modelar desde la consulta"
         hours: 3
@@ -767,7 +868,7 @@ parts:
         engines: [cassandra, scylladb]
         lab: labs/05-nosql-workloads
         sources: [chang-bigtable-2006, cassandra-definitive-3ed, docs-cassandra]
-      - id: "030"
+      - id: "040"
         slug: series-temporales-cardinalidad-y-retencion
         title: "Series temporales: cardinalidad, retención y agregados continuos"
         hours: 3
@@ -776,7 +877,7 @@ parts:
         engines: [timescaledb, influxdb]
         lab: labs/04-indexing
         sources: [docs-timescale, docs-influxdb, kleppmann-ddia]
-      - id: "031"
+      - id: "041"
         slug: busqueda-de-texto-indice-invertido-y-relevancia
         title: "Búsqueda de texto: índice invertido, análisis y relevancia"
         hours: 3
@@ -785,7 +886,7 @@ parts:
         engines: [opensearch, postgresql]
         lab: labs/06-vector-search
         sources: [robertson-bm25-2009, docs-opensearch, docs-postgresql]
-      - id: "032"
+      - id: "042"
         slug: analitica-columnar-y-vectorizacion
         title: "Analítica columnar: por qué el formato cambia el orden de magnitud"
         hours: 3
@@ -795,14 +896,14 @@ parts:
         lab: labs/04-indexing
         sources: [docs-clickhouse, docs-duckdb, stonebraker-end-of-era-2007, flajolet-hyperloglog-2007]
 
-  - id: "07"
+  - id: "08"
     slug: transacciones-concurrencia-y-recuperacion
     title: Transacciones, concurrencia y recuperación
     summary: >-
       Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de
       aislamiento y como se vuelve de una caída.
     classes:
-      - id: "033"
+      - id: "043"
         slug: acid-que-garantiza-cada-letra
         title: "ACID: qué garantiza cada letra y quién la implementa"
         hours: 3
@@ -811,7 +912,7 @@ parts:
         engines: [postgresql, sqlite, mysql]
         lab: labs/03-transactions
         sources: [gray-transaction-concept-1981, gray-reuter-tp, silberschatz-dsc7]
-      - id: "034"
+      - id: "044"
         slug: anomalias-de-aislamiento-y-la-critica-ansi
         title: Anomalías de aislamiento y la crítica a los niveles ANSI
         hours: 4
@@ -820,7 +921,7 @@ parts:
         engines: [postgresql, mysql, sqlite]
         lab: labs/03-transactions
         sources: [berenson-isolation-1995, adya-generalized-isolation-1999, kleppmann-hermitage, docs-postgresql-mvcc, docs-sqlite-isolation]
-      - id: "035"
+      - id: "045"
         slug: bloqueo-en-dos-fases-y-mvcc
         title: Bloqueo en dos fases, MVCC e instantáneas
         hours: 4
@@ -829,7 +930,7 @@ parts:
         engines: [postgresql, mysql]
         lab: labs/03-transactions
         sources: [gray-reuter-tp, docs-postgresql-mvcc, rogov-postgresql-internals]
-      - id: "036"
+      - id: "046"
         slug: registro-anticipado-y-recuperacion
         title: "Registro anticipado y recuperación: WAL y ARIES"
         hours: 4
@@ -838,7 +939,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/03-transactions
         sources: [mohan-aries-1992, docs-sqlite-wal, petrov-database-internals]
-      - id: "037"
+      - id: "047"
         slug: concurrencia-en-la-aplicacion
         title: "Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista"
         hours: 3
@@ -848,14 +949,14 @@ parts:
         lab: labs/03-transactions
         sources: [bernstein-newcomer-tp, helland-life-beyond-2007, kleppmann-ddia]
 
-  - id: "08"
+  - id: "09"
     slug: almacenamiento-indices-y-planes
     title: Almacenamiento, índices y planes
     summary: >-
       Por qué una consulta tarda: páginas, estructuras de índice, estadísticas
       y la lectura honesta de un plan de ejecución.
     classes:
-      - id: "038"
+      - id: "048"
         slug: paginas-filas-y-buffer-pool
         title: "Páginas, filas y buffer: por qué la entrada y salida manda"
         hours: 3
@@ -864,7 +965,7 @@ parts:
         engines: [postgresql, sqlite]
         lab: labs/04-indexing
         sources: [petrov-database-internals, hellerstein-architecture, rogov-postgresql-internals]
-      - id: "039"
+      - id: "049"
         slug: b-tree-orden-de-columnas-y-selectividad
         title: "B-Tree: estructura, orden de columnas y selectividad"
         hours: 4
@@ -873,7 +974,7 @@ parts:
         engines: [postgresql, mysql, sqlite]
         lab: labs/04-indexing
         sources: [bayer-mccreight-1972, graefe-btree-2011, winand-sql-performance]
-      - id: "040"
+      - id: "050"
         slug: lsm-tree-compactacion-y-amplificacion
         title: LSM-Tree, compactación y amplificación de escritura
         hours: 3
@@ -882,7 +983,7 @@ parts:
         engines: [cassandra, scylladb, redis]
         lab: labs/04-indexing
         sources: [oneil-lsm-1996, petrov-database-internals, bloom-1970]
-      - id: "041"
+      - id: "051"
         slug: indices-especializados
         title: "Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes"
         hours: 3
@@ -891,7 +992,7 @@ parts:
         engines: [postgresql]
         lab: labs/04-indexing
         sources: [docs-postgresql-indexes, winand-sql-performance, rogov-postgresql-internals]
-      - id: "042"
+      - id: "052"
         slug: planes-de-ejecucion-y-refutacion
         title: "Planes de ejecución: leer EXPLAIN y refutar una hipótesis"
         hours: 4
@@ -901,14 +1002,14 @@ parts:
         lab: labs/04-indexing
         sources: [selinger-1979, docs-postgresql-explain, docs-sqlite-optoverview]
 
-  - id: "09"
+  - id: "10"
     slug: distribucion-replica-y-consistencia
     title: Distribución, réplica y consistencia
     summary: >-
       Qué se gana y qué se paga al repartir los datos: replicación, partición,
       los teoremas que acotan lo posible y el consenso.
     classes:
-      - id: "043"
+      - id: "053"
         slug: replica-lider-unico-multilider-y-sin-lider
         title: "Réplica: líder único, multilíder y sin líder"
         hours: 4
@@ -917,7 +1018,7 @@ parts:
         engines: [postgresql, mysql, cassandra]
         lab: labs/07-replication
         sources: [kleppmann-ddia, gray-danger-replication-1996, decandia-dynamo-2007]
-      - id: "044"
+      - id: "054"
         slug: particionado-rebalanceo-y-claves-calientes
         title: Particionado, rebalanceo y claves calientes
         hours: 3
@@ -926,7 +1027,7 @@ parts:
         engines: [cassandra, mongodb, postgresql]
         lab: labs/05-nosql-workloads
         sources: [kleppmann-ddia, decandia-dynamo-2007, docs-cassandra]
-      - id: "045"
+      - id: "055"
         slug: cap-pacelc-y-lo-que-realmente-se-elige
         title: CAP, PACELC y lo que realmente se elige
         hours: 3
@@ -935,7 +1036,7 @@ parts:
         engines: [cassandra, spanner, postgresql]
         lab: labs/05-nosql-workloads
         sources: [gilbert-lynch-2002, brewer-cap-12-years, abadi-pacelc-2012, bailis-hat-2013]
-      - id: "046"
+      - id: "056"
         slug: modelos-de-consistencia-y-garantias-de-sesion
         title: Modelos de consistencia y garantías de sesión
         hours: 3
@@ -944,7 +1045,7 @@ parts:
         engines: [cassandra, mongodb, spanner]
         lab: labs/07-replication
         sources: [kingsbury-jepsen-consistency, kingsbury-jepsen-analyses, vogels-eventually-consistent-2009, lamport-time-clocks-1978, shapiro-crdt-2011]
-      - id: "047"
+      - id: "057"
         slug: consenso-y-transacciones-distribuidas
         title: "Consenso y transacciones distribuidas: Raft, 2PC y sagas"
         hours: 4
@@ -954,14 +1055,14 @@ parts:
         lab: labs/03-transactions
         sources: [ongaro-raft-2014, lamport-paxos-1998, helland-life-beyond-2007, corbett-spanner-2012]
 
-  - id: "10"
+  - id: "11"
     slug: operacion-seguridad-y-gobierno
     title: Operación, seguridad y gobierno
     summary: >-
       Lo que separa un ejercicio de un sistema: restauración probada,
       migraciones sin caída, control de acceso, observabilidad y privacidad.
     classes:
-      - id: "048"
+      - id: "058"
         slug: respaldo-y-restauracion-probada
         title: "Respaldo y restauración: solo cuenta lo que se ha restaurado"
         hours: 4
@@ -970,7 +1071,7 @@ parts:
         engines: [postgresql, sqlite, mongodb]
         lab: labs/08-recovery
         sources: [docs-postgresql-backup, campbell-majors-dbre, google-sre-book]
-      - id: "049"
+      - id: "059"
         slug: migraciones-evolutivas-sin-caida
         title: Migraciones evolutivas sin ventana de caída
         hours: 3
@@ -979,7 +1080,7 @@ parts:
         engines: [postgresql, mysql]
         lab: labs/03-transactions
         sources: [ambler-sadalage-refactoring, kleppmann-ddia, docs-postgresql]
-      - id: "050"
+      - id: "060"
         slug: control-de-acceso-y-seguridad-por-fila
         title: "Control de acceso: privilegio mínimo, roles y seguridad por fila"
         hours: 3
@@ -988,7 +1089,7 @@ parts:
         engines: [postgresql, mysql]
         lab: labs/03-transactions
         sources: [docs-postgresql-rls, nist-sp800-53, cis-benchmarks, owasp-top10]
-      - id: "051"
+      - id: "061"
         slug: inyeccion-sql-y-parametrizacion
         title: Inyección SQL y el contrato de parametrización
         hours: 3
@@ -997,7 +1098,7 @@ parts:
         engines: [postgresql, sqlite, mysql]
         lab: labs/01-sql-foundations
         sources: [owasp-sqli-cheatsheet, owasp-top10, docs-pep-249, docs-python-sqlite3]
-      - id: "052"
+      - id: "062"
         slug: observabilidad-slo-y-capacidad
         title: Observabilidad, objetivos de servicio y capacidad
         hours: 3
@@ -1006,7 +1107,7 @@ parts:
         engines: [postgresql, mongodb]
         lab: labs/04-indexing
         sources: [google-sre-book, dean-tail-at-scale-2013, campbell-majors-dbre]
-      - id: "053"
+      - id: "063"
         slug: privacidad-retencion-y-gobierno-del-dato
         title: Privacidad, retención y gobierno del dato
         hours: 3
@@ -1016,14 +1117,14 @@ parts:
         lab: labs/02-polyglot-modeling
         sources: [gdpr-2016-679, chile-ley-19628, nist-csf]
 
-  - id: "11"
+  - id: "12"
     slug: analitica-integracion-y-streaming
     title: Analítica, integración y streaming
     summary: >-
       Sacar los datos del sistema que los produjo sin perder su significado:
       almacen dimensional, captura de cambios y procesamiento continuo.
     classes:
-      - id: "054"
+      - id: "064"
         slug: oltp-frente-a-olap
         title: "OLTP frente a OLAP: por qué se separan"
         hours: 3
@@ -1032,7 +1133,7 @@ parts:
         engines: [postgresql, duckdb, clickhouse]
         lab: labs/04-indexing
         sources: [stonebraker-end-of-era-2007, kimball-toolkit, docs-duckdb]
-      - id: "055"
+      - id: "065"
         slug: modelado-dimensional
         title: "Modelado dimensional: hechos, dimensiones y cambios lentos"
         hours: 4
@@ -1041,7 +1142,7 @@ parts:
         engines: [duckdb, clickhouse, postgresql]
         lab: labs/04-indexing
         sources: [kimball-toolkit, reis-housley-data-engineering, docs-dbt]
-      - id: "056"
+      - id: "066"
         slug: integracion-etl-elt-y-captura-de-cambios
         title: "Integración: ETL, ELT, captura de cambios y el registro como nexo"
         hours: 3
@@ -1050,7 +1151,7 @@ parts:
         engines: [postgresql, kafka]
         lab: labs/05-nosql-workloads
         sources: [kreps-log-2013, docs-debezium, docs-dbt, docs-apache-iceberg]
-      - id: "057"
+      - id: "067"
         slug: streaming-tiempo-de-evento-y-ventanas
         title: "Streaming: tiempo de evento, ventanas y semántica de entrega"
         hours: 3
@@ -1060,14 +1161,14 @@ parts:
         lab: labs/05-nosql-workloads
         sources: [streaming-systems, docs-kafka, kreps-log-2013]
 
-  - id: "12"
+  - id: "13"
     slug: vectores-recuperacion-y-rag
     title: Vectores, recuperación y RAG
     summary: >-
       La base de datos como componente de un sistema de inteligencia
       artificial: distancias, indices aproximados y recuperación medida.
     classes:
-      - id: "058"
+      - id: "068"
         slug: embeddings-y-metricas-de-distancia
         title: "Embeddings y métricas de distancia: qué significa parecido"
         hours: 3
@@ -1076,7 +1177,7 @@ parts:
         engines: [qdrant, postgresql]
         lab: labs/06-vector-search
         sources: [karpukhin-dpr-2020, johnson-faiss-2019, docs-pgvector]
-      - id: "059"
+      - id: "069"
         slug: indices-vectoriales-aproximados
         title: "Índices vectoriales aproximados: HNSW, IVF y el recall"
         hours: 4
@@ -1085,7 +1186,7 @@ parts:
         engines: [qdrant, milvus, postgresql]
         lab: labs/06-vector-search
         sources: [malkov-hnsw-2018, johnson-faiss-2019, docs-qdrant, docs-milvus]
-      - id: "060"
+      - id: "070"
         slug: busqueda-hibrida-y-filtrado
         title: "Búsqueda híbrida: léxica más vectorial y filtrado por metadatos"
         hours: 3
@@ -1094,7 +1195,7 @@ parts:
         engines: [opensearch, qdrant, postgresql]
         lab: labs/06-vector-search
         sources: [robertson-bm25-2009, docs-opensearch, docs-pgvector, docs-qdrant]
-      - id: "061"
+      - id: "071"
         slug: rag-evaluable
         title: "RAG evaluable: medir la recuperación antes que la generación"
         hours: 3
@@ -1104,14 +1205,14 @@ parts:
         lab: labs/06-vector-search
         sources: [lewis-rag-2020, karpukhin-dpr-2020, robertson-bm25-2009]
 
-  - id: "13"
+  - id: "14"
     slug: arquitectura-y-proyecto-final
     title: Arquitectura y proyecto final
     summary: >-
       Cerrar el programa con una decisión defendible: comparación por
       evidencia, costo total y una demostración que se pueda auditar.
     classes:
-      - id: "062"
+      - id: "072"
         slug: persistencia-poliglota-por-evidencia
         title: "Persistencia políglota: decidir por evidencia y no por moda"
         hours: 3
@@ -1120,7 +1221,7 @@ parts:
         engines: [postgresql, mongodb, redis, qdrant]
         lab: labs/02-polyglot-modeling
         sources: [sadalage-fowler-nosql, kleppmann-ddia, redbook5]
-      - id: "063"
+      - id: "073"
         slug: registro-de-decisiones-y-costo-total
         title: Registro de decisiones de arquitectura y costo total
         hours: 3
@@ -1129,7 +1230,7 @@ parts:
         engines: [postgresql]
         lab: labs/02-polyglot-modeling
         sources: [redbook5, reis-housley-data-engineering, campbell-majors-dbre]
-      - id: "064"
+      - id: "074"
         slug: proyecto-final-disenar-medir-y-defender
         title: "Proyecto final: diseñar, medir y defender"
         hours: 6
