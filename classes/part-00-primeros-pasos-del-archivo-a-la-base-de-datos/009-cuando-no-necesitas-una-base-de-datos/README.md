@@ -189,7 +189,7 @@ afirmación.
 | Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
 |---|---|---|---|---|
 | SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/whentouse.html) |
-| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/why_duckdb) |
+| DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/why_duckdb) |
 | PostgreSQL | sí | conceptual | — | [doc oficial](https://www.postgresql.org/docs/current/tutorial-arch.html) |
 | Redis | sí | conceptual | — | [doc oficial](https://redis.io/docs/latest/develop/) |
 | MongoDB | **no** | — | — | [doc oficial](https://www.mongodb.com/docs/manual/administration/install-community/) |
@@ -209,7 +209,7 @@ afirmación.
 - **Cómo se hace aquí:** El equivalente para analizar en vez de registrar: consulta directamente un CSV o un Parquet de gigabytes **sin cargarlo** en ningún sitio, sin servidor y sin esquema previo.
 - **Por qué sí:** Para el caso más frecuente de todos —«tengo un fichero grande y quiero preguntarle cosas»— evita montar una base de datos entera para algo que se hace una vez al mes.
 - **Por qué no:** No es un sistema de registro: un solo escritor, sin concurrencia y sin servicio. Analiza una copia; no guarda la verdad.
-- 📄 Documentación oficial: <https://duckdb.org/docs/stable/why_duckdb>
+- 📄 Documentación oficial: <https://duckdb.org/why_duckdb>
 
 #### PostgreSQL
 

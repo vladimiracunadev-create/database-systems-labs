@@ -1,5 +1,5 @@
 -- motor: duckdb
--- doc: https://duckdb.org/docs/stable/why_duckdb
+-- doc: https://duckdb.org/why_duckdb
 -- nota: guarda COLUMNAS. Este agregado lee la columna `nota` y la columna
 --       `curso`, y ninguna otra. Ademas, la misma consulta funciona sobre un
 --       archivo sin cargarlo:

@@ -60,19 +60,26 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
 <pre><code class="language-mermaid">flowchart TD
     CY[&quot;curriculum.yaml&lt;br/&gt;partes · clases · horas · fuentes&quot;] --&gt; BC[&quot;scripts/build_classes.py&quot;]
     LM[&quot;classes/**/lesson.md&lt;br/&gt;la materia, escrita a mano&quot;] --&gt; BC
-    SJ[&quot;catalog/sources.json&lt;br/&gt;109 fuentes&quot;] --&gt; BC
+    MY[&quot;classes/**/motores.yaml&lt;br/&gt;el caso y la matriz de motores&quot;] --&gt; BC
+    IM[&quot;classes/**/implementaciones/&lt;br/&gt;el código real, uno por motor&quot;] --&gt; BC
+    SJ[&quot;catalog/sources.json&lt;br/&gt;120 fuentes&quot;] --&gt; BC
     BC --&gt; CR[&quot;classes/**/README.md&lt;br/&gt;+ índices de parte&lt;br/&gt;(generados)&quot;]
+
+    MY --&gt; VE[&quot;scripts/verificar_equivalencia.py&quot;]
+    IM --&gt; VE
+    VE --&gt; MO{&quot;¿todos los motores&lt;br/&gt;dan la misma respuesta?&quot;}
 
     CY --&gt; GS[&quot;scripts/generate_site.py&quot;]
     CR --&gt; GS
     SJ --&gt; GS
     DJ[&quot;catalog/databases.json&lt;br/&gt;27 motores&quot;] --&gt; GS
-    GS --&gt; ST[&quot;site/&lt;br/&gt;82 páginas + busqueda.json&lt;br/&gt;(generado)&quot;]
+    GS --&gt; ST[&quot;site/&lt;br/&gt;una página por clase + busqueda.json&lt;br/&gt;(generado)&quot;]
 
     CY --&gt; VR[&quot;scripts/validate_repository.py&quot;]
     SJ --&gt; VR
     DJ --&gt; VR
     LM --&gt; VR
+    MY --&gt; VR
     RD[&quot;reference-data/&quot;] --&gt; VR
     VR --&gt; OK{&quot;¿main en verde?&quot;}
 </code></pre>
@@ -93,6 +100,16 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
 </tr>
 <tr>
 <td><code>classes/**/lesson.md</code></td>
+<td>Fuente</td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td><code>classes/**/motores.yaml</code></td>
+<td>Fuente</td>
+<td><strong>Sí</strong></td>
+</tr>
+<tr>
+<td><code>classes/**/implementaciones/**</code></td>
 <td>Fuente</td>
 <td><strong>Sí</strong></td>
 </tr>
@@ -128,7 +145,7 @@ artefacto quedó desactualizado. Es lo que impide que el sitio publicado y el
 repositorio digan cosas distintas.</p>
 <h2 id="los-componentes">Los componentes</h2>
 <h3 id="curriculumyaml"><code>curriculum.yaml</code></h3>
-<p>Metadatos de las 64 clases: identificador, <code>slug</code>, título, horas, nivel,
+<p>Metadatos de las 74 clases: identificador, <code>slug</code>, título, horas, nivel,
 conceptos, motores, laboratorio y <strong>fuentes</strong>. También las rutas por objetivo y
 los pesos de evaluación. Nada de lo que aquí se declara se repite en otro sitio.</p>
 <h3 id="catalogsourcesjson"><code>catalog/sources.json</code></h3>
@@ -141,15 +158,78 @@ oficial y si tienen laboratorio ejecutable (<code>core_lab</code>) o solo ficha
 comparativa. La distinción evita prometer dominio de tecnologías que solo se
 mencionan.</p>
 <h3 id="classes"><code>classes/</code></h3>
-<p>Una carpeta por clase con <code>lesson.md</code> (la materia) y <code>README.md</code> (el documento
-publicable, generado). La separación permite que las 64 clases compartan
-encabezado, rúbrica y formato de bibliografía sin 64 copias que mantener.</p>
+<p>Una carpeta por clase con cuatro cosas, y solo la última es artefacto:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Qué es</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lesson.md</code></td>
+<td>La materia, escrita a mano</td>
+</tr>
+<tr>
+<td><code>motores.yaml</code></td>
+<td>El <strong>caso</strong> con su salida esperada y la <strong>matriz de motores</strong>, con el porqué sí y el porqué no de cada uno</td>
+</tr>
+<tr>
+<td><code>implementaciones/&lt;motor&gt;/</code></td>
+<td>El código real que resuelve el caso en ese motor</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>El documento publicable, <strong>generado</strong> a partir de los tres anteriores</td>
+</tr>
+</tbody>
+</table></div>
+<p>La separación permite que las 74 clases compartan encabezado, rúbrica y formato
+de bibliografía sin 74 copias que mantener, y que el código de cada motor viva
+en un archivo que se puede ejecutar tal cual, no dentro de un bloque de
+Markdown.</p>
+<h3 id="scriptsverificar_equivalenciapy"><code>scripts/verificar_equivalencia.py</code></h3>
+<p>El componente que sostiene la afirmación central del programa: <strong>el mismo
+problema, resuelto en varios motores, da la misma respuesta</strong>. Ejecuta cada
+implementación contra su motor y compara el resultado con el contrato de la
+clase. Tres niveles, declarados siempre:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Motores</th>
+<th>Dónde corre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nucleo</code></td>
+<td>SQLite, DuckDB</td>
+<td>En cualquier máquina y en todos los trabajos de CI</td>
+</tr>
+<tr>
+<td><code>servicio</code></td>
+<td>PostgreSQL, MySQL, MongoDB, Redis, Neo4j</td>
+<td>Contra el contenedor real, con el cliente oficial de cada motor</td>
+</tr>
+<tr>
+<td><code>declarado</code></td>
+<td>El resto del catálogo</td>
+<td>No se ejecuta, y así se dice</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cada clase corre en su <strong>propio espacio de nombres</strong> —un esquema en PostgreSQL,
+una base en MySQL, una base en MongoDB—, porque sin ese aislamiento las tablas
+de una clase impiden borrar las de otra y el verificador acabaría midiendo la
+basura que dejó la anterior.</p>
 <h3 id="labs"><code>labs/</code></h3>
 <p>Experimentos reproducibles. El primero usa SQLite en memoria y no depende de
 nada externo; el resto llega por perfiles de <code>docker-compose.yml</code>.</p>
 <h3 id="reference-data"><code>reference-data/</code></h3>
 <p>El dominio educativo canónico —estudiantes, cursos, inscripciones— que usan
-todas las clases. Que el dominio sea el mismo en las 64 clases es lo que permite
+todas las clases. Que el dominio sea el mismo en las 74 clases es lo que permite
 comparar motores sin cambiar de problema.</p>
 <h3 id="site"><code>site/</code></h3>
 <p>Sitio estático de GitHub Pages: portada con búsqueda y filtros, una página por
@@ -185,8 +265,24 @@ catálogo de motores.</p>
 <td>Prometer cobertura inexistente</td>
 </tr>
 <tr>
-<td>Secuencia 001..064 sin huecos</td>
+<td>Secuencia 001..074 sin huecos</td>
 <td>Clases perdidas al reordenar</td>
+</tr>
+<tr>
+<td>Todo motor con su <code>porque_no</code></td>
+<td>Comparativas de folleto, con solo ventajas</td>
+</tr>
+<tr>
+<td>Todo motor con su <code>doc:</code> en el dominio oficial</td>
+<td>Afirmaciones sobre un motor sin respaldo</td>
+</tr>
+<tr>
+<td>Implementación declarada que existe en disco</td>
+<td>Código prometido y ausente</td>
+</tr>
+<tr>
+<td>Resultado idéntico entre motores</td>
+<td>«Es equivalente» dicho sin comprobarlo</td>
 </tr>
 <tr>
 <td>Secciones obligatorias en cada lección</td>
@@ -213,7 +309,14 @@ catálogo de motores.</p>
 <h2 id="decisiones-y-su-motivo">Decisiones y su motivo</h2>
 <ul>
 <li><strong><code>lesson.md</code> separado de <code>README.md</code>.</strong> Cambiar la rúbrica o el pie de página
-  es un cambio en el generador, no 64 ediciones.</li>
+  es un cambio en el generador, no 74 ediciones.</li>
+<li><strong>El código de cada motor en su propio archivo, no en el Markdown.</strong> Un bloque
+  de código dentro de una clase no se puede ejecutar; un archivo, sí. El
+  generador lo inserta en el README, así que lo que se lee es exactamente lo que
+  la máquina ejecutó.</li>
+<li><strong><code>porque_no</code> obligatorio.</strong> Es la regla que impide que la comparación degenere
+  en una lista de ventajas. Si de un motor no se sabe decir qué se paga por
+  usarlo, no se ha entendido lo suficiente como para recomendarlo.</li>
 <li><strong>Las fuentes en JSON y no en Markdown.</strong> Permite validar la estructura y
   renderizarlas en varios sitios sin duplicarlas.</li>
 <li><strong>El sitio versionado en el repositorio.</strong> Se puede revisar el diff de lo que
@@ -227,8 +330,8 @@ catálogo de motores.</p>
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/docs/ARCHITECTURE.md" rel="noopener"><code>docs/ARCHITECTURE.md</code></a></p>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

@@ -1,5 +1,5 @@
 -- motor: duckdb
--- doc: https://duckdb.org/docs/stable/why_duckdb
+-- doc: https://duckdb.org/why_duckdb
 -- nota: el lado ANALITICO. Lee dos columnas y ninguna mas, vectorizadas. Y la
 --       misma consulta funciona sobre el fichero exportado por el sistema
 --       transaccional, sin cargarlo:

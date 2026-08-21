@@ -227,7 +227,7 @@ no ejecutado.
 | Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
 |---|---|---|---|---|
 | SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/whentouse.html) |
-| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/why_duckdb) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/why_duckdb) |
 | PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/tutorial-arch.html) |
 | ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/operations/utilities/clickhouse-local) |
 | Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/develop/reference/protocol-spec/) |
@@ -277,7 +277,7 @@ ORDER BY curso;
 
 ```sql
 -- motor: duckdb
--- doc: https://duckdb.org/docs/stable/why_duckdb
+-- doc: https://duckdb.org/why_duckdb
 -- nota: guarda COLUMNAS. Este agregado lee la columna `nota` y la columna
 --       `curso`, y ninguna otra. Ademas, la misma consulta funciona sobre un
 --       archivo sin cargarlo:
@@ -305,7 +305,7 @@ ORDER BY curso;
 
 - **Por qué sí:** Es el motor embebido analítico: guarda columnas, las comprime y las procesa en lotes vectorizados. El mismo agregado sobre millones de filas lee solo la columna que necesita, y además puede consultar directamente un CSV o un Parquet sin cargarlo.
 - **Por qué no:** Un solo proceso escritor y sin control de concurrencia entre aplicaciones: no es el sitio donde vive la verdad del negocio, sino donde se analiza una copia de ella.
-- 📄 Documentación oficial: <https://duckdb.org/docs/stable/why_duckdb>
+- 📄 Documentación oficial: <https://duckdb.org/why_duckdb>
 
 #### PostgreSQL · [`implementaciones/postgresql/consulta.sql`](implementaciones/postgresql/consulta.sql)
 

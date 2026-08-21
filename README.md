@@ -18,7 +18,7 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 [![Enlaces](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/enlaces.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/enlaces.yml)
 [![CodeQL](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/vladimiracunadev-create/database-systems-labs/actions/workflows/codeql.yml)
 
-[![Versión](https://img.shields.io/badge/versión-2.0.0-orange?style=for-the-badge)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-3.0.0-orange?style=for-the-badge)](CHANGELOG.md)
 [![Clases](https://img.shields.io/badge/clases-74%20·%2015%20partes-4aa8ff?style=for-the-badge)](classes/README.md)
 [![Fuentes](https://img.shields.io/badge/fuentes-120%20con%20ISBN%20·%20DOI%20·%20norma-0b7285?style=for-the-badge)](catalog/sources.json)
 [![Laboratorios](https://img.shields.io/badge/laboratorios-7%20ejecutables%20en%20CI-2ee6c5?style=for-the-badge)](labs/README.md)

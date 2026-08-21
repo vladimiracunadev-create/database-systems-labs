@@ -243,7 +243,7 @@ afirmación.
 | SQLite | sí | conceptual | — | [doc oficial](https://sqlite.org/fileformat.html) |
 | DuckDB | sí | conceptual | — | [doc oficial](https://duckdb.org/docs/stable/internals/storage.html) |
 | MongoDB | sí | conceptual | — | [doc oficial](https://www.mongodb.com/docs/manual/core/wiredtiger/) |
-| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html) |
+| Apache Cassandra | sí | conceptual | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloom_filters.html) |
 | Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/) |
 
 ### Los que resuelven el caso
@@ -288,7 +288,7 @@ afirmación.
 - **Cómo se hace aquí:** Los datos viven en archivos inmutables (SSTables) con un índice de particiones y un filtro de Bloom por archivo. La caché relevante no es la de filas —que está desactivada por omisión— sino la de claves y, sobre todo, la del sistema operativo sobre los archivos.
 - **Por qué sí:** El filtro de Bloom evita abrir archivos que seguro no contienen la clave: es lo que hace que una lectura no tenga que mirar en todos.
 - **Por qué no:** Una lectura puede acabar tocando varios archivos igualmente, y la caché de filas activada sin criterio expulsa datos útiles y empeora el rendimiento. Es de los pocos motores donde activar una caché suele ser mala idea.
-- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloomfilters.html>
+- 📄 Documentación oficial: <https://cassandra.apache.org/doc/latest/cassandra/managing/operating/bloom_filters.html>
 
 ### Los que no resuelven este caso — y qué se hace en su lugar
 

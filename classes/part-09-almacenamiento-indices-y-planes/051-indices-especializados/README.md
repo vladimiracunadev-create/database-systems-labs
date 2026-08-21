@@ -270,7 +270,7 @@ no ejecutado.
 | MySQL | sí | servicio | [código](implementaciones/mysql/consulta.sql) | [doc oficial](https://dev.mysql.com/doc/refman/8.4/en/create-index.html) |
 | MongoDB | sí | servicio | [código](implementaciones/mongodb/consulta.js) | [doc oficial](https://www.mongodb.com/docs/manual/core/index-partial/) |
 | DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/sql/indexes.html) |
-| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-usage.html) |
+| Apache Cassandra | **no** | — | — | [doc oficial](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-concepts.html) |
 | Redis | **no** | — | — | [doc oficial](https://redis.io/docs/latest/commands/zadd/) |
 
 ### Los que resuelven el caso
@@ -484,7 +484,7 @@ Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de est
 
 | Motor | Por qué no | Qué se hace en su lugar | Fuente |
 |---|---|---|---|
-| Apache Cassandra | Su índice secundario es local a cada nodo, así que una consulta por él pregunta a todo el anillo. Y sobre una columna de baja cardinalidad como `estado`, cada nodo devolvería muchísimas filas: es el antipatrón documentado. | Una tabla `pedidos_pendientes` con `estado` como clave de partición y la fecha como agrupamiento, alimentada por la aplicación y vaciada al entregar: el índice parcial construido a mano. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-usage.html) |
+| Apache Cassandra | Su índice secundario es local a cada nodo, así que una consulta por él pregunta a todo el anillo. Y sobre una columna de baja cardinalidad como `estado`, cada nodo devolvería muchísimas filas: es el antipatrón documentado. | Una tabla `pedidos_pendientes` con `estado` como clave de partición y la fecha como agrupamiento, alimentada por la aplicación y vaciada al entregar: el índice parcial construido a mano. | [doc](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-concepts.html) |
 | Redis | No hay índices que crear sobre datos ya escritos: la estructura de acceso se decide al escribir y no hay forma de añadir otra después sin recorrer todo el espacio de claves. | Un conjunto ordenado `pedidos:pendientes` con la fecha como puntuación, del que se saca el pedido al entregarlo. Es literalmente un índice parcial mantenido a mano, con la ventaja de que se lee en microsegundos y el inconveniente de que hay que acordarse de mantenerlo. | [doc](https://redis.io/docs/latest/commands/zadd/) |
 
 ---

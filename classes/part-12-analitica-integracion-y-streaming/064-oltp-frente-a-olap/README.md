@@ -228,7 +228,7 @@ no ejecutado.
 
 | Motor | ¿Resuelve el caso? | Nivel de prueba | Código | Fuente |
 |---|---|---|---|---|
-| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/docs/stable/why_duckdb) |
+| DuckDB | sí | núcleo | [código](implementaciones/duckdb/consulta.sql) | [doc oficial](https://duckdb.org/why_duckdb) |
 | ClickHouse | sí | declarado | [código](implementaciones/clickhouse/consulta.sql) | [doc oficial](https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree) |
 | PostgreSQL | sí | servicio | [código](implementaciones/postgresql/consulta.sql) | [doc oficial](https://www.postgresql.org/docs/current/rules-materializedviews.html) |
 | SQLite | sí | núcleo | [código](implementaciones/sqlite/consulta.sql) | [doc oficial](https://sqlite.org/whentouse.html) |
@@ -244,7 +244,7 @@ no ejecutado.
 
 ```sql
 -- motor: duckdb
--- doc: https://duckdb.org/docs/stable/why_duckdb
+-- doc: https://duckdb.org/why_duckdb
 -- nota: el lado ANALITICO. Lee dos columnas y ninguna mas, vectorizadas. Y la
 --       misma consulta funciona sobre el fichero exportado por el sistema
 --       transaccional, sin cargarlo:
@@ -281,7 +281,7 @@ ORDER BY trimestre;
 
 - **Por qué sí:** Es analítico puro y embebido: lee solo las columnas `mes` e `importe`, las procesa vectorizadas y no necesita servidor. Para el análisis local sobre una copia de los datos, no hay nada más directo.
 - **Por qué no:** Un solo escritor y sin concurrencia entre procesos: no puede ser el sistema donde se registran las ventas, solo donde se analizan.
-- 📄 Documentación oficial: <https://duckdb.org/docs/stable/why_duckdb>
+- 📄 Documentación oficial: <https://duckdb.org/why_duckdb>
 
 #### ClickHouse · [`implementaciones/clickhouse/consulta.sql`](implementaciones/clickhouse/consulta.sql)
 

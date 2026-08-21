@@ -140,6 +140,74 @@ el validador deja de ser el único componente sin pruebas.
   `docs/`, `assessments/`, `projects/` y los documentos de la raíz, así que un
   cambio en ellos no llegaba a publicarse.
 
+## 3.0.0 — 2026-08-20
+
+El repositorio cambia de modelo. Hasta aquí una clase explicaba un concepto y
+citaba motores de pasada; a partir de aquí **declara un caso, lo resuelve en
+varios motores y escribe, con el mismo peso, por qué sí y por qué no conviene
+resolverlo en cada uno**. Los motores que *no* resuelven el caso aparecen
+también, con el motivo y con lo que se hace en su lugar.
+
+### Añadido
+
+- **Eje comparado en las 74 clases.** Cada una trae su `motores.yaml` —el caso,
+  la salida esperada y la matriz de motores— y su carpeta `implementaciones/`
+  con el código real de cada uno. **408 implementaciones**, de las que **267 se
+  ejecutan contra el motor real** y el resto se declaran como material revisado
+  y no ejecutado.
+- **`scripts/verificar_equivalencia.py`.** Ejecuta cada implementación y compara
+  su resultado con el contrato de su clase. Tres niveles declarados: *núcleo*
+  (SQLite y DuckDB, sin servicios, en cualquier máquina), *servicio*
+  (PostgreSQL, MySQL, MongoDB, Redis y Neo4j contra el contenedor real, con el
+  cliente oficial de cada uno) y *declarado* (se muestra y se revisa; la máquina
+  no lo ejecuta).
+- **`scripts/motores_lib.py`.** Carga y valida las comparaciones. Exige
+  `porque_no` en todo motor —un motor que solo tiene ventajas no se entendió, se
+  copió del folleto— y exige que el enlace `doc:` cuelgue del dominio oficial que
+  registra `catalog/databases.json`.
+- **Parte 00 nueva, la rampa de entrada.** Diez clases para quien nunca ha
+  escrito una consulta: qué es un dato, por qué la hoja de cálculo deja de
+  servir, crear/insertar/leer, filtrar y ordenar, cambiar datos y el `WHERE` que
+  salva, tipos, clave primaria, dos tablas y una clave foránea, cuándo **no**
+  hace falta una base de datos, y el mapa de las seis familias de motores.
+- **Trabajo de CI `equivalencia`.** Levanta los cinco motores de servicio con
+  `docker compose --profile todo up -d --wait` y ejecuta todas las
+  implementaciones contra ellos.
+- **Servicio `neo4j`** en `docker-compose.yml`, y perfil `todo` para levantar los
+  cinco de una vez.
+- **El verificador de enlaces cubre los dos registros:** las fuentes
+  bibliográficas y ahora también los `doc:` de cada motor —347 enlaces—, con
+  `--solo motores` para comprobar solo estos.
+
+### Cambiado
+
+- **Renumeración.** Partes 00–13 pasan a 01–14 y clases 001–064 pasan a 011–074,
+  para dejar sitio a la parte 00. Las referencias por identificador se
+  reescribieron en los dos únicos sitios donde viven —`curriculum.yaml` y
+  `certificaciones/_mapeo.json`—, más las rutas de enlace de los `.md`.
+- **La parte 00 entra en las siete rutas por rol** como rampa común, y las horas
+  declaradas en cada guía se actualizaron en consecuencia.
+- **`scripts/build_classes.py`** renderiza la sección comparada en cada README, y
+  escapa la barra vertical en las celdas de tabla —que aparece de verdad en
+  cuanto se habla del operador de concatenación.
+- **Dos pruebas de coherencia dejan de escribir cifras a mano:** la que exigía la
+  parte «13» como cierre lee ahora la primera y la última del currículo, y la que
+  fijaba 210 horas comprueba que la portada dice las que el currículo suma.
+
+### Corregido
+
+- **`docker-compose.yml`: el volumen de PostgreSQL 18** se montaba en
+  `/var/lib/postgresql/data` y el contenedor **nunca llegaba a estar sano**. La
+  imagen 18 coloca los datos en un subdirectorio con la versión dentro, así que
+  el punto de montaje es `/var/lib/postgresql`.
+- **Puertos configurables** por variable de entorno, para poder levantar el stack
+  en una máquina que ya tenga un PostgreSQL o un MySQL escuchando.
+- **`scripts/generate_site.py`:** los enlaces a `motores.yaml` y a
+  `implementaciones/` apuntan al archivo en GitHub en vez de morir en el sitio.
+- **Tres enlaces de documentación oficial rotos** (DuckDB y dos de Cassandra),
+  detectados por el verificador de enlaces en su primera ejecución sobre el
+  registro de motores.
+
 ## 2.0.0 — 2026-08-19
 
 Reescritura del programa en torno a una regla: **ninguna clase se publica sin
