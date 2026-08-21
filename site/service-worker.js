@@ -1,7 +1,7 @@
 // Cache del sitio para consulta sin conexion.
 // La version sale de la huella del contenido generado: si cambia una pagina,
 // cambia el nombre de la cache y la anterior se descarta entera.
-const CACHE = "database-systems-labs-c9f2ab764744";
+const CACHE = "database-systems-labs-6b9653e44549";
 const ESENCIALES = ["./", "./index.html", "./laboratorios.html", "./autoevaluacion.html", "./fuentes.html", "./motores.html", "./busqueda.json", "./assets/styles.css", "./assets/class.css", "./assets/comun.js", "./assets/app.js", "./assets/class.js", "./assets/icon.svg"];
 
 self.addEventListener("install", (evento) => {

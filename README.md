@@ -37,10 +37,17 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 [📚 **Bibliografía**](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html) ·
 [🗺️ **Roadmap**](ROADMAP.md)
 
+<br>
+
+| 📚 Clases | 🗂️ Partes | ⏱️ Horas | 🧩 Motores | 🧪 Labs | 📖 Fuentes | 📝 Preguntas |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **74** | **15** | **230** | **27** | **7** | **120** | **256** |
+
 </div>
 
 ## La regla del repositorio
 
+> [!IMPORTANT]
 > **Ninguna clase se publica sin fuentes, y ninguna cita apunta al vacío.**
 
 Todo lo que el programa afirma procede de un libro, un artículo con DOI, una
@@ -123,23 +130,23 @@ explicación no demuestra transferencia**.
 
 ## Programa
 
-| Parte | Tema | Clases | Horas |
-|---|---|---:|---:|
-| [00](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | 10 | 20 |
-| [01](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | 4 | 12 |
-| [02](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | 5 | 16 |
-| [03](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | 4 | 13 |
-| [04](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | 6 | 20 |
-| [05](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | 4 | 12 |
-| [06](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
-| [07](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
-| [08](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
-| [09](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
-| [10](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
-| [11](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
-| [12](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
-| [13](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
-| [14](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
+| | Parte | Tema | Clases | Horas |
+|:---:|:---:|---|---:|---:|
+| 🪜 | [00](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | 10 | 20 |
+| 🧱 | [01](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | 4 | 12 |
+| 📐 | [02](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | 5 | 16 |
+| 🔗 | [03](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | 4 | 13 |
+| 🔎 | [04](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | 6 | 20 |
+| 🐘 | [05](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | 4 | 12 |
+| 📄 | [06](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
+| 🕸️ | [07](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
+| 🔒 | [08](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
+| 🗂️ | [09](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
+| 🌐 | [10](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
+| 🛡️ | [11](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
+| 📊 | [12](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
+| 🧠 | [13](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
+| 🏛️ | [14](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
 
 El índice completo está en [`classes/README.md`](classes/README.md) y el
 currículo canónico, en [`curriculum.yaml`](curriculum.yaml).
@@ -152,15 +159,15 @@ el puesto, cómo es un día de trabajo, qué necesitas saber, qué partes hacer 
 en qué orden, qué tienes que poder demostrar al terminar, qué credenciales
 existen, cómo progresa la carrera y qué mitos conviene desmontar.
 
-| Ruta | Partes | Nivel | Horas | Guía |
-|---|---|---|---:|---|
-| Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 06 · 08 · 09 · 11 · 14 | entrada | 172 | [guía](rutas/desarrollo-de-aplicaciones.md) |
-| Ingeniero de datos | 00 · 01 · 02 · 03 · 04 · 07 · 10 · 12 · 13 · 14 | intermedio | 151 | [guía](rutas/ingenieria-de-datos.md) |
-| DBA / SRE de datos | 00 · 01 · 02 · 04 · 05 · 08 · 09 · 10 · 11 · 14 | intermedio | 163 | [guía](rutas/fiabilidad-y-operacion.md) |
-| Arquitecto de datos | todas | avanzado | 230 | [guía](rutas/arquitectura.md) |
-| Analytics engineer / BI | 00 · 01 · 02 · 03 · 04 · 05 · 09 · 12 · 14 | intermedio | 135 | [guía](rutas/analitica-y-bi.md) |
-| Ingeniero de IA aplicada y recuperación | 00 · 01 · 02 · 03 · 04 · 06 · 07 · 09 · 13 · 14 | avanzado | 151 | [guía](rutas/ia-y-recuperacion.md) |
-| Gobierno y privacidad del dato | 00 · 01 · 02 · 04 · 08 · 10 · 11 · 12 · 14 | intermedio | 147 | [guía](rutas/gobierno-y-privacidad.md) |
+| | Ruta | Partes | Nivel | Horas | Guía |
+|:---:|---|---|---|---:|---|
+| 👩‍💻 | Desarrollador de aplicaciones | 00 · 01 · 02 · 03 · 04 · 05 · 06 · 08 · 09 · 11 · 14 | entrada | 172 | [guía](rutas/desarrollo-de-aplicaciones.md) |
+| 🛠️ | Ingeniero de datos | 00 · 01 · 02 · 03 · 04 · 07 · 10 · 12 · 13 · 14 | intermedio | 151 | [guía](rutas/ingenieria-de-datos.md) |
+| 🧰 | DBA / SRE de datos | 00 · 01 · 02 · 04 · 05 · 08 · 09 · 10 · 11 · 14 | intermedio | 163 | [guía](rutas/fiabilidad-y-operacion.md) |
+| 🏛️ | Arquitecto de datos | todas | avanzado | 230 | [guía](rutas/arquitectura.md) |
+| 📊 | Analytics engineer / BI | 00 · 01 · 02 · 03 · 04 · 05 · 09 · 12 · 14 | intermedio | 135 | [guía](rutas/analitica-y-bi.md) |
+| 🧠 | Ingeniero de IA aplicada y recuperación | 00 · 01 · 02 · 03 · 04 · 06 · 07 · 09 · 13 · 14 | avanzado | 151 | [guía](rutas/ia-y-recuperacion.md) |
+| 🛡️ | Gobierno y privacidad del dato | 00 · 01 · 02 · 04 · 08 · 10 · 11 · 12 · 14 | intermedio | 147 | [guía](rutas/gobierno-y-privacidad.md) |
 
 El índice está en [`rutas/README.md`](rutas/README.md), y las rutas viven como
 datos en [`curriculum.yaml`](curriculum.yaml): la validación comprueba que cada
@@ -181,11 +188,11 @@ reproducible —lo hace [`scripts/generar_certificaciones.py`](scripts/generar_c
 desde [`certificaciones/_mapeo.json`](certificaciones/_mapeo.json)— y la brecha se declara:
 saber qué te falta vale más que un porcentaje redondo.
 
-| Certificación | Código | Cobertura del programa | Cómo se calcula |
-|---|---|---|---|
-| [Azure Database Administrator Associate](certificaciones/dp-300.md) | DP-300 | 70 % | medida sobre las 15 subáreas oficiales |
-| [AWS Certified Data Engineer – Associate](certificaciones/aws-dea-c01.md) | DEA-C01 | 62 % | estimada por dominio, justificada con clases |
-| [Azure Data Fundamentals](certificaciones/dp-900.md) | DP-900 | 60 % | medida sobre las 11 subáreas oficiales |
+| | Certificación | Código | Cobertura del programa | Cómo se calcula |
+|:---:|---|---|---|---|
+| 🔷 | [Azure Database Administrator Associate](certificaciones/dp-300.md) | DP-300 | 70 % | medida sobre las 15 subáreas oficiales |
+| 🟧 | [AWS Certified Data Engineer – Associate](certificaciones/aws-dea-c01.md) | DEA-C01 | 62 % | estimada por dominio, justificada con clases |
+| 🔹 | [Azure Data Fundamentals](certificaciones/dp-900.md) | DP-900 | 60 % | medida sobre las 11 subáreas oficiales |
 
 Lo que la cobertura **no** mide: tu probabilidad de aprobar. Un examen de proveedor pregunta
 además por nombres de servicios y consolas que este programa no enseña a propósito. Un 70 %
@@ -240,27 +247,28 @@ Los motores llegan por perfiles, para no levantarlos todos a la vez:
 docker compose --profile relational up -d
 ```
 
-Las credenciales del `compose` son locales y están a la vista en un archivo
-versionado. **Nunca deben copiarse a otro entorno.**
+> [!CAUTION]
+> Las credenciales del `compose` son locales y están a la vista en un archivo
+> versionado. **Nunca deben copiarse a otro entorno.**
 
 ## El sitio
 
 [**vladimiracunadev-create.github.io/database-systems-labs**](https://vladimiracunadev-create.github.io/database-systems-labs/)
 — 120 páginas generadas desde este mismo repositorio, sin analítica y sin cuentas:
 
-| | |
-|---|---|
-| **Catálogo** | las 64 clases con búsqueda en el cliente y filtros por parte, nivel y motor |
-| **Clase** | lectura larga con barra de avance, anterior/siguiente, diagramas Mermaid y copiar bloque de código |
-| **[Laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)** | qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio |
-| **[Autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)** | las 256 preguntas del programa, enlazadas a su clase |
-| **[Rutas por rol](https://vladimiracunadev-create.github.io/database-systems-labs/rutas/index.html)** | siete recorridos con su guía de carrera: recorrido, credenciales, mercado y mitos |
-| **[Certificaciones](https://vladimiracunadev-create.github.io/database-systems-labs/certificaciones/index.html)** | qué parte del temario oficial de cada examen cubre el programa, calculado |
-| **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 120 entradas con ISBN, DOI o URL oficial y quién las cita |
-| **[Documentación](https://vladimiracunadev-create.github.io/database-systems-labs/docs/index.html)** | arquitectura, método, rúbrica, entornos y roadmap, publicados desde sus `.md` |
-| **Progreso** | marcar clases como completadas; se guarda solo en tu navegador |
-| **Tema** | claro y oscuro, siguiendo la preferencia del sistema o tu elección |
-| **Sin conexión** | aplicación instalable (PWA) con service worker y manifiesto |
+| | | |
+|:---:|---|---|
+| 🔍 | **Catálogo** | las 64 clases con búsqueda en el cliente y filtros por parte, nivel y motor |
+| 📖 | **Clase** | lectura larga con barra de avance, anterior/siguiente, diagramas Mermaid y copiar bloque de código |
+| 🧪 | **[Laboratorios](https://vladimiracunadev-create.github.io/database-systems-labs/laboratorios.html)** | qué mide cada uno, cómo se ejecuta y de qué fuente sale su criterio |
+| 📝 | **[Autoevaluación](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html)** | las 256 preguntas del programa, enlazadas a su clase |
+| 🧭 | **[Rutas por rol](https://vladimiracunadev-create.github.io/database-systems-labs/rutas/index.html)** | siete recorridos con su guía de carrera: recorrido, credenciales, mercado y mitos |
+| 🎓 | **[Certificaciones](https://vladimiracunadev-create.github.io/database-systems-labs/certificaciones/index.html)** | qué parte del temario oficial de cada examen cubre el programa, calculado |
+| 📚 | **[Fuentes](https://vladimiracunadev-create.github.io/database-systems-labs/fuentes.html)** | las 120 entradas con ISBN, DOI o URL oficial y quién las cita |
+| 📄 | **[Documentación](https://vladimiracunadev-create.github.io/database-systems-labs/docs/index.html)** | arquitectura, método, rúbrica, entornos y roadmap, publicados desde sus `.md` |
+| ✅ | **Progreso** | marcar clases como completadas; se guarda solo en tu navegador |
+| 🌗 | **Tema** | claro y oscuro, siguiendo la preferencia del sistema o tu elección |
+| 📱 | **Sin conexión** | aplicación instalable (PWA) con service worker y manifiesto |
 
 Los iconos y la portada social también son artefactos generados: se dibujan
 píxel a píxel con `zlib` y `struct` en
@@ -306,13 +314,13 @@ correcto sin explicación no demuestra transferencia**. De ahí que el 40 % de l
 evidencias de laboratorio —hipótesis previa, comando, entorno, salida y **límite declarado**— y
 que la rúbrica esté escrita para que la aplique alguien que no conoce el programa.
 
-| Pieza | Peso | Qué evalúa |
-|---|---:|---|
-| [Diagnóstico inicial](assessments/diagnostic.md) | 0 % | Por dónde empezar, con clave de corrección y encaminamiento |
-| [Evidencias de laboratorio](assessments/evidencias.md) | 40 % | Que ejecutaste, entendiste y declaraste qué **no** demuestra |
-| Retos de transferencia | 20 % | Que lo aplicaste a tu propio contexto |
-| [Decisiones de arquitectura](projects/capstone.md) | 15 % | Que puedes justificar y revertir una elección |
-| [Proyecto final](projects/capstone.md) | 25 % | Todo junto, defendido ante preguntas |
+| | Pieza | Peso | Qué evalúa |
+|:---:|---|---:|---|
+| 🧭 | [Diagnóstico inicial](assessments/diagnostic.md) | 0 % | Por dónde empezar, con clave de corrección y encaminamiento |
+| 🧪 | [Evidencias de laboratorio](assessments/evidencias.md) | 40 % | Que ejecutaste, entendiste y declaraste qué **no** demuestra |
+| 🔄 | Retos de transferencia | 20 % | Que lo aplicaste a tu propio contexto |
+| 🏗️ | [Decisiones de arquitectura](projects/capstone.md) | 15 % | Que puedes justificar y revertir una elección |
+| 🎓 | [Proyecto final](projects/capstone.md) | 25 % | Todo junto, defendido ante preguntas |
 
 La [rúbrica](assessments/rubric.md) —diez dimensiones, cuatro niveles descritos en cada una,
 mínimos por dimensión y seis faltas críticas— y el [examen final por rol](assessments/examen-por-rol.md)

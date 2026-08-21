@@ -1,5 +1,7 @@
 # 046 — Registro anticipado y recuperación: WAL y ARIES
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-08-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-046%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-08-transacciones-concurrencia-y-recuperacion/045-bloqueo-en-dos-fases-y-mvcc/README.md) · [Siguiente →](../../part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md)
 
 Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
@@ -9,6 +11,18 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 **Conceptos centrales:** `WAL` · `punto de control` · `rehacer` · `deshacer` · `LSN`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 046"]
+    C --> K1["WAL"]
+    C --> K2["punto de control"]
+    C --> K3["rehacer"]
+    C --> K4["deshacer"]
+    C --> K5["LSN"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

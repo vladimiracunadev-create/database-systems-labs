@@ -1,5 +1,7 @@
 # 057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-057%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md) · [Siguiente →](../../part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md)
 
 Parte 10 — Distribución, réplica y consistencia · Avanzado ·
@@ -9,6 +11,18 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 **Conceptos centrales:** `consenso` · `elección de líder` · `commit en dos fases` · `saga` · `compensación`
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 057"]
+    C --> K1["consenso"]
+    C --> K2["elección de líder"]
+    C --> K3["commit en dos fases"]
+    C --> K4["saga"]
+    C --> K5["compensación"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

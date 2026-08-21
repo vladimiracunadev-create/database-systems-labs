@@ -1,5 +1,7 @@
 # 024 — DDL: el esquema como contrato ejecutable
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-024%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md) · [Siguiente →](../../part-04-sql-en-profundidad/025-select-filtrado-proyeccion-y-orden/README.md)
 
 Parte 04 — SQL en profundidad · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 04 — SQL en profundidad · Fundamentos ·
 **Conceptos centrales:** `tipo de dato` · `restricción` · `valor por defecto` · `DDL transaccional`
 
 **En este caso se comparan 8 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 024"]
+    C --> K1["tipo de dato"]
+    C --> K2["restricción"]
+    C --> K3["valor por defecto"]
+    C --> K4["DDL transaccional"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

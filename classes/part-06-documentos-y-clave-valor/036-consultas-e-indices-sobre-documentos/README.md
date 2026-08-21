@@ -1,5 +1,7 @@
 # 036 — Consultas, índices y agregación sobre documentos
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-06-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-036%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 06](../README.md) · [← Anterior](../../part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/README.md) · [Siguiente →](../../part-06-documentos-y-clave-valor/037-clave-valor-cache-y-expiracion/README.md)
 
 Parte 06 — Documentos y clave-valor · Intermedio ·
@@ -9,6 +11,17 @@ Parte 06 — Documentos y clave-valor · Intermedio ·
 **Conceptos centrales:** `índice compuesto` · `canalización de agregación` · `índice multiclave` · `cobertura`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 036"]
+    C --> K1["índice compuesto"]
+    C --> K2["canalización de agregación"]
+    C --> K3["índice multiclave"]
+    C --> K4["cobertura"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

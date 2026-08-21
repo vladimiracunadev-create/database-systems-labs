@@ -8,6 +8,12 @@
 > concurrencia y despliegues sin caída · **Cargos habituales:** desarrollador backend,
 > desarrollador full-stack, ingeniero de software.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-entrada-2e8b57?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-11-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-172-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 Casi todo el software que existe guarda algo. El desarrollador de aplicaciones es quien decide
@@ -83,6 +89,30 @@ justificar cada decisión de datos con un mecanismo y una medición, en vez de c
   dentro de un año.
 
 ## 📚 Tu ruta en el programa
+
+<!-- recorrido:inicio -->
+
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P05["🐘 05"]
+    P06["📄 06"]
+    P08["🔒 08"]
+    P09["🗂️ 09"]
+    P11["🛡️ 11"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P05 --> P06 --> P08 --> P09 --> P11 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
 
 10 partes, 172 horas estimadas. El orden importa: cada parte apoya a la siguiente.
 

@@ -1,5 +1,7 @@
 # 040 — Series temporales: cardinalidad, retención y agregados continuos
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-07-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-040%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 07](../README.md) · [← Anterior](../../part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/README.md) · [Siguiente →](../../part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md)
 
 Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
@@ -9,6 +11,17 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
 **Conceptos centrales:** `cardinalidad de etiquetas` · `submuestreo` · `retención` · `agregado continuo`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 040"]
+    C --> K1["cardinalidad de etiquetas"]
+    C --> K2["submuestreo"]
+    C --> K3["retención"]
+    C --> K4["agregado continuo"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

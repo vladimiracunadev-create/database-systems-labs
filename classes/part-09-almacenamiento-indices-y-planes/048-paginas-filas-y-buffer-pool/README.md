@@ -1,5 +1,7 @@
 # 048 — Páginas, filas y buffer: por qué la entrada y salida manda
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-09-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-048%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md) · [Siguiente →](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)
 
 Parte 09 — Almacenamiento, índices y planes · Intermedio ·
@@ -9,6 +11,18 @@ Parte 09 — Almacenamiento, índices y planes · Intermedio ·
 **Conceptos centrales:** `pagina` · `factor de bloque` · `buffer pool` · `localidad` · `lectura secuencial`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 048"]
+    C --> K1["pagina"]
+    C --> K2["factor de bloque"]
+    C --> K3["buffer pool"]
+    C --> K4["localidad"]
+    C --> K5["lectura secuencial"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

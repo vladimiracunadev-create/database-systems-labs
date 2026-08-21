@@ -1,5 +1,7 @@
 # 010 — El mapa de los motores: seis familias y un criterio
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-010%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) · [Siguiente →](../../part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md)
 
 Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 **Conceptos centrales:** `familias de motores` · `modelo de agregado` · `patrón de acceso` · `multimodelo`
 
 **En este caso se comparan 9 motores**: 8 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 010"]
+    C --> K1["familias de motores"]
+    C --> K2["modelo de agregado"]
+    C --> K3["patrón de acceso"]
+    C --> K4["multimodelo"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

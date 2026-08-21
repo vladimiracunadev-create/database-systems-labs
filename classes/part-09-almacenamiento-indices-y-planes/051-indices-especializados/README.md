@@ -1,5 +1,7 @@
 # 051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-09-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-051%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 09](../README.md) · [← Anterior](../../part-09-almacenamiento-indices-y-planes/050-lsm-tree-compactacion-y-amplificacion/README.md) · [Siguiente →](../../part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md)
 
 Parte 09 — Almacenamiento, índices y planes · Avanzado ·
@@ -9,6 +11,18 @@ Parte 09 — Almacenamiento, índices y planes · Avanzado ·
 **Conceptos centrales:** `índice parcial` · `índice de expresión` · `GIN` · `BRIN` · `costo de mantenimiento`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 051"]
+    C --> K1["índice parcial"]
+    C --> K2["índice de expresión"]
+    C --> K3["GIN"]
+    C --> K4["BRIN"]
+    C --> K5["costo de mantenimiento"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

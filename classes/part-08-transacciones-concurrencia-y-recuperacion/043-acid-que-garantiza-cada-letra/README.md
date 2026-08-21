@@ -1,5 +1,7 @@
 # 043 — ACID: qué garantiza cada letra y quién la implementa
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-08-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-043%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md) · [Siguiente →](../../part-08-transacciones-concurrencia-y-recuperacion/044-anomalias-de-aislamiento-y-la-critica-ansi/README.md)
 
 Parte 08 — Transacciones, concurrencia y recuperación · Intermedio ·
@@ -9,6 +11,18 @@ Parte 08 — Transacciones, concurrencia y recuperación · Intermedio ·
 **Conceptos centrales:** `atomicidad` · `consistencia` · `aislamiento` · `durabilidad` · `unidad de recuperación`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 043"]
+    C --> K1["atomicidad"]
+    C --> K2["consistencia"]
+    C --> K3["aislamiento"]
+    C --> K4["durabilidad"]
+    C --> K5["unidad de recuperación"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

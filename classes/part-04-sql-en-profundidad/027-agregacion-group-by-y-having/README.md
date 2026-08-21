@@ -1,5 +1,7 @@
 # 027 — Agregación, GROUP BY y HAVING sin duplicar filas
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-027%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md) · [Siguiente →](../../part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/README.md)
 
 Parte 04 — SQL en profundidad · Intermedio ·
@@ -9,6 +11,18 @@ Parte 04 — SQL en profundidad · Intermedio ·
 **Conceptos centrales:** `agrupación` · `agregado` · `HAVING` · `doble conteo` · `dependencia funcional en GROUP BY`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 027"]
+    C --> K1["agrupación"]
+    C --> K2["agregado"]
+    C --> K3["HAVING"]
+    C --> K4["doble conteo"]
+    C --> K5["dependencia funcional en GROUP BY"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

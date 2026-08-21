@@ -8,6 +8,12 @@
 > transformaciones versionadas y la frontera OLTP/OLAP · **Cargos habituales:** analytics
 > engineer, ingeniero de BI, analista de datos sénior.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-intermedio-1f6feb?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-9-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-135-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 Este rol apareció cuando quedó claro que el problema del análisis no era la herramienta de
@@ -74,6 +80,28 @@ usar, cómo contar una historia con datos— ni la herramienta de BI concreta de
 - **Sostener el número** cuando a alguien no le gusta, mostrando el linaje en vez de discutir.
 
 ## 📚 Tu ruta en el programa
+
+<!-- recorrido:inicio -->
+
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P05["🐘 05"]
+    P09["🗂️ 09"]
+    P12["📊 12"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P05 --> P09 --> P12 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
 
 8 partes, 135 horas estimadas.
 

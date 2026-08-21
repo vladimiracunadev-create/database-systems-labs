@@ -1,5 +1,7 @@
 # 064 — OLTP frente a OLAP: por qué se separan
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-12-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-064%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md) · [Siguiente →](../../part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md)
 
 Parte 12 — Analítica, integración y streaming · Intermedio ·
@@ -9,6 +11,17 @@ Parte 12 — Analítica, integración y streaming · Intermedio ·
 **Conceptos centrales:** `carga transaccional` · `carga analítica` · `contención` · `formato de almacenamiento`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 064"]
+    C --> K1["carga transaccional"]
+    C --> K2["carga analítica"]
+    C --> K3["contención"]
+    C --> K4["formato de almacenamiento"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

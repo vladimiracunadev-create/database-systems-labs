@@ -1,5 +1,7 @@
 # 055 — CAP, PACELC y lo que realmente se elige
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-055%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-distribucion-replica-y-consistencia/054-particionado-rebalanceo-y-claves-calientes/README.md) · [Siguiente →](../../part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md)
 
 Parte 10 — Distribución, réplica y consistencia · Avanzado ·
@@ -9,6 +11,16 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 **Conceptos centrales:** `partición de red` · `disponibilidad` · `latencia frente a consistencia`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 055"]
+    C --> K1["partición de red"]
+    C --> K2["disponibilidad"]
+    C --> K3["latencia frente a consistencia"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

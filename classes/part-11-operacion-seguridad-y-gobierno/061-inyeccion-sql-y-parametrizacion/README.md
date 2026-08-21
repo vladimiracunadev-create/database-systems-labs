@@ -1,5 +1,7 @@
 # 061 — Inyección SQL y el contrato de parametrización
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-11-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-061%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 11](../README.md) · [← Anterior](../../part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md) · [Siguiente →](../../part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md)
 
 Parte 11 — Operación, seguridad y gobierno · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 11 — Operación, seguridad y gobierno · Fundamentos ·
 **Conceptos centrales:** `consulta parametrizada` · `identificador dinamico` · `lista blanca` · `defensa en profundidad`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 061"]
+    C --> K1["consulta parametrizada"]
+    C --> K2["identificador dinamico"]
+    C --> K3["lista blanca"]
+    C --> K4["defensa en profundidad"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

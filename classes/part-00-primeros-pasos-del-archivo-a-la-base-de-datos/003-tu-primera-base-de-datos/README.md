@@ -1,14 +1,28 @@
 # 003 — Tu primera base de datos: crear, insertar y leer
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-003%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) · [Siguiente →](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md)
 
 Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 2 horas estimadas · motores `sqlite`, `duckdb`, `postgresql`, `mysql`, `mongodb` · laboratorio
 [`labs/01-sql-foundations`](../../../labs/01-sql-foundations/README.md) · 3 fuentes.
 
-**Conceptos centrales:** `CREATE TABLE` · `INSERT` · `SELECT` · `definición frente a manipulación` · `None`
+**Conceptos centrales:** `CREATE TABLE` · `INSERT` · `SELECT` · `definición frente a manipulación` · `NULL`
 
 **En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 003"]
+    C --> K1["CREATE TABLE"]
+    C --> K2["INSERT"]
+    C --> K3["SELECT"]
+    C --> K4["definición frente a manipulación"]
+    C --> K5["NULL"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

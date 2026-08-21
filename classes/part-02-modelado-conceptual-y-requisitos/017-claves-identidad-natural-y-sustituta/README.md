@@ -1,5 +1,7 @@
 # 017 — Claves, identidad y el debate natural frente a sustituta
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-02-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-017%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/README.md) · [Siguiente →](../../part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/README.md)
 
 Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
 **Conceptos centrales:** `clave candidata` · `clave primaria` · `clave sustituta` · `identidad estable`
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 017"]
+    C --> K1["clave candidata"]
+    C --> K2["clave primaria"]
+    C --> K3["clave sustituta"]
+    C --> K4["identidad estable"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

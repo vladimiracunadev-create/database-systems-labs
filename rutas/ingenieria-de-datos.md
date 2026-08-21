@@ -8,6 +8,12 @@
 > captura de cambios, modelado analítico y streaming · **Cargos habituales:** ingeniero de
 > datos, ingeniero de plataforma de datos, ingeniero de streaming.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-intermedio-1f6feb?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-10-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-151-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 La ingeniería de datos existe porque el dato nace en un sitio y se necesita en otro. Nace en
@@ -83,6 +89,29 @@ difícil del trabajo real—.
   te llegue como sorpresa.
 
 ## 📚 Tu ruta en el programa
+
+<!-- recorrido:inicio -->
+
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P07["🕸️ 07"]
+    P10["🌐 10"]
+    P12["📊 12"]
+    P13["🧠 13"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P07 --> P10 --> P12 --> P13 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
 
 9 partes, 151 horas estimadas.
 

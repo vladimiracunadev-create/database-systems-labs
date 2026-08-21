@@ -1,5 +1,7 @@
 # 004 — Leer datos: SELECT, WHERE y ORDER BY
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-004%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) · [Siguiente →](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/005-cambiar-datos-insert-update-delete/README.md)
 
 Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
@@ -9,6 +11,18 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 **Conceptos centrales:** `filtrado` · `proyección` · `orden` · `LIMIT` · `IS NULL`
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 004"]
+    C --> K1["filtrado"]
+    C --> K2["proyección"]
+    C --> K3["orden"]
+    C --> K4["LIMIT"]
+    C --> K5["IS NULL"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

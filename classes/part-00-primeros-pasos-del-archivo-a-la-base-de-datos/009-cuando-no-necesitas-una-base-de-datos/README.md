@@ -1,5 +1,7 @@
 # 009 — Cuándo NO necesitas una base de datos
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-009%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) · [Siguiente →](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md)
 
 Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 **Conceptos centrales:** `criterio de decisión` · `motor embebido` · `costo de operación` · `alternativas`
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 009"]
+    C --> K1["criterio de decisión"]
+    C --> K2["motor embebido"]
+    C --> K3["costo de operación"]
+    C --> K4["alternativas"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

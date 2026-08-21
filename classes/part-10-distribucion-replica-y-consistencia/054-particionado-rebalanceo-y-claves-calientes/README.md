@@ -1,5 +1,7 @@
 # 054 — Particionado, rebalanceo y claves calientes
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-054%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-10-distribucion-replica-y-consistencia/053-replica-lider-unico-multilider-y-sin-lider/README.md) · [Siguiente →](../../part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md)
 
 Parte 10 — Distribución, réplica y consistencia · Avanzado ·
@@ -9,6 +11,17 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 **Conceptos centrales:** `hash consistente` · `partición por rango` · `punto caliente` · `reequilibrio`
 
 **En este caso se comparan 8 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 054"]
+    C --> K1["hash consistente"]
+    C --> K2["partición por rango"]
+    C --> K3["punto caliente"]
+    C --> K4["reequilibrio"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

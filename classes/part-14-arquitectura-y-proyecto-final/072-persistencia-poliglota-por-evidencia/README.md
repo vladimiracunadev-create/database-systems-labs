@@ -1,5 +1,7 @@
 # 072 — Persistencia políglota: decidir por evidencia y no por moda
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-14-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-072%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 14](../README.md) · [← Anterior](../../part-13-vectores-recuperacion-y-rag/071-rag-evaluable/README.md) · [Siguiente →](../../part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md)
 
 Parte 14 — Arquitectura y proyecto final · Avanzado ·
@@ -9,6 +11,17 @@ Parte 14 — Arquitectura y proyecto final · Avanzado ·
 **Conceptos centrales:** `carga de trabajo` · `criterio de selección` · `costo de operación` · `complejidad añadida`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 072"]
+    C --> K1["carga de trabajo"]
+    C --> K2["criterio de selección"]
+    C --> K3["costo de operación"]
+    C --> K4["complejidad añadida"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

@@ -1,5 +1,7 @@
 # 047 — Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-08-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-047%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 08](../README.md) · [← Anterior](../../part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md) · [Siguiente →](../../part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md)
 
 Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
@@ -9,6 +11,17 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 **Conceptos centrales:** `idempotencia` · `clave de idempotencia` · `bloqueo optimista` · `reintento con retroceso`
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 047"]
+    C --> K1["idempotencia"]
+    C --> K2["clave de idempotencia"]
+    C --> K3["bloqueo optimista"]
+    C --> K4["reintento con retroceso"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

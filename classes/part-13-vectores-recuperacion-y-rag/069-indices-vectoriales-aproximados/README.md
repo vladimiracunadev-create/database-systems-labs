@@ -1,5 +1,7 @@
 # 069 — Índices vectoriales aproximados: HNSW, IVF y el recall
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-13-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-069%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 13](../README.md) · [← Anterior](../../part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md) · [Siguiente →](../../part-13-vectores-recuperacion-y-rag/070-busqueda-hibrida-y-filtrado/README.md)
 
 Parte 13 — Vectores, recuperación y RAG · Avanzado ·
@@ -9,6 +11,18 @@ Parte 13 — Vectores, recuperación y RAG · Avanzado ·
 **Conceptos centrales:** `búsqueda aproximada` · `recall` · `HNSW` · `cuantización` · `latencia frente a exactitud`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 069"]
+    C --> K1["búsqueda aproximada"]
+    C --> K2["recall"]
+    C --> K3["HNSW"]
+    C --> K4["cuantización"]
+    C --> K5["latencia frente a exactitud"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

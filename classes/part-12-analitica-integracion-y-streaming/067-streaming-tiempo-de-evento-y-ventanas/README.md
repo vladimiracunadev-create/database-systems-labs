@@ -1,5 +1,7 @@
 # 067 — Streaming: tiempo de evento, ventanas y semántica de entrega
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-12-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-067%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md) · [Siguiente →](../../part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md)
 
 Parte 12 — Analítica, integración y streaming · Avanzado ·
@@ -9,6 +11,17 @@ Parte 12 — Analítica, integración y streaming · Avanzado ·
 **Conceptos centrales:** `tiempo de evento` · `marca de agua` · `ventana` · `entrega al menos una vez`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 067"]
+    C --> K1["tiempo de evento"]
+    C --> K2["marca de agua"]
+    C --> K3["ventana"]
+    C --> K4["entrega al menos una vez"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

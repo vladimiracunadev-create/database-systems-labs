@@ -1,5 +1,7 @@
 # 011 — Qué resuelve un sistema de bases de datos y qué no
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-01-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-011%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md) · [Siguiente →](../../part-01-fundamentos-datos-sistemas-y-metodo/012-arquitectura-interna-de-un-gestor/README.md)
 
 Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
@@ -9,6 +11,18 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 **Conceptos centrales:** `persistencia` · `concurrencia` · `integridad` · `recuperación` · `independencia de datos`
 
 **En este caso se comparan 9 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 011"]
+    C --> K1["persistencia"]
+    C --> K2["concurrencia"]
+    C --> K3["integridad"]
+    C --> K4["recuperación"]
+    C --> K5["independencia de datos"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

@@ -1,5 +1,7 @@
 # 005 — Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-005%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 00](../README.md) · [← Anterior](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) · [Siguiente →](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/README.md)
 
 Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
@@ -9,6 +11,18 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 **Conceptos centrales:** `UPDATE` · `DELETE` · `alcance del cambio` · `filas afectadas` · `transacción como red`
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 005"]
+    C --> K1["UPDATE"]
+    C --> K2["DELETE"]
+    C --> K3["alcance del cambio"]
+    C --> K4["filas afectadas"]
+    C --> K5["transacción como red"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

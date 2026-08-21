@@ -1,5 +1,7 @@
 # 065 — Modelado dimensional: hechos, dimensiones y cambios lentos
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-12-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-065%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md) · [Siguiente →](../../part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md)
 
 Parte 12 — Analítica, integración y streaming · Intermedio ·
@@ -9,6 +11,17 @@ Parte 12 — Analítica, integración y streaming · Intermedio ·
 **Conceptos centrales:** `tabla de hechos` · `dimensión` · `grano` · `dimensión de cambio lento`
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 065"]
+    C --> K1["tabla de hechos"]
+    C --> K2["dimensión"]
+    C --> K3["grano"]
+    C --> K4["dimensión de cambio lento"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

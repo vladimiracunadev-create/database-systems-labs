@@ -1,5 +1,7 @@
 # 033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-05-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-033%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-05-motores-relacionales-y-dialectos/032-mysql-sqlserver-y-oracle-divergencias/README.md) · [Siguiente →](../../part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/README.md)
 
 Parte 05 — Motores relacionales y dialectos · Intermedio ·
@@ -9,6 +11,17 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 **Conceptos centrales:** `motor embebido` · `tipado dinamico` · `almacenamiento columnar` · `vectorización`
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 033"]
+    C --> K1["motor embebido"]
+    C --> K2["tipado dinamico"]
+    C --> K3["almacenamiento columnar"]
+    C --> K4["vectorización"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

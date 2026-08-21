@@ -1,5 +1,7 @@
 # 053 — Réplica: líder único, multilíder y sin líder
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-053%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 10](../README.md) · [← Anterior](../../part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md) · [Siguiente →](../../part-10-distribucion-replica-y-consistencia/054-particionado-rebalanceo-y-claves-calientes/README.md)
 
 Parte 10 — Distribución, réplica y consistencia · Avanzado ·
@@ -9,6 +11,17 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 **Conceptos centrales:** `replicación sincrónica` · `retraso de réplica` · `quórum` · `lectura de tu propia escritura`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 053"]
+    C --> K1["replicación sincrónica"]
+    C --> K2["retraso de réplica"]
+    C --> K3["quórum"]
+    C --> K4["lectura de tu propia escritura"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

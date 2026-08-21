@@ -1,5 +1,7 @@
 # 025 — SELECT: filtrado, proyección y orden con semántica precisa
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-025%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) · [Siguiente →](../../part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md)
 
 Parte 04 — SQL en profundidad · Fundamentos ·
@@ -9,6 +11,17 @@ Parte 04 — SQL en profundidad · Fundamentos ·
 **Conceptos centrales:** `predicado` · `orden de evaluación` · `colación` · `determinismo de orden`
 
 **En este caso se comparan 7 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 025"]
+    C --> K1["predicado"]
+    C --> K2["orden de evaluación"]
+    C --> K3["colación"]
+    C --> K4["determinismo de orden"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

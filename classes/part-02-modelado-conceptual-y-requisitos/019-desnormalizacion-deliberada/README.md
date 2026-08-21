@@ -1,5 +1,7 @@
 # 019 — Desnormalización deliberada y patrones de acceso
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-02-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-019%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 02](../README.md) · [← Anterior](../../part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/README.md) · [Siguiente →](../../part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/README.md)
 
 Parte 02 — Modelado conceptual y requisitos · Intermedio ·
@@ -9,6 +11,17 @@ Parte 02 — Modelado conceptual y requisitos · Intermedio ·
 **Conceptos centrales:** `redundancia controlada` · `costo de escritura` · `agregado` · `patrón de lectura`
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 019"]
+    C --> K1["redundancia controlada"]
+    C --> K2["costo de escritura"]
+    C --> K3["agregado"]
+    C --> K4["patrón de lectura"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

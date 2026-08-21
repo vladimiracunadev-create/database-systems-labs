@@ -1,5 +1,7 @@
 # 014 — Entorno reproducible y evidencia comprobable
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-01-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-014%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 01](../README.md) · [← Anterior](../../part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/README.md) · [Siguiente →](../../part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/README.md)
 
 Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
@@ -9,6 +11,18 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 **Conceptos centrales:** `reproducibilidad` · `semilla` · `contenedor` · `invariante` · `evidencia`
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 014"]
+    C --> K1["reproducibilidad"]
+    C --> K2["semilla"]
+    C --> K3["contenedor"]
+    C --> K4["invariante"]
+    C --> K5["evidencia"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

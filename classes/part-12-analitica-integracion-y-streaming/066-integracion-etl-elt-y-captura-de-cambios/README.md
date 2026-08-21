@@ -1,5 +1,7 @@
 # 066 — Integración: ETL, ELT, captura de cambios y el registro como nexo
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-12-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-066%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 12](../README.md) · [← Anterior](../../part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md) · [Siguiente →](../../part-12-analitica-integracion-y-streaming/067-streaming-tiempo-de-evento-y-ventanas/README.md)
 
 Parte 12 — Analítica, integración y streaming · Avanzado ·
@@ -9,6 +11,18 @@ Parte 12 — Analítica, integración y streaming · Avanzado ·
 **Conceptos centrales:** `ETL` · `ELT` · `CDC` · `escritura dual` · `idempotencia de carga`
 
 **En este caso se comparan 8 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 066"]
+    C --> K1["ETL"]
+    C --> K2["ELT"]
+    C --> K3["CDC"]
+    C --> K4["escritura dual"]
+    C --> K5["idempotencia de carga"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

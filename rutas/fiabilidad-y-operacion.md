@@ -8,6 +8,12 @@
 > demostrada y cambios sin caída · **Cargos habituales:** administrador de bases de datos, SRE
 > de datos, ingeniero de fiabilidad.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-intermedio-1f6feb?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-10-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-163-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 El rol clásico de DBA —crear usuarios, ejecutar respaldos, vigilar espacio— se ha ido
@@ -81,6 +87,29 @@ mediciones con las que se argumenta.
   sin ella, solo molesta.
 
 ## 📚 Tu ruta en el programa
+
+<!-- recorrido:inicio -->
+
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P04["🔎 04"]
+    P05["🐘 05"]
+    P08["🔒 08"]
+    P09["🗂️ 09"]
+    P10["🌐 10"]
+    P11["🛡️ 11"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P04 --> P05 --> P08 --> P09 --> P10 --> P11 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
 
 9 partes, 163 horas estimadas.
 

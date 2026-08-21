@@ -1,5 +1,7 @@
 # 026 — Reuniones: interna, externa, semi y anti
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-026%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 04](../README.md) · [← Anterior](../../part-04-sql-en-profundidad/025-select-filtrado-proyeccion-y-orden/README.md) · [Siguiente →](../../part-04-sql-en-profundidad/027-agregacion-group-by-y-having/README.md)
 
 Parte 04 — SQL en profundidad · Intermedio ·
@@ -9,6 +11,18 @@ Parte 04 — SQL en profundidad · Intermedio ·
 **Conceptos centrales:** `reunión interna` · `reunión externa` · `semirreunion` · `antirreunion` · `multiplicación de filas`
 
 **En este caso se comparan 12 motores**: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 026"]
+    C --> K1["reunión interna"]
+    C --> K2["reunión externa"]
+    C --> K3["semirreunion"]
+    C --> K4["antirreunion"]
+    C --> K5["multiplicación de filas"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

@@ -1,5 +1,7 @@
 # 023 — Integridad: restricciones, claves foraneas y acciones referenciales
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-03-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-023%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 03](../README.md) · [← Anterior](../../part-03-modelo-relacional-y-algebra/022-calculo-relacional-y-equivalencia/README.md) · [Siguiente →](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md)
 
 Parte 03 — Modelo relacional y álgebra · Intermedio ·
@@ -9,6 +11,18 @@ Parte 03 — Modelo relacional y álgebra · Intermedio ·
 **Conceptos centrales:** `integridad de entidad` · `integridad referencial` · `CHECK` · `ON DELETE` · `aplazamiento`
 
 **En este caso se comparan 6 motores**: 3 lo resuelven (3 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 023"]
+    C --> K1["integridad de entidad"]
+    C --> K2["integridad referencial"]
+    C --> K3["CHECK"]
+    C --> K4["ON DELETE"]
+    C --> K5["aplazamiento"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 

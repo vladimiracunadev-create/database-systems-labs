@@ -1,5 +1,7 @@
 # 032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código
 
+![🗂️ parte](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-05-2e8b57?style=flat-square) ![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square) ![⏱️ duración](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square) ![📗 clase](https://img.shields.io/badge/%F0%9F%93%97%20clase-032%20%2F%2074-6e7781?style=flat-square)
+
 > [Programa](../../../README.md) · [Parte 05](../README.md) · [← Anterior](../../part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/README.md) · [Siguiente →](../../part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/README.md)
 
 Parte 05 — Motores relacionales y dialectos · Intermedio ·
@@ -9,6 +11,17 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 **Conceptos centrales:** `colación` · `modo estricto` · `cadena vacia frente a nulo` · `identificador citado`
 
 **En este caso se comparan 7 motores**: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
+
+```mermaid
+flowchart LR
+    C["🗄️ Clase 032"]
+    C --> K1["colación"]
+    C --> K2["modo estricto"]
+    C --> K3["cadena vacia frente a nulo"]
+    C --> K4["identificador citado"]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+```
 
 ---
 
