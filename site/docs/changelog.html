@@ -189,6 +189,72 @@ el validador deja de ser el único componente sin pruebas.</p>
   <code>docs/</code>, <code>assessments/</code>, <code>projects/</code> y los documentos de la raíz, así que un
   cambio en ellos no llegaba a publicarse.</li>
 </ul>
+<h2 id="300--2026-08-20">3.0.0 — 2026-08-20</h2>
+<p>El repositorio cambia de modelo. Hasta aquí una clase explicaba un concepto y
+citaba motores de pasada; a partir de aquí <strong>declara un caso, lo resuelve en
+varios motores y escribe, con el mismo peso, por qué sí y por qué no conviene
+resolverlo en cada uno</strong>. Los motores que <em>no</em> resuelven el caso aparecen
+también, con el motivo y con lo que se hace en su lugar.</p>
+<h3 id="añadido">Añadido</h3>
+<ul>
+<li><strong>Eje comparado en las 74 clases.</strong> Cada una trae su <code>motores.yaml</code> —el caso,
+  la salida esperada y la matriz de motores— y su carpeta <code>implementaciones/</code>
+  con el código real de cada uno. <strong>408 implementaciones</strong>, de las que <strong>267 se
+  ejecutan contra el motor real</strong> y el resto se declaran como material revisado
+  y no ejecutado.</li>
+<li><strong><code>scripts/verificar_equivalencia.py</code>.</strong> Ejecuta cada implementación y compara
+  su resultado con el contrato de su clase. Tres niveles declarados: <em>núcleo</em>
+  (SQLite y DuckDB, sin servicios, en cualquier máquina), <em>servicio</em>
+  (PostgreSQL, MySQL, MongoDB, Redis y Neo4j contra el contenedor real, con el
+  cliente oficial de cada uno) y <em>declarado</em> (se muestra y se revisa; la máquina
+  no lo ejecuta).</li>
+<li><strong><code>scripts/motores_lib.py</code>.</strong> Carga y valida las comparaciones. Exige
+  <code>porque_no</code> en todo motor —un motor que solo tiene ventajas no se entendió, se
+  copió del folleto— y exige que el enlace <code>doc:</code> cuelgue del dominio oficial que
+  registra <code>catalog/databases.json</code>.</li>
+<li><strong>Parte 00 nueva, la rampa de entrada.</strong> Diez clases para quien nunca ha
+  escrito una consulta: qué es un dato, por qué la hoja de cálculo deja de
+  servir, crear/insertar/leer, filtrar y ordenar, cambiar datos y el <code>WHERE</code> que
+  salva, tipos, clave primaria, dos tablas y una clave foránea, cuándo <strong>no</strong>
+  hace falta una base de datos, y el mapa de las seis familias de motores.</li>
+<li><strong>Trabajo de CI <code>equivalencia</code>.</strong> Levanta los cinco motores de servicio con
+  <code>docker compose --profile todo up -d --wait</code> y ejecuta todas las
+  implementaciones contra ellos.</li>
+<li><strong>Servicio <code>neo4j</code></strong> en <code>docker-compose.yml</code>, y perfil <code>todo</code> para levantar los
+  cinco de una vez.</li>
+<li><strong>El verificador de enlaces cubre los dos registros:</strong> las fuentes
+  bibliográficas y ahora también los <code>doc:</code> de cada motor —347 enlaces—, con
+  <code>--solo motores</code> para comprobar solo estos.</li>
+</ul>
+<h3 id="cambiado">Cambiado</h3>
+<ul>
+<li><strong>Renumeración.</strong> Partes 00–13 pasan a 01–14 y clases 001–064 pasan a 011–074,
+  para dejar sitio a la parte 00. Las referencias por identificador se
+  reescribieron en los dos únicos sitios donde viven —<code>curriculum.yaml</code> y
+  <code>certificaciones/_mapeo.json</code>—, más las rutas de enlace de los <code>.md</code>.</li>
+<li><strong>La parte 00 entra en las siete rutas por rol</strong> como rampa común, y las horas
+  declaradas en cada guía se actualizaron en consecuencia.</li>
+<li><strong><code>scripts/build_classes.py</code></strong> renderiza la sección comparada en cada README, y
+  escapa la barra vertical en las celdas de tabla —que aparece de verdad en
+  cuanto se habla del operador de concatenación.</li>
+<li><strong>Dos pruebas de coherencia dejan de escribir cifras a mano:</strong> la que exigía la
+  parte «13» como cierre lee ahora la primera y la última del currículo, y la que
+  fijaba 210 horas comprueba que la portada dice las que el currículo suma.</li>
+</ul>
+<h3 id="corregido">Corregido</h3>
+<ul>
+<li><strong><code>docker-compose.yml</code>: el volumen de PostgreSQL 18</strong> se montaba en
+  <code>/var/lib/postgresql/data</code> y el contenedor <strong>nunca llegaba a estar sano</strong>. La
+  imagen 18 coloca los datos en un subdirectorio con la versión dentro, así que
+  el punto de montaje es <code>/var/lib/postgresql</code>.</li>
+<li><strong>Puertos configurables</strong> por variable de entorno, para poder levantar el stack
+  en una máquina que ya tenga un PostgreSQL o un MySQL escuchando.</li>
+<li><strong><code>scripts/generate_site.py</code>:</strong> los enlaces a <code>motores.yaml</code> y a
+  <code>implementaciones/</code> apuntan al archivo en GitHub en vez de morir en el sitio.</li>
+<li><strong>Tres enlaces de documentación oficial rotos</strong> (DuckDB y dos de Cassandra),
+  detectados por el verificador de enlaces en su primera ejecución sobre el
+  registro de motores.</li>
+</ul>
 <h2 id="200--2026-08-19">2.0.0 — 2026-08-19</h2>
 <p>Reescritura del programa en torno a una regla: <strong>ninguna clase se publica sin
 fuentes, y ninguna cita apunta al vacío</strong>.</p>
@@ -248,8 +314,8 @@ fuentes, y ninguna cita apunta al vacío</strong>.</p>
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/CHANGELOG.md" rel="noopener"><code>CHANGELOG.md</code></a></p>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

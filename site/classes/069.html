@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="Índices vectoriales aproximados: HNSW, IVF y el recall. Parte 13: Vectores, recuperación y RAG.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/069.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="069 — Índices vectoriales aproximados: HNSW, IVF y el recall · Database Systems Labs">
+<meta property="og:description" content="Índices vectoriales aproximados: HNSW, IVF y el recall. Parte 13: Vectores, recuperación y RAG.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/069.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "069 — Índices vectoriales aproximados: HNSW, IVF y el recall", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["búsqueda aproximada", "recall", "HNSW", "cuantización", "latencia frente a exactitud"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>069 — Índices vectoriales aproximados: HNSW, IVF y el recall · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html" aria-current="page">Clases</a>
+    <a href="../rutas/index.html">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="parte-13.html">Parte 13 · Vectores, recuperación y RAG</a>
+  <span aria-hidden="true">/</span><span>Clase 069</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="069--índices-vectoriales-aproximados-hnsw-ivf-y-el-recall">069 — Índices vectoriales aproximados: HNSW, IVF y el recall</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-13-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-069%20%2F%2074-6e7781?style=flat-square" /></p>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="068.html">← Anterior</a> · <a href="070.html">Siguiente →</a></p>
+</blockquote>
+<p>Parte 13 — Vectores, recuperación y RAG · Avanzado ·
+4 horas estimadas · motores <code>qdrant</code>, <code>milvus</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>búsqueda aproximada</code> · <code>recall</code> · <code>HNSW</code> · <code>cuantización</code> · <code>latencia frente a exactitud</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 069&quot;]
+    C --&gt; K1[&quot;búsqueda aproximada&quot;]
+    C --&gt; K2[&quot;recall&quot;]
+    C --&gt; K3[&quot;HNSW&quot;]
+    C --&gt; K4[&quot;cuantización&quot;]
+    C --&gt; K5[&quot;latencia frente a exactitud&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Buscar entre millones de vectores en milisegundos aceptando no encontrar siempre el mejor resultado. El índice aproximado cambia exactitud por velocidad, y hay que saber cuánta.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Definir recall y medirlo contra la búsqueda exhaustiva.</li>
+<li>Explicar la estructura de HNSW y el papel de <code>m</code> y <code>ef</code>.</li>
+<li>Comparar HNSW, IVF y la cuantización.</li>
+<li>Ajustar parámetros con una curva de recall frente a latencia.</li>
+<li>Explicar el efecto del filtrado por metadatos sobre el recall.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="recall-la-métrica-que-no-se-puede-omitir">Recall: la métrica que no se puede omitir</h3>
+<pre><code class="language-text">recall@k = |resultados_aproximados ∩ resultados_exactos| / k
+</code></pre>
+<p>Se mide comparando contra la búsqueda <strong>exhaustiva</strong> sobre el mismo conjunto. Si nadie la ha medido, el sistema tiene un recall desconocido, y «desconocido» en la práctica suele significar 0,7.</p>
+<h3 id="hnsw">HNSW</h3>
+<p>Malkov y Yashunin proponen un grafo navegable jerárquico:</p>
+<ul>
+<li>Varias capas. La superior tiene pocos nodos con enlaces largos; las inferiores, todos los nodos con enlaces cortos.</li>
+<li>La búsqueda entra por arriba, avanza con avidez hacia el vecino más cercano a la consulta, y baja de capa al no poder mejorar.</li>
+<li>Complejidad aproximada: <strong>O(log N)</strong> en vez de O(N).</li>
+</ul>
+<p>Parámetros:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Parámetro</th>
+<th>Momento</th>
+<th>Efecto de aumentarlo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>m</code></td>
+<td>Construcción</td>
+<td>Más enlaces por nodo: mejor recall, más memoria</td>
+</tr>
+<tr>
+<td><code>ef_construction</code></td>
+<td>Construcción</td>
+<td>Grafo de mejor calidad, construcción más lenta</td>
+</tr>
+<tr>
+<td><code>ef_search</code></td>
+<td>Consulta</td>
+<td><strong>Mejor recall, más latencia</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ef_search</code> es el único ajustable <strong>por consulta</strong>, y es la palanca operativa: permite pedir más exactitud en las consultas que la necesitan sin reconstruir nada.</p>
+<pre><code class="language-text">memoria del grafo ≈ n_vectores × m × 2 × 4 B (enlaces bidireccionales)
+1 000 000 × 16 × 2 × 4 B ≈ 128 MB   (además de los vectores)
+</code></pre>
+<h3 id="ivf">IVF</h3>
+<p>Alternativa: agrupar los vectores en <code>nlist</code> celdas por k-medias; en la consulta, buscar solo en las <code>nprobe</code> celdas más cercanas.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>HNSW</th>
+<th>IVF</th>
+<th>IVF + PQ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memoria</td>
+<td>Alta (vectores + grafo)</td>
+<td>Media</td>
+<td><strong>Baja</strong> (cuantizada)</td>
+</tr>
+<tr>
+<td>Construcción</td>
+<td>Lenta</td>
+<td>Rápida (requiere entrenamiento)</td>
+<td>Rápida</td>
+</tr>
+<tr>
+<td>Recall a igual latencia</td>
+<td><strong>Mejor</strong></td>
+<td>Bueno</td>
+<td>Menor</td>
+</tr>
+<tr>
+<td>Inserción incremental</td>
+<td>Buena</td>
+<td>Degrada: hay que reentrenar</td>
+<td>Ídem</td>
+</tr>
+<tr>
+<td>Escala</td>
+<td>Millones</td>
+<td>Miles de millones</td>
+<td>Miles de millones</td>
+</tr>
+</tbody>
+</table></div>
+<p>La <strong>cuantización de producto</strong> (PQ, Johnson et al.) divide el vector en subvectores y sustituye cada uno por el código de su centroide. Comprime 10–50× a cambio de recall. Para mil millones de vectores es la única opción viable en memoria.</p>
+<h3 id="el-problema-del-filtrado">El problema del filtrado</h3>
+<p>Casi siempre se quiere buscar <strong>dentro de un subconjunto</strong>: solo los fragmentos de un curso, solo los del último año.</p>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta con filtro&quot;] --&gt; S{&quot;Estrategia&quot;}
+    S --&gt; A[&quot;Pre-filtrado:&lt;br/&gt;filtrar y luego buscar&quot;]
+    S --&gt; B[&quot;Post-filtrado:&lt;br/&gt;buscar k y luego filtrar&quot;]
+    S --&gt; C[&quot;Filtrado integrado:&lt;br/&gt;el índice conoce el filtro&quot;]
+    A --&gt; A1[&quot;Recall correcto&lt;br/&gt;Puede degradar a exhaustivo&quot;]
+    B --&gt; B1[&quot;Rápido&lt;br/&gt;DEVUELVE MENOS DE k&lt;br/&gt;o nada&quot;]
+    C --&gt; C1[&quot;Lo mejor de ambos&lt;br/&gt;Requiere soporte del motor&quot;]
+</code></pre>
+<p><strong>El post-filtrado es la trampa.</strong> Si se piden 10 vecinos y se filtra después por un curso que representa el 1 % del corpus, lo esperable es obtener <strong>0 resultados</strong>, aunque existan cientos de fragmentos relevantes de ese curso.</p>
+<p>Qdrant implementa filtrado integrado con índices de carga útil; pgvector se apoya en el planificador de PostgreSQL, que puede elegir entre índice vectorial y filtro previo según la selectividad estimada — con los mismos aciertos y errores de estimación de la clase 042.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Colección: 2 000 000 de fragmentos, vectores de 768 dimensiones normalizados.</p>
+<p><strong>Referencia exhaustiva:</strong></p>
+<pre><code class="language-sql">SET LOCAL enable_indexscan = off;         -- forzar búsqueda exacta
+SELECT id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10;
+-- latencia: 1 840 ms   recall: 1,000 por definición
+</code></pre>
+<p><strong>HNSW con distintos <code>ef_search</code>:</strong></p>
+<pre><code class="language-sql">CREATE INDEX ON fragmentos USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+
+SET hnsw.ef_search = 40;
+SELECT id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10;
+</code></pre>
+<p><strong>Curva medida sobre 200 consultas de evaluación:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;"><code>ef_search</code></th>
+<th style="text-align: right;">Latencia p50</th>
+<th style="text-align: right;">Latencia p99</th>
+<th style="text-align: right;">recall@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1,2 ms</td>
+<td style="text-align: right;">3 ms</td>
+<td style="text-align: right;">0,71</td>
+</tr>
+<tr>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">2,8 ms</td>
+<td style="text-align: right;">6 ms</td>
+<td style="text-align: right;">0,93</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">5,9 ms</td>
+<td style="text-align: right;">12 ms</td>
+<td style="text-align: right;">0,981</td>
+</tr>
+<tr>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">11,4 ms</td>
+<td style="text-align: right;">24 ms</td>
+<td style="text-align: right;">0,994</td>
+</tr>
+<tr>
+<td style="text-align: right;">400</td>
+<td style="text-align: right;">22,1 ms</td>
+<td style="text-align: right;">47 ms</td>
+<td style="text-align: right;">0,998</td>
+</tr>
+<tr>
+<td style="text-align: right;">exhaustivo</td>
+<td style="text-align: right;">1 840 ms</td>
+<td style="text-align: right;">2 100 ms</td>
+<td style="text-align: right;">1,000</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Lectura de la curva.</strong> Entre 10 y 100 el recall sube 27 puntos por 4,7 ms. Entre 200 y 400 sube 0,4 puntos por 10,7 ms. El rendimiento decreciente es evidente y <strong>el punto de operación se elige aquí</strong>, no por intuición:</p>
+<pre><code class="language-text">Elección: ef_search = 100 → recall 0,981 con p99 de 12 ms
+Justificación: perder el 1,9 % de los mejores resultados es aceptable porque
+               hay un reordenador posterior (clase 060) y el generador recibe
+               10 fragmentos, no 1.
+</code></pre>
+<p><strong>Efecto de <code>m</code>,</strong> que sí exige reconstruir:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;"><code>m</code></th>
+<th style="text-align: right;">Memoria del grafo</th>
+<th style="text-align: right;">recall@10 (<code>ef</code>=100)</th>
+<th style="text-align: right;">Tiempo de construcción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">128 MB</td>
+<td style="text-align: right;">0,942</td>
+<td style="text-align: right;">4 min</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">256 MB</td>
+<td style="text-align: right;">0,981</td>
+<td style="text-align: right;">9 min</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">512 MB</td>
+<td style="text-align: right;">0,993</td>
+<td style="text-align: right;">21 min</td>
+</tr>
+<tr>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">1 024 MB</td>
+<td style="text-align: right;">0,996</td>
+<td style="text-align: right;">52 min</td>
+</tr>
+</tbody>
+</table></div>
+<p>De 32 a 64 se duplica la memoria por 0,3 puntos. <strong><code>m = 16</code> o <code>32</code> es donde está el equilibrio</strong> en la mayoría de los corpus.</p>
+<p><strong>El filtrado, medido:</strong></p>
+<pre><code class="language-sql">-- Post-filtrado: MAL
+WITH v AS (SELECT id, curso_id FROM fragmentos ORDER BY embedding &lt;=&gt; :q LIMIT 10)
+SELECT * FROM v WHERE curso_id = 42;
+</code></pre>
+<pre><code class="language-text">curso_id = 42 representa el 0,8 % del corpus
+resultados devueltos: 0 de 10 consultas de prueba devolvieron algo
+</code></pre>
+<p>Cero. El sistema «funciona» y no encuentra nada.</p>
+<pre><code class="language-sql">-- Pre-filtrado con índice parcial: BIEN cuando hay pocos valores de filtro
+CREATE INDEX ON fragmentos USING hnsw (embedding vector_cosine_ops)
+  WHERE curso_id = 42;
+
+-- Filtrado integrado (Qdrant): BIEN en el caso general
+</code></pre>
+<pre><code class="language-json">{
+  &quot;vector&quot;: [...],
+  &quot;filter&quot;: {&quot;must&quot;: [{&quot;key&quot;: &quot;curso_id&quot;, &quot;match&quot;: {&quot;value&quot;: 42}}]},
+  &quot;limit&quot;: 10,
+  &quot;params&quot;: {&quot;hnsw_ef&quot;: 128}
+}
+</code></pre>
+<pre><code class="language-text">resultados: 10 de 10   recall@10 dentro del subconjunto: 0,97
+</code></pre>
+<p><strong>Regla de decisión sobre el filtrado:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Selectividad del filtro</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt; 20 % del corpus</td>
+<td>Post-filtrado con <code>k</code> ampliado (pedir 50 para quedarse con 10)</td>
+</tr>
+<tr>
+<td>1–20 %</td>
+<td>Filtrado integrado</td>
+</tr>
+<tr>
+<td>&lt; 1 %</td>
+<td>Pre-filtrado exhaustivo (el subconjunto es pequeño; el índice no hace falta)</td>
+</tr>
+</tbody>
+</table></div>
+<p>La última fila es la más contraintuitiva y la más útil: con un filtro muy selectivo, <strong>la búsqueda exhaustiva sobre el subconjunto es rápida y exacta</strong>. No todo necesita índice.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Escala</th>
+<th>Índice recomendado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt; 10 000 vectores</td>
+<td>Ninguno: exhaustivo</td>
+</tr>
+<tr>
+<td>10 000 – 10 M</td>
+<td>HNSW</td>
+</tr>
+<tr>
+<td>10 M – 100 M</td>
+<td>HNSW con cuantización, o IVF</td>
+</tr>
+<tr>
+<td>&gt; 100 M</td>
+<td>IVF + PQ, distribuido</td>
+</tr>
+<tr>
+<td>Filtro muy selectivo</td>
+<td>Exhaustivo sobre el subconjunto</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>No medir el recall.</strong> Es el error fundamental: se desconoce qué se está perdiendo.</li>
+<li><strong>Post-filtrado con filtros selectivos.</strong> Devuelve menos de <code>k</code> o nada.</li>
+<li><strong>Subir <code>ef_search</code> sin curva.</strong> Se paga latencia sin ganancia apreciable.</li>
+<li><strong><code>m</code> muy alto.</strong> Duplica la memoria por décimas de recall.</li>
+<li><strong>Reconstruir el índice tras cada inserción.</strong> HNSW admite inserción incremental.</li>
+<li><strong>Índice para colecciones pequeñas.</strong> Con 5 000 vectores, el exhaustivo es más rápido y exacto.</li>
+<li><strong>Comparar recall entre modelos distintos.</strong> No es comparable.</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>El recall se degrada silenciosamente al crecer la colección o al cambiar la distribución de los datos. Medirlo periódicamente contra una muestra exhaustiva —igual que se prueba la restauración de copias— es lo que evita descubrir meses después que la búsqueda dejó de encontrar.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Construye un conjunto de 100 consultas y calcula la referencia exhaustiva.</li>
+<li>Traza la curva de recall frente a latencia variando <code>ef_search</code>.</li>
+<li>Elige el punto de operación y justifícalo por escrito.</li>
+<li>Reproduce el fallo del post-filtrado y corrígelo con filtrado integrado.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Cómo se mide el recall y contra qué referencia?</li>
+<li>Explica por qué el post-filtrado devuelve cero resultados con un filtro del 0,8 %.</li>
+<li>¿Qué diferencia hay entre <code>ef_construction</code> y <code>ef_search</code> en cuanto a cuándo se pueden cambiar?</li>
+<li>Con un filtro que selecciona el 0,3 % del corpus, ¿qué estrategia elegirías y por qué?</li>
+</ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Renunciar a encontrar siempre el vecino más cercano, y saber exactamente cuánto se renuncia</p>
+<p>La búsqueda exacta del vecino más cercano en muchas dimensiones no tiene
+atajo: hay que comparar contra todos. Por eso los índices vectoriales son
+<strong>aproximados</strong>: renuncian a garantizar el resultado correcto a cambio de
+ser miles de veces más rápidos.</p>
+<p>Esa renuncia se mide, y tiene nombre: <strong>recall@k</strong>, la fracción de los k
+vecinos verdaderos que el índice devolvió. Un índice con recall 0,95
+devuelve, de media, 19 de cada 20 correctos. Y aquí está lo importante: el
+recall <strong>no se puede saber sin medirlo</strong> contra una búsqueda exacta sobre el
+mismo conjunto.</p>
+<p>Los tres compromisos son siempre los mismos —velocidad, memoria y recall— y
+cada familia de índice los reparte distinto. Esta comparación enumera qué
+ofrece cada motor y <strong>qué parámetro mueve cada eje</strong>, porque elegirlos a ojo
+es lo habitual y es un error.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qdrant</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://qdrant.tech/documentation/concepts/indexing/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Milvus</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://milvus.io/docs/index.md">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/vector-search/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/extensions/vss">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="qdrant">Qdrant</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> HNSW con parámetros explícitos: <code>m</code> (conexiones por nodo, memoria y calidad), <code>ef_construct</code> (esfuerzo al construir) y <code>ef</code> en cada consulta (esfuerzo al buscar). Añade cuantización escalar, binaria y por producto para reducir memoria, y permite guardar el original en disco y reordenar los candidatos con él.</li>
+<li><strong>Por qué sí:</strong> El compromiso se ajusta <strong>por consulta</strong> con <code>ef</code>, sin reconstruir nada: la misma colección puede servir una búsqueda rápida y otra exhaustiva.</li>
+<li><strong>Por qué no:</strong> HNSW es un grafo en memoria: su tamaño crece con <code>m</code> y con el número de vectores, y no se puede reducir sin perder recall. La cuantización lo alivia y <strong>baja el recall</strong>; medir cuánto es obligatorio, no opcional.</li>
+<li>📄 Documentación oficial: <a href="https://qdrant.tech/documentation/concepts/indexing/">https://qdrant.tech/documentation/concepts/indexing/</a></li>
+</ul>
+<h4 id="milvus">Milvus</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Ofrece la mayor variedad de familias: <strong>IVF</strong> —agrupa en celdas y busca solo en <code>nprobe</code> de ellas—, <strong>HNSW</strong>, <strong>DiskANN</strong> para conjuntos que no caben en memoria, y variantes cuantizadas de cada una.</li>
+<li><strong>Por qué sí:</strong> Poder elegir familia permite ajustarse al presupuesto real: IVF con cuantización por producto cabe en una fracción de la memoria que pide HNSW, a cambio de recall.</li>
+<li><strong>Por qué no:</strong> IVF tiene un fallo propio que sorprende: si el vecino verdadero cayó en una celda que <code>nprobe</code> no visitó, <strong>no aparece nunca</strong>, por mucho que se suba el límite de resultados. Y construir el índice exige entrenar con una muestra representativa.</li>
+<li>📄 Documentación oficial: <a href="https://milvus.io/docs/index.md">https://milvus.io/docs/index.md</a></li>
+</ul>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Con pgvector, dos índices: <strong>HNSW</strong> —mejor recall, construcción lenta, más memoria— e <strong>IVFFlat</strong> —construcción rápida, menos memoria, hay que elegir el número de listas y <strong>reconstruirlo</strong> cuando los datos crecen—. El esfuerzo de búsqueda se ajusta con <code>hnsw.ef_search</code> o <code>ivfflat.probes</code>.</li>
+<li><strong>Por qué sí:</strong> El índice vive junto a los datos: se puede combinar con <code>WHERE</code> sobre columnas normales y todo ocurre en una transacción. Para la mayoría de los sistemas, eso vale más que unos puntos de recall.</li>
+<li><strong>Por qué no:</strong> El filtrado y el índice conviven mal: si el <code>WHERE</code> es muy selectivo, PostgreSQL puede recorrer el índice vectorial y descartar casi todo después, devolviendo menos resultados de los pedidos. Es el mismo problema del filtrado que Qdrant resuelve dentro del grafo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-types.html">https://www.postgresql.org/docs/current/indexes-types.html</a></li>
+</ul>
+<h4 id="opensearch">OpenSearch</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Índice <code>knn_vector</code> con HNSW sobre las bibliotecas Lucene, nmslib o FAISS, con <code>ef_search</code> y <code>m</code> configurables, y búsqueda exacta disponible para medir el recall contra ella.</li>
+<li><strong>Por qué sí:</strong> Que la búsqueda exacta esté a mano en el mismo sistema hace fácil lo que casi nadie hace: <strong>medir</strong> el recall real en vez de suponerlo.</li>
+<li><strong>Por qué no:</strong> El índice vectorial se suma al invertido en la misma memoria del clúster, y competir por ella degrada las dos búsquedas a la vez. Dimensionar deja de ser un problema de una sola estructura.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/vector-search/">https://docs.opensearch.org/latest/vector-search/</a></li>
+</ul>
+<h4 id="duckdb">DuckDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Fuerza bruta vectorizada, y una extensión HNSW experimental. Su papel aquí no es servir búsquedas: es <strong>calcular la verdad</strong> contra la que se mide el recall de los demás.</li>
+<li><strong>Por qué sí:</strong> Sin una lista de vecinos verdaderos, la palabra «recall» no significa nada. Calcularla por fuerza bruta sobre una muestra es exactamente el trabajo para el que sirve.</li>
+<li><strong>Por qué no:</strong> Ese cálculo es caro por definición: sirve para una muestra de consultas de evaluación, no para el tráfico real.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/extensions/vss">https://duckdb.org/docs/stable/extensions/vss</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>No hay índice vectorial en el motor: solo fuerza bruta escrita a mano, que es lo que la clase anterior ya mostró. Aquí no aportaría una fila distinta.</td>
+<td>Extensiones de terceros construidas sobre SQLite para búsqueda vectorial en el dispositivo, con las mismas familias de índice y los mismos compromisos.</td>
+<td><a href="https://sqlite.org/lang_expr.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>Su índice vectorial vive en el módulo de búsqueda, no en el servidor base: compararlo aquí exigiría una imagen distinta de la que este repositorio levanta.</td>
+<td>Con el módulo, HNSW o fuerza bruta sobre campos de hash o JSON; sin él, Redis como caché de los resultados que devuelve otro sistema.</td>
+<td><a href="https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/06-vector-search/run_vector_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Yu A. Malkov, D. A. Yashunin</strong> (2020). <a href="https://arxiv.org/abs/1603.09320">Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs</a>. IEEE TPAMI 42(4). DOI <a href="https://doi.org/10.1109/TPAMI.2018.2889473">10.1109/TPAMI.2018.2889473</a>.<br />
+  Índice HNSW: el que usan Qdrant, Weaviate, Milvus, pgvector y Lucene.</li>
+<li><strong>Jeff Johnson, Matthijs Douze, Herve Jegou</strong> (2019). <a href="https://arxiv.org/abs/1702.08734">Billion-scale Similarity Search with GPUs</a>. IEEE Transactions on Big Data.<br />
+  FAISS: cuantización de producto y compromiso memoria-exactitud.</li>
+<li><strong>Qdrant</strong> (2026). <a href="https://qdrant.tech/documentation/">Qdrant Documentation</a>.<br />
+  Colecciones, filtros con carga útil y parametros HNSW.</li>
+<li><strong>LF AI &amp; Data Foundation</strong> (2026). <a href="https://milvus.io/docs">Milvus Documentation</a>.<br />
+  Índices vectoriales distribuidos y sus compromisos de exactitud.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="068.html">← Anterior</a> · <a href="070.html">Siguiente →</a></p>
+</blockquote>
+<button id="completar" class="completar" type="button" aria-pressed="false"
+        data-clase="069">Marcar como completada</button>
+<nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
+<a class="anterior" href="068.html"><span class="sentido">← Anterior · 068</span>Embeddings y métricas de distancia: qué significa parecido</a>
+<a class="siguiente" href="070.html"><span class="sentido">Siguiente · 070 →</span>Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a>
+</nav>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

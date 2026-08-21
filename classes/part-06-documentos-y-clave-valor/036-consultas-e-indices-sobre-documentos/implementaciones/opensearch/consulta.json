@@ -1,0 +1,41 @@
+{
+  "_comentario": [
+    "motor: opensearch",
+    "doc: https://docs.opensearch.org/latest/aggregations/bucket/terms/",
+    "nota: implementacion declarada. Para que el desanidado sea CORRECTO, el",
+    "arreglo `lineas` tiene que estar mapeado como `nested`; si no, OpenSearch",
+    "aplana los campos y pierde la correlacion entre categoria e importe de la",
+    "misma linea. Ese mapeo convierte cada linea en un documento oculto con su",
+    "propio costo de indexacion.",
+    "Se aplica con:  PUT /pedidos  con el bloque `mappings`",
+    "y se consulta:  POST /pedidos/_search  con el bloque `busqueda`"
+  ],
+
+  "mappings": {
+    "properties": {
+      "lineas": {
+        "type": "nested",
+        "properties": {
+          "producto": { "type": "keyword" },
+          "categoria": { "type": "keyword" },
+          "importe": { "type": "integer" }
+        }
+      }
+    }
+  },
+
+  "busqueda": {
+    "size": 0,
+    "aggs": {
+      "lineas": {
+        "nested": { "path": "lineas" },
+        "aggs": {
+          "por_categoria": {
+            "terms": { "field": "lineas.categoria", "order": { "_key": "asc" } },
+            "aggs": { "importe": { "sum": { "field": "lineas.importe" } } }
+          }
+        }
+      }
+    }
+  }
+}

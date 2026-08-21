@@ -1,0 +1,124 @@
+---
+caso:
+  titulo: Qué hay que poder defender de cada motor que entra en el proyecto
+  modo: conceptual
+  contrato: |
+    El proyecto final no se aprueba por funcionar: se aprueba por **defenderse**.
+    Y defender una decisión de persistencia significa contestar cuatro preguntas
+    sobre cada motor que aparezca en la arquitectura, con evidencia y no con
+    preferencias:
+
+    1. **Qué carga resuelve** que ningún otro del proyecto resuelve mejor.
+    2. **Qué medición lo demuestra**, con protocolo, semilla y límites declarados.
+    3. **Qué garantía se pierde** al usarlo, y quién asume esa pérdida.
+    4. **Qué evidencia obligaría a sacarlo** de la arquitectura.
+
+    Esta última sección del programa recoge, motor por motor, lo que el tribunal
+    va a preguntar. No es una lista de defectos: es la lista de las cosas que hay
+    que haber pensado antes de que las pregunte alguien.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: postgresql
+    aplica: si
+    como: >-
+      Hay que defender el **modelo**, no el motor: los invariantes declarados en
+      el esquema, la anomalía de concurrencia reproducida y corregida, el plan de
+      ejecución de la consulta crítica antes y después, y la restauración probada
+      con la comparación de cifras.
+    porque_si: >-
+      Es el motor donde casi todo lo exigible se puede demostrar con evidencia
+      reproducible y sin infraestructura adicional: no hay excusa para no
+      traerla.
+    porque_no: >-
+      Que sea la opción por omisión no exime de justificarla: «usamos PostgreSQL
+      porque es lo que sé» es tan poco defendible como adoptar un motor de moda.
+      Hay que decir qué carga tiene y por qué le sirve.
+    doc: https://www.postgresql.org/docs/current/
+
+  - id: redis
+    aplica: si
+    como: >-
+      Hay que declarar **qué se pierde si se cae**: qué datos vivían solo ahí,
+      cuánto tarda en reconstruirse la caché y qué le pasa al sistema mientras
+      está fría. Y demostrar que hay política de caducidad.
+    porque_si: >-
+      Es la separación más fácil de justificar y también la más fácil de
+      justificar mal: basta un dato que no se pueda perder para que la defensa se
+      caiga entera.
+    porque_no: >-
+      La pregunta que más se falla: «¿qué pasa si Redis arranca vacío en hora
+      punta?». Si la respuesta no está medida, la arquitectura tiene una avería
+      que nadie ha visto todavía.
+    doc: https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+
+  - id: mongodb
+    aplica: si
+    como: >-
+      Hay que defender el **límite del agregado**: qué documento contiene qué,
+      por qué eso no crece sin techo, y qué operaciones cruzan la frontera del
+      documento y por tanto no son atómicas.
+    porque_si: >-
+      Cuando el agregado está bien elegido, la defensa es sólida y corta: una
+      escritura, una unidad de consistencia, sin transacción.
+    porque_no: >-
+      Cuando no lo está, aparecen transacciones de varios documentos por todas
+      partes, y eso es la señal de que se está usando un motor documental para un
+      problema relacional. El tribunal lo verá en el código antes que en la
+      explicación.
+    doc: https://www.mongodb.com/docs/manual/core/data-modeling-introduction/
+
+  - id: duckdb
+    aplica: si
+    como: >-
+      Hay que declarar el **retraso**: de cuándo son los datos del panel, cómo se
+      exportan, qué pasa si la exportación falla y cómo se nota que el panel está
+      mostrando algo viejo.
+    porque_si: >-
+      Es la forma más barata de separar la analítica de lo transaccional, y
+      defenderla es fácil si el retraso está declarado en el propio panel.
+    porque_no: >-
+      Un panel sin fecha de datos es un panel que miente en cuanto la exportación
+      falla una noche. Esa es la pregunta que hay que tener contestada.
+    doc: https://duckdb.org/docs/stable/
+
+  - id: qdrant
+    aplica: si
+    como: >-
+      Hay que traer **recall y latencia medidos** contra la alternativa que no
+      añade un sistema —pgvector—, sobre el mismo conjunto de evaluación, y
+      explicar cómo se mantiene sincronizado con la base de datos.
+    porque_si: >-
+      Si esa medición existe, la decisión es defendible en una frase. Si no
+      existe, no hay decisión: hay una preferencia.
+    porque_no: >-
+      La pregunta difícil no es el recall: es qué pasa cuando alguien borra un
+      documento en la base y el vector sigue ahí. Esa incoherencia hay que
+      haberla diseñado.
+    doc: https://qdrant.tech/documentation/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Salvo que el proyecto tenga un volumen de escritura que una máquina no
+      pueda absorber —y eso hay que **medirlo**, no suponerlo—, incluirlo es
+      añadir un modelo sin reuniones, sin transacciones y con reparaciones
+      periódicas para resolver un problema que no se tiene.
+    alternativa: >-
+      Si aun así entra, hay que defender la tabla por consulta, el tamaño máximo
+      de partición previsto y quién ejecuta las reparaciones. Sin esas tres
+      respuestas, la defensa no se sostiene.
+    doc: https://cassandra.apache.org/doc/latest/
+
+  - id: sqlite
+    aplica: no
+    porque_no: >-
+      Para un proyecto con varios usuarios concurrentes y acceso remoto no es una
+      opción defendible como almacén principal, por mucho que simplifique el
+      desarrollo.
+    alternativa: >-
+      Sí es defendible —y muy buena— para las **pruebas** del proyecto: un
+      esquema idéntico en memoria hace que la batería de pruebas corra en
+      segundos y sin servicios. Esa decisión también se documenta.
+    doc: https://sqlite.org/whentouse.html

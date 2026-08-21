@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Clave-valor, caché y expiración: qué se pierde exactamente. Parte 05: Documentos y clave-valor.">
+<meta name="description" content="Agregación, GROUP BY y HAVING sin duplicar filas. Parte 04: SQL en profundidad.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/027.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="027 — Clave-valor, caché y expiración: qué se pierde exactamente · Database Systems Labs">
-<meta property="og:description" content="Clave-valor, caché y expiración: qué se pierde exactamente. Parte 05: Documentos y clave-valor.">
+<meta property="og:title" content="027 — Agregación, GROUP BY y HAVING sin duplicar filas · Database Systems Labs">
+<meta property="og:description" content="Agregación, GROUP BY y HAVING sin duplicar filas. Parte 04: SQL en profundidad.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/027.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "027 — Clave-valor, caché y expiración: qué se pierde exactamente", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["TTL", "invalidación", "estampida de caché", "durabilidad configurable"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>027 — Clave-valor, caché y expiración: qué se pierde exactamente · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "027 — Agregación, GROUP BY y HAVING sin duplicar filas", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["agrupación", "agregado", "HAVING", "doble conteo", "dependencia funcional en GROUP BY"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>027 — Agregación, GROUP BY y HAVING sin duplicar filas · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,312 +49,610 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-05.html">Parte 05 · Documentos y clave-valor</a>
+  <a href="parte-04.html">Parte 04 · SQL en profundidad</a>
   <span aria-hidden="true">/</span><span>Clase 027</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="027--clave-valor-caché-y-expiración-qué-se-pierde-exactamente">027 — Clave-valor, caché y expiración: qué se pierde exactamente</h1>
+<h1 id="027--agregación-group-by-y-having-sin-duplicar-filas">027 — Agregación, GROUP BY y HAVING sin duplicar filas</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-027%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="026.html">← Anterior</a> · <a href="028.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="026.html">← Anterior</a> · <a href="028.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 05 — Documentos y clave-valor · Intermedio ·
-3 horas estimadas · motores <code>redis</code>, <code>dynamodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>TTL</code> · <code>invalidación</code> · <code>estampida de caché</code> · <code>durabilidad configurable</code></p>
+<p>Parte 04 — SQL en profundidad · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>agrupación</code> · <code>agregado</code> · <code>HAVING</code> · <code>doble conteo</code> · <code>dependencia funcional en GROUP BY</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 027&quot;]
+    C --&gt; K1[&quot;agrupación&quot;]
+    C --&gt; K2[&quot;agregado&quot;]
+    C --&gt; K3[&quot;HAVING&quot;]
+    C --&gt; K4[&quot;doble conteo&quot;]
+    C --&gt; K5[&quot;dependencia funcional en GROUP BY&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Usar un almacén clave-valor sabiendo exactamente qué se pierde y cuándo. Una caché mal diseñada no solo no acelera: sirve datos incorrectos y derriba el origen cuando expira.</p>
+<p>Agregar sin perder ni inventar información. La agregación resume, y todo resumen descarta datos: hay que saber exactamente cuáles.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Elegir la estructura de datos de Redis adecuada al problema.</li>
-<li>Explicar qué se pierde exactamente con RDB, con AOF y con cada valor de <code>appendfsync</code>.</li>
-<li>Aplicar las tres estrategias de invalidación y sus consecuencias.</li>
-<li>Prevenir la estampida de caché con tres mecanismos distintos.</li>
-<li>Decidir cuándo un almacén clave-valor es la base de datos y cuándo solo es caché.</li>
+<li>Explicar cómo tratan los nulos las funciones de agregación y por qué importa.</li>
+<li>Distinguir <code>COUNT(*)</code>, <code>COUNT(col)</code> y <code>COUNT(DISTINCT col)</code>.</li>
+<li>Agrupar por la clave y no por un atributo descriptivo, y decir por qué.</li>
+<li>Usar agregación condicional para pivotar sin salir de SQL estándar.</li>
+<li>Aplicar <code>GROUPING SETS</code>, <code>ROLLUP</code> y <code>CUBE</code> donde el motor los ofrezca.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="no-es-solo-una-tabla-hash">No es solo una tabla hash</h3>
-<p>Redis ofrece estructuras con operaciones atómicas propias, y elegir bien evita lógica en la aplicación:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Estructura</th>
-<th>Operaciones</th>
-<th>Caso de uso</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>String</td>
-<td><code>GET</code>, <code>SET</code>, <code>INCR</code></td>
-<td>Caché, contadores</td>
-</tr>
-<tr>
-<td>Hash</td>
-<td><code>HGET</code>, <code>HSET</code>, <code>HINCRBY</code></td>
-<td>Objeto con campos actualizables por separado</td>
-</tr>
-<tr>
-<td>List</td>
-<td><code>LPUSH</code>, <code>BRPOP</code></td>
-<td>Cola simple</td>
-</tr>
-<tr>
-<td>Set</td>
-<td><code>SADD</code>, <code>SINTER</code></td>
-<td>Pertenencia, intersecciones</td>
-</tr>
-<tr>
-<td>Sorted set</td>
-<td><code>ZADD</code>, <code>ZRANGEBYSCORE</code></td>
-<td>Ranking, colas por prioridad, ventanas temporales</td>
-</tr>
-<tr>
-<td>Stream</td>
-<td><code>XADD</code>, <code>XREADGROUP</code></td>
-<td>Registro de eventos con grupos de consumidores</td>
-</tr>
-<tr>
-<td>HyperLogLog</td>
-<td><code>PFADD</code>, <code>PFCOUNT</code></td>
-<td>Conteo aproximado de distintos con ~12 KB fijos</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>INCR</code> es atómico: no hay lectura-modificación-escritura y por tanto no hay actualización perdida (clase 001). Esa atomicidad por operación es la principal razón para usar Redis en vez de una tabla hash en memoria del proceso.</p>
-<h3 id="qué-se-pierde-exactamente">Qué se pierde exactamente</h3>
-<p>La pregunta que hay que responder antes de guardar algo importante:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Configuración</th>
-<th>Qué se pierde ante caída del proceso</th>
-<th>Ante caída de la máquina</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Sin persistencia</td>
-<td>Todo</td>
-<td>Todo</td>
-</tr>
-<tr>
-<td>RDB cada 5 min</td>
-<td>Hasta 5 min</td>
-<td>Hasta 5 min</td>
-</tr>
-<tr>
-<td>AOF <code>appendfsync everysec</code></td>
-<td>Nada</td>
-<td><strong>Hasta 1 segundo</strong></td>
-</tr>
-<tr>
-<td>AOF <code>appendfsync always</code></td>
-<td>Nada</td>
-<td>Nada (con un costo alto por escritura)</td>
-</tr>
-<tr>
-<td>RDB + AOF</td>
-<td>Lo que indique el AOF</td>
-<td>Ídem</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>everysec</code> es el valor por defecto y el que casi todos usan. Es una elección correcta para una caché y una elección <strong>que hay que declarar</strong> si se guardan datos que no están en ningún otro sitio.</p>
-<p>Advertencia adicional: con replicación asíncrona, un <code>SET</code> confirmado al cliente puede perderse si el primario cae antes de replicar. Redis no ofrece durabilidad sincrónica por omisión.</p>
-<h3 id="invalidación">Invalidación</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Estrategia</th>
-<th>Cómo funciona</th>
-<th>Riesgo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>TTL</strong></td>
-<td>El dato expira solo</td>
-<td>Ventana de datos obsoletos igual al TTL</td>
-</tr>
-<tr>
-<td><strong>Escritura y borrado</strong> (<em>write-through invalidate</em>)</td>
-<td>Al escribir en el origen, se borra la clave</td>
-<td>Carrera entre el borrado y una lectura concurrente</td>
-</tr>
-<tr>
-<td><strong>Escritura directa</strong> (<em>write-through</em>)</td>
-<td>Se escribe en ambos</td>
-<td>Doble escritura, posible divergencia si una falla</td>
-</tr>
-</tbody>
-</table></div>
-<p>La carrera de la segunda estrategia es real y merece detalle:</p>
-<pre><code class="language-text">t0  Lector    : falla la caché, lee del origen -&gt; valor V1
-t1  Escritor  : actualiza el origen            -&gt; valor V2
-t2  Escritor  : borra la clave de la caché
-t3  Lector    : escribe en la caché lo que leyó en t0 -&gt; V1  (obsoleto, ¡y sin TTL, para siempre!)
+<h3 id="los-nulos-y-los-agregados">Los nulos y los agregados</h3>
+<p>Todas las funciones de agregación, <strong>salvo <code>COUNT(*)</code></strong>, ignoran los nulos. Es una decisión de la norma con consecuencias directas:</p>
+<pre><code class="language-sql">-- notas: 6.0, 7.0, NULL, NULL
+SELECT COUNT(*)      FROM enrollments;   -- 4  (filas)
+SELECT COUNT(nota)   FROM enrollments;   -- 2  (valores no nulos)
+SELECT SUM(nota)     FROM enrollments;   -- 13.0
+SELECT AVG(nota)     FROM enrollments;   -- 6.5   = 13.0 / 2, NO / 4
 </code></pre>
-<p>Defensas: poner <strong>siempre</strong> un TTL aunque se invalide explícitamente (acota el daño), o usar <code>SET ... XX</code> con comprobación de versión.</p>
-<h3 id="estampida">Estampida</h3>
-<p>Cuando una clave muy solicitada expira, todas las peticiones concurrentes fallan a la vez y golpean el origen simultáneamente. Con 5 000 peticiones por segundo y una consulta de 200 ms, la expiración de una sola clave lanza ~1 000 consultas idénticas contra la base de datos.</p>
-<p>Tres defensas:</p>
-<ol>
-<li><strong>Bloqueo de recálculo:</strong> solo una petición recalcula; las demás esperan o sirven el valor antiguo.</li>
-</ol>
-<p><code>text
-   SET recalculo:clave 1 NX EX 30     -- solo uno lo consigue</code></p>
-<ol start="2">
-<li><strong>TTL con dispersión aleatoria:</strong> <code>TTL = base + aleatorio(0, base·0,1)</code>. Evita que miles de claves creadas a la vez expiren a la vez.</li>
-<li><strong>Recálculo anticipado probabilístico:</strong> cada lectura recalcula con probabilidad creciente conforme se acerca la expiración, de modo que la clave se renueva antes de caducar.</li>
-</ol>
-<pre><code class="language-mermaid">flowchart TD
-    R[&quot;Petición&quot;] --&gt; C{&quot;¿Está en caché?&quot;}
-    C -- &quot;Sí&quot; --&gt; V{&quot;¿Cerca de expirar?&quot;}
-    V -- &quot;No&quot; --&gt; S[&quot;Servir&quot;]
-    V -- &quot;Sí&quot; --&gt; P{&quot;Sorteo de&lt;br/&gt;recálculo anticipado&quot;}
-    P -- &quot;No&quot; --&gt; S
-    P -- &quot;Sí&quot; --&gt; L
-    C -- &quot;No&quot; --&gt; L{&quot;¿Consigo el&lt;br/&gt;bloqueo de recálculo?&quot;}
-    L -- &quot;Sí&quot; --&gt; O[&quot;Consultar origen&lt;br/&gt;y guardar con TTL disperso&quot;]
-    L -- &quot;No&quot; --&gt; W[&quot;Esperar o servir&lt;br/&gt;el valor anterior&quot;]
-    O --&gt; S
-    W --&gt; S
+<p><code>AVG</code> divide por el número de valores <strong>no nulos</strong>. Si la intención era «promedio contando las no calificadas como cero», hay que decirlo:</p>
+<pre><code class="language-sql">SELECT SUM(COALESCE(nota, 0)) / COUNT(*) FROM enrollments;   -- 3.25
+</code></pre>
+<p>6,5 frente a 3,25: dos respuestas defendibles a dos preguntas distintas. Elegir sin darse cuenta es el error.</p>
+<p>Caso límite que sorprende: <code>SUM</code> sobre un conjunto vacío devuelve <code>NULL</code>, no 0. Un informe que suma pagos de un mes sin pagos muestra un hueco en vez de un cero, salvo que se escriba <code>COALESCE(SUM(monto), 0)</code>.</p>
+<h3 id="agrupar-por-la-clave">Agrupar por la clave</h3>
+<pre><code class="language-sql">-- MAL: fusiona homónimos
+SELECT s.nombre, COUNT(*) FROM students s JOIN enrollments e ON e.student_id = s.id
+GROUP BY s.nombre;
+
+-- BIEN
+SELECT s.id, s.nombre, COUNT(*) FROM students s JOIN enrollments e ON e.student_id = s.id
+GROUP BY s.id, s.nombre;
+</code></pre>
+<p>La norma exige que toda columna del <code>SELECT</code> que no sea agregada aparezca en <code>GROUP BY</code>. PostgreSQL permite una excepción sensata: si se agrupa por la clave primaria, admite las demás columnas de esa tabla, porque están funcionalmente determinadas (clase 008). MySQL en modo no estricto lo permitía sin ninguna justificación, y devolvía un valor arbitrario del grupo: origen de innumerables informes silenciosamente erróneos.</p>
+<h3 id="agregación-condicional">Agregación condicional</h3>
+<p><code>FILTER</code> (norma SQL, soportado por PostgreSQL y SQLite) o <code>CASE</code> dentro del agregado permiten varias métricas en un solo recorrido:</p>
+<pre><code class="language-sql">SELECT course_id,
+       COUNT(*)                                      AS total,
+       COUNT(*) FILTER (WHERE nota &gt;= 4.0)           AS aprobados,
+       COUNT(*) FILTER (WHERE nota &lt;  4.0)           AS reprobados,
+       COUNT(*) FILTER (WHERE nota IS NULL)          AS sin_calificar,
+       AVG(nota) FILTER (WHERE nota IS NOT NULL)     AS promedio
+FROM enrollments
+GROUP BY course_id;
+</code></pre>
+<p>Equivalente portable con <code>CASE</code>:</p>
+<pre><code class="language-sql">       SUM(CASE WHEN nota &gt;= 4.0 THEN 1 ELSE 0 END) AS aprobados
+</code></pre>
+<p>Lo importante no es la sintaxis: es que <strong>un solo recorrido</strong> produce las cinco métricas. La alternativa —cinco consultas o cinco subconsultas— recorre la tabla cinco veces.</p>
+<h3 id="subtotales">Subtotales</h3>
+<pre><code class="language-sql">SELECT c.periodo, c.id, COUNT(*) AS inscritos
+FROM courses c JOIN enrollments e ON e.course_id = c.id
+GROUP BY ROLLUP (c.periodo, c.id);
+</code></pre>
+<p><code>ROLLUP</code> añade las filas de subtotal por período y el total general. Distinguir un subtotal de una fila real se hace con <code>GROUPING()</code>, porque en la fila de subtotal <code>c.id</code> es nulo, igual que lo sería un id realmente nulo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Construcción</th>
+<th>Qué añade</th>
+<th>Soporte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GROUPING SETS</code></td>
+<td>Las combinaciones que se enumeren</td>
+<td>PostgreSQL, SQL Server, Oracle, MySQL 8</td>
+</tr>
+<tr>
+<td><code>ROLLUP</code></td>
+<td>Jerarquía de subtotales + total</td>
+<td>Amplio</td>
+</tr>
+<tr>
+<td><code>CUBE</code></td>
+<td>Todas las combinaciones posibles</td>
+<td>PostgreSQL, SQL Server, Oracle</td>
+</tr>
+</tbody>
+</table></div>
+<p>SQLite no los implementa; se emulan con <code>UNION ALL</code> de varias agregaciones.</p>
+<pre><code class="language-mermaid">flowchart LR
+    F[&quot;Filas&quot;] --&gt; W[&quot;WHERE&lt;br/&gt;descarta filas&quot;]
+    W --&gt; G[&quot;GROUP BY&lt;br/&gt;forma grupos&quot;]
+    G --&gt; A[&quot;Agregados&lt;br/&gt;ignoran NULL salvo COUNT(*)&quot;]
+    A --&gt; H[&quot;HAVING&lt;br/&gt;descarta grupos&quot;]
+    H --&gt; S[&quot;SELECT&quot;]
+    S --&gt; O[&quot;ORDER BY&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Caché del panel del curso, que en la clase 009 costaba una agregación sobre millones de filas.</p>
-<pre><code class="language-python">import json, random, time
-
-TTL_BASE = 300  # 5 minutos
-
-def panel_curso(redis, db, course_id):
-    clave = f&quot;curso:{course_id}:panel&quot;
-    dato = redis.get(clave)
-    if dato is not None:
-        return json.loads(dato)
-
-    # Solo un proceso recalcula; el resto espera brevemente y reintenta.
-    if redis.set(f&quot;lock:{clave}&quot;, &quot;1&quot;, nx=True, ex=30):
-        try:
-            panel = consultar_panel(db, course_id)          # la agregación cara
-            ttl = TTL_BASE + random.randint(0, TTL_BASE // 10)
-            redis.set(clave, json.dumps(panel), ex=ttl)
-            return panel
-        finally:
-            redis.delete(f&quot;lock:{clave}&quot;)
-
-    time.sleep(0.05)
-    dato = redis.get(clave)
-    return json.loads(dato) if dato else consultar_panel(db, course_id)
+<p>Informe pedido: <em>«por curso: inscritos, aprobados, promedio de los calificados y porcentaje de aprobación»</em>.</p>
+<pre><code class="language-sql">SELECT c.id,
+       c.nombre,
+       COUNT(e.student_id)                                   AS inscritos,
+       COUNT(e.nota)                                         AS calificados,
+       SUM(CASE WHEN e.nota &gt;= 4.0 THEN 1 ELSE 0 END)        AS aprobados,
+       ROUND(AVG(e.nota), 2)                                 AS promedio_calificados,
+       ROUND(100.0 * SUM(CASE WHEN e.nota &gt;= 4.0 THEN 1 ELSE 0 END)
+             / NULLIF(COUNT(e.nota), 0), 1)                  AS pct_aprobacion
+FROM courses c
+LEFT JOIN enrollments e ON e.course_id = c.id
+GROUP BY c.id, c.nombre
+ORDER BY c.id;
 </code></pre>
-<p><strong>Efecto medido</strong>, con 5 000 peticiones/s a un curso y una agregación de 200 ms:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Escenario</th>
-<th style="text-align: right;">Consultas al origen por expiración</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Sin caché</td>
-<td style="text-align: right;">5 000/s, continuamente</td>
-</tr>
-<tr>
-<td>Caché sin bloqueo</td>
-<td style="text-align: right;">~1 000 de golpe cada 5 min</td>
-</tr>
-<tr>
-<td>Caché con bloqueo + TTL disperso</td>
-<td style="text-align: right;">1 cada ~5 min</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Invalidación al inscribir</strong>, para que el panel no espere 5 minutos:</p>
-<pre><code class="language-python">def inscribir(db, redis, student_id, course_id):
-    with db.transaction():                     # el origen es la verdad
-        db.execute(&quot;INSERT INTO enrollments (student_id, course_id) VALUES (?,?)&quot;,
-                   (student_id, course_id))
-    redis.delete(f&quot;curso:{course_id}:panel&quot;)   # fuera de la transacción, a propósito
+<p>Cada decisión, con su porqué:</p>
+<ul>
+<li><strong><code>LEFT JOIN</code></strong>: los cursos sin inscritos deben aparecer con 0, no desaparecer del informe.</li>
+<li><strong><code>COUNT(e.student_id)</code> y no <code>COUNT(*)</code></strong>: con <code>LEFT JOIN</code>, un curso sin inscritos genera una fila con nulos; <code>COUNT(*)</code> daría <strong>1</strong> y <code>COUNT(e.student_id)</code> da <strong>0</strong>, que es lo correcto.</li>
+<li><strong><code>COUNT(e.nota)</code> aparte de <code>inscritos</code></strong>: distingue «inscritos» de «calificados». Sin esa columna, el lector no puede saber sobre qué base se calculó el promedio.</li>
+<li><strong><code>NULLIF(COUNT(e.nota), 0)</code></strong>: evita la división por cero en cursos sin calificar; el resultado es nulo, que es honesto (no hay porcentaje definido).</li>
+<li><strong><code>100.0 *</code></strong> y no <code>100 *</code>: fuerza aritmética decimal. Con enteros, <code>100 * 3 / 4</code> da 75 en algunos motores y 0 en otros por división entera.</li>
+</ul>
+<p><strong>Traza sobre un curso concreto</strong> — 40 inscritos, 32 calificados, 24 con nota ≥ 4,0, suma de notas 148,8:</p>
+<pre><code class="language-text">inscritos            = 40
+calificados          = 32
+aprobados            = 24
+promedio_calificados = 148,8 / 32 = 4,65
+pct_aprobacion       = 100 · 24 / 32 = 75,0 %
 </code></pre>
-<p>El borrado va <strong>después</strong> del <code>COMMIT</code> y fuera de la transacción. Si se hiciera dentro y la transacción se revirtiera, se habría invalidado una caché correcta; peor aún, una lectura concurrente podría repoblarla con el valor no confirmado. El precio de este orden es una ventana de milisegundos con el panel obsoleto, que el TTL acota de todos modos.</p>
-<p><strong>Estructura adecuada.</strong> Si el panel solo necesita el contador:</p>
-<pre><code class="language-text">HINCRBY curso:bd:contadores inscritos 1
-</code></pre>
-<p>Una operación atómica de O(1) en vez de invalidar y recalcular. La lección: elegir la estructura correcta a veces elimina el problema de invalidación en lugar de resolverlo.</p>
+<p>Obsérvese que el porcentaje se calcula sobre <strong>calificados</strong>, no sobre inscritos. Sobre inscritos daría 60 %. Ambos números son ciertos y responden a preguntas distintas; el informe debe decir cuál usa. Es el punto pedagógico central de la clase: <strong>el denominador es una decisión, no un detalle</strong>.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Uso</th>
-<th>¿Es aceptable perder los datos?</th>
-<th>Configuración</th>
+<th>Expresión</th>
+<th>Cuenta</th>
+<th>Devuelve con conjunto vacío</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Caché de consultas</td>
-<td>Sí</td>
-<td>Sin persistencia, TTL, <code>maxmemory-policy allkeys-lru</code></td>
+<td><code>COUNT(*)</code></td>
+<td>Filas, incluidas las de nulos</td>
+<td>0</td>
 </tr>
 <tr>
-<td>Sesiones de usuario</td>
-<td>Molesto, no grave</td>
-<td>AOF <code>everysec</code>, TTL</td>
+<td><code>COUNT(col)</code></td>
+<td>Valores no nulos</td>
+<td>0</td>
 </tr>
 <tr>
-<td>Cola de trabajos</td>
-<td>No</td>
-<td>Streams con confirmación, o un motor de colas real</td>
+<td><code>COUNT(DISTINCT col)</code></td>
+<td>Valores no nulos distintos</td>
+<td>0</td>
 </tr>
 <tr>
-<td>Contadores de negocio</td>
-<td>No</td>
-<td>Origen relacional; Redis solo acelera</td>
+<td><code>SUM(col)</code></td>
+<td>Suma de no nulos</td>
+<td><code>NULL</code></td>
 </tr>
 <tr>
-<td>Límite de tasa</td>
-<td>Sí</td>
-<td>Sin persistencia, TTL corto</td>
+<td><code>AVG(col)</code></td>
+<td>Suma / cuenta de no nulos</td>
+<td><code>NULL</code></td>
 </tr>
 <tr>
-<td>Ranking en vivo</td>
-<td>Depende</td>
-<td>Sorted set + reconstrucción desde el origen</td>
+<td><code>MIN</code>/<code>MAX(col)</code></td>
+<td>Extremos de no nulos</td>
+<td><code>NULL</code></td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Caché sin TTL.</strong> Un fallo de invalidación se vuelve permanente.</li>
-<li><strong>Usar Redis como fuente de verdad sin declarar la durabilidad.</strong> <code>everysec</code> pierde hasta un segundo.</li>
-<li><strong>Invalidar dentro de la transacción.</strong> Repuebla con datos no confirmados.</li>
-<li><strong>Todas las claves con el mismo TTL.</strong> Expiran en bloque y provocan estampida.</li>
-<li><strong><code>KEYS *</code> en producción.</strong> Bloquea el servidor, que es de un solo hilo para comandos; usar <code>SCAN</code>.</li>
-<li><strong>Guardar objetos enormes.</strong> Un valor de varios megabytes bloquea el hilo durante su serialización.</li>
-<li><strong>Sin <code>maxmemory-policy</code>.</strong> Al llenarse, Redis empieza a rechazar escrituras en vez de desalojar.</li>
+<li><strong><code>COUNT(*)</code> tras un <code>LEFT JOIN</code>.</strong> Cuenta 1 donde debería contar 0.</li>
+<li><strong><code>AVG</code> sin decir sobre qué base.</strong> El lector supone que es sobre el total y casi nunca lo es.</li>
+<li><strong><code>SUM</code> de un conjunto vacío mostrado como hueco.</strong> Falta <code>COALESCE</code>.</li>
+<li><strong>Agrupar por el nombre.</strong> Fusiona entidades distintas.</li>
+<li><strong>División entera silenciosa.</strong> <code>100 * a / b</code> con enteros trunca.</li>
+<li><strong><code>HAVING</code> para condiciones de fila.</strong> Agrupa de más y luego descarta.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La caída más habitual asociada a caché no es la caché: es el origen, cuando la caché se vacía de golpe (reinicio, despliegue, expiración masiva) y recibe de una vez todo el tráfico que llevaba meses sin ver. Probar el arranque en frío bajo carga es parte de la entrega.</p>
+<p>Dos informes del mismo negocio que no cuadran suelen diferir en el denominador o en el tratamiento de los nulos, no en los datos. Documentar en el propio SQL qué se cuenta y sobre qué base evita reuniones enteras de conciliación.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Elige una consulta cara real y cachéala con TTL disperso y bloqueo de recálculo.</li>
-<li>Mide las consultas al origen con y sin bloqueo, provocando la expiración bajo carga.</li>
-<li>Documenta qué se pierde en tu configuración de persistencia, en unidades de tiempo.</li>
-<li>Reproduce la carrera de invalidación y demuestra que el TTL acota el daño.</li>
+<li>Toma un informe agregado real y determina, para cada métrica, cuál es su denominador.</li>
+<li>Calcula la misma métrica con dos denominadores defendibles y muestra ambas cifras.</li>
+<li>Reescribe cinco consultas de métrica en una sola con agregación condicional y compara tiempos.</li>
+<li>Añade el manejo de nulos y de conjunto vacío, y demuestra el resultado en un mes sin datos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Cuántos datos se pierden exactamente con <code>appendfsync everysec</code> y una caída de la máquina?</li>
-<li>Traza la carrera entre un lector y un escritor que deja un valor obsoleto en la caché.</li>
-<li>Calcula la estampida esperada en tu sistema con sus cifras de tráfico.</li>
-<li>Da un dato de tu dominio que <strong>no</strong> guardarías en Redis y explica por qué.</li>
+<li>Con notas <code>6.0, NULL, NULL</code>, ¿qué devuelven <code>COUNT(*)</code>, <code>COUNT(nota)</code>, <code>AVG(nota)</code> y <code>SUM(nota)</code>?</li>
+<li>¿Por qué <code>COUNT(*)</code> es incorrecto tras un <code>LEFT JOIN</code> cuando quieres contar hijos?</li>
+<li>Explica cuándo agrupar solo por la clave primaria es válido y por qué.</li>
+<li>Da dos porcentajes correctos y distintos para la misma pregunta de negocio, y di cómo elegirías.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Contar dos hijos del mismo padre sin que se multipliquen entre sí</p>
+<p>Por cada curso hay que devolver cuántos inscritos tiene y cuántas
+evaluaciones. Son dos recuentos sobre dos tablas distintas que cuelgan del
+mismo padre, y ahí está el error de agregación más caro que existe: reunir
+las dos y contar. Para DB-101, con 2 inscritos y 3 evaluaciones, esa reunión
+produce 6 filas intermedias y los dos recuentos salen 6.</p>
+<p>Lo grave no es el número: es que <strong>el informe se genera igual</strong>. Nadie revisa
+un total que parece plausible. La forma correcta agrega antes de reunir, para
+que cada lado aporte una sola fila por curso.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>curso</th>
+<th>inscritos</th>
+<th>evaluaciones</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DB-101</code></td>
+<td><code>2</code></td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>SE-201</code></td>
+<td><code>1</code></td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 027</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/groupby.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-agg.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/aggregate-functions">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_select.html
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INTEGER PRIMARY KEY,
+    curso  TEXT NOT NULL,
+    titulo TEXT NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Permite ver el doble conteo y su corrección en el mismo archivo, sin infraestructura: basta cambiar la consulta por la ingenua para que los dos números salten a 6.</li>
+<li><strong>Por qué no:</strong> Tolera <code>GROUP BY</code> con columnas no agregadas y devuelve un valor cualquiera del grupo, sin avisar. Es el motor donde una agregación mal escrita más fácilmente pasa por buena.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/groupby.html
+-- nota: DuckDB acepta GROUP BY ALL, que evita el error de olvidar una columna
+--       en la lista. Aqui se escribe la forma portable a proposito.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INTEGER PRIMARY KEY,
+    curso  VARCHAR NOT NULL,
+    titulo VARCHAR NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La agregación es su terreno: cuenta y agrupa sobre millones de filas en memoria, y <code>GROUP BY ALL</code> evita el error de olvidar una columna en la lista.</li>
+<li><strong>Por qué no:</strong> Esa velocidad esconde el problema: la versión con doble reunión y <code>DISTINCT</code> también termina rápido aquí, así que el costo del error no se nota hasta que la misma consulta se lleva al motor transaccional.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/groupby.html">https://duckdb.org/docs/stable/sql/query_syntax/groupby.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-agg.html
+-- nota: EXPLAIN (ANALYZE) sobre la version ingenua muestra «rows=6» en el nodo
+--       de la reunion para DB-101: el doble conteo deja de ser un argumento y
+--       pasa a ser un numero.
+
+DROP TABLE IF EXISTS evaluaciones, inscripciones, cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     integer PRIMARY KEY,
+    curso  text NOT NULL,
+    titulo text NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Rechaza el <code>GROUP BY</code> ambiguo con un error, tiene agregados con <code>FILTER</code> —que evita varias subconsultas— y <code>EXPLAIN (ANALYZE)</code> muestra las filas intermedias reales, que es como se demuestra el doble conteo con números.</li>
+<li><strong>Por qué no:</strong> La agregación previa por subconsulta puede materializarse: en tablas grandes conviene comprobar si una función de ventana o un <code>LATERAL</code> con límite resulta más barato, en vez de asumirlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-agg.html">https://www.postgresql.org/docs/current/tutorial-agg.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html
+
+DROP TABLE IF EXISTS evaluaciones;
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+CREATE TABLE evaluaciones (
+    id     INT PRIMARY KEY,
+    curso  VARCHAR(50) NOT NULL,
+    titulo VARCHAR(50) NOT NULL
+);
+
+INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
+INSERT INTO inscripciones (estudiante, curso) VALUES
+    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
+INSERT INTO evaluaciones (id, curso, titulo) VALUES
+    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
+    (4, 'SE-201', 'Examen');
+
+-- === consulta ===
+-- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
+--   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
+-- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
+-- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
+-- el trabajo sigue estando ahi.
+--
+-- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
+-- por curso, asi que ninguna reunion multiplica nada.
+SELECT c.codigo AS curso,
+       COALESCE(i.inscritos, 0) AS inscritos,
+       COALESCE(e.evaluaciones, 0) AS evaluaciones
+FROM cursos c
+LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
+           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
+LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
+           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con <code>ONLY_FULL_GROUP_BY</code> activo por omisión desde 5.7, las agregaciones ambiguas ya no cuelan, y el motor resuelve la agregación previa con tablas derivadas materializadas.</li>
+<li><strong>Por qué no:</strong> Esa materialización crea tablas temporales sin índices: cuando las subconsultas devuelven muchas filas, la reunión posterior se vuelve un escaneo completo de la temporal.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/027-agregacion-group-by-y-having/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: aqui el doble conteo NO puede ocurrir: cada $lookup deja su propio
+//       arreglo y $size cuenta cada uno por separado. El precio es que son dos
+//       busquedas por curso, no una reunion.
+
+// === preparacion ===
+db.cursos.drop();
+db.inscripciones.drop();
+db.evaluaciones.drop();
+
+db.cursos.insertMany([{ _id: &quot;DB-101&quot; }, { _id: &quot;SE-201&quot; }]);
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot; },
+]);
+db.evaluaciones.insertMany([
+  { curso: &quot;DB-101&quot;, titulo: &quot;Control 1&quot; },
+  { curso: &quot;DB-101&quot;, titulo: &quot;Control 2&quot; },
+  { curso: &quot;DB-101&quot;, titulo: &quot;Examen&quot; },
+  { curso: &quot;SE-201&quot;, titulo: &quot;Examen&quot; },
+]);
+
+// === consulta ===
+db.cursos
+  .aggregate([
+    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
+                 foreignField: &quot;curso&quot;, as: &quot;i&quot; } },
+    { $lookup: { from: &quot;evaluaciones&quot;, localField: &quot;_id&quot;,
+                 foreignField: &quot;curso&quot;, as: &quot;e&quot; } },
+    { $project: { _id: 0, curso: &quot;$_id&quot;,
+                  inscritos: { $size: &quot;$i&quot; }, evaluaciones: { $size: &quot;$e&quot; } } },
+    { $sort: { curso: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.inscritos + &quot;|&quot; + d.evaluaciones));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El problema del doble conteo no aparece si cada <code>$lookup</code> se cuenta por separado con <code>$size</code>: no hay producto cartesiano porque cada búsqueda deja su propio arreglo.</li>
+<li><strong>Por qué no:</strong> Cada <code>$lookup</code> es una consulta más por documento del lado externo; con muchos cursos, lo que en SQL era una reunión se convierte en miles de búsquedas y la latencia crece de forma lineal.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse</td>
+<td>Resolvería el caso sin esfuerzo, pero compararlo aquí induce a error: su forma idiomática no es agregar dos hijos normalizados, sino guardar los hechos ya aplanados y usar estados de agregación (<code>AggregatingMergeTree</code>) que se combinan al fusionar partes.</td>
+<td>Se estudia en la parte de analítica columnar, con su propio caso y su propia medición, en vez de forzarlo a imitar un esquema transaccional.</td>
+<td><a href="https://clickhouse.com/docs/en/sql-reference/aggregate-functions">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay <code>GROUP BY</code>: agregar exigiría traer todos los miembros al cliente y contarlos allí, con lo que el recuento deja de ser una propiedad del almacén.</td>
+<td>Mantener un contador por curso y por tipo de hijo, actualizado en cada escritura, con el riesgo de deriva que se estudió en la clase de desnormalización deliberada.</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -398,27 +696,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Redis Ltd.</strong> (2026). <a href="https://redis.io/docs/latest/">Redis Documentation</a>.<br />
-  Estructuras de datos, expiración y semántica de comandos.</li>
-<li><strong>Redis Ltd.</strong> (2026). <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">Redis: Persistence</a>.<br />
-  RDB frente a AOF: qué se pierde exactamente en cada configuración.</li>
-<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
-  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
+  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
+<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
+  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="026.html">← Anterior</a> · <a href="028.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="026.html">← Anterior</a> · <a href="028.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="027">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="026.html"><span class="sentido">← Anterior · 026</span>Consultas, índices y agregación sobre documentos</a>
-<a class="siguiente" href="028.html"><span class="sentido">Siguiente · 028 →</span>Grafos de propiedades y los recorridos que SQL hace mal</a>
+<a class="anterior" href="026.html"><span class="sentido">← Anterior · 026</span>Reuniones: interna, externa, semi y anti</a>
+<a class="siguiente" href="028.html"><span class="sentido">Siguiente · 028 →</span>CTE, subconsultas y funciones de ventana</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

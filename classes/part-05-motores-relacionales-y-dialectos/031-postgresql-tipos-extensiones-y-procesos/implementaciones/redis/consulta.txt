@@ -1,0 +1,17 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/commands/sinter/
+# nota: el problema se invierte. No se guardan las etiquetas del curso: se
+#       guardan los cursos de cada etiqueta. Preguntar por una etiqueta es leer
+#       un conjunto; cruzar dos es SINTER. La pregunta inversa —que etiquetas
+#       tiene este curso— exige mantener tambien la otra direccion.
+
+# === preparacion ===
+FLUSHDB
+SADD etiqueta:sql DB-101
+SADD etiqueta:datos DB-101
+SADD etiqueta:proceso SE-201
+SADD etiqueta:datos AR-301
+SADD etiqueta:diseno AR-301
+
+# === consulta ===
+SORT etiqueta:datos ALPHA

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Anomalías de aislamiento y la crítica a los niveles ANSI. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta name="description" content="El agregado como unidad de consistencia. Parte 06: Documentos y clave-valor.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/034.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="034 — Anomalías de aislamiento y la crítica a los niveles ANSI · Database Systems Labs">
-<meta property="og:description" content="Anomalías de aislamiento y la crítica a los niveles ANSI. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta property="og:title" content="034 — El agregado como unidad de consistencia · Database Systems Labs">
+<meta property="og:description" content="El agregado como unidad de consistencia. Parte 06: Documentos y clave-valor.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/034.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "034 — Anomalías de aislamiento y la crítica a los niveles ANSI", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["lectura sucia", "lectura no repetible", "fantasma", "sesgo de escritura", "snapshot isolation"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>034 — Anomalías de aislamiento y la crítica a los niveles ANSI · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "034 — El agregado como unidad de consistencia", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["agregado", "frontera transaccional", "entidad", "actividad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>034 — El agregado como unidad de consistencia · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,289 +49,567 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-07.html">Parte 07 · Transacciones, concurrencia y recuperación</a>
+  <a href="parte-06.html">Parte 06 · Documentos y clave-valor</a>
   <span aria-hidden="true">/</span><span>Clase 034</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="034--anomalías-de-aislamiento-y-la-crítica-a-los-niveles-ansi">034 — Anomalías de aislamiento y la crítica a los niveles ANSI</h1>
+<h1 id="034--el-agregado-como-unidad-de-consistencia">034 — El agregado como unidad de consistencia</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-06-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-034%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
-4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 5 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>lectura sucia</code> · <code>lectura no repetible</code> · <code>fantasma</code> · <code>sesgo de escritura</code> · <code>snapshot isolation</code></p>
+<p>Parte 06 — Documentos y clave-valor · Intermedio ·
+3 horas estimadas · motores <code>mongodb</code>, <code>redis</code>, <code>dynamodb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>agregado</code> · <code>frontera transaccional</code> · <code>entidad</code> · <code>actividad</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 034&quot;]
+    C --&gt; K1[&quot;agregado&quot;]
+    C --&gt; K2[&quot;frontera transaccional&quot;]
+    C --&gt; K3[&quot;entidad&quot;]
+    C --&gt; K4[&quot;actividad&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Reproducir las anomalías de concurrencia una por una y saber cuáles permite tu motor en su nivel por defecto. El nombre del nivel no basta: hay que comprobar el comportamiento.</p>
+<p>Entender la idea que organiza casi todo el mundo no relacional: el <strong>agregado</strong>. Elegir sus fronteras es elegir dónde hay transacciones y dónde no.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Reproducir cada anomalía con dos sesiones y una traza temporal.</li>
-<li>Explicar por qué la norma ANSI define los niveles de forma ambigua.</li>
-<li>Distinguir instantánea de serializable y describir el sesgo de escritura.</li>
-<li>Comprobar empíricamente qué permite tu motor, con el método de Hermitage.</li>
-<li>Elegir nivel de aislamiento con un criterio explícito.</li>
+<li>Definir agregado y distinguirlo de entidad y de tabla.</li>
+<li>Explicar por qué la frontera del agregado es la frontera de la atomicidad.</li>
+<li>Aplicar el criterio de Helland sobre entidades y actividades.</li>
+<li>Diseñar la coherencia entre agregados sin transacción distribuida.</li>
+<li>Reconocer cuándo un agregado mal elegido produce un punto caliente.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="las-anomalías">Las anomalías</h3>
+<h3 id="qué-es-un-agregado">Qué es un agregado</h3>
+<p>Sadalage y Fowler toman el término del diseño dirigido por el dominio: un <strong>agregado</strong> es un conjunto de datos que se trata como una unidad para lectura y escritura. Un pedido con sus líneas y su dirección de envío es un agregado; el cliente que lo hizo es otro.</p>
+<p>En un modelo relacional el agregado no existe: cada entidad es su tabla y la transacción puede abarcar cuantas quiera. En los modelos documental, clave-valor y de columnas anchas, el agregado <strong>es</strong> la unidad de almacenamiento, de replicación y —esto es lo decisivo— de <strong>atomicidad</strong>.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Anomalía</th>
-<th>Qué ocurre</th>
+<th>Modelo</th>
+<th>Unidad de atomicidad garantizada</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>P0 Escritura sucia</strong></td>
-<td>Una transacción sobrescribe un dato no confirmado de otra</td>
+<td>Relacional</td>
+<td>La transacción, sobre cualquier conjunto de tablas</td>
 </tr>
 <tr>
-<td><strong>P1 Lectura sucia</strong></td>
-<td>Se lee un dato que después se revierte</td>
+<td>Documental</td>
+<td>El documento; varios documentos solo con transacciones explícitas</td>
 </tr>
 <tr>
-<td><strong>P2 Lectura no repetible</strong></td>
-<td>Se lee dos veces el mismo dato y cambia</td>
+<td>Clave-valor</td>
+<td>La clave; operaciones multiclave solo con guiones o transacciones</td>
 </tr>
 <tr>
-<td><strong>P3 Fantasma</strong></td>
-<td>Se repite una consulta de rango y aparecen filas nuevas</td>
-</tr>
-<tr>
-<td><strong>P4 Actualización perdida</strong></td>
-<td>Dos lecturas-modificaciones concurrentes; una se pierde</td>
-</tr>
-<tr>
-<td><strong>A5A Lectura sesgada</strong></td>
-<td>Se leen dos datos relacionados y se ve una combinación imposible</td>
-</tr>
-<tr>
-<td><strong>A5B Sesgo de escritura</strong></td>
-<td>Dos transacciones leen lo mismo, escriben cosas distintas y juntas rompen una invariante</td>
+<td>Columnas anchas</td>
+<td>La partición</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="la-crítica-de-berenson-y-otros">La crítica de Berenson y otros</h3>
-<p>El artículo de 1995 demuestra que la norma ANSI SQL-92 define los niveles enumerando fenómenos prohibidos, y que esas definiciones son <strong>ambiguas</strong>: admiten una lectura estricta y otra laxa. Peor: no cubren el sesgo de escritura, así que un sistema puede ser conforme a <code>SERIALIZABLE</code> según la letra de la norma y permitir anomalías.</p>
-<p>De ahí sale además la caracterización de <strong>snapshot isolation</strong> (aislamiento de instantánea), que la norma ni menciona y que hoy implementan PostgreSQL, Oracle y SQL Server.</p>
-<p>Adya (1999) reformula las definiciones sin referirse a la implementación, mediante grafos de dependencias entre transacciones. Es la formulación que usan los verificadores modernos.</p>
-<p><strong>Consecuencia práctica:</strong> el nombre del nivel no dice qué garantiza. <code>REPEATABLE READ</code> significa cosas distintas en MySQL y en PostgreSQL.</p>
-<h3 id="lo-que-permite-cada-motor-de-verdad">Lo que permite cada motor, de verdad</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Anomalía</th>
-<th>PG <code>RC</code></th>
-<th>PG <code>RR</code></th>
-<th>PG <code>SER</code></th>
-<th>MySQL <code>RR</code></th>
-<th>SQLite</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Lectura sucia</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Lectura no repetible</td>
-<td><strong>Sí</strong></td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Fantasma</td>
-<td><strong>Sí</strong></td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Actualización perdida</td>
-<td><strong>Sí</strong></td>
-<td>No (aborta)</td>
-<td>No</td>
-<td><strong>Sí</strong>*</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Sesgo de escritura</td>
-<td><strong>Sí</strong></td>
-<td><strong>Sí</strong></td>
-<td>No</td>
-<td><strong>Sí</strong></td>
-<td>No</td>
-</tr>
-</tbody>
-</table></div>
-<p>* MySQL <code>REPEATABLE READ</code> con lecturas normales; con <code>SELECT ... FOR UPDATE</code> se evita.</p>
-<p>Dos hechos que importan:</p>
+<h3 id="la-consecuencia">La consecuencia</h3>
+<p>Si dos datos deben cambiar juntos <strong>siempre</strong>, deben estar en el mismo agregado o hay que asumir explícitamente la inconsistencia transitoria. No hay tercera opción barata.</p>
+<p>Ejemplo: «el saldo del monedero y el registro del movimiento deben cuadrar». En un solo documento, la escritura es atómica. En dos documentos, existe un instante en que uno se escribió y el otro no; si el proceso muere ahí, queda una inconsistencia que alguien debe reparar.</p>
+<h3 id="entidades-y-actividades">Entidades y actividades</h3>
+<p>Helland ofrece el marco más útil para el caso distribuido:</p>
 <ul>
-<li><strong>PostgreSQL <code>REPEATABLE READ</code> es aislamiento de instantánea</strong>, no la definición ANSI. No permite fantasmas —lo que la norma sí permitiría— y sí permite sesgo de escritura.</li>
-<li><strong>Solo <code>SERIALIZABLE</code> evita el sesgo de escritura.</strong> PostgreSQL lo implementa con aislamiento de instantánea serializable (SSI), que detecta ciclos de dependencia y aborta una transacción.</li>
+<li><strong>Entidad:</strong> unidad con identidad y estado, que cabe en un nodo y se actualiza atómicamente. Es el agregado.</li>
+<li><strong>Actividad:</strong> coordinación entre entidades, que <strong>no</strong> puede ser atómica y debe tolerar reintentos y llegadas fuera de orden.</li>
 </ul>
+<p>De ahí sus dos exigencias para cualquier interacción entre agregados: los mensajes deben ser <strong>idempotentes</strong> (procesar dos veces no cambia el resultado) y <strong>conmutativos</strong> cuando sea posible (el orden de llegada no altera el estado final).</p>
+<p>Ese es exactamente el patrón saga de la clase 047: la actividad se descompone en pasos locales atómicos, cada uno con su compensación.</p>
+<h3 id="cómo-elegir-la-frontera">Cómo elegir la frontera</h3>
 <pre><code class="language-mermaid">flowchart TD
-    A[&quot;Dos transacciones concurrentes&quot;] --&gt; B{&quot;¿Leen lo que la&lt;br/&gt;otra escribe?&quot;}
-    B -- &quot;No&quot; --&gt; OK[&quot;Sin conflicto&quot;]
-    B -- &quot;Sí&quot; --&gt; C{&quot;¿Escriben el&lt;br/&gt;mismo dato?&quot;}
-    C -- &quot;Sí&quot; --&gt; D[&quot;Actualización perdida&lt;br/&gt;→ evitable con RR o bloqueo&quot;]
-    C -- &quot;No&quot; --&gt; E[&quot;Sesgo de escritura&lt;br/&gt;→ SOLO evitable con SERIALIZABLE&lt;br/&gt;o bloqueo explícito&quot;]
+    A[&quot;Dos datos relacionados&quot;] --&gt; B{&quot;¿Deben cambiar&lt;br/&gt;juntos siempre?&quot;}
+    B -- &quot;Sí&quot; --&gt; C{&quot;¿Crecen sin&lt;br/&gt;límite juntos?&quot;}
+    C -- &quot;No&quot; --&gt; D[&quot;Mismo agregado&quot;]
+    C -- &quot;Sí&quot; --&gt; E[&quot;Agregados separados&lt;br/&gt;+ compensación explícita&quot;]
+    B -- &quot;No&quot; --&gt; F{&quot;¿Se leen&lt;br/&gt;siempre juntos?&quot;}
+    F -- &quot;Sí&quot; --&gt; G{&quot;¿Uno cambia mucho&lt;br/&gt;más que el otro?&quot;}
+    G -- &quot;No&quot; --&gt; D
+    G -- &quot;Sí&quot; --&gt; H[&quot;Separar: evita reescribir&lt;br/&gt;lo estable en cada cambio&quot;]
+    F -- &quot;No&quot; --&gt; H
 </code></pre>
+<p>Tres preguntas, en este orden: ¿cambian juntos?, ¿crecen sin límite?, ¿se leen juntos? La primera manda sobre las otras dos, porque es la única que afecta a la corrección; las otras afectan al rendimiento.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<h3 id="actualización-perdida">Actualización perdida</h3>
-<pre><code class="language-text">Sesión A                              Sesión B
-BEGIN;
-SELECT saldo FROM c WHERE id=1;  1000
-                                      BEGIN;
-                                      SELECT saldo FROM c WHERE id=1;  1000
-UPDATE c SET saldo=700 WHERE id=1;
-COMMIT;
-                                      UPDATE c SET saldo=500 WHERE id=1;
-                                      COMMIT;
+<p>Dominio: inscripciones a cursos, con la regla «el contador de inscritos del curso debe coincidir con el número de inscripciones».</p>
+<p><strong>Diseño A — agregado por curso:</strong></p>
+<pre><code class="language-json">{
+  &quot;_id&quot;: &quot;curso-2026-1-bd&quot;,
+  &quot;nombre&quot;: &quot;Bases de datos&quot;,
+  &quot;periodo&quot;: &quot;2026-1&quot;,
+  &quot;cupo&quot;: 40,
+  &quot;inscritos&quot;: 3,
+  &quot;inscripciones&quot;: [
+    {&quot;student_id&quot;: 11, &quot;nota&quot;: 6.0},
+    {&quot;student_id&quot;: 12, &quot;nota&quot;: null},
+    {&quot;student_id&quot;: 13, &quot;nota&quot;: 5.5}
+  ]
+}
 </code></pre>
-<p>Resultado: 500. Correcto: 200.</p>
+<p>Inscribir a alguien es <strong>una</strong> escritura atómica: se añade al arreglo y se incrementa el contador en la misma operación. La invariante no puede romperse.</p>
+<p>Problemas, con números:</p>
+<ul>
+<li><strong>Crecimiento no acotado.</strong> Con 40 inscritos es correcto. Con 5 000, cada lectura del curso trae 5 000 subdocumentos aunque solo se quiera el nombre, y cada inscripción reescribe el documento entero. MongoDB además limita el documento a 16 MB.</li>
+<li><strong>Punto caliente.</strong> Todas las inscripciones al mismo curso se serializan sobre el mismo documento. En un período de matrícula, con 200 inscripciones por segundo al curso más demandado, esa serialización es la cola entera.</li>
+<li><strong>Consulta imposible sin barrido.</strong> «Todos los cursos de un estudiante» exige recorrer todos los cursos, porque el estudiante no es la clave.</li>
+</ul>
+<p><strong>Diseño B — agregado por inscripción:</strong></p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;11:curso-2026-1-bd&quot;, &quot;student_id&quot;: 11, &quot;course_id&quot;: &quot;curso-2026-1-bd&quot;,
+ &quot;nota&quot;: 6.0, &quot;estado&quot;: &quot;activa&quot;, &quot;registrada_en&quot;: &quot;2026-03-11T12:00:00Z&quot;}
+</code></pre>
+<p>Escala en escritura y permite indexar por estudiante y por curso. A cambio, el contador de inscritos ya <strong>no</strong> puede mantenerse atómicamente: está en otro documento.</p>
+<p>Las tres respuestas honestas a ese hueco:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Nivel</th>
-<th>Comportamiento</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>READ COMMITTED</code></td>
-<td>Ocurre: B pisa a A</td>
-</tr>
-<tr>
-<td><code>REPEATABLE READ</code> (PG)</td>
-<td>B aborta con <code>could not serialize access</code></td>
-</tr>
-<tr>
-<td><code>READ COMMITTED</code> + <code>SELECT ... FOR UPDATE</code></td>
-<td>B espera a A y lee 700</td>
-</tr>
-<tr>
-<td><code>UPDATE c SET saldo = saldo - 500</code></td>
-<td>El motor lee y escribe en una operación: no ocurre</td>
-</tr>
-</tbody>
-</table></div>
-<p>La última fila es la más importante: <strong>una única sentencia atómica de lectura-modificación elimina la anomalía sin cambiar el nivel de aislamiento</strong>. Es la solución más barata y la más ignorada.</p>
-<h3 id="sesgo-de-escritura">Sesgo de escritura</h3>
-<p>La anomalía que sobrevive al aislamiento de instantánea. Regla: <em>«siempre debe haber al menos un profesor asignado a cada curso»</em>. Hay dos, Ana y Luis, y ambos piden baja a la vez.</p>
-<pre><code class="language-text">Sesión A (Ana)                              Sesión B (Luis)
-BEGIN ISOLATION LEVEL REPEATABLE READ;
-SELECT COUNT(*) FROM teaching
-  WHERE course_id='bd';           -- 2
-                                            BEGIN ISOLATION LEVEL REPEATABLE READ;
-                                            SELECT COUNT(*) FROM teaching
-                                              WHERE course_id='bd';       -- 2
--- 2 &gt;= 2, puedo darme de baja
-DELETE FROM teaching
-  WHERE course_id='bd' AND teacher_id=1;
-                                            -- 2 &gt;= 2, puedo darme de baja
-                                            DELETE FROM teaching
-                                              WHERE course_id='bd' AND teacher_id=2;
-COMMIT;
-                                            COMMIT;
-</code></pre>
-<p><strong>Resultado: cero profesores.</strong> Ninguna transacción escribió sobre lo que la otra escribió —A borró la fila 1 y B la 2—, así que no hay conflicto de escritura que detectar. Cada una leyó un estado en el que su acción era válida y juntas rompieron la invariante.</p>
-<p>Es el ejemplo canónico y el mejor argumento contra «con instantánea basta».</p>
-<p>Tres soluciones:</p>
-<pre><code class="language-sql">-- 1. SERIALIZABLE: PostgreSQL detecta el ciclo y aborta una
-BEGIN ISOLATION LEVEL SERIALIZABLE;
--- ... la segunda en confirmar recibe:
--- ERROR: could not serialize access due to read/write dependencies among transactions
-</code></pre>
-<pre><code class="language-sql">-- 2. Materializar el conflicto: bloquear la fila padre
-BEGIN;
-SELECT id FROM courses WHERE id='bd' FOR UPDATE;   -- las dos compiten por ESTA fila
-SELECT COUNT(*) FROM teaching WHERE course_id='bd';
-DELETE FROM teaching WHERE course_id='bd' AND teacher_id=1;
-COMMIT;
-</code></pre>
-<pre><code class="language-sql">-- 3. Convertirlo en una restricción declarativa que el motor comprueba
---    (contador con CHECK, o restricción diferida: clase 013)
-</code></pre>
-<p><code>SERIALIZABLE</code> es la solución correcta y tiene un costo: transacciones abortadas que la aplicación <strong>debe</strong> reintentar. Cualquier código que use <code>SERIALIZABLE</code> sin bucle de reintento está incompleto.</p>
-<h3 id="comprobarlo-empíricamente">Comprobarlo empíricamente</h3>
-<p>El método de Hermitage (Kleppmann) es un conjunto de guiones de dos sesiones, uno por anomalía, que se ejecutan contra cada motor y cada nivel. El resultado es una tabla de hechos, no de promesas de la documentación.</p>
-<p>Reproducirlo con dos terminales sobre el <code>docker-compose</code> del repositorio es el laboratorio de esta clase.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Nivel</th>
-<th>Evita</th>
-<th>Permite</th>
+<th>Respuesta</th>
+<th>Garantía</th>
 <th>Costo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>READ UNCOMMITTED</code></td>
-<td>—</td>
-<td>Todo</td>
-<td>Ninguno</td>
+<td>Calcular contando al leer</td>
+<td>Exacta siempre</td>
+<td>Una agregación por lectura</td>
 </tr>
 <tr>
-<td><code>READ COMMITTED</code></td>
-<td>Lectura sucia</td>
-<td>No repetible, fantasma, perdida, sesgo</td>
-<td>Bajo</td>
+<td>Transacción multidocumento</td>
+<td>Exacta</td>
+<td>Coordinación; en clúster, latencia y contención</td>
 </tr>
 <tr>
-<td><code>REPEATABLE READ</code> / instantánea</td>
-<td>+ no repetible, fantasma, perdida</td>
-<td><strong>Sesgo de escritura</strong></td>
-<td>Abortos ocasionales</td>
-</tr>
-<tr>
-<td><code>SERIALIZABLE</code></td>
-<td>Todo</td>
-<td>—</td>
-<td>Abortos frecuentes con contención</td>
+<td>Contador eventual + reconciliación</td>
+<td>Aproximada entre reconciliaciones</td>
+<td>Barata; exige la invariante auditada</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Diseño C — híbrido, el habitual en producción:</strong></p>
+<pre><code class="language-json">{&quot;_id&quot;: &quot;curso-2026-1-bd&quot;, &quot;nombre&quot;: &quot;Bases de datos&quot;, &quot;cupo&quot;: 40,
+ &quot;inscritos_aprox&quot;: 3812, &quot;actualizado_en&quot;: &quot;2026-03-11T12:00:05Z&quot;}
+</code></pre>
+<p>Las inscripciones son documentos propios; el curso guarda un contador <strong>declaradamente aproximado</strong>. El nombre del campo comunica su semántica: quien lo lee sabe que no es una verdad transaccional. Para el control de cupo, que sí exige exactitud, se cuenta de verdad en el momento crítico.</p>
+<p><strong>La invariante, obligatoria en B y C:</strong></p>
+<pre><code class="language-javascript">db.enrollments.aggregate([
+  {$match: {estado: &quot;activa&quot;}},
+  {$group: {_id: &quot;$course_id&quot;, real: {$sum: 1}}},
+  {$lookup: {from: &quot;courses&quot;, localField: &quot;_id&quot;, foreignField: &quot;_id&quot;, as: &quot;c&quot;}},
+  {$unwind: &quot;$c&quot;},
+  {$match: {$expr: {$ne: [&quot;$real&quot;, &quot;$c.inscritos_aprox&quot;]}}}
+])
+</code></pre>
+<p>Cero resultados: coherente. Con resultados: la divergencia, cuantificada.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Diseño</th>
+<th>Atomicidad de la invariante</th>
+<th>Escala en escritura</th>
+<th>Consulta por estudiante</th>
+<th>Tamaño acotado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A: agregado por curso</td>
+<td>Total</td>
+<td>Mala (punto caliente)</td>
+<td>Mala</td>
+<td>No</td>
+</tr>
+<tr>
+<td>B: agregado por inscripción</td>
+<td>Ninguna</td>
+<td>Buena</td>
+<td>Buena</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>C: híbrido</td>
+<td>Aproximada, declarada</td>
+<td>Buena</td>
+<td>Buena</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Relacional normalizado</td>
+<td>Total (transacción)</td>
+<td>Buena</td>
+<td>Buena</td>
+<td>Sí</td>
+</tr>
+</tbody>
+</table></div>
+<p>La última fila merece atención: el modelo relacional <strong>no</strong> obliga a elegir entre atomicidad y escalabilidad de escritura mientras quepa en un nodo. Renunciar a él tiene sentido cuando ya no cabe, no antes.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Suponer que el nombre del nivel define el comportamiento.</strong> Varía entre motores.</li>
-<li><strong>Creer que instantánea es serializable.</strong> El sesgo de escritura los separa.</li>
-<li><strong>Usar <code>SERIALIZABLE</code> sin reintentos.</strong> Los abortos son parte del contrato.</li>
-<li><strong>Leer-modificar-escribir en la aplicación</strong> cuando bastaría una sentencia atómica.</li>
-<li><strong>Subir el nivel de aislamiento sin identificar la anomalía concreta.</strong> Se paga contención sin saber qué se compró.</li>
-<li><strong>Probar la concurrencia con una sola sesión.</strong> No aparece nada.</li>
+<li><strong>Agregados que crecen sin límite.</strong> Toda lista dentro de un documento necesita una cota conocida.</li>
+<li><strong>Suponer atomicidad entre documentos.</strong> No existe salvo que se pida explícitamente.</li>
+<li><strong>Elegir el agregado por cómo se lee, ignorando cómo se escribe.</strong> El punto caliente aparece después.</li>
+<li><strong>Contadores sin marcar como aproximados.</strong> Quien los lee supone exactitud.</li>
+<li><strong>Copiar el modelo relacional a documentos.</strong> Una colección por tabla con referencias reproduce las reuniones sin tener el motor que las optimiza.</li>
+<li><strong>Usar transacciones multidocumento como si fuesen gratis.</strong> En clúster tienen un costo de coordinación real.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El sesgo de escritura produce los datos imposibles que aparecen «una vez cada tantos meses» y nadie logra reproducir: dos reservas para la misma sala, un cupo excedido en uno, un turno sin nadie de guardia. Reconocer el patrón es la mitad del diagnóstico.</p>
+<p>El punto caliente por agregado demasiado grande no se ve en desarrollo: aparece el día de mayor tráfico, que es el peor día para descubrirlo. Estimar el tamaño máximo del agregado y su tasa de escritura es parte del diseño, no una optimización posterior.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Reproduce la actualización perdida y el sesgo de escritura con dos sesiones, y captura ambas trazas.</li>
-<li>Repite en dos motores y niveles distintos, y construye tu tabla de hechos.</li>
-<li>Identifica en tu sistema una invariante vulnerable al sesgo de escritura.</li>
-<li>Resuélvela de dos formas distintas y compara el costo en contención.</li>
+<li>Elige una entidad de tu dominio y propón dos fronteras de agregado distintas.</li>
+<li>Para cada una, escribe la invariante que se garantiza atómicamente y la que no.</li>
+<li>Estima el tamaño máximo del agregado y la tasa de escritura sobre el más caliente.</li>
+<li>Diseña la reconciliación para la invariante que quedó fuera y su periodicidad.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué el sesgo de escritura no lo detecta el aislamiento de instantánea?</li>
-<li>Escribe una operación de tu sistema que hoy sea lectura-modificación-escritura y conviértela en atómica.</li>
-<li>¿Qué debe hacer la aplicación al recibir un error de serialización, y por qué no basta con reintentar sin límite?</li>
-<li>Diseña el guion de dos sesiones que demuestre si tu motor permite fantasmas en su nivel por defecto.</li>
+<li>¿Por qué la frontera del agregado es la frontera de la atomicidad?</li>
+<li>Da un agregado de tu dominio que crecería sin límite y propón cómo acotarlo.</li>
+<li>Explica el criterio de Helland de idempotencia con un mensaje concreto de tu sistema.</li>
+<li>¿En qué caso concreto renunciarías al modelo relacional por uno de agregados, y con qué evidencia?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un pedido y sus líneas que cambian juntos o no cambian</p>
+<p>Un <strong>agregado</strong>, en el sentido de Evans y de Vernon, es el grupo de datos
+que se trata como una unidad: tiene una raíz —el pedido—, un límite —sus
+líneas— y un invariante que debe cumplirse siempre. Aquí el invariante es
+que el total guardado sea igual a la suma de las líneas.</p>
+<p>El caso crea el pedido con dos líneas, añade una tercera y sube el total. La
+consulta devuelve el total guardado y el calculado. Que coincidan es todo el
+ejercicio: lo interesante no es el número, sino <strong>qué mecanismo garantiza
+que nunca se separen</strong> en cada motor, y qué pasa cuando el agregado no cabe
+en la unidad atómica que ese motor ofrece.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>pedido</th>
+<th>total_guardado</th>
+<th>total_calculado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>P-1</code></td>
+<td><code>300</code></td>
+<td><code>300</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 034</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_transaction.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_transaction.html
+-- nota: el limite del agregado es una CONVENCION, no una propiedad del
+--       esquema. Nada impide un UPDATE suelto que rompa el invariante.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id    TEXT PRIMARY KEY,
+    total INTEGER NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id TEXT NOT NULL REFERENCES pedidos(id),
+    producto  TEXT NOT NULL,
+    importe   INTEGER NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El agregado se reparte en dos tablas y la transacción lo mantiene entero: <code>BEGIN</code>/<code>COMMIT</code> es la frontera. En un motor relacional el límite del agregado lo decide el diseñador, no el almacén.</li>
+<li><strong>Por qué no:</strong> Precisamente por eso el límite es invisible: nada en el esquema dice que <code>pedidos</code> y <code>lineas</code> son una unidad, y basta un <code>UPDATE</code> suelto sin transacción para romper el invariante sin que nada proteste.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_transaction.html">https://sqlite.org/lang_transaction.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id    VARCHAR PRIMARY KEY,
+    total INTEGER NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id VARCHAR NOT NULL,
+    producto  VARCHAR NOT NULL,
+    importe   INTEGER NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene transacciones ACID sobre el archivo, así que el mismo guion sirve para comprobar el invariante sobre un volcado analítico.</li>
+<li><strong>Por qué no:</strong> Un solo proceso escritor: el agregado está a salvo de una escritura a medias, pero no de dos aplicaciones que quieran escribirlo a la vez, porque esa situación sencillamente no está contemplada.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/transactions.html">https://duckdb.org/docs/stable/sql/statements/transactions.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+-- nota: el invariante se puede llevar al esquema con una restriccion diferible
+--       comprobada al COMMIT, en vez de dejarlo en manos de quien escriba.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lineas, pedidos;
+
+CREATE TABLE pedidos (
+    id    text PRIMARY KEY,
+    total integer NOT NULL
+);
+CREATE TABLE lineas (
+    pedido_id text NOT NULL REFERENCES pedidos(id),
+    producto  text NOT NULL,
+    importe   integer NOT NULL,
+    PRIMARY KEY (pedido_id, producto)
+);
+
+-- El agregado nace entero, dentro de UNA transaccion.
+BEGIN;
+INSERT INTO pedidos (id, total) VALUES ('P-1', 200);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'teclado', 120);
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'raton', 80);
+COMMIT;
+
+-- Y cambia entero: la linea nueva y el total suben juntos o no sube ninguno.
+BEGIN;
+INSERT INTO lineas (pedido_id, producto, importe) VALUES ('P-1', 'cable', 100);
+UPDATE pedidos SET total = total + 100 WHERE id = 'P-1';
+COMMIT;
+
+-- === consulta ===
+-- El invariante del agregado: el total guardado y la suma de sus lineas. Si
+-- alguna vez dejan de coincidir, la transaccion no estaba haciendo su trabajo.
+SELECT p.id AS pedido,
+       p.total AS total_guardado,
+       (SELECT SUM(l.importe) FROM lineas l WHERE l.pedido_id = p.id) AS total_calculado
+FROM pedidos p
+ORDER BY p.id;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La transacción abarca cuantas tablas haga falta, con aislamiento configurable y con restricciones diferibles: el límite del agregado puede ser tan grande como el problema pida, y el invariante se puede comprobar al confirmar en vez de en cada sentencia.</li>
+<li><strong>Por qué no:</strong> Esa libertad invita a agregados enormes: una transacción que toca diez tablas retiene bloqueos y versiones durante todo su recorrido, y en concurrencia alta convierte el invariante en una cola.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-transactions.html">https://www.postgresql.org/docs/current/tutorial-transactions.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
+// nota: aqui NO hay transaccion, y no hace falta. El pedido y sus lineas son un
+//       solo documento, y la escritura de un documento es atomica: $push y $inc
+//       en la misma orden se aplican juntos o no se aplica ninguno.
+
+// === preparacion ===
+db.pedidos.drop();
+
+db.pedidos.insertOne({
+  _id: &quot;P-1&quot;,
+  total: 200,
+  lineas: [
+    { producto: &quot;teclado&quot;, importe: 120 },
+    { producto: &quot;raton&quot;, importe: 80 },
+  ],
+});
+
+// Una sola orden: la linea nueva y el total suben juntos.
+db.pedidos.updateOne(
+  { _id: &quot;P-1&quot; },
+  {
+    $push: { lineas: { producto: &quot;cable&quot;, importe: 100 } },
+    $inc: { total: 100 },
+  },
+);
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $project: { _id: 0, pedido: &quot;$_id&quot;, total_guardado: &quot;$total&quot;,
+                  total_calculado: { $sum: &quot;$lineas.importe&quot; } } },
+    { $sort: { pedido: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.pedido + &quot;|&quot; + d.total_guardado + &quot;|&quot; + d.total_calculado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí el agregado es literal: pedido y líneas son <strong>un documento</strong>, y la escritura de un documento es atómica por definición. El límite del agregado deja de ser una convención y pasa a ser una propiedad del almacén, sin transacción que declarar.</li>
+<li><strong>Por qué no:</strong> Ese límite es también una jaula: el documento no puede pasar de 16 MB, un pedido con cien mil líneas no cabe, y todo lo que cruce la frontera del documento vuelve a necesitar transacciones de varios documentos, que aquí cuestan más que en un motor relacional.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">https://www.mongodb.com/docs/manual/core/write-operations-atomicity/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/programmability/eval-intro/
+# nota: el script Lua es la unidad atomica: se ejecuta entero, sin que ninguna
+#       otra orden se cuele en medio. Es lo que permite que la linea nueva y el
+#       total suban juntos. Lo que NO garantiza es durabilidad: atomico y
+#       durable son dos propiedades distintas.
+
+# === preparacion ===
+FLUSHDB
+HSET pedido:P-1 total 200
+HSET pedido:P-1:linea teclado 120
+HSET pedido:P-1:linea raton 80
+
+# Anadir la linea y subir el total, sin estado intermedio observable.
+EVAL &quot;redis.call('HSET','pedido:P-1:linea','cable',100) redis.call('HINCRBY','pedido:P-1','total',100) return 1&quot; 0
+
+# === consulta ===
+EVAL &quot;local t=redis.call('HGET','pedido:P-1','total') local ls=redis.call('HVALS','pedido:P-1:linea') local s=0 for _,v in ipairs(ls) do s=s+tonumber(v) end return {'P-1|'..t..'|'..s}&quot; 0
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un script Lua se ejecuta entero y sin interrupciones: es la unidad atómica de Redis y permite actualizar varias claves del mismo agregado sin que nadie vea un estado intermedio.</li>
+<li><strong>Por qué no:</strong> La atomicidad no es durabilidad: si el servidor cae antes de volcar, el agregado consistente que se acaba de escribir puede no existir al arrancar. Y en un clúster, las claves del agregado tienen que compartir ranura (<code>hash tag</code>) o el script ni siquiera se puede ejecutar.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/programmability/eval-intro/">https://redis.io/docs/latest/develop/programmability/eval-intro/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>Un elemento es la unidad atómica, y está limitado a 400 KB. Un agregado que no quepa ahí necesita <code>TransactWriteItems</code>, que admite como mucho 100 elementos, cuesta el doble de capacidad de escritura y no admite dos operaciones sobre el mismo elemento.</td>
+<td>Diseñar el agregado para que quepa en un elemento, o repartirlo en la misma clave de partición y aceptar que la coherencia entre sus elementos la comprueba un proceso posterior.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><code>BATCH</code> no es una transacción: no hay aislamiento entre particiones y no se puede deshacer. Solo dentro de <strong>una</strong> partición la escritura por lotes es atómica y aislada; en cuanto el agregado toca dos particiones, se puede observar a medias.</td>
+<td>Modelar el agregado entero dentro de una sola partición —el pedido como clave, las líneas como filas de agrupamiento— y usar <code>BATCH</code> únicamente dentro de ella.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -375,31 +653,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Hal Berenson, Phil Bernstein, Jim Gray, Jim Melton, Elizabeth O'Neil, Patrick O'Neil</strong> (1995). <a href="https://arxiv.org/abs/cs/0701157">A Critique of ANSI SQL Isolation Levels</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/223784.223785">10.1145/223784.223785</a>.<br />
-  Demuestra que los niveles de la norma no definen sin ambigüedad las anomalías e introduce snapshot isolation.</li>
-<li><strong>Atul Adya</strong> (1999). <a href="http://pmg.csail.mit.edu/papers/adya-phd.pdf">Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions</a>. Tesis doctoral, MIT.<br />
-  Definición de los fenomenos de aislamiento independiente de la implementación.</li>
-<li><strong>Martin Kleppmann</strong> (2014). <a href="https://github.com/ept/hermitage">Hermitage: Testing Transaction Isolation Levels</a>.<br />
-  Guion reproducible que muestra que anomalías permite cada motor en cada nivel.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/mvcc.html">PostgreSQL: Concurrency Control</a>.<br />
-  Niveles de aislamiento tal como los implementa PostgreSQL, no como los define la norma.</li>
-<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/isolation.html">SQLite: Isolation</a>.<br />
-  Que garantiza y que no garantiza SQLite entre conexiones.</li>
+<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
+  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
+<li><strong>Pat Helland</strong> (2007). <a href="https://www.cidrdb.org/cidr2007/papers/cidr07p15.pdf">Life beyond Distributed Transactions: An Apostate's Opinion</a>. CIDR.<br />
+  Entidades, actividades y por qué las transacciones distribuidas no escalan.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="033.html">← Anterior</a> · <a href="035.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="034">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="033.html"><span class="sentido">← Anterior · 033</span>ACID: qué garantiza cada letra y quién la implementa</a>
-<a class="siguiente" href="035.html"><span class="sentido">Siguiente · 035 →</span>Bloqueo en dos fases, MVCC e instantáneas</a>
+<a class="anterior" href="033.html"><span class="sentido">← Anterior · 033</span>SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a>
+<a class="siguiente" href="035.html"><span class="sentido">Siguiente · 035 →</span>Modelado documental: incrustar o referenciar</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

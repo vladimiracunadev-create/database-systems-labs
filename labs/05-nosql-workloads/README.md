@@ -5,8 +5,8 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+. MongoDB y Redis, opcionales
 · **Marca de éxito:** `NOSQL_LAB_OK`
-· **Partes:** [05](../../classes/part-05-documentos-y-clave-valor/README.md) ·
-[06](../../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md)
+· **Partes:** [05](../../classes/part-06-documentos-y-clave-valor/README.md) ·
+[06](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -85,8 +85,8 @@ Redis, comprueba el comportamiento de `EXPIRE` y la expiración perezosa frente 
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [024–027](../../classes/part-05-documentos-y-clave-valor/README.md) y
-  [029 — Columnas anchas: modelar desde la consulta](../../classes/part-06-grafos-columnas-tiempo-y-busqueda/029-columnas-anchas-modelar-desde-la-consulta/README.md).
+- **Clases:** [024–027](../../classes/part-06-documentos-y-clave-valor/README.md) y
+  [029 — Columnas anchas: modelar desde la consulta](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/README.md).
 - **Rutas:** [Ingeniero de datos](../../rutas/ingenieria-de-datos.md),
   [Ingeniero de IA aplicada y recuperación](../../rutas/ia-y-recuperacion.md),
   [Desarrollador de aplicaciones](../../rutas/desarrollo-de-aplicaciones.md).

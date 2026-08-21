@@ -79,8 +79,11 @@ SERVICIOS: dict[str, dict] = {
         "entorno": ["PGOPTIONS=--search_path={ns}"],
         "preparacion": ["psql", "-U", "learner", "-d", "learning",
                         "-v", "ON_ERROR_STOP=1", "-q", "-f", "-"],
+        # `-q` calla los mensajes de estado («SET», «INSERT 0 1») sin tocar el
+        # resultado: sin el, una sentencia SET dentro de la consulta apareceria
+        # como una fila mas.
         "consulta": ["psql", "-U", "learner", "-d", "learning", "-v", "ON_ERROR_STOP=1",
-                     "-At", "-F", "|", "-f", "-"],
+                     "-q", "-At", "-F", "|", "-f", "-"],
         "separador": "|",
     },
     "mysql": {

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Control de acceso: privilegio mínimo, roles y seguridad por fila. Parte 10: Operación, seguridad y gobierno.">
+<meta name="description" content="LSM-Tree, compactación y amplificación de escritura. Parte 09: Almacenamiento, índices y planes.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/050.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="050 — Control de acceso: privilegio mínimo, roles y seguridad por fila · Database Systems Labs">
-<meta property="og:description" content="Control de acceso: privilegio mínimo, roles y seguridad por fila. Parte 10: Operación, seguridad y gobierno.">
+<meta property="og:title" content="050 — LSM-Tree, compactación y amplificación de escritura · Database Systems Labs">
+<meta property="og:description" content="LSM-Tree, compactación y amplificación de escritura. Parte 09: Almacenamiento, índices y planes.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/050.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "050 — Control de acceso: privilegio mínimo, roles y seguridad por fila", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["privilegio mínimo", "rol", "seguridad por fila", "separación de funciones"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>050 — Control de acceso: privilegio mínimo, roles y seguridad por fila · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "050 — LSM-Tree, compactación y amplificación de escritura", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["memtable", "SSTable", "compactación", "amplificación de escritura", "filtro de Bloom"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>050 — LSM-Tree, compactación y amplificación de escritura · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,226 +49,398 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-10.html">Parte 10 · Operación, seguridad y gobierno</a>
+  <a href="parte-09.html">Parte 09 · Almacenamiento, índices y planes</a>
   <span aria-hidden="true">/</span><span>Clase 050</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="050--control-de-acceso-privilegio-mínimo-roles-y-seguridad-por-fila">050 — Control de acceso: privilegio mínimo, roles y seguridad por fila</h1>
+<h1 id="050--lsm-tree-compactación-y-amplificación-de-escritura">050 — LSM-Tree, compactación y amplificación de escritura</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-09-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-050%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 10 — Operación, seguridad y gobierno · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>privilegio mínimo</code> · <code>rol</code> · <code>seguridad por fila</code> · <code>separación de funciones</code></p>
+<p>Parte 09 — Almacenamiento, índices y planes · Avanzado ·
+3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code>, <code>redis</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>memtable</code> · <code>SSTable</code> · <code>compactación</code> · <code>amplificación de escritura</code> · <code>filtro de Bloom</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 050&quot;]
+    C --&gt; K1[&quot;memtable&quot;]
+    C --&gt; K2[&quot;SSTable&quot;]
+    C --&gt; K3[&quot;compactación&quot;]
+    C --&gt; K4[&quot;amplificación de escritura&quot;]
+    C --&gt; K5[&quot;filtro de Bloom&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Declarar quién puede ver y hacer qué, en el motor y no solo en la aplicación. El control de acceso que vive únicamente en el código se salta con una consola y unas credenciales.</p>
+<p>Entender la otra gran familia de estructuras de almacenamiento. El LSM-Tree sostiene Cassandra, RocksDB, ScyllaDB y LevelDB, y su compromiso es el inverso al del B-Tree.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Diseñar roles con privilegio mínimo y separación de funciones.</li>
-<li>Distinguir privilegios de objeto, de columna y de fila.</li>
-<li>Implementar seguridad por fila para multiinquilino.</li>
-<li>Reconocer los riesgos de <code>SECURITY DEFINER</code> y del rol <code>PUBLIC</code>.</li>
-<li>Auditar los privilegios efectivos de una base.</li>
+<li>Describir el camino de una escritura y de una lectura en un LSM.</li>
+<li>Definir y calcular las tres amplificaciones: escritura, lectura y espacio.</li>
+<li>Explicar el papel del filtro de Bloom y calcular su tasa de falsos positivos.</li>
+<li>Comparar compactación por niveles y por tamaños.</li>
+<li>Elegir entre B-Tree y LSM según la carga.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="privilegio-mínimo">Privilegio mínimo</h3>
-<p>Cada actor recibe <strong>solo</strong> lo que necesita. NIST SP 800-53 lo formaliza como control AC-6; OWASP lo sitúa como A01 (control de acceso roto), la categoría número uno de su Top 10.</p>
-<p>La estructura habitual separa el <strong>rol</strong> (permisos) del <strong>usuario</strong> (identidad):</p>
-<pre><code class="language-sql">-- Roles por función, sin capacidad de conectarse
-CREATE ROLE app_lectura   NOLOGIN;
-CREATE ROLE app_escritura NOLOGIN;
-CREATE ROLE app_migracion NOLOGIN;
-
-GRANT USAGE ON SCHEMA public TO app_lectura, app_escritura, app_migracion;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_lectura;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_escritura;
-GRANT ALL ON SCHEMA public TO app_migracion;
-
--- Los futuros objetos también, o el rol se queda obsoleto en la próxima migración
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT SELECT ON TABLES TO app_lectura;
-
--- Usuarios: identidades que se conectan
-CREATE USER svc_api        LOGIN PASSWORD '...' IN ROLE app_escritura;
-CREATE USER svc_informes   LOGIN PASSWORD '...' IN ROLE app_lectura;
-CREATE USER svc_migraciones LOGIN PASSWORD '...' IN ROLE app_migracion;
+<h3 id="el-camino-de-la-escritura">El camino de la escritura</h3>
+<pre><code class="language-text">1. Registro de confirmación (append secuencial, para durabilidad)
+2. Memtable: estructura ordenada en memoria
+3. Cuando la memtable se llena → se vuelca como SSTable inmutable, ordenada
+4. Las SSTables se fusionan periódicamente (compactación)
 </code></pre>
-<p>Tres cuentas con tres alcances distintos. Si se filtran las credenciales de <code>svc_informes</code>, el atacante lee; no borra.</p>
-<p><strong><code>ALTER DEFAULT PRIVILEGES</code> es imprescindible:</strong> sin él, cada tabla nueva creada por una migración queda invisible para el rol de lectura, y alguien acaba «arreglándolo» con un <code>GRANT ALL</code>.</p>
-<h3 id="errores-estructurales-de-postgresql-por-defecto">Errores estructurales de PostgreSQL por defecto</h3>
-<pre><code class="language-sql">-- Hasta PG 14, cualquiera podía crear objetos en el esquema public
-REVOKE CREATE ON SCHEMA public FROM PUBLIC;
--- Cualquiera puede conectarse a cualquier base
-REVOKE CONNECT ON DATABASE mi_base FROM PUBLIC;
+<p>Todo lo que toca el disco es <strong>secuencial</strong>. No hay escritura aleatoria en el camino crítico, y ahí está la ventaja: una escritura secuencial es órdenes de magnitud más barata que una aleatoria.</p>
+<p>Comparación con el B-Tree, que debe localizar la página correcta, modificarla en su sitio y posiblemente dividirla: escritura <strong>aleatoria</strong>, más el registro.</p>
+<h3 id="el-camino-de-la-lectura">El camino de la lectura</h3>
+<pre><code class="language-text">1. Buscar en la memtable
+2. Si no está, buscar en cada SSTable, de la más nueva a la más antigua
+3. Filtro de Bloom por SSTable para descartar sin leer
+4. Índice disperso dentro de la SSTable elegida
 </code></pre>
-<p><code>PUBLIC</code> no es «los administradores»: es <strong>todo rol existente</strong>. Los CIS Benchmarks incluyen ambas revocaciones entre sus controles de configuración endurecida.</p>
-<h3 id="seguridad-por-fila">Seguridad por fila</h3>
-<p>Los privilegios de tabla son de todo o nada. Para multiinquilino hace falta filtrar por fila <strong>en el motor</strong>:</p>
-<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;   -- aplicar también al dueño
+<p>Aquí está el precio: una clave inexistente puede exigir consultar <strong>todas</strong> las SSTables. El filtro de Bloom es lo que hace viable el modelo.</p>
+<h3 id="filtro-de-bloom">Filtro de Bloom</h3>
+<p>Estructura probabilística que responde «seguro que no está» o «puede que esté», nunca «seguro que sí».</p>
+<pre><code class="language-text">tasa de falsos positivos ≈ (1 - e^(-kn/m))^k
 
-CREATE POLICY inquilino_aislado ON enrollments
-  USING       (tenant_id = current_setting('app.tenant_id')::int)
-  WITH CHECK  (tenant_id = current_setting('app.tenant_id')::int);
+con 10 bits por clave y k = 7 funciones hash:  ≈ 0,82 %
 </code></pre>
-<ul>
-<li><code>USING</code> filtra lo que se <strong>lee</strong> (y lo que se puede actualizar o borrar).</li>
-<li><code>WITH CHECK</code> valida lo que se <strong>escribe</strong>: sin él, un inquilino podría insertar filas atribuidas a otro.</li>
-</ul>
-<p>La aplicación fija la variable al tomar la conexión del agrupador:</p>
-<pre><code class="language-python">with pool.connection() as conn:
-    conn.execute(&quot;SELECT set_config('app.tenant_id', %s, true)&quot;, (tenant,))
-    # `true` = local a la transacción: se limpia al terminar, y una conexión
-    # reutilizada del agrupador no hereda el inquilino de la petición anterior.
-</code></pre>
-<p>El tercer argumento <code>true</code> es la diferencia entre un aislamiento correcto y una fuga entre inquilinos con agrupadores de conexiones.</p>
-<p><strong>Advertencia:</strong> la seguridad por fila <strong>no</strong> se aplica a superusuarios ni a roles con <code>BYPASSRLS</code>. La aplicación nunca debe conectarse como superusuario, aquí menos que nunca.</p>
-<h3 id="security-definer"><code>SECURITY DEFINER</code></h3>
-<p>Una función <code>SECURITY DEFINER</code> se ejecuta con los privilegios de quien la creó, no de quien la llama. Es útil y es la vía habitual de escalada de privilegios si se escribe mal:</p>
-<pre><code class="language-sql">CREATE FUNCTION resumen_curso(cid int) RETURNS TABLE(...) AS $$
-  SELECT ... FROM enrollments WHERE course_id = cid;
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, public;
-</code></pre>
-<p><code>SET search_path</code> es obligatorio: sin él, quien llama puede crear un objeto en un esquema propio que sombree al real y hacer que la función ejecute su código con privilegios ajenos.</p>
-<pre><code class="language-mermaid">flowchart TD
-    U[&quot;Petición&quot;] --&gt; A[&quot;Autenticación&lt;br/&gt;quién eres&quot;]
-    A --&gt; C[&quot;Conexión con usuario&lt;br/&gt;de mínimo privilegio&quot;]
-    C --&gt; R[&quot;Roles: qué operaciones&quot;]
-    R --&gt; O[&quot;Privilegios de objeto&lt;br/&gt;tabla, columna&quot;]
-    O --&gt; RLS[&quot;Política por fila&lt;br/&gt;qué filas&quot;]
-    RLS --&gt; D[(&quot;Datos&quot;)]
-    RLS -.-&gt;|&quot;no se aplica a&quot;| SU[&quot;superusuario · BYPASSRLS&quot;]
-    O --&gt; AUD[&quot;Registro de auditoría&quot;]
-</code></pre>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Plataforma multiinquilino: cada institución ve solo sus datos. Además, los docentes ven las notas de sus cursos y los estudiantes solo las propias.</p>
-<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;
-
--- Aislamiento entre instituciones: se aplica SIEMPRE, encima de todo lo demás
-CREATE POLICY p_inquilino ON enrollments
-  AS RESTRICTIVE
-  USING (tenant_id = current_setting('app.tenant_id')::int);
-
--- Un estudiante ve sus propias inscripciones
-CREATE POLICY p_estudiante ON enrollments
-  FOR SELECT TO rol_estudiante
-  USING (student_id = current_setting('app.user_id')::int);
-
--- Un docente ve las de los cursos que dicta
-CREATE POLICY p_docente ON enrollments
-  FOR SELECT TO rol_docente
-  USING (EXISTS (SELECT 1 FROM teaching t
-                 WHERE t.course_id = enrollments.course_id
-                   AND t.teacher_id = current_setting('app.user_id')::int));
-
--- Y solo el docente puede calificar, solo sus cursos
-CREATE POLICY p_docente_califica ON enrollments
-  FOR UPDATE TO rol_docente
-  USING      (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
-                        AND t.teacher_id = current_setting('app.user_id')::int))
-  WITH CHECK (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
-                        AND t.teacher_id = current_setting('app.user_id')::int));
-</code></pre>
-<p><strong>Cómo se combinan las políticas</strong> —esto es lo que se entiende mal—:</p>
-<ul>
-<li>Las políticas <strong>permisivas</strong> (por defecto) se combinan con <strong>OR</strong>: basta que una permita.</li>
-<li>Las <strong>restrictivas</strong> se combinan con <strong>AND</strong>: todas deben permitir.</li>
-</ul>
-<p>Por eso <code>p_inquilino</code> es <code>RESTRICTIVE</code>: garantiza que ninguna política permisiva futura pueda saltarse el aislamiento entre instituciones. Si fuera permisiva, añadir mañana una política de «administrador ve todo» abriría un agujero entre inquilinos.</p>
-<p><strong>Privilegios de columna</strong> para datos sensibles:</p>
-<pre><code class="language-sql">REVOKE SELECT ON students FROM app_lectura;
-GRANT  SELECT (id, nombre, email) ON students TO app_lectura;   -- sin RUT ni dirección
-</code></pre>
-<p><strong>Verificación, que es lo que convierte esto en ingeniería:</strong></p>
-<pre><code class="language-sql">SET app.tenant_id = '1';
-SET app.user_id   = '11';
-SET ROLE rol_estudiante;
-
-SELECT count(*) FROM enrollments;             -- solo las del estudiante 11
-SELECT count(*) FROM enrollments WHERE student_id &lt;&gt; 11;   -- debe ser 0
-INSERT INTO enrollments (tenant_id, student_id, course_id) VALUES (2, 11, 1);
--- ERROR: new row violates row-level security policy
-RESET ROLE;
-</code></pre>
-<p>Estas comprobaciones deben ser <strong>pruebas automatizadas</strong>. Una política de seguridad sin prueba es una intención.</p>
-<p><strong>Auditoría de privilegios efectivos:</strong></p>
-<pre><code class="language-sql">SELECT grantee, table_name, string_agg(privilege_type, ', ') AS privilegios
-FROM information_schema.role_table_grants
-WHERE table_schema = 'public'
-GROUP BY grantee, table_name ORDER BY grantee, table_name;
-
-SELECT rolname, rolsuper, rolbypassrls, rolcreatedb FROM pg_roles
-WHERE rolsuper OR rolbypassrls;    -- debe ser una lista muy corta y conocida
-</code></pre>
-<h2 id="comparación">Comparación</h2>
+<p>Con 10 SSTables y 0,82 % de falsos positivos, una lectura de clave inexistente lee de media 0,082 SSTables en vez de 10. Un 1,25 % de memoria adicional elimina el 99 % del trabajo inútil.</p>
+<h3 id="las-tres-amplificaciones">Las tres amplificaciones</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Necesidad</th>
-<th>Mecanismo</th>
+<th>Amplificación</th>
+<th>Definición</th>
+<th>B-Tree</th>
+<th>LSM</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Servicio que solo lee</td>
-<td>Rol con <code>SELECT</code></td>
+<td><strong>Escritura</strong></td>
+<td>Bytes escritos al disco / bytes lógicos</td>
+<td>~2–3×</td>
+<td>10–30× (por niveles)</td>
 </tr>
 <tr>
-<td>Ocultar columnas sensibles</td>
-<td>Privilegios de columna o vista</td>
+<td><strong>Lectura</strong></td>
+<td>Páginas leídas / mínimo necesario</td>
+<td>~1×</td>
+<td>1–N según SSTables</td>
 </tr>
 <tr>
-<td>Aislar inquilinos</td>
-<td>Política restrictiva por fila</td>
+<td><strong>Espacio</strong></td>
+<td>Espacio ocupado / datos vivos</td>
+<td>1,3–2× (fragmentación)</td>
+<td>1,1× (niveles) a 2× (tamaños)</td>
+</tr>
+</tbody>
+</table></div>
+<p>El dato contraintuitivo: <strong>el LSM amplifica más la escritura</strong>, porque cada dato se reescribe en cada compactación que lo mueve de nivel. Su ventaja no es escribir menos bytes: es escribirlos <strong>secuencialmente</strong>, lo que en la práctica rinde mucho más.</p>
+<h3 id="estrategias-de-compactación">Estrategias de compactación</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Estrategia</th>
+<th>Amplificación de escritura</th>
+<th>De lectura</th>
+<th>De espacio</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Por niveles</strong></td>
+<td>Alta (~10–30×)</td>
+<td>Baja (~1 SSTable por nivel)</td>
+<td>Baja (~1,1×)</td>
+<td>Predomina la lectura</td>
 </tr>
 <tr>
-<td>Un usuario ve solo lo suyo</td>
-<td>Política permisiva por fila</td>
+<td><strong>Por tamaños</strong></td>
+<td>Baja (~4–10×)</td>
+<td>Alta (varias SSTables)</td>
+<td>Alta (~2×)</td>
+<td>Predomina la escritura</td>
 </tr>
 <tr>
-<td>Operación privilegiada acotada</td>
-<td><code>SECURITY DEFINER</code> con <code>search_path</code> fijo</td>
+<td><strong>Temporal</strong></td>
+<td>Muy baja</td>
+<td>Baja con filtro temporal</td>
+<td>Baja</td>
+<td>Series temporales con TTL</td>
+</tr>
+</tbody>
+</table></div>
+<p>La estrategia temporal es la correcta para datos con expiración: las SSTables agrupan por ventana temporal y expirar es eliminar archivos enteros, sin compactar nada.</p>
+<h3 id="lápidas">Lápidas</h3>
+<p>Borrar en un LSM no borra: escribe una <strong>lápida</strong> (marca de borrado). El dato desaparece de verdad cuando una compactación fusiona la lápida con el valor original.</p>
+<p>Consecuencia práctica y frecuente: una tabla de la que se borra mucho puede <strong>crecer</strong> tras los borrados, y las lecturas se vuelven más lentas porque hay que leer y descartar lápidas. En Cassandra, una consulta de rango que atraviesa miles de lápidas es una causa habitual de tiempos agotados.</p>
+<pre><code class="language-mermaid">flowchart TD
+    W[&quot;Escritura&quot;] --&gt; CL[&quot;Registro de confirmación&lt;br/&gt;(secuencial)&quot;]
+    W --&gt; MT[&quot;Memtable&lt;br/&gt;(memoria, ordenada)&quot;]
+    MT --&gt;|&quot;se llena&quot;| L0[&quot;SSTable nivel 0&quot;]
+    L0 --&gt;|&quot;compactación&quot;| L1[&quot;Nivel 1&quot;]
+    L1 --&gt;|&quot;compactación&quot;| L2[&quot;Nivel 2&quot;]
+    R[&quot;Lectura&quot;] --&gt; MT
+    R --&gt; BF{&quot;Filtro de Bloom&lt;br/&gt;por SSTable&quot;}
+    BF -- &quot;seguro que no&quot; --&gt; SK[&quot;Saltar&quot;]
+    BF -- &quot;puede que sí&quot; --&gt; IX[&quot;Índice disperso&lt;br/&gt;→ leer bloque&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Carga: 50 000 escrituras/s de eventos, lecturas por clave puntual y consultas de rango por tiempo.</p>
+<p><strong>Con B-Tree</strong> (PostgreSQL, tabla con índice sobre <code>(sensor_id, medido_en)</code>):</p>
+<pre><code class="language-text">Por cada inserción:
+  - registro WAL:                     secuencial
+  - página de datos:                  aleatoria (o al final si hay correlación)
+  - página de hoja del índice:        ALEATORIA
+  - división de página ocasional:     escrituras extra
+Amplificación ≈ 2-3×, pero con componente ALEATORIO dominante
+</code></pre>
+<p>Con 50 000 inserciones/s y claves dispersas, las hojas del índice se tocan en posiciones aleatorias: el cuello de botella son las IOPS aleatorias.</p>
+<p><strong>Con LSM</strong> (RocksDB o Cassandra):</p>
+<pre><code class="language-text">Por cada inserción:
+  - registro de confirmación:         secuencial
+  - memtable:                         memoria
+Compactación en segundo plano:        SECUENCIAL, fuera del camino crítico
+Amplificación ≈ 15×, todo secuencial
+</code></pre>
+<p>Escribe <strong>cinco veces más bytes</strong> y aun así sostiene mucho más caudal, porque la escritura secuencial en un SSD rinde varios GB/s frente a las decenas de miles de IOPS aleatorias.</p>
+<p><strong>El precio, en la lectura de una clave inexistente:</strong></p>
+<pre><code class="language-text">niveles: L0 (4 SSTables) + L1 (10) + L2 (100) = 114 SSTables
+sin filtro de Bloom: 114 comprobaciones, muchas con lectura de disco
+con filtro (0,82 %):  114 · 0,0082 ≈ 0,93 lecturas de media
+</code></pre>
+<p><strong>Cálculo de espacio con lápidas.</strong> 10 millones de filas de 100 B, se borra el 30 %:</p>
+<pre><code class="language-text">datos vivos                        700 MB
+lápidas (30 %, ~50 B cada una)     150 MB
+valores aún no compactados         300 MB
+total antes de compactar         1 150 MB   ← 64 % más que los datos vivos
+tras compactación completa         700 MB
+</code></pre>
+<p>Por eso <code>gc_grace_seconds</code> en Cassandra —el plazo antes de eliminar lápidas— es un parámetro operativo delicado: bajarlo libera espacio antes, y arriesga que un nodo que estuvo caído resucite datos borrados.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>B-Tree</th>
+<th>LSM-Tree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Escritura aleatoria</td>
+<td>Cara</td>
+<td>Convertida en secuencial</td>
 </tr>
 <tr>
-<td>Saber quién hizo qué</td>
-<td>Registro de auditoría</td>
+<td>Lectura puntual</td>
+<td>Óptima (log N)</td>
+<td>Buena con filtro de Bloom</td>
+</tr>
+<tr>
+<td>Consulta de rango</td>
+<td>Excelente (hojas enlazadas)</td>
+<td>Buena, requiere fusionar SSTables</td>
+</tr>
+<tr>
+<td>Amplificación de escritura</td>
+<td>2–3×</td>
+<td>10–30×</td>
+</tr>
+<tr>
+<td>Espacio</td>
+<td>Fragmentación interna</td>
+<td>Lápidas y duplicados</td>
+</tr>
+<tr>
+<td>Latencia</td>
+<td>Predecible</td>
+<td>Picos durante la compactación</td>
+</tr>
+<tr>
+<td>Motores</td>
+<td>PostgreSQL, InnoDB, SQLite</td>
+<td>Cassandra, RocksDB, ScyllaDB, LevelDB</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>La aplicación se conecta como superusuario.</strong> Ignora toda la seguridad por fila.</li>
-<li><strong>Un solo usuario para todo.</strong> Una filtración lo compromete todo.</li>
-<li><strong><code>set_config</code> sin <code>local = true</code>.</strong> El inquilino persiste en la conexión reutilizada del agrupador: fuga entre inquilinos.</li>
-<li><strong>Política sin <code>WITH CHECK</code>.</strong> Se puede escribir en el ámbito de otro.</li>
-<li><strong>Olvidar <code>ALTER DEFAULT PRIVILEGES</code>.</strong> Las tablas nuevas quedan mal permisionadas.</li>
-<li><strong><code>PUBLIC</code> con privilegios.</strong> Aplica a todos los roles.</li>
-<li><strong><code>SECURITY DEFINER</code> sin <code>search_path</code>.</strong> Escalada de privilegios.</li>
+<li><strong>Borrar masivamente en un LSM y esperar que libere espacio.</strong> Hasta la compactación, ocupa más.</li>
+<li><strong>Consultas de rango sobre zonas con muchas lápidas.</strong> Tiempos agotados difíciles de diagnosticar.</li>
+<li><strong>Estrategia de compactación por defecto para cualquier carga.</strong> Series temporales y cargas de lectura piden estrategias distintas.</li>
+<li><strong>Filtros de Bloom mal dimensionados.</strong> Pocos bits por clave disparan los falsos positivos.</li>
+<li><strong>Ignorar los picos de latencia por compactación.</strong> El percentil 99 es peor que la media.</li>
+<li><strong>Elegir LSM «porque escala».</strong> Si la carga es de lectura por rango, el B-Tree suele ganar.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las filtraciones de datos multiinquilino rara vez son un fallo del motor: son un <code>WHERE tenant_id = ?</code> que faltaba en una consulta nueva. La seguridad por fila hace que ese olvido sea imposible, porque el filtro deja de depender de que alguien lo escriba.</p>
+<p>Las incidencias de un LSM se ven como picos de latencia y de espacio, no como lentitud constante. Vigilar la deuda de compactación pendiente es la métrica que anticipa el problema, igual que la hinchazón lo es en un motor MVCC.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Diseña tres roles con privilegio mínimo para tu sistema.</li>
-<li>Implementa el aislamiento entre inquilinos con una política restrictiva.</li>
-<li>Escribe pruebas automatizadas que intenten leer y escribir fuera del ámbito.</li>
-<li>Audita los privilegios efectivos y los roles con <code>BYPASSRLS</code>.</li>
+<li>Calcula la amplificación de escritura de tu carga con compactación por niveles y por tamaños.</li>
+<li>Estima la tasa de falsos positivos de tu filtro de Bloom con la configuración actual.</li>
+<li>Reproduce el crecimiento de espacio tras un borrado masivo y mide antes y después de compactar.</li>
+<li>Argumenta con cifras si tu carga encaja mejor en B-Tree o en LSM.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué la política de inquilino debe ser restrictiva y no permisiva?</li>
-<li>Explica la fuga que produce <code>set_config</code> sin ámbito local en un agrupador.</li>
-<li>¿Qué añade <code>WITH CHECK</code> que <code>USING</code> no cubre?</li>
-<li>Da un caso donde <code>SECURITY DEFINER</code> sea necesario y cómo lo asegurarías.</li>
+<li>¿Por qué un LSM escribe más bytes y aun así sostiene más caudal de escritura?</li>
+<li>Calcula la tasa de falsos positivos con 8 bits por clave y 5 funciones hash.</li>
+<li>Explica por qué borrar puede aumentar el espacio ocupado y ralentizar las lecturas.</li>
+<li>¿Qué estrategia de compactación elegirías para datos con TTL de 30 días, y por qué?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Escribir rápido y pagarlo después, o escribir despacio y no pagarlo</p>
+<p>Un árbol B modifica la página donde está la fila: la escritura es una
+lectura, un cambio y una escritura en un sitio concreto del disco. Un árbol
+LSM no modifica nada: acumula en memoria, vuelca archivos <strong>inmutables</strong>
+ordenados y los fusiona después en segundo plano. La escritura se vuelve
+secuencial y barata; la lectura puede tener que mirar en varios archivos, y
+la fusión consume entrada y salida para siempre.</p>
+<p>De ahí las tres amplificaciones que hay que saber nombrar: de <strong>escritura</strong>
+(cada byte se reescribe varias veces al compactar), de <strong>lectura</strong> (una
+consulta toca varios archivos) y de <strong>espacio</strong> (conviven versiones y datos
+borrados que aún no se han retirado). Ninguna estructura las minimiza las
+tres: elegir es decidir cuál se paga.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">doc oficial</a></td>
+</tr>
+<tr>
+<td>ScyllaDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/lang_vacuum.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> LSM puro. Escribe en el registro de compromiso y en una tabla en memoria, vuelca SSTables inmutables y las compacta con la estrategia que se elija: por tamaño (<code>STCS</code>), por niveles (<code>LCS</code>) o por ventana temporal (<code>TWCS</code>). Esa elección es la decisión de operación más importante del motor.</li>
+<li><strong>Por qué sí:</strong> La escritura no lee nada antes: es secuencial y de latencia muy predecible, y por eso Cassandra ingiere volúmenes que un árbol B no aguantaría en una sola máquina.</li>
+<li><strong>Por qué no:</strong> Se paga en lectura y en fusión. Con <code>STCS</code> la amplificación de espacio puede llegar a exigir el doble de disco libre para compactar; con <code>LCS</code> baja la amplificación de lectura y sube mucho la de escritura. Y los datos borrados no desaparecen: son lápidas que hay que recorrer hasta la compactación.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/</a></li>
+</ul>
+<h4 id="scylladb">ScyllaDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> El mismo modelo LSM con las mismas estrategias, más una propia (<code>Incremental</code>) pensada para reducir el espacio libre necesario, y con la compactación planificada por su propio programador de entrada y salida en vez de competir con las consultas.</li>
+<li><strong>Por qué sí:</strong> Controlar el reparto de entrada y salida entre consultas y compactación es justo lo que evita el síntoma clásico: la latencia que se dispara cada vez que empieza una compactación grande.</li>
+<li><strong>Por qué no:</strong> Sigue siendo un LSM: las tres amplificaciones están ahí. Lo que cambia es quién decide cuándo se paga, no si se paga.</li>
+<li>📄 Documentación oficial: <a href="https://opensource.docs.scylladb.com/stable/kb/compaction.html">https://opensource.docs.scylladb.com/stable/kb/compaction.html</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> No tiene ninguna de las dos estructuras: los datos viven en memoria. Su persistencia AOF, sin embargo, <strong>es</strong> un registro que crece y que hay que reescribir periódicamente para compactarlo, con el mismo dilema de fondo.</li>
+<li><strong>Por qué sí:</strong> Enseña la idea desnuda: un registro que solo crece necesita, tarde o temprano, un proceso que lo reescriba. Eso es la compactación, sin árbol de por medio.</li>
+<li><strong>Por qué no:</strong> La reescritura del AOF la hace un proceso hijo que duplica memoria por copia al escribir: en el peor momento —mucha escritura— es cuando más memoria hace falta, que es exactamente cuando menos hay.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> WiredTiger usa un árbol B con escritura en un espacio nuevo: los bloques modificados no se sobrescriben en su sitio, se escriben en otro y se publican en el siguiente punto de control. Es un punto intermedio entre las dos familias.</li>
+<li><strong>Por qué sí:</strong> Evita la escritura parcial de páginas sin necesitar un búfer de doble escritura, y permite comprimir cada bloque por separado.</li>
+<li><strong>Por qué no:</strong> Deja bloques huérfanos que hay que recuperar, así que el espacio en disco no baja al borrar datos hasta que se compacta: la amplificación de espacio del LSM reaparece con otro nombre.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
+</ul>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio, y MVCC encima: un <code>UPDATE</code> no modifica la fila, escribe una versión nueva y deja la vieja muerta. La limpieza la hace <code>VACUUM</code>.</li>
+<li><strong>Por qué sí:</strong> La lectura por clave toca un solo camino del árbol: la amplificación de lectura es la mínima posible, y el plan es fácil de predecir.</li>
+<li><strong>Por qué no:</strong> Su amplificación de escritura es alta y poco visible: un <code>UPDATE</code> puede escribir en todos los índices de la tabla, y si la página está limpia desde el último punto de control, el WAL guarda la <strong>página entera</strong> (<code>full_page_writes</code>), no solo el cambio.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/routine-vacuuming.html">https://www.postgresql.org/docs/current/routine-vacuuming.html</a></li>
+</ul>
+<h4 id="sqlite">SQLite</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Árbol B con escritura en el sitio y sin recolección de versiones: al borrar, el espacio queda en una lista de páginas libres que se reutiliza, y solo <code>VACUUM</code> devuelve el archivo a su tamaño mínimo.</li>
+<li><strong>Por qué sí:</strong> Es el modelo más simple y predecible: sin compactación de fondo, sin procesos auxiliares y sin sorpresas de latencia.</li>
+<li><strong>Por qué no:</strong> Sin compactación de fondo, la fragmentación se acumula y el archivo no encoge solo. En dispositivos con almacenamiento limitado, ese <code>VACUUM</code> olvidado es una avería real.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_vacuum.html">https://sqlite.org/lang_vacuum.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>Su almacenamiento no pertenece a ninguna de las dos familias: guarda grupos de filas por columnas, comprimidos, pensados para escribirse una vez y leerse muchas. La pregunta de esta clase —cómo se absorbe la escritura aleatoria constante— no es la suya.</td>
+<td>Se estudia donde le corresponde, en la parte de analítica columnar, donde la pregunta es cuántos bytes hay que leer y no cuántas veces se reescriben.</td>
+<td><a href="https://duckdb.org/docs/stable/internals/storage.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/04-indexing/run_indexing_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -312,29 +484,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL: Row Security Policies</a>.<br />
-  Control de acceso por fila declarado en el propio motor.</li>
-<li><strong>NIST</strong> (2020). <a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final">NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems</a>.<br />
-  Controles de auditoria, cifrado y acceso aplicables a bases de datos.</li>
-<li><strong>Center for Internet Security</strong> (2026). <a href="https://www.cisecurity.org/cis-benchmarks">CIS Benchmarks</a>.<br />
-  Guias de configuración endurecida para PostgreSQL, MySQL, MongoDB y otros.</li>
-<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
-  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
+<li><strong>Patrick O'Neil, Edward Cheng, Dieter Gawlick, Elizabeth O'Neil</strong> (1996). <a href="https://link.springer.com/article/10.1007/s002360050048">The Log-Structured Merge-Tree (LSM-Tree)</a>. Acta Informatica 33(4). DOI <a href="https://doi.org/10.1007/s002360050048">10.1007/s002360050048</a>.<br />
+  Estructura que sostiene RocksDB, Cassandra, ScyllaDB y LevelDB.</li>
+<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
+  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>Burton H. Bloom</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362686.362692">Space/Time Trade-offs in Hash Coding with Allowable Errors</a>. Communications of the ACM 13(7). DOI <a href="https://doi.org/10.1145/362686.362692">10.1145/362686.362692</a>.<br />
+  Filtro de Bloom: clave para evitar lecturas de disco en motores LSM.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="049.html">← Anterior</a> · <a href="051.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="050">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="049.html"><span class="sentido">← Anterior · 049</span>Migraciones evolutivas sin ventana de caída</a>
-<a class="siguiente" href="051.html"><span class="sentido">Siguiente · 051 →</span>Inyección SQL y el contrato de parametrización</a>
+<a class="anterior" href="049.html"><span class="sentido">← Anterior · 049</span>B-Tree: estructura, orden de columnas y selectividad</a>
+<a class="siguiente" href="051.html"><span class="sentido">Siguiente · 051 →</span>Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

@@ -1,0 +1,124 @@
+---
+caso:
+  titulo: Sumar una columna de mil filas y entender por qué el formato decide el tiempo
+  contrato: |
+    La consulta analítica típica toca **pocas columnas de muchísimas filas**. La
+    transaccional toca **todas las columnas de pocas filas**. Esa diferencia, y
+    no el lenguaje, es la que separa a los dos mundos: un almacén orientado a
+    filas guarda la fila entera junta, así que para sumar una columna tiene que
+    leer también todas las demás.
+
+    El caso genera mil filas repartidas en dos categorías y suma el importe de
+    cada una. Con mil filas, todos los motores tardan lo mismo: eso es
+    deliberado, porque lo que se compara aquí es **cómo** llegan al mismo
+    número. El «por qué no» de cada motor dice a partir de qué volumen ese cómo
+    empieza a decidir si la consulta tarda un segundo o un minuto.
+  columnas: [categoria, importe]
+  esperado:
+    - [c0, "250500"]
+    - [c1, "250000"]
+
+motores:
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Almacenamiento columnar, ejecución vectorizada por lotes de miles de
+      valores y paralelismo por trozos: la suma lee solo las dos columnas que
+      necesita, ya comprimidas, y sin una llamada de función por fila. Es la
+      arquitectura analítica completa dentro de un proceso.
+    porque_no: >-
+      Esa arquitectura es pésima para lo contrario: leer una fila entera por su
+      clave obliga a tocar todos los bloques de columna, y modificar filas
+      sueltas reescribe bloques enteros.
+    doc: https://duckdb.org/docs/stable/internals/storage.html
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      Lleva la misma idea a escala distribuida: `MergeTree` ordena y comprime
+      por partes, los índices de salto descartan bloques enteros sin leerlos, y
+      la ejecución es masivamente paralela. Es lo que se usa cuando la tabla
+      tiene miles de millones de filas.
+    porque_no: >-
+      No es transaccional: no hay `BEGIN`, las actualizaciones y borrados son
+      mutaciones asíncronas que reescriben partes, y las reuniones entre tablas
+      grandes son su punto débil. Es un almacén de hechos, no un sistema
+      operacional.
+    doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Está aquí para mostrar el contraste desde el otro lado: el mismo SQL, el
+      mismo resultado, y un almacenamiento por filas que obliga a leer cada
+      registro entero para sumar una columna.
+    porque_no: >-
+      Con mil filas no se nota; con cien millones, la diferencia es de órdenes
+      de magnitud, y no hay índice que la arregle porque el problema no es
+      encontrar las filas, es leerlas todas.
+    doc: https://sqlite.org/fileformat.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es el punto intermedio honesto: filas en disco, pero con ejecución
+      paralela, agregación en paralelo y `BRIN` para tablas ordenadas. Para
+      analítica de tamaño medio sobre los datos operativos, evita montar un
+      almacén aparte.
+    porque_no: >-
+      Sigue leyendo filas completas y usando una versión por fila para el
+      control de concurrencia: por mucho paralelismo, no compite con un formato
+      columnar cuando la consulta toca dos columnas de una tabla de cien.
+    doc: https://www.postgresql.org/docs/current/parallel-query.html
+
+  - id: bigquery
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/bigquery/consulta.sql
+    porque_si: >-
+      Separa por completo almacenamiento y cómputo: el mismo formato columnar,
+      con miles de nodos efímeros que se asignan por consulta y sin nada que
+      administrar. Para un agregado sobre petabytes ocasional, es la opción con
+      menos operación.
+    porque_no: >-
+      Se paga por bytes leídos: la misma consulta escrita con `SELECT *` en vez
+      de dos columnas cuesta dinero de verdad, y una consulta mal filtrada puede
+      costar más que el análisis que la motivó. Aquí la optimización no es de
+      tiempo, es de factura.
+    doc: https://cloud.google.com/bigquery/docs/best-practices-costs
+
+  - id: snowflake
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/snowflake/consulta.sql
+    porque_si: >-
+      Micro-particiones columnares con metadatos por partición que permiten
+      descartar bloques sin leerlos, y almacenes de cómputo independientes que
+      se dimensionan por carga: el equipo de análisis no compite con el de
+      ingesta.
+    porque_no: >-
+      El cómputo se factura por tiempo encendido, así que la disciplina de
+      apagar y dimensionar es parte del diseño; y su rendimiento depende del
+      orden de agrupamiento, que hay que mantener con `CLUSTER BY` en tablas
+      grandes.
+    doc: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      Su almacenamiento es orientado a documentos: sumar un campo de un millón
+      de documentos obliga a leer un millón de documentos completos. La tubería
+      de agregación es expresiva, pero el formato no ayuda.
+    alternativa: >-
+      Exportar a Parquet y analizar con DuckDB o ClickHouse, que es lo que
+      hace en la práctica casi todo el que tiene datos operativos en MongoDB y
+      preguntas analíticas sobre ellos.
+    doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/

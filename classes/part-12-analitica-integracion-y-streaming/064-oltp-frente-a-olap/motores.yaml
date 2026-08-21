@@ -1,0 +1,120 @@
+---
+caso:
+  titulo: >-
+    Cuatro números que resumen doce meses, y la consulta contraria que ningún
+    motor sirve igual de bien
+  contrato: |
+    Las dos cargas piden cosas opuestas. La **transaccional** toca una fila con
+    todas sus columnas, muchas veces por segundo, y necesita que la escritura sea
+    inmediata y duradera. La **analítica** toca todas las filas de pocas
+    columnas, unas cuantas veces al día, y necesita leer mucho y rápido.
+
+    Un mismo almacenamiento no puede estar optimizado para las dos, y de ahí
+    salen las dos consecuencias que organizan esta parte del programa: que
+    existan dos sistemas, y que haga falta un proceso que copie del primero al
+    segundo.
+
+    El caso es la consulta analítica en su forma mínima: doce meses de ventas
+    resumidos en cuatro trimestres. Todos los motores la responden; el «por qué
+    no» de cada uno dice qué se rompe cuando se le pide además la otra.
+  columnas: [trimestre, importe]
+  esperado:
+    - [T1, "600"]
+    - [T2, "1500"]
+    - [T3, "2400"]
+    - [T4, "3300"]
+
+motores:
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es analítico puro y embebido: lee solo las columnas `mes` e `importe`, las
+      procesa vectorizadas y no necesita servidor. Para el análisis local sobre
+      una copia de los datos, no hay nada más directo.
+    porque_no: >-
+      Un solo escritor y sin concurrencia entre procesos: no puede ser el
+      sistema donde se registran las ventas, solo donde se analizan.
+    doc: https://duckdb.org/why_duckdb
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      La misma arquitectura columnar a escala distribuida, con vistas
+      materializadas que agregan **al insertar**: el informe trimestral no se
+      calcula, se lee ya calculado.
+    porque_no: >-
+      No es transaccional y las modificaciones fila a fila son mutaciones
+      asíncronas: corregir una venta mal registrada no es un `UPDATE`, es una
+      operación de mantenimiento.
+    doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es el punto donde muchas arquitecturas empiezan y donde muchas deberían
+      quedarse: con agregación paralela y vistas materializadas resuelve la
+      analítica de tamaño medio **sobre los datos operativos**, sin proceso de
+      copia, sin retraso y sin un sistema más.
+    porque_no: >-
+      El informe compite por la misma caché y las mismas conexiones que las
+      transacciones. Un análisis pesado a la hora punta degrada las ventas, y
+      esa es exactamente la razón por la que se separan las dos cargas.
+    doc: https://www.postgresql.org/docs/current/rules-materializedviews.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Sirve para ver el contraste desde el lado transaccional: el mismo SQL, el
+      mismo resultado, y un almacenamiento por filas que tiene que leer los doce
+      registros completos para sumar una columna.
+    porque_no: >-
+      Con doce filas da igual; con doce millones, la diferencia es de órdenes de
+      magnitud, y no hay índice que la arregle porque hay que leerlas todas.
+    doc: https://sqlite.org/whentouse.html
+
+  - id: bigquery
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/bigquery/consulta.sql
+    porque_si: >-
+      Elimina la operación por completo: no hay servidor, ni índices, ni ajuste;
+      solo consultas y una factura. Para un informe trimestral sobre volúmenes
+      grandes y esporádicos, es la opción con menos trabajo humano.
+    porque_no: >-
+      Es exclusivamente analítico: no admite escrituras fila a fila con
+      latencia baja, y la inserción en flujo tiene su propio costo y sus propias
+      reglas. Nunca es la otra mitad de la pareja.
+    doc: https://cloud.google.com/bigquery/docs/introduction
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      Puede resolver la consulta con `$group`, pero no aporta una fila distinta
+      a esta comparación: su almacenamiento es orientado a documentos, así que
+      agregar obliga a leer documentos completos, igual que SQLite lee filas
+      completas.
+    alternativa: >-
+      Exportar a un almacén columnar para la analítica —o usar los servicios
+      analíticos que su propio proveedor ofrece— y dejar la colección para lo
+      transaccional, que es su terreno.
+    doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay agregación sobre un conjunto de registros: habría que traerse las
+      doce ventas al cliente y sumarlas allí. Con doce da igual; con doce
+      millones, no hay conversación.
+    alternativa: >-
+      Mantener los totales por trimestre como contadores actualizados en cada
+      venta: el informe está siempre listo y solo responde la pregunta que se
+      decidió de antemano.
+    doc: https://redis.io/docs/latest/commands/hincrby/

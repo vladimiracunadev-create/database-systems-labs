@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Privacidad, retención y gobierno del dato. Parte 10: Operación, seguridad y gobierno.">
+<meta name="description" content="Réplica: líder único, multilíder y sin líder. Parte 10: Distribución, réplica y consistencia.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/053.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="053 — Privacidad, retención y gobierno del dato · Database Systems Labs">
-<meta property="og:description" content="Privacidad, retención y gobierno del dato. Parte 10: Operación, seguridad y gobierno.">
+<meta property="og:title" content="053 — Réplica: líder único, multilíder y sin líder · Database Systems Labs">
+<meta property="og:description" content="Réplica: líder único, multilíder y sin líder. Parte 10: Distribución, réplica y consistencia.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/053.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "053 — Privacidad, retención y gobierno del dato", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["minimización", "limitación de finalidad", "seudonimización", "derecho de supresión"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>053 — Privacidad, retención y gobierno del dato · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "053 — Réplica: líder único, multilíder y sin líder", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["replicación sincrónica", "retraso de réplica", "quórum", "lectura de tu propia escritura"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>053 — Réplica: líder único, multilíder y sin líder · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,343 +49,454 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-10.html">Parte 10 · Operación, seguridad y gobierno</a>
+  <a href="parte-10.html">Parte 10 · Distribución, réplica y consistencia</a>
   <span aria-hidden="true">/</span><span>Clase 053</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="053--privacidad-retención-y-gobierno-del-dato">053 — Privacidad, retención y gobierno del dato</h1>
+<h1 id="053--réplica-líder-único-multilíder-y-sin-líder">053 — Réplica: líder único, multilíder y sin líder</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-053%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
 <p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="052.html">← Anterior</a> · <a href="054.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 10 — Operación, seguridad y gobierno · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>minimización</code> · <code>limitación de finalidad</code> · <code>seudonimización</code> · <code>derecho de supresión</code></p>
+<p>Parte 10 — Distribución, réplica y consistencia · Avanzado ·
+4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>cassandra</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md"><code>labs/07-replication</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>replicación sincrónica</code> · <code>retraso de réplica</code> · <code>quórum</code> · <code>lectura de tu propia escritura</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 053&quot;]
+    C --&gt; K1[&quot;replicación sincrónica&quot;]
+    C --&gt; K2[&quot;retraso de réplica&quot;]
+    C --&gt; K3[&quot;quórum&quot;]
+    C --&gt; K4[&quot;lectura de tu propia escritura&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Traducir las obligaciones de privacidad en decisiones de esquema. Minimización, retención y supresión no son cláusulas de un documento legal: son columnas, políticas y trabajos programados.</p>
+<p>Replicar datos entendiendo qué se gana (disponibilidad, lectura escalada, cercanía geográfica) y qué se paga (retraso, conflictos, pérdida potencial en la conmutación).</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Aplicar minimización y limitación de finalidad al diseñar tablas.</li>
-<li>Distinguir anonimización de seudonimización y sus consecuencias legales.</li>
-<li>Implementar una política de retención con supresión verificable.</li>
-<li>Resolver el conflicto entre derecho de supresión y necesidad de conservar evidencia.</li>
-<li>Construir un registro de tratamiento a partir del propio esquema.</li>
+<li>Comparar las tres topologías de replicación y su modelo de fallo.</li>
+<li>Explicar el retraso de réplica y las anomalías que produce.</li>
+<li>Aplicar las garantías de sesión que las corrigen.</li>
+<li>Calcular quórums de lectura y escritura sin líder.</li>
+<li>Decidir entre replicación síncrona y asíncrona con un criterio de negocio.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-principios-que-afectan-al-esquema">Los principios que afectan al esquema</h3>
-<p>El RGPD europeo y la Ley 19.628 chilena comparten principios cuya traducción técnica es directa:</p>
+<h3 id="las-tres-topologías">Las tres topologías</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Principio</th>
-<th>Traducción al esquema</th>
+<th>Topología</th>
+<th>Escrituras</th>
+<th>Conflictos</th>
+<th>Ejemplos</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Minimización</strong></td>
-<td>No crear la columna si no hay una finalidad declarada</td>
+<td><strong>Líder único</strong></td>
+<td>Un nodo</td>
+<td>Imposibles</td>
+<td>PostgreSQL, MySQL, SQL Server</td>
 </tr>
 <tr>
-<td><strong>Limitación de finalidad</strong></td>
-<td>El dato recogido para A no se usa para B sin nueva base legal</td>
+<td><strong>Multilíder</strong></td>
+<td>Varios nodos</td>
+<td>Inevitables, hay que resolverlos</td>
+<td>Multirregión, CouchDB, CRDT</td>
 </tr>
 <tr>
-<td><strong>Limitación del plazo</strong></td>
-<td>Toda tabla con datos personales necesita política de retención</td>
-</tr>
-<tr>
-<td><strong>Exactitud</strong></td>
-<td>Debe existir un camino para rectificar</td>
-</tr>
-<tr>
-<td><strong>Integridad y confidencialidad</strong></td>
-<td>Cifrado, control de acceso (clase 050), auditoría</td>
-</tr>
-<tr>
-<td><strong>Responsabilidad proactiva</strong></td>
-<td>Hay que poder <strong>demostrarlo</strong>, no solo cumplirlo</td>
+<td><strong>Sin líder</strong></td>
+<td>Cualquier nodo, por quórum</td>
+<td>Se resuelven al leer</td>
+<td>Dynamo, Cassandra, Riak</td>
 </tr>
 </tbody>
 </table></div>
-<p>El último es el que más se subestima: la obligación incluye poder acreditar lo que se hace. Un registro de tratamiento generado desde el esquema es una forma barata de cumplirlo.</p>
-<h3 id="anonimización-frente-a-seudonimización">Anonimización frente a seudonimización</h3>
+<p>Con líder único no hay conflictos de escritura <strong>por construcción</strong>: todas pasan por el mismo nodo, que las ordena. Es la razón por la que sigue siendo la elección correcta salvo que haya un motivo fuerte para otra cosa.</p>
+<h3 id="síncrona-frente-a-asíncrona">Síncrona frente a asíncrona</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th></th>
-<th>Seudonimización</th>
-<th>Anonimización</th>
+<th>Modo</th>
+<th>Confirma cuando</th>
+<th>Se pierde en la conmutación</th>
+<th>Latencia de escritura</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Qué es</td>
-<td>Reemplazar identificadores por códigos, guardando la correspondencia</td>
-<td>Eliminar la posibilidad de reidentificar</td>
+<td>Asíncrona</td>
+<td>El líder escribió</td>
+<td>Lo aún no replicado</td>
+<td>Baja</td>
 </tr>
 <tr>
-<td>¿Sigue siendo dato personal?</td>
-<td><strong>Sí</strong></td>
-<td>No</td>
+<td>Síncrona</td>
+<td>Al menos una réplica confirmó</td>
+<td>Nada</td>
+<td>+1 ida y vuelta</td>
 </tr>
 <tr>
-<td>Reversible</td>
-<td>Sí, con la tabla de correspondencia</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Ejemplo</td>
-<td><code>student_id</code> en vez del RUT</td>
-<td>Agregados con supresión de celdas pequeñas</td>
+<td>Semisíncrona</td>
+<td>Una réplica de N</td>
+<td>Nada, si esa sobrevive</td>
+<td>+1 ida y vuelta</td>
 </tr>
 </tbody>
 </table></div>
-<p>Error frecuente y caro: llamar «anonimizado» a un conjunto seudonimizado. Reemplazar el nombre por un identificador <strong>no</strong> anonimiza: si quedan la fecha de nacimiento, la comuna y el sexo, la reidentificación es factible con datos externos.</p>
-<p>Anonimizar de verdad exige agregación con umbral, generalización o ruido:</p>
-<pre><code class="language-sql">-- Publicable: suprime los grupos demasiado pequeños para reidentificar
-SELECT comuna, extract(year FROM edad_rango) AS rango, count(*) AS n
-FROM v_estudiantes
-GROUP BY comuna, rango
-HAVING count(*) &gt;= 10;      -- k-anonimato con k = 10
+<p>La asíncrona es la configuración por defecto casi siempre, y significa que <strong>una conmutación puede perder transacciones ya confirmadas al cliente</strong>. No es un fallo: es el compromiso elegido. Debe estar escrito en el objetivo de punto de recuperación (RPO, clase 048).</p>
+<p>PostgreSQL permite ajustarlo por transacción:</p>
+<pre><code class="language-sql">SET synchronous_commit = 'remote_apply';   -- solo para las operaciones críticas
 </code></pre>
-<h3 id="retención">Retención</h3>
-<p>Cada tabla con datos personales necesita responder cuatro preguntas: <strong>qué</strong> se guarda, <strong>para qué</strong>, <strong>cuánto tiempo</strong> y <strong>qué pasa después</strong>.</p>
-<p>Documentado en el propio esquema, para que no viva solo en una hoja de cálculo:</p>
-<pre><code class="language-sql">COMMENT ON TABLE  enrollments IS
-  'Datos personales: sí. Finalidad: gestión académica. '
-  'Retención: 5 años tras el egreso (obligación legal de certificación). '
-  'Después: seudonimizar student_id y conservar el agregado.';
-COMMENT ON COLUMN students.rut IS
-  'Identificador nacional. Base legal: obligación legal. '
-  'Acceso: rol_secretaria. Retención: igual que enrollments.';
+<p>Patrón útil: asíncrono por defecto, síncrono para pagos.</p>
+<h3 id="el-retraso-y-sus-anomalías">El retraso y sus anomalías</h3>
+<p>El retraso de réplica es el tiempo entre confirmar en el líder y ser visible en la réplica. Con carga normal son milisegundos; durante una carga masiva o un <code>VACUUM</code> pesado, pueden ser minutos.</p>
+<pre><code class="language-sql">SELECT client_addr,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS bytes_de_retraso,
+       replay_lag
+FROM pg_stat_replication;
 </code></pre>
-<h3 id="el-conflicto-de-la-supresión">El conflicto de la supresión</h3>
-<p>El derecho de supresión no es absoluto: cede ante obligaciones legales de conservación. Un estudiante puede pedir borrar su cuenta, y la institución debe conservar el registro académico.</p>
-<p>La solución de diseño es <strong>separar la identidad del hecho</strong>:</p>
+<p>Tres anomalías, con sus nombres y sus remedios:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Anomalía</th>
+<th>Qué ve el usuario</th>
+<th>Garantía que la corrige</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lee su propia escritura y no la ve</td>
+<td>Publica un comentario y desaparece</td>
+<td><strong>Lectura de tus escrituras</strong></td>
+</tr>
+<tr>
+<td>Ve datos que retroceden</td>
+<td>Refresca y el comentario vuelve a desaparecer</td>
+<td><strong>Lectura monótona</strong></td>
+</tr>
+<tr>
+<td>Ve un efecto antes que su causa</td>
+<td>La respuesta antes que la pregunta</td>
+<td><strong>Consistencia causal</strong> (clase 046)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Implementaciones habituales:</p>
+<ul>
+<li><strong>Lectura de tus escrituras:</strong> durante N segundos tras escribir, leer del líder. O guardar el LSN de la escritura y exigir que la réplica lo haya alcanzado.</li>
+<li><strong>Lectura monótona:</strong> fijar cada sesión a la misma réplica.</li>
+</ul>
+<h3 id="sin-líder-y-quórums">Sin líder y quórums</h3>
+<p>Dynamo introdujo el modelo: se escribe en N réplicas, se espera confirmación de W, se lee de R.</p>
+<pre><code class="language-text">R + W &gt; N  →  los conjuntos de lectura y escritura se solapan
+              → alguna réplica leída tiene la última escritura
+</code></pre>
+<p>Con N = 3:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>W</th>
+<th>R</th>
+<th>Solapa</th>
+<th>Tolera</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>Sí</td>
+<td>1 nodo caído en ambas operaciones</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1</td>
+<td>Sí</td>
+<td>0 en escritura, 2 en lectura</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3</td>
+<td>Sí</td>
+<td>2 en escritura, 0 en lectura</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td><strong>No</strong></td>
+<td>Máxima disponibilidad, sin garantía</td>
+</tr>
+</tbody>
+</table></div>
+<p>Advertencia importante: <strong><code>R + W &gt; N</code> no da linealizabilidad</strong>. Garantiza que alguna réplica leída tiene el valor más reciente, no que se sepa distinguirlo si hay escrituras concurrentes, ni protege contra reversiones si un nodo se recupera con datos viejos. Bailis et al. desarrollan qué se puede y qué no se puede garantizar sin coordinación.</p>
+<p>Mecanismos de reparación: reparación en lectura (al detectar réplicas atrasadas, se corrigen), entrega con pista (un nodo vecino acepta la escritura del caído y se la entrega al volver) y reparación anti-entropía periódica.</p>
 <pre><code class="language-mermaid">flowchart TD
-    P[&quot;Solicitud de supresión&quot;] --&gt; C{&quot;¿Hay obligación legal&lt;br/&gt;de conservar el hecho?&quot;}
-    C -- &quot;No&quot; --&gt; D[&quot;Borrado real,&lt;br/&gt;incluido en copias tras su rotación&quot;]
-    C -- &quot;Sí&quot; --&gt; S[&quot;Separar identidad del hecho&quot;]
-    S --&gt; S1[&quot;Borrar la fila de identidad&lt;br/&gt;(nombre, RUT, contacto)&quot;]
-    S --&gt; S2[&quot;Conservar el hecho&lt;br/&gt;con identificador seudónimo&quot;]
-    S1 --&gt; R[&quot;Registrar la supresión&lt;br/&gt;(evidencia de cumplimiento)&quot;]
-    S2 --&gt; R
+    subgraph L[&quot;Líder único&quot;]
+        W1[&quot;Escritura&quot;] --&gt; LD[&quot;Líder&quot;]
+        LD --&gt;|&quot;WAL&quot;| R1[&quot;Réplica 1&quot;]
+        LD --&gt;|&quot;WAL&quot;| R2[&quot;Réplica 2&quot;]
+        R1 --&gt; RD1[&quot;Lectura (con retraso)&quot;]
+    end
+    subgraph S[&quot;Sin líder&quot;]
+        W2[&quot;Escritura&quot;] --&gt; N1[&quot;Nodo 1&quot;]
+        W2 --&gt; N2[&quot;Nodo 2&quot;]
+        W2 --&gt; N3[&quot;Nodo 3&quot;]
+        RD2[&quot;Lectura R=2&quot;] --&gt; N1
+        RD2 --&gt; N2
+        RD2 --&gt; REP[&quot;Reparación en lectura&lt;br/&gt;si divergen&quot;]
+    end
 </code></pre>
-<pre><code class="language-sql">-- Identidad: se puede suprimir
-CREATE TABLE student_identity (
-  student_id INTEGER PRIMARY KEY REFERENCES students(id),
-  rut        TEXT UNIQUE,
-  nombre     TEXT NOT NULL,
-  email      TEXT,
-  suprimida_en TIMESTAMPTZ
-);
-
--- Hechos académicos: se conservan, referencian solo al identificador interno
-CREATE TABLE enrollments (
-  student_id INTEGER NOT NULL REFERENCES students(id),
-  course_id  INTEGER NOT NULL REFERENCES courses(id),
-  nota       NUMERIC(2,1),
-  PRIMARY KEY (student_id, course_id)
-);
-</code></pre>
-<p>Con esta separación, ejercer el derecho es borrar una fila de <code>student_identity</code>. El histórico académico sobrevive, referido a un identificador que ya no apunta a ninguna persona identificable.</p>
-<p><strong>Esta decisión hay que tomarla al diseñar.</strong> Si el RUT está copiado en quince tablas —y lo estará si es la clave primaria (clase 007)—, la supresión se convierte en un proyecto.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Inventario del dominio, que es el punto de partida de todo lo demás:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tabla.columna</th>
-<th>¿Personal?</th>
-<th>Finalidad</th>
-<th>Base legal</th>
-<th>Retención</th>
-<th>Acceso</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>student_identity.rut</code></td>
-<td>Sí, identificador</td>
-<td>Certificación académica</td>
-<td>Obligación legal</td>
-<td>5 años tras egreso</td>
-<td><code>rol_secretaria</code></td>
-</tr>
-<tr>
-<td><code>student_identity.nombre</code></td>
-<td>Sí</td>
-<td>Emisión de certificados</td>
-<td>Contrato</td>
-<td>Ídem</td>
-<td><code>rol_secretaria</code>, <code>rol_docente</code></td>
-</tr>
-<tr>
-<td><code>student_identity.email</code></td>
-<td>Sí</td>
-<td>Comunicación</td>
-<td>Contrato</td>
-<td>Hasta baja + 1 año</td>
-<td><code>rol_secretaria</code></td>
-</tr>
-<tr>
-<td><code>enrollments.nota</code></td>
-<td>Sí, asociado</td>
-<td>Evaluación</td>
-<td>Contrato</td>
-<td>5 años tras egreso</td>
-<td><code>rol_docente</code> (solo sus cursos)</td>
-</tr>
-<tr>
-<td><code>access_log.ip</code></td>
-<td><strong>Sí</strong></td>
-<td>Seguridad</td>
-<td>Interés legítimo</td>
-<td><strong>90 días</strong></td>
-<td><code>rol_seguridad</code></td>
-</tr>
-<tr>
-<td><code>courses.nombre</code></td>
-<td>No</td>
-<td>—</td>
-<td>—</td>
-<td>Indefinida</td>
-<td>Público</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>access_log.ip</code> es el que se olvida: una dirección IP es dato personal en la mayoría de los marcos, y los registros de acceso suelen guardarse para siempre «por si acaso».</p>
-<p><strong>Retención automatizada:</strong></p>
-<pre><code class="language-sql">CREATE TABLE retencion_politica (
-  tabla       TEXT PRIMARY KEY,
-  columna_ts  TEXT NOT NULL,
-  dias        INTEGER NOT NULL,
-  accion      TEXT NOT NULL CHECK (accion IN ('borrar','seudonimizar')),
-  descripcion TEXT NOT NULL
-);
+<p>Sistema: un líder y dos réplicas asíncronas; las lecturas se reparten entre las réplicas.</p>
+<p><strong>La anomalía, con traza real:</strong></p>
+<pre><code class="language-text">t0    Cliente escribe la nota  -&gt; líder. COMMIT. Respuesta 200.
+t0+5ms Cliente recarga la ficha -&gt; réplica 2 (retraso: 340 ms)
+t0+5ms Respuesta: la nota no aparece.
+t0+1s  Cliente recarga         -&gt; réplica 1 (retraso: 12 ms)
+t0+1s  Respuesta: la nota aparece.
+t0+2s  Cliente recarga         -&gt; réplica 2 (aún atrasada)
+t0+2s  Respuesta: la nota DESAPARECE otra vez.
+</code></pre>
+<p>Dos anomalías en cinco segundos: no lee su propia escritura y la lectura no es monótona. Para el usuario, el sistema está roto; para el equipo, todo está «en verde».</p>
+<p><strong>Corrección 1 — leer del líder tras escribir:</strong></p>
+<pre><code class="language-python">def leer_ficha(ctx, student_id):
+    # Tras una escritura propia, leer del líder durante una ventana
+    # holgadamente mayor que el retraso p99 observado.
+    if ctx.escribio_hace_menos_de(seconds=10):
+        return leer(lider, student_id)
+    return leer(replica_de(ctx.session_id), student_id)
+</code></pre>
+<p><strong>Corrección 2 — esperar al LSN</strong>, más precisa y sin cargar el líder:</p>
+<pre><code class="language-python">def escribir_nota(ctx, ...):
+    lsn = lider.execute(&quot;...; SELECT pg_current_wal_lsn()&quot;)
+    ctx.session[&quot;lsn_minimo&quot;] = lsn
 
-INSERT INTO retencion_politica VALUES
-  ('access_log', 'ocurrido_en',  90, 'borrar',
-   'Registros de acceso: interés legítimo en seguridad, 90 días'),
-  ('notificaciones', 'enviada_en', 365, 'borrar',
-   'Historial de notificaciones enviadas');
+def leer_ficha(ctx, student_id):
+    r = replica_de(ctx.session_id)
+    if r.replay_lsn() &lt; ctx.session.get(&quot;lsn_minimo&quot;, 0):
+        return leer(lider, student_id)      # esta réplica aún no alcanza
+    return leer(r, student_id)
 </code></pre>
-<pre><code class="language-sql">-- Ejecución diaria, por lotes para no bloquear (clase 049)
-DO $$
-DECLARE p RECORD; n INTEGER;
-BEGIN
-  FOR p IN SELECT * FROM retencion_politica WHERE accion = 'borrar' LOOP
-    LOOP
-      EXECUTE format(
-        'DELETE FROM %I WHERE ctid IN (
-           SELECT ctid FROM %I WHERE %I &lt; now() - make_interval(days =&gt; $1)
-           LIMIT 10000)', p.tabla, p.tabla, p.columna_ts) USING p.dias;
-      GET DIAGNOSTICS n = ROW_COUNT;
-      EXIT WHEN n = 0;
-      COMMIT;
-    END LOOP;
-  END LOOP;
-END $$;
+<p><strong>Corrección 3 — fijar la sesión a una réplica.</strong> Resuelve la lectura monótona (nunca retrocede) pero no la lectura de las propias escrituras si esa réplica va atrasada. Se combina con la 1 o la 2.</p>
+<p><strong>Cálculo de capacidad de lectura.</strong> Con un líder que sostiene 8 000 lecturas/s y dos réplicas iguales:</p>
+<pre><code class="language-text">solo líder:          8 000 lecturas/s
+líder + 2 réplicas: 24 000 lecturas/s teóricas
+con el 10 % desviado al líder por consistencia: ~21 600 útiles
 </code></pre>
-<p>Se usa <code>format</code> con <code>%I</code> (clase 051) porque el nombre de tabla no es parametrizable, y viene de una tabla de configuración controlada, no de una entrada de usuario.</p>
-<p><strong>Verificación, que es lo que acredita el cumplimiento:</strong></p>
-<pre><code class="language-sql">SELECT p.tabla, p.dias,
-       (SELECT count(*) FROM access_log
-        WHERE ocurrido_en &lt; now() - make_interval(days =&gt; p.dias)) AS fuera_de_plazo
-FROM retencion_politica p WHERE p.tabla = 'access_log';
--- fuera_de_plazo debe ser 0
-</code></pre>
-<p><strong>El punto que casi siempre falta: las copias de seguridad.</strong> Borrar de la base no borra de las copias. Un dato suprimido hoy sigue en la copia de ayer, y en la de hace un mes.</p>
-<p>La posición defendible —y la que aceptan los reguladores— es: las copias tienen su propio ciclo de rotación, la supresión se completa cuando la última copia que contenía el dato ha expirado, y ese plazo está documentado.</p>
-<pre><code class="language-text">Retención de copias: 35 días
-→ La supresión se completa como máximo 35 días después de la solicitud.
-→ Se documenta en la respuesta al titular.
-→ Nadie restaura una copia parcialmente para reinsertar datos suprimidos.
-</code></pre>
-<p><strong>Registro de tratamiento generado desde el esquema:</strong></p>
-<pre><code class="language-sql">SELECT c.table_name, c.column_name,
-       col_description(format('%I.%I', c.table_schema, c.table_name)::regclass,
-                       c.ordinal_position) AS documentacion
-FROM information_schema.columns c
-WHERE c.table_schema = 'public'
-ORDER BY c.table_name, c.ordinal_position;
-</code></pre>
-<p>Una columna con datos personales y sin comentario es un hallazgo de auditoría. Convertir eso en una comprobación de integración continua hace que la documentación no envejezca.</p>
+<p>Y el límite que no se supera: <strong>las escrituras no escalan</strong>. Todas van al líder. Añadir réplicas no aumenta en nada la capacidad de escritura; eso exige particionar (clase 044).</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Objetivo</th>
-<th>Técnica</th>
-<th>Consecuencia</th>
+<th>Necesidad</th>
+<th>Topología</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Reducir exposición</td>
-<td>No recoger el dato</td>
-<td>La más eficaz y la menos usada</td>
+<td>Escalar lecturas</td>
+<td>Líder único + réplicas</td>
 </tr>
 <tr>
-<td>Permitir análisis sin identidad</td>
-<td>Seudonimización</td>
-<td>Sigue siendo dato personal</td>
+<td>Alta disponibilidad regional</td>
+<td>Líder único con conmutación automática</td>
 </tr>
 <tr>
-<td>Publicar datos abiertos</td>
-<td>Anonimización con k-anonimato</td>
-<td>Pérdida de detalle</td>
+<td>Escritura en varias regiones</td>
+<td>Multilíder, con resolución de conflictos</td>
 </tr>
 <tr>
-<td>Cumplir plazos</td>
-<td>Retención automatizada</td>
-<td>Trabajo programado + verificación</td>
+<td>Tolerar la caída de varios nodos</td>
+<td>Sin líder con quórum</td>
 </tr>
 <tr>
-<td>Atender supresión</td>
-<td>Separar identidad de hecho</td>
-<td>Decisión de diseño temprana</td>
+<td>Cero pérdida en la conmutación</td>
+<td>Replicación síncrona</td>
 </tr>
 <tr>
-<td>Acreditar cumplimiento</td>
-<td>Documentación en el esquema</td>
-<td>Auditable y siempre al día</td>
+<td>Latencia mínima de escritura</td>
+<td>Asíncrona, con RPO declarado</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Recoger «por si acaso».</strong> Cada columna es una obligación permanente.</li>
-<li><strong>Llamar anonimizado a lo seudonimizado.</strong> Error con consecuencias legales.</li>
-<li><strong>Registros de acceso eternos.</strong> Las IP son datos personales.</li>
-<li><strong>Identificador nacional como clave primaria.</strong> Lo esparce por todo el esquema.</li>
-<li><strong>Ignorar las copias en la supresión.</strong> El dato sigue ahí.</li>
-<li><strong>Política de retención sin verificación.</strong> Se rompe en silencio.</li>
-<li><strong>Borrado lógico llamado supresión.</strong> Marcar <code>borrado = true</code> no suprime nada.</li>
+<li><strong>Conmutación automática con réplica asíncrona sin declarar el RPO.</strong> Se pierden transacciones confirmadas.</li>
+<li><strong>Repartir lecturas sin garantías de sesión.</strong> Aparecen las tres anomalías.</li>
+<li><strong>Suponer que las réplicas escalan la escritura.</strong> No lo hacen.</li>
+<li><strong>Cerebro dividido en multilíder.</strong> Dos líderes aceptando escrituras que después no se pueden reconciliar.</li>
+<li><strong><code>R + W &gt; N</code> interpretado como linealizabilidad.</strong> No lo es.</li>
+<li><strong>No vigilar el retraso.</strong> Una réplica atrasada sirve datos viejos sin ningún error visible.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La mayor parte del trabajo de cumplimiento se ahorra al diseñar: separar identidad de hechos, no recoger lo innecesario y documentar la finalidad de cada columna cuesta una tarde al inicio y evita un proyecto de meses cuando llega la primera solicitud o la primera auditoría.</p>
+<p>El retraso de réplica es la métrica que más incidencias explica y la que menos se mira. Una alerta sobre el retraso p99 —y la lógica que desvía al líder cuando se supera— evita la clase entera de incidencias «me desaparecen los datos».</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Inventaría las columnas con datos personales de tu esquema, con finalidad y base legal.</li>
-<li>Documenta cada una con <code>COMMENT</code> y añade una comprobación en CI que exija comentario.</li>
-<li>Implementa una política de retención con su verificación.</li>
-<li>Diseña el procedimiento de supresión, incluido el plazo derivado de tus copias.</li>
+<li>Levanta un líder y una réplica y mide el retraso bajo carga de escritura.</li>
+<li>Reproduce las tres anomalías con un cliente que lea de la réplica.</li>
+<li>Implementa la corrección por LSN y demuestra que desaparecen.</li>
+<li>Calcula el RPO real de tu configuración actual, en segundos y en transacciones.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué la seudonimización no exime de las obligaciones de protección de datos?</li>
-<li>Da una columna de tu sistema que hoy no tendría base legal declarada.</li>
-<li>Explica cómo atiendes una supresión conservando una obligación legal.</li>
-<li>¿Cuándo se completa realmente una supresión, dado tu ciclo de copias?</li>
+<li>¿Cuántas transacciones se pierden en una conmutación asíncrona con 340 ms de retraso y 2 000 escrituras/s?</li>
+<li>Explica por qué fijar la sesión a una réplica no resuelve la lectura de tus escrituras.</li>
+<li>Con N = 5, enumera las combinaciones <code>R</code>/<code>W</code> que solapan y su tolerancia a fallos.</li>
+<li>Da una operación de tu sistema que justifique replicación síncrona y otra que no.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Quién puede aceptar una escritura, y qué pasa cuando ese nodo cae</p>
+<p>Solo hay tres topologías de réplica y cada una responde distinto a la misma
+pregunta: <strong>¿quién puede aceptar una escritura?</strong></p>
+<p>Con <strong>líder único</strong>, uno solo; los demás copian. Es simple y no hay
+conflictos de escritura, pero el líder es un punto de fallo y su
+conmutación es la operación más delicada del sistema. Con <strong>multilíder</strong>,
+varios; hay conflictos y hay que resolverlos. <strong>Sin líder</strong>, cualquiera: el
+cliente escribe en varias réplicas y lee de varias, y la coherencia se
+arregla por quórum y reparación.</p>
+<p>Esta comparación no tiene salida que verificar: lo que se compara es qué
+ofrece cada motor y, sobre todo, <strong>qué se pierde exactamente cuando el nodo
+que manda deja de contestar</strong>.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/high-availability.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.mongodb.com/docs/manual/replication/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">doc oficial</a></td>
+</tr>
+<tr>
+<td>CockroachDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://sqlite.org/backup.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql">PostgreSQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único con réplica física del WAL, síncrona o asíncrona según <code>synchronous_commit</code> y <code>synchronous_standby_names</code>, más réplica lógica por publicación y suscripción desde la versión 10. La conmutación <strong>no</strong> viene incluida: la hace una herramienta externa (Patroni, repmgr).</li>
+<li><strong>Por qué sí:</strong> La réplica es el mismo mecanismo que la durabilidad —el WAL—, así que no añade una pieza conceptual nueva, y con réplica síncrona no se pierde ninguna transacción confirmada.</li>
+<li><strong>Por qué no:</strong> Que la conmutación sea externa significa que <strong>elegir y operar esa herramienta es parte del diseño</strong>, y que un fallo de configuración puede producir dos primarios a la vez. Con réplica asíncrona, promover una réplica pierde las transacciones que no llegaron.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/high-availability.html">https://www.postgresql.org/docs/current/high-availability.html</a></li>
+</ul>
+<h4 id="mysql">MySQL</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único clásico con registro binario y, desde 5.7, <strong>Group Replication</strong>: un grupo con consenso basado en Paxos que permite modo de un primario o de varios primarios.</li>
+<li><strong>Por qué sí:</strong> Group Replication trae la conmutación automática dentro del producto, sin herramienta externa, y detecta los conflictos entre primarios con certificación.</li>
+<li><strong>Por qué no:</strong> El modo de varios primarios solo detecta conflictos al certificar y aborta transacciones: sirve para carga repartida, no para escribir la misma fila desde dos sitios. Y la réplica clásica es asíncrona por omisión, con pérdida posible en la conmutación.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication.html</a></li>
+</ul>
+<h4 id="mongodb">MongoDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Conjunto de réplicas con líder único elegido por votación entre los miembros. La conmutación es automática y está en el producto; el cliente la sigue gracias al controlador, que reconoce el nuevo primario.</li>
+<li><strong>Por qué sí:</strong> Es de los pocos de esta lista donde la alta disponibilidad viene resuelta de fábrica y sin piezas adicionales, y donde <code>writeConcern: "majority"</code> permite exigir que la escritura sobreviva a una conmutación.</li>
+<li><strong>Por qué no:</strong> Con <code>w: 1</code> —el valor por omisión histórico— una escritura confirmada puede <strong>revertirse</strong> al conmutar: el cliente recibió un éxito y el dato no existe. Y las lecturas desde secundarios pueden devolver datos viejos salvo que se pida <code>readConcern</code> adecuado.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/replication/">https://www.mongodb.com/docs/manual/replication/</a></li>
+</ul>
+<h4 id="apache-cassandra">Apache Cassandra</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Sin líder. Cualquier nodo coordina, escribe en las <code>RF</code> réplicas y espera tantas confirmaciones como pida el nivel de consistencia. La coherencia se recupera con lecturas de reparación, entregas sugeridas y reparaciones periódicas.</li>
+<li><strong>Por qué sí:</strong> No hay conmutación que hacer porque no hay nadie a quien sustituir: la caída de un nodo no interrumpe la escritura si el nivel elegido se puede seguir cumpliendo. Es la topología con mayor disponibilidad de escritura.</li>
+<li><strong>Por qué no:</strong> Los conflictos se resuelven por «la última escritura gana» según la marca de tiempo, lo que <strong>pierde datos en silencio</strong> cuando dos clientes escriben lo mismo a la vez con relojes desajustados. Y las reparaciones periódicas son trabajo de operación que, si se olvida, deja réplicas divergentes.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html</a></li>
+</ul>
+<h4 id="redis">Redis</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Líder único con réplicas asíncronas, y Sentinel o Cluster para la conmutación automática. En Cluster, cada fragmento tiene su primario y sus réplicas.</li>
+<li><strong>Por qué sí:</strong> La réplica es barata y no frena al primario, que es justo lo que se quiere de una caché: la latencia no puede depender de que otro nodo confirme.</li>
+<li><strong>Por qué no:</strong> Al ser asíncrona, una conmutación pierde las escrituras que no llegaron, y su propia documentación lo dice sin rodeos. Redis no promete consistencia fuerte, y usarlo como si la prometiera es el error de arquitectura más común que se comete con él.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+</ul>
+<h4 id="cockroachdb">CockroachDB</h4>
+<ul>
+<li><strong>Cómo se hace aquí:</strong> Ni líder único por base ni multilíder: <strong>un grupo Raft por cada rango</strong> de datos. Cada rango tiene su propio líder, elegido por consenso, así que el papel de líder está repartido por todo el clúster y por todos los datos.</li>
+<li><strong>Por qué sí:</strong> Da conmutación automática por rango, sin herramienta externa, y sin perder transacciones confirmadas: el consenso garantiza que lo confirmado está en la mayoría antes de contestar.</li>
+<li><strong>Por qué no:</strong> Cada escritura cuesta una ronda de consenso: la latencia mínima es la de llegar a la mayoría, y si las réplicas están en regiones distintas, esa latencia es geográfica y no hay ajuste que la evite.</li>
+<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/architecture/replication-layer">https://www.cockroachlabs.com/docs/stable/architecture/replication-layer</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>No tiene réplica: es una biblioteca sobre un archivo. Copiar el archivo mientras se escribe produce una copia corrupta, y no hay mecanismo de difusión de cambios.</td>
+<td>Proyectos construidos encima —Litestream para réplica continua del WAL a almacenamiento de objetos, o rqlite y dqlite, que ponen Raft alrededor de SQLite— resuelven casos concretos sin cambiar de motor.</td>
+<td><a href="https://sqlite.org/backup.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+python labs/07-replication/run_replication_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -429,12 +540,12 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Union Europea</strong> (2016). <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Reglamento (UE) 2016/679 - Proteccion de datos personales</a>.<br />
-  Minimización, limitación de finalidad y derecho de supresión con efecto en el esquema.</li>
-<li><strong>Biblioteca del Congreso Nacional de Chile</strong> (1999). <a href="https://www.bcn.cl/leychile/navegar?idNorma=141599">Ley 19.628 sobre proteccion de la vida privada</a>.<br />
-  Marco chileno de datos personales aplicable a los proyectos del programa.</li>
-<li><strong>NIST</strong> (2024). <a href="https://www.nist.gov/cyberframework">NIST Cybersecurity Framework 2.0</a>. DOI <a href="https://doi.org/10.6028/NIST.CSWP.29">10.6028/NIST.CSWP.29</a>.<br />
-  Funciones Gobernar, Identificar, Proteger, Detectar, Responder y Recuperar.</li>
+<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
+  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
+<li><strong>Jim Gray, Pat Helland, Patrick O'Neil, Dennis Shasha</strong> (1996). <a href="https://dl.acm.org/doi/10.1145/233269.233330">The Dangers of Replication and a Solution</a>. ACM SIGMOD. DOI <a href="https://doi.org/10.1145/233269.233330">10.1145/233269.233330</a>.<br />
+  Cuantifica cómo crecen los conflictos con el número de réplicas.</li>
+<li><strong>Giuseppe DeCandia, Deniz Hastorun, Madan Jampani</strong> (2007). <a href="https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">Dynamo: Amazon's Highly Available Key-value Store</a>. ACM SOSP. DOI <a href="https://doi.org/10.1145/1294261.1294281">10.1145/1294261.1294281</a>.<br />
+  Hash consistente, quorums ajustables y reconciliación en el cliente.</li>
 </ul>
 <hr />
 <blockquote>
@@ -443,13 +554,13 @@ enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="053">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="052.html"><span class="sentido">← Anterior · 052</span>Observabilidad, objetivos de servicio y capacidad</a>
-<a class="siguiente" href="054.html"><span class="sentido">Siguiente · 054 →</span>OLTP frente a OLAP: por qué se separan</a>
+<a class="anterior" href="052.html"><span class="sentido">← Anterior · 052</span>Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a>
+<a class="siguiente" href="054.html"><span class="sentido">Siguiente · 054 →</span>Particionado, rebalanceo y claves calientes</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

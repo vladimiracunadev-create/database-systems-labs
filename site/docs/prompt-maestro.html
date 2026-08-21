@@ -72,6 +72,23 @@ es saltárselo en silencio.</p>
 </ul>
 <p><code>scripts/validate_repository.py</code> comprueba lo anterior y falla el <code>push</code>. No es
 una guía de estilo: es una puerta.</p>
+<h2 id="1-bis-la-segunda-regla">1 bis. La segunda regla</h2>
+<blockquote>
+<p><strong>Ningún motor se compara sin decir qué se paga por usarlo.</strong></p>
+</blockquote>
+<p>Consecuencias operativas:</p>
+<ul>
+<li>Todo motor de un <code>motores.yaml</code> declara <code>porque_si</code> <strong>y</strong> <code>porque_no</code>. Un motor
+  que solo tiene ventajas no se entendió: se copió del folleto del fabricante.</li>
+<li>Todo motor declara <code>doc:</code>, y ese enlace <strong>tiene que colgar del dominio oficial</strong>
+  que registra <code>catalog/databases.json</code>. Una opinión sobre PostgreSQL se apoya en
+  <code>postgresql.org</code>, no en un blog.</li>
+<li>Un motor que <strong>no</strong> resuelve el caso se declara igualmente, con <code>aplica: no</code>, su
+  motivo y la <code>alternativa</code> que se usa en su lugar.</li>
+<li>Lo que se dice que se ejecuta, se ejecuta. <code>ejecucion: nucleo</code> o <code>servicio</code>
+  significa que <code>scripts/verificar_equivalencia.py</code> lo corre de verdad; si no se
+  puede, se declara <code>declarado</code> y se dice por qué.</li>
+</ul>
 <h2 id="2-dónde-se-edita-cada-cosa">2. Dónde se edita cada cosa</h2>
 <div class="tabla-scroll"><table>
 <thead>
@@ -86,6 +103,16 @@ una guía de estilo: es una puerta.</p>
 <td>La materia de una clase</td>
 <td><code>classes/**/lesson.md</code></td>
 <td><code>classes/**/README.md</code></td>
+</tr>
+<tr>
+<td>El caso comparado y la matriz de motores</td>
+<td><code>classes/**/motores.yaml</code></td>
+<td><code>classes/**/README.md</code></td>
+</tr>
+<tr>
+<td>El código de un motor en una clase</td>
+<td><code>classes/**/implementaciones/&lt;motor&gt;/</code></td>
+<td>el bloque de código del README</td>
 </tr>
 <tr>
 <td>Horas, nivel, conceptos, fuentes</td>
@@ -132,12 +159,69 @@ la siguiente generación, y la integración continua lo detecta.</p>
    ## Reto de transferencia
    ## Preguntas de evaluación</code></p>
 <ol start="3">
+<li><strong>Escribir <code>motores.yaml</code></strong> con el caso y la matriz. El caso lleva título,
+   contrato, columnas y la <strong>salida esperada</strong>, que es la misma para todos los
+   motores que lo resuelvan:</li>
+</ol>
+<p>```yaml
+   caso:
+     titulo: ...
+     contrato: |
+       Qué hay que devolver, con qué datos y en qué orden.
+     columnas: [a, b]
+     esperado:
+       - [Ada, "90"]</p>
+<p>motores:
+     - id: sqlite
+       aplica: si
+       ejecucion: nucleo          # nucleo | servicio | declarado
+       archivo: implementaciones/sqlite/consulta.sql
+       porque_si: ...
+       porque_no: ...
+       doc: https://sqlite.org/...
+     - id: redis
+       aplica: no
+       porque_no: ...
+       alternativa: ...
+       doc: https://redis.io/docs/latest/...
+   ```</p>
+<p>Reglas del caso:</p>
+<ul>
+<li><strong>Al menos un motor de núcleo</strong> (SQLite o DuckDB). Si nada se puede ejecutar
+     sin servicios, no hay caso: hay una opinión.</li>
+<li>La salida esperada se compara como <strong>texto</strong>, así que conviene evitar
+     decimales y nulos, que cada cliente imprime a su manera. Un centinela
+     explícito (<code>sin-curso</code>) enseña más y compara mejor.</li>
+<li>Cuando la decisión no se pueda reducir a una consulta con resultado
+     —consenso, CAP, gobierno del dato— se declara <code>modo: conceptual</code> y cada
+     motor añade <code>como:</code> en vez de código. La clase dirá, con esas palabras, que
+     ahí no hay sello de máquina.</li>
+</ul>
+<ol start="4">
+<li><strong>Escribir las implementaciones</strong> en <code>implementaciones/&lt;motor&gt;/</code>, cada una con
+   su cabecera y sus dos secciones:</li>
+</ol>
+<p>```sql
+   -- motor: postgresql
+   -- doc: https://www.postgresql.org/docs/current/...
+   -- nota: lo que hay que mirar en este motor y en ningún otro.</p>
+<p>-- === preparacion ===
+   CREATE TABLE ...;
+   INSERT INTO ...;</p>
+<p>-- === consulta ===
+   SELECT ...;
+   ```</p>
+<p>En los motores que no devuelven tablas —MongoDB, Redis, Neo4j— la consulta
+   <strong>imprime</strong> las filas con las columnas separadas por <code>|</code>: comparar entre
+   modelos distintos solo es posible sobre una forma común.</p>
+<ol start="5">
 <li><strong>Regenerar y validar:</strong></li>
 </ol>
 <p><code>bash
    python scripts/build_classes.py
    python scripts/generate_site.py
-   python scripts/validate_repository.py</code></p>
+   python scripts/validate_repository.py
+   python scripts/verificar_equivalencia.py --verbose</code></p>
 <h2 id="4-qué-es-una-clase-aceptable">4. Qué es una clase aceptable</h2>
 <p>No basta con que las secciones existan. El criterio de contenido:</p>
 <ul>
@@ -149,8 +233,13 @@ la siguiente generación, y la integración continua lo detecta.</p>
 <li><strong>Se declara lo que la clase no demuestra.</strong> Es la sección que distingue el
   material honesto del promocional.</li>
 <li><strong>Se enlaza con las clases vecinas</strong> por su número, para que el programa se
-  lea como un cuerpo y no como 64 fichas sueltas.</li>
+  lea como un cuerpo y no como 74 fichas sueltas.</li>
 <li><strong>Ninguna comparación entre productos se apoya en material comercial.</strong></li>
+<li><strong>El <code>porque_no</code> de cada motor es concreto y comprobable.</strong> «Puede ser lento»
+  no vale; «<code>$lookup</code> no usa índices del lado interno con la misma libertad que
+  un motor relacional» sí, porque se puede ir a la documentación y verificarlo.</li>
+<li><strong>Los motores descartados dicen qué se hace en su lugar.</strong> Un <code>aplica: no</code> sin
+  <code>alternativa</code> deja al lector sin salida.</li>
 </ul>
 <p>Longitud mínima comprobada: 2 500 caracteres y al menos un bloque de código.
 Son mínimos, no objetivos.</p>
@@ -162,6 +251,11 @@ Son mínimos, no objetivos.</p>
    Declarar <code>true</code> sin laboratorio es prometer de más.</li>
 <li>Añadir su documentación oficial a <code>catalog/sources.json</code> y citarla desde la
    clase que lo trate.</li>
+<li>Si se quiere que sus implementaciones <strong>se ejecuten</strong>, añadir el servicio a
+   <code>docker-compose.yml</code> con su healthcheck y el adaptador correspondiente en
+   <code>SERVICIOS</code>, dentro de <code>scripts/verificar_equivalencia.py</code>. Mientras eso no
+   exista, sus implementaciones van como <code>ejecucion: declarado</code>. Decir que algo
+   se ejecuta sin ejecutarlo es la única mentira que este repositorio no admite.</li>
 </ol>
 <h2 id="6-seguridad-y-ética">6. Seguridad y ética</h2>
 <ul>
@@ -175,21 +269,30 @@ Son mínimos, no objetivos.</p>
   demuestra.</li>
 </ul>
 <h2 id="7-antes-de-abrir-un-cambio">7. Antes de abrir un cambio</h2>
-<pre><code class="language-bash">python scripts/validate_repository.py     # estructura, fuentes, enlaces, codificación
-python scripts/build_classes.py --check   # ¿quedaron README sin regenerar?
-python scripts/generate_site.py --check   # ¿quedó el sitio desactualizado?
+<pre><code class="language-bash">python scripts/validate_repository.py       # estructura, fuentes, motores, enlaces, codificación
+python scripts/build_classes.py --check     # ¿quedaron README sin regenerar?
+python scripts/generate_site.py --check     # ¿quedó el sitio desactualizado?
+python scripts/verificar_equivalencia.py    # SQLite y DuckDB, sin servicios
 python labs/01-sql-foundations/run_lab.py
-python labs/06-vector-search/run_vector_lab.py
-python scripts/check_external_links.py    # opcional; obligatorio si tocaste el registro
+python -m pytest -q
 </code></pre>
-<p>Los cinco primeros son los que ejecuta la integración continua. Si pasan en
-local, <code>main</code> seguirá en verde.</p>
+<p>Y si tocaste implementaciones de motores con servicio:</p>
+<pre><code class="language-bash">docker compose --profile todo up -d --wait
+python scripts/verificar_equivalencia.py --con-servicios --verbose
+docker compose --profile todo down --volumes
+</code></pre>
+<p>Si tocaste el registro de fuentes o algún enlace <code>doc:</code>:</p>
+<pre><code class="language-bash">python scripts/check_external_links.py      # los dos registros
+python scripts/check_external_links.py --solo motores
+</code></pre>
+<p>Todo lo anterior lo ejecuta la integración continua. Si pasa en local, <code>main</code>
+seguirá en verde.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/PROMPT_MAESTRO.md" rel="noopener"><code>PROMPT_MAESTRO.md</code></a></p>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

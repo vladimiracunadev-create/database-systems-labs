@@ -1,0 +1,101 @@
+---
+caso:
+  titulo: Subir la nota de un curso y dar de baja a un estudiante, sin tocar nada más
+  contrato: |
+    Dos cambios sobre cuatro notas: subir 5 puntos **solo** a las de DB-101, y
+    borrar **solo** las de Linus. Los dos llevan `WHERE`, y ahí está toda la
+    clase: sin esa cláusula, el primero subiría las cuatro notas y el segundo
+    vaciaría la tabla.
+
+    Ninguna de las dos versiones equivocadas da error. Son órdenes perfectamente
+    válidas que hacen exactamente lo que dicen, y por eso el hábito de comprobar
+    el alcance con un `SELECT` antes de ejecutar vale más que cualquier
+    herramienta.
+  columnas: [estudiante, curso, nota]
+  esperado:
+    - [Ada, DB-101, "95"]
+    - [Ada, SE-201, "66"]
+    - [Grace, DB-101, "77"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `UPDATE` y `DELETE` con la sintaxis estándar, y una función —`changes()`—
+      que devuelve cuántas filas se tocaron: la comprobación más barata que
+      existe contra un `WHERE` mal escrito.
+    porque_no: >-
+      No hay usuarios ni permisos: cualquiera con acceso al archivo puede
+      ejecutar el `DELETE` sin `WHERE`. En un motor con servidor, al menos se
+      puede negar ese permiso.
+    doc: https://sqlite.org/lang_update.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Misma sintaxis, y es el sitio natural para comprobar el alcance **antes**:
+      contar cuántas filas coinciden con el `WHERE` sobre una copia de los datos
+      reales cuesta segundos.
+    porque_no: >-
+      Modificar filas de una en una es lo que peor hace un motor columnar: cada
+      `UPDATE` reescribe bloques enteros de columna.
+    doc: https://duckdb.org/docs/stable/sql/statements/update
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Aquí el `UPDATE` puede ir dentro de una transacción **junto con el
+      recuento**: si el número de filas afectadas no cuadra, `ROLLBACK` y no ha
+      pasado nada. Es la red de seguridad completa.
+    porque_no: >-
+      Un `UPDATE` no modifica la fila: escribe una versión nueva y deja la vieja
+      muerta hasta que el vacío la retire. Un `UPDATE` masivo sin `WHERE` no solo
+      cambia los datos: también hincha la tabla.
+    doc: https://www.postgresql.org/docs/current/sql-update.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Tiene una defensa específica para este accidente: el modo seguro de
+      actualización (`sql_safe_updates`), que **rechaza** un `UPDATE` o un
+      `DELETE` sin `WHERE` sobre una columna indexada. El cliente `mysql` lo
+      activa con `--safe-updates`.
+    porque_no: >-
+      Viene desactivado por omisión en las conexiones de aplicación, así que la
+      protección solo existe donde alguien la activó a propósito.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/mysql-tips.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      La API obliga a elegir: `updateOne` o `updateMany`, `deleteOne` o
+      `deleteMany`. Ese nombre explícito es una defensa mejor que la de SQL,
+      donde una sola palabra decide entre una fila y un millón.
+    porque_no: >-
+      `deleteMany({})` con el filtro vacío vacía la colección igual, y el filtro
+      vacío es lo que devuelve un objeto sin inicializar: el accidente cambia de
+      forma, no desaparece.
+    doc: https://www.mongodb.com/docs/manual/reference/method/db.collection.updateMany/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay condición que escribir: cada orden actúa sobre una clave concreta.
+      El accidente equivalente existe y es peor —`FLUSHDB` vacía la base sin
+      preguntar, y `KEYS *` bloquea el servidor entero mientras recorre—, pero
+      no se parece a un `WHERE` olvidado.
+    alternativa: >-
+      Renombrar las órdenes peligrosas en la configuración (`rename-command
+      FLUSHDB ""`) es la defensa habitual: quitarlas de en medio en vez de
+      confiar en no escribirlas.
+    doc: https://redis.io/docs/latest/commands/flushdb/

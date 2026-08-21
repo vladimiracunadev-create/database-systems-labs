@@ -1,0 +1,133 @@
+---
+caso:
+  titulo: Cargar el mismo lote dos veces y que el destino no se entere
+  contrato: |
+    Todo proceso de integración se reintenta: la red falla, el trabajo se cae a
+    mitad, alguien lo relanza «por si acaso». Si cargar dos veces el mismo lote
+    duplica las filas, el sistema es una bomba de relojería. Por eso la
+    propiedad que define una carga bien hecha no es la velocidad: es la
+    **idempotencia**.
+
+    El caso carga tres clientes y **repite la carga entera** con el mismo lote.
+    El destino tiene que quedar con tres filas y los mismos saldos, no con seis.
+    La forma de conseguirlo es la misma en todas partes —escribir por clave, no
+    añadir— y lo que cambia es cómo se llama en cada motor y qué pasa cuando la
+    clave no basta.
+  columnas: [cliente, saldo]
+  esperado:
+    - [C-1, "10"]
+    - [C-2, "20"]
+    - [C-3, "30"]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `INSERT ... ON CONFLICT DO UPDATE` resuelve la carga idempotente en una
+      sentencia, y su **decodificación lógica** convierte al WAL en una fuente de
+      captura de cambios: Debezium y compañía leen de ahí sin consultar la base
+      ni añadir disparadores.
+    porque_no: >-
+      Esa captura obliga a gestionar las **ranuras de réplica**: una ranura que
+      nadie consume retiene el WAL indefinidamente y llena el disco del
+      primario. Es la avería clásica de una integración abandonada.
+    doc: https://www.postgresql.org/docs/current/sql-insert.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      `INSERT ... ON DUPLICATE KEY UPDATE` hace lo mismo, y el registro binario
+      en formato de fila (`ROW`) es una fuente de captura de cambios madura y muy
+      usada.
+    porque_no: >-
+      `ON DUPLICATE KEY UPDATE` se dispara con **cualquier** clave única, no solo
+      con la que se esperaba: con dos restricciones únicas, la sentencia puede
+      actualizar una fila distinta de la que se pretendía, en silencio.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene la misma cláusula `ON CONFLICT DO UPDATE` con la sintaxis de
+      PostgreSQL: la idempotencia se puede estudiar y probar sin infraestructura.
+    porque_no: >-
+      No hay captura de cambios: para saber qué cambió hay que compararlo todo,
+      o llevar una columna de marca de tiempo y confiar en que nadie la olvide
+      al escribir.
+    doc: https://sqlite.org/lang_upsert.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es la herramienta natural de la **T** de ELT: transforma leyendo
+      directamente ficheros CSV o Parquet, y admite el mismo `ON CONFLICT`.
+      Buena parte de los procesos que antes exigían un clúster caben aquí.
+    porque_no: >-
+      No es un destino operativo ni un orquestador: no hay reintentos, ni
+      registro de ejecuciones, ni gestión de dependencias entre tareas. Es el
+      motor de transformación, no el proceso.
+    doc: https://duckdb.org/docs/stable/sql/statements/insert
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `updateOne` con `upsert: true` es idempotente por definición, y los
+      **flujos de cambios** (`watch`) dan captura de cambios con reanudación por
+      testigo: se puede retomar exactamente donde se dejó tras una caída.
+    porque_no: >-
+      Ese testigo de reanudación caduca con el registro de operaciones: si el
+      consumidor está parado más tiempo del que cubre el `oplog`, no puede
+      reanudar y hay que **recargarlo todo**. Dimensionar el `oplog` es parte del
+      diseño de la integración.
+    doc: https://www.mongodb.com/docs/manual/changeStreams/
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      Su motor `ReplacingMergeTree` da idempotencia sin `UPDATE`: se insertan
+      siempre filas nuevas con una versión, y la fusión se queda con la última.
+      Encaja con un almacén que solo sabe añadir.
+    porque_no: >-
+      La deduplicación ocurre **cuando la fusión decide**, no al insertar: hasta
+      entonces conviven las dos versiones y una consulta puede contarlas las dos.
+      Hay que escribir `FINAL` —que es caro— o agregar de forma que los
+      duplicados no importen.
+    doc: https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/replacingmergetree
+
+  - id: kafka
+    aplica: no
+    porque_no: >-
+      No es un destino donde cargar ni un motor donde consultar: es el registro
+      por el que viajan los cambios. La idempotencia de esta clase se resuelve en
+      el consumidor, no en él.
+    alternativa: >-
+      El **patrón de bandeja de salida**: cada servicio escribe el cambio y el
+      evento en la misma transacción local, y un conector de captura de cambios
+      lee el registro del motor y lo publica. Así nunca hay un cambio sin evento
+      ni un evento sin cambio, que es el fallo que hunde a las integraciones
+      escritas a mano.
+    doc: https://kafka.apache.org/documentation/#semantics
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      `SET` es idempotente de forma trivial, así que el caso no enseña nada aquí:
+      escribir dos veces la misma clave con el mismo valor deja el mismo estado
+      por construcción.
+    alternativa: >-
+      Donde sí aporta es como **registro de lotes ya procesados**
+      (`SADD lotes:procesados <id>`), que es la forma más barata de que un
+      reintento no vuelva a aplicar lo que ya se aplicó.
+    doc: https://redis.io/docs/latest/commands/sadd/

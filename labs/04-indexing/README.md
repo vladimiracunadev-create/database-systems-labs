@@ -5,7 +5,7 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ (SQLite). PostgreSQL, opcional
 · **Marca de éxito:** `INDEXING_LAB_OK`
-· **Parte:** [08 — Almacenamiento, índices y planes](../../classes/part-08-almacenamiento-indices-y-planes/README.md)
+· **Parte:** [08 — Almacenamiento, índices y planes](../../classes/part-09-almacenamiento-indices-y-planes/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -56,7 +56,7 @@ lees más de lo que escribes.
 
 - No mide latencia ni rendimiento bajo carga concurrente.
 - No cubre índices parciales, cubrientes, GIN, GiST ni BRIN: eso es la
-  [clase 041](../../classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/README.md).
+  [clase 041](../../classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/README.md).
 - El planificador de SQLite es más simple que el de PostgreSQL u Oracle; las **formas** se
   transfieren, los costes concretos no.
 - No modela fragmentación ni mantenimiento del índice a lo largo del tiempo.
@@ -82,9 +82,9 @@ aparte, al menos quince repeticiones, mediana y dispersión, y declarar la máqu
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [038–042](../../classes/part-08-almacenamiento-indices-y-planes/README.md), en
-  especial [039 — B-tree, orden de columnas y selectividad](../../classes/part-08-almacenamiento-indices-y-planes/039-b-tree-orden-de-columnas-y-selectividad/README.md)
-  y [042 — Planes de ejecución y refutación](../../classes/part-08-almacenamiento-indices-y-planes/042-planes-de-ejecucion-y-refutacion/README.md).
+- **Clases:** [038–042](../../classes/part-09-almacenamiento-indices-y-planes/README.md), en
+  especial [039 — B-tree, orden de columnas y selectividad](../../classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)
+  y [042 — Planes de ejecución y refutación](../../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md).
 - **Rutas:** [Desarrollador de aplicaciones](../../rutas/desarrollo-de-aplicaciones.md),
   [DBA / SRE de datos](../../rutas/fiabilidad-y-operacion.md),
   [Analytics engineer / BI](../../rutas/analitica-y-bi.md).

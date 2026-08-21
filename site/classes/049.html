@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Migraciones evolutivas sin ventana de caída. Parte 10: Operación, seguridad y gobierno.">
+<meta name="description" content="B-Tree: estructura, orden de columnas y selectividad. Parte 09: Almacenamiento, índices y planes.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/049.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="049 — Migraciones evolutivas sin ventana de caída · Database Systems Labs">
-<meta property="og:description" content="Migraciones evolutivas sin ventana de caída. Parte 10: Operación, seguridad y gobierno.">
+<meta property="og:title" content="049 — B-Tree: estructura, orden de columnas y selectividad · Database Systems Labs">
+<meta property="og:description" content="B-Tree: estructura, orden de columnas y selectividad. Parte 09: Almacenamiento, índices y planes.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/049.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "049 — Migraciones evolutivas sin ventana de caída", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["expandir y contraer", "doble escritura", "relleno", "compatibilidad hacia atras"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>049 — Migraciones evolutivas sin ventana de caída · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "049 — B-Tree: estructura, orden de columnas y selectividad", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["B-Tree", "prefijo más a la izquierda", "selectividad", "índice cubriente"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>049 — B-Tree: estructura, orden de columnas y selectividad · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,326 +49,653 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-10.html">Parte 10 · Operación, seguridad y gobierno</a>
+  <a href="parte-09.html">Parte 09 · Almacenamiento, índices y planes</a>
   <span aria-hidden="true">/</span><span>Clase 049</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="049--migraciones-evolutivas-sin-ventana-de-caída">049 — Migraciones evolutivas sin ventana de caída</h1>
+<h1 id="049--b-tree-estructura-orden-de-columnas-y-selectividad">049 — B-Tree: estructura, orden de columnas y selectividad</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-09-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-049%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 10 — Operación, seguridad y gobierno · Avanzado ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>expandir y contraer</code> · <code>doble escritura</code> · <code>relleno</code> · <code>compatibilidad hacia atras</code></p>
+<p>Parte 09 — Almacenamiento, índices y planes · Intermedio ·
+4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>B-Tree</code> · <code>prefijo más a la izquierda</code> · <code>selectividad</code> · <code>índice cubriente</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 049&quot;]
+    C --&gt; K1[&quot;B-Tree&quot;]
+    C --&gt; K2[&quot;prefijo más a la izquierda&quot;]
+    C --&gt; K3[&quot;selectividad&quot;]
+    C --&gt; K4[&quot;índice cubriente&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Cambiar el esquema mientras la aplicación sirve tráfico. La técnica se resume en una idea: nunca hacer un cambio incompatible; hacer dos compatibles con un periodo de convivencia en medio.</p>
+<p>Dominar el índice B-Tree: cómo se recorre, por qué el orden de las columnas decide qué consultas sirve y cuándo el motor decide no usarlo.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Aplicar el patrón expandir-migrar-contraer.</li>
-<li>Identificar qué operaciones DDL bloquean y por cuánto.</li>
-<li>Diseñar una doble escritura con relleno y verificación.</li>
-<li>Escribir migraciones idempotentes y reversibles.</li>
-<li>Reconocer el cambio que sí exige una ventana de parada.</li>
+<li>Calcular la altura de un B-Tree y el número de páginas de una búsqueda.</li>
+<li>Aplicar la regla del prefijo más a la izquierda.</li>
+<li>Explicar por qué una condición de rango «detiene» el uso de las columnas siguientes.</li>
+<li>Estimar selectividad y predecir si el índice se usará.</li>
+<li>Diseñar índices cubrientes y medir su beneficio y su costo.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="expandir-migrar-contraer">Expandir, migrar, contraer</h3>
-<p>Ambler y Sadalage formalizaron la técnica. Todo cambio incompatible se descompone en tres despliegues:</p>
-<pre><code class="language-text">1. EXPANDIR   Añadir lo nuevo sin quitar lo viejo. Ambas versiones del código funcionan.
-2. MIGRAR     Rellenar los datos nuevos. Cambiar el código para usarlos. Verificar.
-3. CONTRAER   Eliminar lo viejo, cuando ya nadie lo usa.
+<h3 id="la-estructura">La estructura</h3>
+<p>Bayer y McCreight (1972) definieron el B-Tree; los motores usan la variante B⁺: todos los datos en las hojas, hojas enlazadas entre sí para recorridos por rango.</p>
+<pre><code class="language-text">                    [ 200 | 500 ]                    raíz
+                   /      |      \
+          [50|120]   [300|400]   [700|900]           internos
+          /  |  \      /  |  \     /  |  \
+        hojas ordenadas, enlazadas: → → → →
 </code></pre>
-<p>La regla que lo hace funcionar: <strong>en todo momento, la versión antigua y la nueva del código deben poder ejecutarse contra el mismo esquema</strong>. Durante un despliegue gradual conviven, y en una reversión también.</p>
+<p><strong>Altura:</strong></p>
+<pre><code class="language-text">entradas por página ≈ 8 192 / (tamaño de clave + puntero)
+con clave de 8 B + puntero 6 B: ≈ 585 entradas
+N = 10 000 000  →  altura = ⌈log₅₈₅ 10⁷⌉ = 3
+</code></pre>
+<p><strong>Tres páginas</strong> para localizar cualquier fila entre diez millones. Y en la práctica los niveles superiores están siempre en memoria, así que la búsqueda cuesta una o dos lecturas físicas.</p>
+<p>Los B-Tree son <strong>muy planos</strong>: multiplicar los datos por 585 añade un solo nivel.</p>
+<h3 id="el-prefijo-más-a-la-izquierda">El prefijo más a la izquierda</h3>
+<p>Un índice sobre <code>(a, b, c)</code> ordena por <code>a</code>, luego por <code>b</code>, luego por <code>c</code>. Sirve para:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Cambio deseado</th>
-<th>Expandir</th>
-<th>Migrar</th>
-<th>Contraer</th>
+<th>Consulta</th>
+<th>¿Usa el índice?</th>
+<th>Hasta dónde</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Renombrar columna</td>
-<td>Añadir la nueva</td>
-<td>Copiar + doble escritura + cambiar lecturas</td>
-<td>Eliminar la antigua</td>
+<td><code>WHERE a = 1</code></td>
+<td>Sí</td>
+<td><code>a</code></td>
 </tr>
 <tr>
-<td>Cambiar tipo</td>
-<td>Añadir columna con el tipo nuevo</td>
-<td>Convertir + doble escritura</td>
-<td>Eliminar la antigua</td>
+<td><code>WHERE a = 1 AND b = 2</code></td>
+<td>Sí</td>
+<td><code>a</code>, <code>b</code></td>
 </tr>
 <tr>
-<td>Dividir tabla</td>
-<td>Crear la nueva + vista de compatibilidad</td>
-<td>Copiar + cambiar escrituras</td>
-<td>Eliminar la antigua</td>
+<td><code>WHERE a = 1 AND b = 2 AND c = 3</code></td>
+<td>Sí</td>
+<td>todo</td>
 </tr>
 <tr>
-<td>Añadir <code>NOT NULL</code></td>
-<td>Añadir <code>CHECK NOT VALID</code></td>
-<td>Corregir nulos + <code>VALIDATE</code></td>
-<td>Convertir a <code>NOT NULL</code></td>
+<td><code>WHERE b = 2</code></td>
+<td><strong>No</strong> (o barrido de índice)</td>
+<td>—</td>
 </tr>
 <tr>
-<td>Añadir clave foránea</td>
-<td><code>NOT VALID</code></td>
-<td>Corregir huérfanos + <code>VALIDATE</code></td>
+<td><code>WHERE a = 1 AND c = 3</code></td>
+<td>Parcial</td>
+<td>solo <code>a</code>; filtra <code>c</code> después</td>
+</tr>
+<tr>
+<td><code>ORDER BY a, b</code></td>
+<td>Sí, sin ordenar</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ORDER BY b</code></td>
+<td>No</td>
 <td>—</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="qué-bloquea-y-por-cuánto">Qué bloquea y por cuánto</h3>
-<p>Este es el conocimiento operativo que evita incidentes:</p>
+<p>La analogía exacta es la guía telefónica ordenada por apellido y luego por nombre: buscar por nombre sin apellido no aprovecha el orden.</p>
+<h3 id="el-rango-detiene-el-índice">El rango detiene el índice</h3>
+<p>Regla que Winand desarrolla como concepto central:</p>
+<pre><code class="language-sql">-- índice (course_id, registrada_en, nota)
+WHERE course_id = 42 AND registrada_en &gt; '2026-01-01' AND nota = 6.0
+</code></pre>
+<p>El motor puede usar <code>course_id</code> (igualdad) y <code>registrada_en</code> (rango), pero <strong>no</strong> <code>nota</code>: dentro del rango de fechas, las notas no están ordenadas globalmente. <code>nota</code> se aplica como filtro sobre las filas leídas.</p>
+<p>De ahí la regla de diseño: <strong>igualdades primero, luego la columna de orden, y el rango al final</strong>. Es exactamente la regla ESR de MongoDB de la clase 026, con otro nombre.</p>
+<h3 id="selectividad">Selectividad</h3>
+<pre><code class="language-text">selectividad = filas que cumplen / filas totales
+</code></pre>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Operación</th>
-<th>PostgreSQL</th>
+<th>Selectividad</th>
+<th>Uso probable del índice</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ADD COLUMN</code> sin valor por defecto</td>
-<td>Instantáneo (bloqueo breve)</td>
+<td>&lt; 1 %</td>
+<td>Casi seguro</td>
 </tr>
 <tr>
-<td><code>ADD COLUMN ... DEFAULT</code></td>
-<td>Instantáneo desde PG 11</td>
+<td>1 – 5 %</td>
+<td>Probable</td>
 </tr>
 <tr>
-<td><code>ADD COLUMN ... NOT NULL</code> sin defecto</td>
-<td><strong>Falla</strong> si hay filas</td>
+<td>5 – 20 %</td>
+<td>Depende del ancho de fila y la correlación</td>
 </tr>
 <tr>
-<td><code>DROP COLUMN</code></td>
-<td>Instantáneo (marca como borrada)</td>
-</tr>
-<tr>
-<td><code>ALTER TYPE</code> que exige conversión</td>
-<td><strong>Reescribe la tabla</strong>: bloqueo largo</td>
-</tr>
-<tr>
-<td><code>CREATE INDEX</code></td>
-<td><strong>Bloquea escrituras</strong></td>
-</tr>
-<tr>
-<td><code>CREATE INDEX CONCURRENTLY</code></td>
-<td>No bloquea; más lento; puede fallar y dejar un índice inválido</td>
-</tr>
-<tr>
-<td><code>ADD CONSTRAINT ... NOT VALID</code></td>
-<td>Instantáneo</td>
-</tr>
-<tr>
-<td><code>VALIDATE CONSTRAINT</code></td>
-<td>Barrido sin bloquear escrituras</td>
-</tr>
-<tr>
-<td><code>SET NOT NULL</code> con <code>CHECK</code> validado previo</td>
-<td>Instantáneo desde PG 12</td>
+<td>&gt; 20 %</td>
+<td>Barrido secuencial</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>La trampa de la cola de bloqueos.</strong> Un <code>ALTER TABLE</code> que necesita un bloqueo exclusivo espera a que terminen las transacciones en curso, y <strong>mientras espera bloquea a todas las que llegan detrás</strong>. Una consulta de informe de 10 minutos convierte un <code>ALTER</code> instantáneo en 10 minutos de indisponibilidad total de esa tabla.</p>
-<p>La defensa es siempre la misma:</p>
-<pre><code class="language-sql">SET lock_timeout = '3s';
-ALTER TABLE ... ;   -- si no consigue el bloqueo en 3 s, falla y se reintenta después
+<p>Un índice sobre una columna booleana con reparto 50/50 casi nunca se usa: leer la mitad de la tabla por accesos aleatorios es peor que leerla entera en secuencial (clase 038).</p>
+<p><strong>Excepción importante:</strong> el índice <strong>parcial</strong> sobre el valor raro sí sirve.</p>
+<pre><code class="language-sql">CREATE INDEX enrollments_pendientes ON enrollments (course_id)
+WHERE estado = 'pendiente';    -- solo el 2 % de las filas
 </code></pre>
-<p>En MySQL, además, hay que recordar que <strong>el DDL no es transaccional</strong> (clase 014): una migración de varios pasos que falla a la mitad no se revierte sola.</p>
-<pre><code class="language-mermaid">flowchart LR
-    V1[&quot;Código v1&lt;br/&gt;usa columna vieja&quot;] --&gt; E[&quot;EXPANDIR&lt;br/&gt;añadir columna nueva&lt;br/&gt;+ doble escritura&quot;]
-    E --&gt; V12[&quot;v1 y v2 conviven&lt;br/&gt;ambas funcionan&quot;]
-    V12 --&gt; M[&quot;MIGRAR&lt;br/&gt;rellenar por lotes&lt;br/&gt;+ verificar&quot;]
-    M --&gt; V2[&quot;Código v2&lt;br/&gt;lee la nueva&quot;]
-    V2 --&gt; W[&quot;Esperar: ¿reversión posible?&lt;br/&gt;días, no minutos&quot;]
-    W --&gt; C[&quot;CONTRAER&lt;br/&gt;eliminar la vieja&quot;]
+<h3 id="índice-cubriente">Índice cubriente</h3>
+<p>Si el índice contiene todas las columnas que la consulta necesita, el motor no toca la tabla:</p>
+<pre><code class="language-sql">CREATE INDEX enr_cubriente ON enrollments (course_id, registrada_en) INCLUDE (nota);
+</code></pre>
+<p><code>INCLUDE</code> (PostgreSQL 11+, SQL Server) añade columnas <strong>solo a las hojas</strong>: no participan en el orden ni engordan los nodos internos. Es más barato que añadirlas a la clave.</p>
+<pre><code class="language-mermaid">flowchart TD
+    Q[&quot;Consulta&quot;] --&gt; S{&quot;Selectividad&lt;br/&gt;del filtro&quot;}
+    S -- &quot;&gt; 20 %&quot; --&gt; SEQ[&quot;Barrido secuencial&quot;]
+    S -- &quot;&lt; 5 %&quot; --&gt; I{&quot;¿El índice cubre&lt;br/&gt;todas las columnas?&quot;}
+    I -- &quot;Sí&quot; --&gt; C[&quot;Barrido de índice solo&lt;br/&gt;0 accesos a la tabla&quot;]
+    I -- &quot;No&quot; --&gt; B{&quot;¿Muchas filas&lt;br/&gt;coincidentes?&quot;}
+    B -- &quot;Sí&quot; --&gt; BM[&quot;Barrido de mapa de bits:&lt;br/&gt;ordena antes de leer datos&quot;]
+    B -- &quot;No&quot; --&gt; IX[&quot;Búsqueda por índice&quot;]
+    S -- &quot;5-20 %&quot; --&gt; COR{&quot;¿Las filas están&lt;br/&gt;físicamente correlacionadas?&quot;}
+    COR -- &quot;Sí&quot; --&gt; IX
+    COR -- &quot;No&quot; --&gt; SEQ
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Objetivo: renombrar <code>enrollments.nota</code> a <code>calificacion</code> y cambiar su tipo de <code>REAL</code> a <code>NUMERIC(2,1)</code>. Tabla de 5 millones de filas, 400 escrituras/s.</p>
-<p><strong>Lo que NO se puede hacer:</strong></p>
-<pre><code class="language-sql">ALTER TABLE enrollments RENAME COLUMN nota TO calificacion;
+<p>Consulta frecuente sobre 5 000 000 de inscripciones:</p>
+<pre><code class="language-sql">SELECT student_id, nota
+FROM enrollments
+WHERE course_id = 42 AND estado = 'activa' AND registrada_en &gt;= '2026-01-01'
+ORDER BY registrada_en DESC
+LIMIT 20;
 </code></pre>
-<p>Instantáneo en el motor y <strong>catastrófico</strong>: todo el código desplegado que dice <code>nota</code> falla desde ese instante, incluidas las instancias que aún no se han actualizado.</p>
-<h3 id="paso-1--expandir">Paso 1 — Expandir</h3>
-<pre><code class="language-sql">SET lock_timeout = '3s';
-ALTER TABLE enrollments ADD COLUMN calificacion NUMERIC(2,1);   -- instantáneo
-
-CREATE OR REPLACE FUNCTION sync_calificacion() RETURNS TRIGGER AS $$
-BEGIN
-  -- Doble escritura en ambos sentidos: el código viejo escribe `nota`,
-  -- el nuevo escribe `calificacion`, y ambos quedan sincronizados.
-  IF NEW.calificacion IS DISTINCT FROM OLD.calificacion THEN
-    NEW.nota := NEW.calificacion::real;
-  ELSIF NEW.nota IS DISTINCT FROM OLD.nota THEN
-    NEW.calificacion := NEW.nota::numeric(2,1);
-  END IF;
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_sync_calificacion BEFORE INSERT OR UPDATE ON enrollments
-FOR EACH ROW EXECUTE FUNCTION sync_calificacion();
+<p><strong>Datos del dominio:</strong> 300 cursos (16 667 filas por curso), 85 % activas, la mitad posteriores a esa fecha.</p>
+<p><strong>Índice 1 — ingenuo, una columna:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i1 ON enrollments (course_id);
 </code></pre>
-<p>Aquí no ha cambiado nada para el código existente. Se puede revertir sin consecuencias.</p>
-<h3 id="paso-2--rellenar-por-lotes">Paso 2 — Rellenar por lotes</h3>
-<p>Un <code>UPDATE</code> único de 5 millones de filas mantendría un bloqueo enorme, generaría 5 millones de versiones muertas y un WAL gigantesco.</p>
-<pre><code class="language-sql">DO $$
-DECLARE ultimo RECORD; n INTEGER;
-BEGIN
-  LOOP
-    WITH lote AS (
-      SELECT student_id, course_id FROM enrollments
-      WHERE calificacion IS NULL AND nota IS NOT NULL
-      ORDER BY student_id, course_id LIMIT 10000 FOR UPDATE SKIP LOCKED
-    )
-    UPDATE enrollments e SET calificacion = e.nota::numeric(2,1)
-    FROM lote l WHERE e.student_id = l.student_id AND e.course_id = l.course_id;
-    GET DIAGNOSTICS n = ROW_COUNT;
-    EXIT WHEN n = 0;
-    COMMIT;             -- transacción corta por lote
-    PERFORM pg_sleep(0.1);   -- dar aire al autovacuum y a la réplica
-  END LOOP;
-END $$;
+<pre><code class="language-text">Búsqueda por índice: 16 667 entradas
+Acceso a la tabla:   16 667 lecturas (posiblemente aleatorias)
+Filtro:              estado y fecha, descarta ~58 %
+Orden:               7 000 filas ordenadas en memoria
+LIMIT 20
 </code></pre>
-<p><code>SKIP LOCKED</code> evita esperar a filas que la aplicación está modificando. La pausa evita que el relleno dispare el retraso de réplica (clase 043).</p>
-<h3 id="paso-3--verificar-antes-de-seguir">Paso 3 — Verificar antes de seguir</h3>
-<pre><code class="language-sql">SELECT count(*) FROM enrollments
-WHERE nota IS DISTINCT FROM calificacion::real;   -- debe ser 0
+<p><strong>Índice 2 — orden equivocado:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i2 ON enrollments (registrada_en, course_id, estado);
 </code></pre>
-<p><strong>Esta consulta es la puerta.</strong> Si no da cero, no se avanza.</p>
-<h3 id="paso-4--desplegar-el-código-que-lee-calificacion">Paso 4 — Desplegar el código que lee <code>calificacion</code></h3>
-<p>Despliegue gradual. Durante horas conviven instancias que leen una y otra columna; el disparador mantiene ambas correctas.</p>
-<h3 id="paso-5--esperar">Paso 5 — Esperar</h3>
-<p>Días, no minutos. Es la ventana en la que una reversión del código sigue siendo posible sin tocar la base.</p>
-<h3 id="paso-6--contraer">Paso 6 — Contraer</h3>
-<pre><code class="language-sql">SET lock_timeout = '3s';
-DROP TRIGGER trg_sync_calificacion ON enrollments;
-ALTER TABLE enrollments DROP COLUMN nota;
+<p>Peor: el rango va primero, así que el índice se recorre desde la fecha hasta el final —millones de entradas— filtrando <code>course_id</code> sobre cada una.</p>
+<p><strong>Índice 3 — igualdades, orden, rango:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i3 ON enrollments (course_id, estado, registrada_en DESC);
 </code></pre>
-<p><strong>Resumen de la operación:</strong></p>
+<pre><code class="language-text">Descenso del árbol:        3 páginas
+Recorrido de hojas:        20 entradas (ya en el orden pedido, descendente)
+Acceso a la tabla:         20 filas
+Orden:                     NINGUNO (el índice lo entrega)
+</code></pre>
+<p><strong>16 667 → 20.</strong> Y desaparece el ordenamiento, que era el otro coste.</p>
+<p><strong>Índice 4 — cubriente:</strong></p>
+<pre><code class="language-sql">CREATE INDEX i4 ON enrollments (course_id, estado, registrada_en DESC)
+       INCLUDE (student_id, nota);
+</code></pre>
+<pre><code class="language-text">Accesos a la tabla: 0
+</code></pre>
+<p><strong>Comparación medida:</strong></p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Paso</th>
-<th>Duración</th>
-<th>Bloqueo</th>
-<th>¿Reversible?</th>
+<th>Índice</th>
+<th style="text-align: right;">Entradas leídas</th>
+<th style="text-align: right;">Filas de tabla</th>
+<th>¿Ordena?</th>
+<th style="text-align: right;">Tamaño</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1 Expandir</td>
-<td>&lt; 1 s</td>
-<td>Breve</td>
+<td>Sin índice</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">5 000 000</td>
 <td>Sí</td>
+<td style="text-align: right;">0</td>
 </tr>
 <tr>
-<td>2 Rellenar</td>
-<td>~2 h</td>
-<td>Ninguno</td>
+<td>i1</td>
+<td style="text-align: right;">16 667</td>
+<td style="text-align: right;">16 667</td>
 <td>Sí</td>
+<td style="text-align: right;">107 MB</td>
 </tr>
 <tr>
-<td>3 Verificar</td>
-<td>minutos</td>
-<td>Ninguno</td>
-<td>Sí</td>
+<td>i2</td>
+<td style="text-align: right;">~2 500 000</td>
+<td style="text-align: right;">2 500 000</td>
+<td>No</td>
+<td style="text-align: right;">214 MB</td>
 </tr>
 <tr>
-<td>4 Desplegar</td>
-<td>~30 min</td>
-<td>Ninguno</td>
-<td>Sí</td>
+<td>i3</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">20</td>
+<td>No</td>
+<td style="text-align: right;">161 MB</td>
 </tr>
 <tr>
-<td>5 Esperar</td>
-<td>días</td>
-<td>Ninguno</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>6 Contraer</td>
-<td>&lt; 1 s</td>
-<td>Breve</td>
-<td><strong>No</strong></td>
+<td>i4</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;"><strong>0</strong></td>
+<td>No</td>
+<td style="text-align: right;">268 MB</td>
 </tr>
 </tbody>
 </table></div>
-<p>Cinco de seis pasos son reversibles. Solo el último no lo es, y para entonces ya se ha demostrado que nadie usa la columna vieja.</p>
-<h3 id="el-cambio-que-sí-exige-parada">El cambio que sí exige parada</h3>
-<p>No todo se puede hacer en caliente. Ejemplos honestos: cambiar la clave primaria de una tabla enorme referenciada por muchas otras, o una reorganización que exige reescribir el conjunto sin espacio para una copia. Ahí la decisión correcta es programar una ventana, comunicarla y ensayarla sobre una copia restaurada (clase 048), no forzar un procedimiento en caliente que se quedará a medias.</p>
+<p><strong>El costo del índice, que también hay que declarar.</strong> i4 pesa 268 MB y se mantiene en <strong>cada</strong> inserción, actualización y borrado de la tabla. Con 400 inscripciones diarias, es despreciable. Con 40 000 por segundo, no lo es: cada escritura toca el índice y compite por sus páginas.</p>
+<p>Regla: <strong>un índice es una apuesta de que se leerá más de lo que se escribirá</strong>. Los índices que no se usan solo cuestan.</p>
+<pre><code class="language-sql">SELECT indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes WHERE idx_scan = 0 ORDER BY pg_relation_size(indexrelid) DESC;
+</code></pre>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Enfoque</th>
-<th>Caída</th>
-<th>Riesgo</th>
-<th>Duración total</th>
+<th>Objetivo</th>
+<th>Diseño</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ALTER</code> directo</td>
-<td>Sí, mientras dure</td>
-<td>Alto</td>
-<td>Minutos</td>
+<td>Igualdad en varias columnas</td>
+<td>Índice compuesto, las más selectivas antes</td>
 </tr>
 <tr>
-<td>Expandir-migrar-contraer</td>
-<td>Ninguna</td>
-<td>Bajo</td>
-<td>Días</td>
+<td>Igualdad + orden</td>
+<td>Igualdades, luego la columna del <code>ORDER BY</code></td>
 </tr>
 <tr>
-<td>Tabla sombra + intercambio</td>
-<td>Segundos</td>
-<td>Medio</td>
-<td>Horas</td>
+<td>Rango</td>
+<td>Al final del índice</td>
 </tr>
 <tr>
-<td>Herramienta en línea (<code>gh-ost</code>, <code>pt-osc</code>)</td>
-<td>Ninguna</td>
-<td>Medio</td>
-<td>Horas</td>
+<td>Evitar acceso a la tabla</td>
+<td><code>INCLUDE</code> con las columnas proyectadas</td>
+</tr>
+<tr>
+<td>Valor poco frecuente</td>
+<td>Índice parcial</td>
+</tr>
+<tr>
+<td>Búsqueda por función</td>
+<td>Índice de expresión</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>RENAME COLUMN</code> en caliente.</strong> Rompe todo el código desplegado.</li>
-<li><strong><code>ALTER</code> sin <code>lock_timeout</code>.</strong> Una consulta larga bloquea la tabla entera.</li>
-<li><strong><code>UPDATE</code> masivo en una sola transacción.</strong> Hinchazón, WAL enorme, retraso de réplica.</li>
-<li><strong><code>CREATE INDEX</code> sin <code>CONCURRENTLY</code> en producción.</strong> Bloquea escrituras.</li>
-<li><strong>Contraer el mismo día que se despliega.</strong> No queda margen de reversión.</li>
-<li><strong>Migraciones no idempotentes.</strong> Un reintento tras un fallo parcial falla o duplica.</li>
-<li><strong>No verificar entre pasos.</strong> Se avanza sobre datos incompletos.</li>
+<li><strong>Un índice por columna.</strong> El motor rara vez combina dos con eficacia; un compuesto sirve a más consultas.</li>
+<li><strong>Rango antes que igualdad.</strong> Desperdicia el resto del índice.</li>
+<li><strong>Indexar columnas de baja cardinalidad.</strong> Salvo como índice parcial.</li>
+<li><strong>Función sobre la columna en el <code>WHERE</code>.</strong> <code>WHERE lower(email) = ...</code> no usa el índice sobre <code>email</code>; hace falta un índice de expresión.</li>
+<li><strong>Índices que nadie usa.</strong> Cuestan espacio y escrituras.</li>
+<li><strong>Ignorar el orden del <code>ORDER BY</code> en el índice.</strong> Un índice ascendente sirve para <code>DESC</code> en muchos motores, pero no siempre en índices compuestos con sentidos mixtos.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las migraciones son el cambio con mayor probabilidad de causar una caída, porque se prueban con datos de desarrollo y se ejecutan sobre datos de producción. Ensayarlas contra una copia restaurada del tamaño real es la práctica que más incidentes evita.</p>
+<p>Los índices se acumulan: cada incidencia añade uno y nadie retira los anteriores. Una revisión trimestral de índices no usados suele recuperar decenas de gigabytes y acelerar la escritura sin tocar una línea de código.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Elige un cambio incompatible real y descomponlo en los tres pasos.</li>
-<li>Implementa la doble escritura y demuestra que ambas versiones del código funcionan.</li>
-<li>Rellena por lotes midiendo el retraso de réplica durante el proceso.</li>
-<li>Escribe la consulta de verificación que actúa como puerta entre pasos.</li>
+<li>Elige tu consulta más frecuente y diseña el índice con la regla igualdad-orden-rango.</li>
+<li>Mide entradas leídas, filas de tabla y presencia de ordenamiento antes y después.</li>
+<li>Conviértelo en cubriente y compara tamaño frente a beneficio.</li>
+<li>Enumera los índices sin uso de tu base y calcula el espacio recuperable.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué <code>RENAME COLUMN</code> es peligroso si es instantáneo en el motor?</li>
-<li>Explica la cola de bloqueos y cómo <code>lock_timeout</code> la evita.</li>
-<li>¿Qué aporta <code>SKIP LOCKED</code> en un relleno por lotes?</li>
-<li>Da un cambio de tu esquema que sí exigiría una ventana de parada, y justifícalo.</li>
+<li>Calcula la altura de un B-Tree con 500 millones de filas y clave de 16 bytes.</li>
+<li>¿Por qué un índice sobre <code>(a, b)</code> no sirve para <code>WHERE b = 2</code>?</li>
+<li>Explica por qué un rango impide aprovechar las columnas posteriores.</li>
+<li>Da una consulta tuya donde el índice cubriente compense y otra donde no.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Igualdad primero, rango después: por qué el orden de las columnas del índice decide todo</p>
+<p>Un índice B-Tree ordena las filas por la concatenación de sus columnas, en
+el orden en que se declararon. De ahí sale la única regla de diseño de
+índices que hay que recordar: <strong>las columnas de igualdad van primero, la de
+rango va al final</strong>, y después de una columna de rango el índice deja de
+poder acotar nada.</p>
+<p>El caso pide los alumnos de DB-101 con nota entre 60 y 90. Con el índice
+<code>(curso, nota)</code>, el motor entra por la igualdad y recorre un rango contiguo:
+lee exactamente las filas que devuelve. Con <code>(nota, curso)</code> tendría que
+recorrer todas las notas entre 60 y 90 de <strong>todos</strong> los cursos y descartar
+después. El resultado es idéntico en los dos casos; el trabajo, no.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Bob</code></td>
+<td><code>61</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
+</tr>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 049</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/optoverview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/indexes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-multicolumn.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/zrangebyscore/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/optoverview.html
+-- nota: para comprobarlo, anteponer EXPLAIN QUERY PLAN a la consulta:
+--         SEARCH notas USING INDEX notas_curso_nota (curso=? AND nota&gt;? AND nota&lt;?)
+--       Con el indice creado como (nota, curso) la misma linea diria
+--         SEARCH notas USING INDEX ... (nota&gt;? AND nota&lt;?)
+--       sin la igualdad: el motor recorreria las notas de TODOS los cursos.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    curso      TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>EXPLAIN QUERY PLAN</code> dice en una línea si hubo <code>SEARCH ... USING INDEX</code> o <code>SCAN</code>: es la forma más directa que existe de comprobar si el índice sirvió.</li>
+<li><strong>Por qué no:</strong> Su planificador solo usa <strong>un</strong> índice por tabla y no tiene reunión hash ni por fusión: las conclusiones sobre estrategias de índice no se transfieren a un motor grande.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/optoverview.html">https://sqlite.org/optoverview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/indexes.html
+-- nota: aqui el indice apenas cambia nada, y esa es la comparacion. El filtro se
+--       resuelve leyendo la columna comprimida y descartando bloques por sus
+--       valores minimo y maximo: no hay arbol que recorrer.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    curso      VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para ver el contraste: aquí el índice apenas importa, porque el filtro se resuelve leyendo la columna comprimida y descartando bloques por sus valores mínimo y máximo. El mismo problema, otra solución.</li>
+<li><strong>Por qué no:</strong> Sus índices ART están pensados para restricciones de unicidad y búsquedas muy selectivas, no para sostener planes: razonar sobre orden de columnas aquí no lleva a ninguna parte.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/indexes.html">https://duckdb.org/docs/stable/sql/indexes.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/indexes-multicolumn.html
+-- nota: la medicion que cierra la discusion:
+--         EXPLAIN (ANALYZE, BUFFERS) SELECT ...
+--       Con (curso, nota): «Index Cond» lleva las dos condiciones.
+--       Con (nota, curso): la igualdad baja a «Filter» y aparece
+--       «Rows Removed by Filter», que es exactamente el trabajo desperdiciado.
+--       Y con INCLUDE (estudiante) el indice cubre la consulta entera y el plan
+--       pasa a «Index Only Scan»: no se toca la tabla.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    curso      text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde la regla se puede medir: <code>EXPLAIN (ANALYZE, BUFFERS)</code> muestra las filas leídas frente a las devueltas, y <code>Rows Removed by Filter</code> delata al índice con las columnas en mal orden. Además tiene índices cubrientes con <code>INCLUDE</code>, para responder sin ir a la tabla.</li>
+<li><strong>Por qué no:</strong> Cada índice es una estructura más que mantener en cada <code>INSERT</code>, <code>UPDATE</code> y <code>DELETE</code>, y en su modelo MVCC un <code>UPDATE</code> puede tener que escribir en <strong>todos</strong> los índices de la tabla aunque no cambie ninguna columna indexada.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-multicolumn.html">https://www.postgresql.org/docs/current/indexes-multicolumn.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html
+-- nota: EXPLAIN muestra key_len, que dice cuantos BYTES del indice se usaron.
+--       Si key_len solo cubre la primera columna, el motor no llego a acotar por
+--       la segunda, y ahi esta el diagnostico.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante VARCHAR(50) NOT NULL,
+    curso      VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (estudiante, curso)
+);
+INSERT INTO notas (estudiante, curso, nota) VALUES
+    ('Ada',   'DB-101', 90),
+    ('Linus', 'DB-101', 58),
+    ('Grace', 'DB-101', 72),
+    ('Bob',   'DB-101', 61),
+    ('Ada',   'SE-201', 66),
+    ('Grace', 'SE-201', 78);
+
+-- El orden de las columnas del indice NO es una preferencia de estilo. Con
+-- (curso, nota) el motor entra por la igualdad y recorre un RANGO CONTIGUO de
+-- notas. Con (nota, curso) tendria que recorrer todas las notas entre 60 y 90 de
+-- TODOS los cursos y filtrar despues.
+CREATE INDEX notas_curso_nota ON notas (curso, nota);
+
+-- === consulta ===
+SELECT estudiante, nota
+FROM notas
+WHERE curso = 'DB-101' AND nota BETWEEN 60 AND 90
+ORDER BY nota, estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La regla es la misma y <code>EXPLAIN</code> muestra <code>key_len</code>, que dice <strong>cuántos bytes del índice se usaron de verdad</strong>: es la forma más precisa de comprobar hasta qué columna llegó a acotar el motor.</li>
+<li><strong>Por qué no:</strong> InnoDB organiza la tabla por la clave primaria, así que todo índice secundario guarda la clave primaria como puntero: una clave primaria ancha —un UUID en texto— engorda todos los índices de la tabla a la vez.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html">https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/
+// nota: la regla tiene nombre propio en la documentacion de MongoDB —«igualdad,
+//       orden, rango»— y es la misma de esta clase. Para medirla:
+//         db.notas.find(...).explain(&quot;executionStats&quot;)
+//       y comparar totalKeysExamined con nReturned: si el primero es mucho
+//       mayor, el indice esta en mal orden.
+
+// === preparacion ===
+db.notas.drop();
+db.notas.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante: &quot;Bob&quot;, curso: &quot;DB-101&quot;, nota: 61 },
+  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
+  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot;, nota: 78 },
+]);
+db.notas.createIndex({ curso: 1, nota: 1 });
+
+// === consulta ===
+db.notas
+  .find({ curso: &quot;DB-101&quot;, nota: { $gte: 60, $lte: 90 } },
+        { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ nota: 1, estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La regla se llama aquí «igualdad, orden, rango» y está documentada con ese nombre: es la misma idea, y <code>explain("executionStats")</code> compara <code>totalKeysExamined</code> con <code>nReturned</code> para ver cuánto se leyó de más.</li>
+<li><strong>Por qué no:</strong> El límite de 64 índices por colección y el costo de mantenerlos en cada escritura son los mismos que en un relacional, con un agravante: sin esquema, es fácil acabar con índices sobre campos que solo existen en la mitad de los documentos.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/">https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay índices que diseñar sobre una tabla existente: el orden lo fija la clave primaria al crearla, y cambiarlo significa crear otra tabla y reescribir los datos. La decisión de esta clase se toma una vez, al modelar, y no se puede corregir después.</td>
+<td>La clave de agrupamiento <strong>es</strong> el índice: <code>PRIMARY KEY ((curso), nota, estudiante)</code> da exactamente el mismo acceso por igualdad y rango que el índice <code>(curso, nota)</code> de esta clase.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay índices sobre valores: el acceso es por clave. Un rango solo se puede pedir sobre la puntuación de un conjunto ordenado, y eso hay que haberlo previsto al escribir.</td>
+<td>Un conjunto ordenado por curso (<code>notas:DB-101</code>) con la nota como puntuación, que da el mismo acceso por rango que el índice de esta clase, a cambio de mantener una estructura por criterio.</td>
+<td><a href="https://redis.io/docs/latest/commands/zrangebyscore/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/04-indexing/run_indexing_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -412,27 +739,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Scott W. Ambler, Pramod J. Sadalage</strong> (2006). <a href="https://databaserefactoring.com/">Refactoring Databases: Evolutionary Database Design</a>. Addison-Wesley. ISBN 978-0-321-29353-4.<br />
-  Migraciones con período de transición y compatibilidad hacia atras.</li>
-<li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
-  Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>R. Bayer, E. McCreight</strong> (1972). <a href="https://link.springer.com/article/10.1007/BF00288683">Organization and Maintenance of Large Ordered Indices</a>. Acta Informatica 1(3). DOI <a href="https://doi.org/10.1007/BF00288683">10.1007/BF00288683</a>.<br />
+  Artículo original del B-Tree.</li>
+<li><strong>Goetz Graefe</strong> (2011). <a href="https://www.nowpublishers.com/article/Details/DBS-028">Modern B-Tree Techniques</a>. Foundations and Trends in Databases 3(4). DOI <a href="https://doi.org/10.1561/1900000028">10.1561/1900000028</a>.<br />
+  Estado del arte del B-Tree: división, compresión y concurrencia.</li>
+<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
+  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="048.html">← Anterior</a> · <a href="050.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="049">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="048.html"><span class="sentido">← Anterior · 048</span>Respaldo y restauración: solo cuenta lo que se ha restaurado</a>
-<a class="siguiente" href="050.html"><span class="sentido">Siguiente · 050 →</span>Control de acceso: privilegio mínimo, roles y seguridad por fila</a>
+<a class="anterior" href="048.html"><span class="sentido">← Anterior · 048</span>Páginas, filas y buffer: por qué la entrada y salida manda</a>
+<a class="siguiente" href="050.html"><span class="sentido">Siguiente · 050 →</span>LSM-Tree, compactación y amplificación de escritura</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

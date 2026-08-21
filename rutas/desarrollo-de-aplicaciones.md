@@ -8,6 +8,12 @@
 > concurrencia y despliegues sin caída · **Cargos habituales:** desarrollador backend,
 > desarrollador full-stack, ingeniero de software.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-entrada-2e8b57?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-11-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-172-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 Casi todo el software que existe guarda algo. El desarrollador de aplicaciones es quien decide
@@ -84,36 +90,60 @@ justificar cada decisión de datos con un mecanismo y una medición, en vez de c
 
 ## 📚 Tu ruta en el programa
 
-10 partes, 152 horas estimadas. El orden importa: cada parte apoya a la siguiente.
+<!-- recorrido:inicio -->
 
-1. 📚 [**Parte 00 — Fundamentos, sistemas y método**](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md)
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P05["🐘 05"]
+    P06["📄 06"]
+    P08["🔒 08"]
+    P09["🗂️ 09"]
+    P11["🛡️ 11"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P05 --> P06 --> P08 --> P09 --> P11 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
+
+10 partes, 172 horas estimadas. El orden importa: cada parte apoya a la siguiente.
+
+1. 📚 [**Parte 01 — Fundamentos, sistemas y método**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h). Qué resuelve un gestor y qué no, y cómo montar un entorno donde puedas
    comprobar lo que afirmas.
-2. 📚 [**Parte 01 — Modelado conceptual y requisitos**](../classes/part-01-modelado-conceptual-y-requisitos/README.md)
+2. 📚 [**Parte 02 — Modelado conceptual y requisitos**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). De requisitos a entidades. Clase que no puedes saltarte:
-   [007 — Claves, identidad y el debate natural frente a sustituta](../classes/part-01-modelado-conceptual-y-requisitos/007-claves-identidad-natural-y-sustituta/README.md).
-3. 📚 [**Parte 02 — Modelo relacional y álgebra**](../classes/part-02-modelo-relacional-y-algebra/README.md)
+   [007 — Claves, identidad y el debate natural frente a sustituta](../classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/README.md).
+3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h). Por qué SQL se comporta como se comporta.
-4. 📚 [**Parte 03 — SQL en profundidad**](../classes/part-03-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). El núcleo del rol. Imprescindibles:
-   [014 — DDL: el esquema como contrato](../classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/README.md),
-   [016 — Reuniones](../classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/README.md)
-   y [019 — Nulos y lógica de tres valores](../classes/part-03-sql-en-profundidad/019-nulos-y-logica-de-tres-valores/README.md),
+   [014 — DDL: el esquema como contrato](../classes/part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md),
+   [016 — Reuniones](../classes/part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md)
+   y [019 — Nulos y lógica de tres valores](../classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/README.md),
    que explica los resultados «imposibles» que verás en producción.
-5. 📚 [**Parte 04 — Motores relacionales y dialectos**](../classes/part-04-motores-relacionales-y-dialectos/README.md)
+5. 📚 [**Parte 05 — Motores relacionales y dialectos**](../classes/part-05-motores-relacionales-y-dialectos/README.md)
    (4 clases · 12 h). Lo que cambia al pasar de SQLite a PostgreSQL o MySQL.
-6. 📚 [**Parte 05 — Documentos y clave-valor**](../classes/part-05-documentos-y-clave-valor/README.md)
+6. 📚 [**Parte 06 — Documentos y clave-valor**](../classes/part-06-documentos-y-clave-valor/README.md)
    (4 clases · 13 h). Cuándo un documento o una caché ayudan, y qué consistencia pierdes.
-7. 📚 [**Parte 07 — Transacciones, concurrencia y recuperación**](../classes/part-07-transacciones-concurrencia-y-recuperacion/README.md)
+7. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
    (5 clases · 18 h). La parte que separa al que escribe consultas del que escribe sistemas.
-   Clase clave: [037 — Concurrencia en la aplicación](../classes/part-07-transacciones-concurrencia-y-recuperacion/037-concurrencia-en-la-aplicacion/README.md).
-8. 📚 [**Parte 08 — Almacenamiento, índices y planes**](../classes/part-08-almacenamiento-indices-y-planes/README.md)
+   Clase clave: [037 — Concurrencia en la aplicación](../classes/part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md).
+8. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
    (5 clases · 17 h). Para dejar de adivinar por qué algo va lento.
-9. 📚 [**Parte 10 — Operación, seguridad y gobierno**](../classes/part-10-operacion-seguridad-y-gobierno/README.md)
+9. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
    (6 clases · 19 h). Aquí solo dos son obligatorias para ti:
-   [049 — Migraciones evolutivas sin ventana de caída](../classes/part-10-operacion-seguridad-y-gobierno/049-migraciones-evolutivas-sin-caida/README.md)
-   y [051 — Inyección SQL y el contrato de parametrización](../classes/part-10-operacion-seguridad-y-gobierno/051-inyeccion-sql-y-parametrizacion/README.md).
-10. 📚 [**Parte 13 — Arquitectura y proyecto final**](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+   [049 — Migraciones evolutivas sin ventana de caída](../classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/README.md)
+   y [051 — Inyección SQL y el contrato de parametrización](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md).
+10. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
     (3 clases · 12 h). Cierra con una decisión defendida.
 
 Practica en los laboratorios, que es donde el conocimiento se vuelve tuyo:
@@ -186,7 +216,7 @@ consulta ofertas reales de tu mercado y contrástalas entre varias fuentes.
 ## 🚀 Siguientes pasos
 
 1. Haz las Partes 00 → 01 → 02 sin saltarte nada, aunque ya sepas SQL: son el vocabulario.
-2. Ataca la Parte 03 completa y ejecuta [`01-sql-foundations`](../labs/01-sql-foundations/README.md)
+2. Ataca la Parte 04 completa y ejecuta [`01-sql-foundations`](../labs/01-sql-foundations/README.md)
    prediciendo cada resultado **antes** de ejecutarlo.
 3. Ejecuta [`03-transactions`](../labs/03-transactions/README.md) y reescribe una operación
    crítica de tu propio proyecto con la corrección que corresponda.

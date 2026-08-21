@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Streaming: tiempo de evento, ventanas y semántica de entrega. Parte 11: Analítica, integración y streaming.">
+<meta name="description" content="Consenso y transacciones distribuidas: Raft, 2PC y sagas. Parte 10: Distribución, réplica y consistencia.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/057.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="057 — Streaming: tiempo de evento, ventanas y semántica de entrega · Database Systems Labs">
-<meta property="og:description" content="Streaming: tiempo de evento, ventanas y semántica de entrega. Parte 11: Analítica, integración y streaming.">
+<meta property="og:title" content="057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas · Database Systems Labs">
+<meta property="og:description" content="Consenso y transacciones distribuidas: Raft, 2PC y sagas. Parte 10: Distribución, réplica y consistencia.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/057.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "057 — Streaming: tiempo de evento, ventanas y semántica de entrega", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["tiempo de evento", "marca de agua", "ventana", "entrega al menos una vez"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>057 — Streaming: tiempo de evento, ventanas y semántica de entrega · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["consenso", "elección de líder", "commit en dos fases", "saga", "compensación"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,318 +49,625 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-11.html">Parte 11 · Analítica, integración y streaming</a>
+  <a href="parte-10.html">Parte 10 · Distribución, réplica y consistencia</a>
   <span aria-hidden="true">/</span><span>Clase 057</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="057--streaming-tiempo-de-evento-ventanas-y-semántica-de-entrega">057 — Streaming: tiempo de evento, ventanas y semántica de entrega</h1>
+<h1 id="057--consenso-y-transacciones-distribuidas-raft-2pc-y-sagas">057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-10-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-057%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 11 — Analítica, integración y streaming · Avanzado ·
-3 horas estimadas · motores <code>kafka</code>, <code>clickhouse</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>tiempo de evento</code> · <code>marca de agua</code> · <code>ventana</code> · <code>entrega al menos una vez</code></p>
+<p>Parte 10 — Distribución, réplica y consistencia · Avanzado ·
+4 horas estimadas · motores <code>spanner</code>, <code>cockroachdb</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>consenso</code> · <code>elección de líder</code> · <code>commit en dos fases</code> · <code>saga</code> · <code>compensación</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 057&quot;]
+    C --&gt; K1[&quot;consenso&quot;]
+    C --&gt; K2[&quot;elección de líder&quot;]
+    C --&gt; K3[&quot;commit en dos fases&quot;]
+    C --&gt; K4[&quot;saga&quot;]
+    C --&gt; K5[&quot;compensación&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Procesar datos que no dejan de llegar. La dificultad no es el caudal: es que los eventos llegan tarde, desordenados y a veces dos veces, y hay que decidir cuándo se cierra un resultado.</p>
+<p>Coordinar varios nodos cuando hace falta acuerdo: consenso para elegir líder y ordenar operaciones, y las tres formas de que una operación abarque varios sistemas.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Distinguir tiempo de evento, de ingesta y de procesamiento.</li>
-<li>Elegir el tipo de ventana adecuado a la pregunta.</li>
-<li>Explicar qué es una marca de agua y qué compromiso codifica.</li>
-<li>Comparar las tres semánticas de entrega y cómo se consigue cada una.</li>
-<li>Aplicar la dualidad flujo-tabla.</li>
+<li>Explicar qué problema resuelve el consenso y por qué necesita mayoría.</li>
+<li>Describir Raft: elección de líder, replicación del registro y confirmación.</li>
+<li>Identificar el fallo del commit en dos fases y por qué bloquea.</li>
+<li>Diseñar una saga con sus compensaciones.</li>
+<li>Elegir entre 2PC, saga y bandeja de salida transaccional.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-tres-tiempos">Los tres tiempos</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tiempo</th>
-<th>Definición</th>
-<th>Problema</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>De evento</strong></td>
-<td>Cuando ocurrió en el mundo</td>
-<td>Llega tarde y desordenado</td>
-</tr>
-<tr>
-<td><strong>De ingesta</strong></td>
-<td>Cuando entró al sistema</td>
-<td>No refleja la realidad</td>
-</tr>
-<tr>
-<td><strong>De procesamiento</strong></td>
-<td>Cuando se calculó</td>
-<td>Reprocesar da otro resultado</td>
-</tr>
-</tbody>
-</table></div>
-<p>Akidau, Chernyak y Lax establecen la regla: <strong>si la pregunta es sobre el mundo, se usa tiempo de evento</strong>. «¿Cuántas inscripciones hubo el martes?» se refiere al martes real, no a cuándo llegaron los mensajes.</p>
-<p>El desfase entre evento y procesamiento no está acotado: un móvil sin cobertura puede enviar eventos de hace tres días.</p>
-<h3 id="tipos-de-ventana">Tipos de ventana</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Ventana</th>
-<th>Forma</th>
-<th>Pregunta que responde</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Fija</strong> (tumbling)</td>
-<td>Intervalos contiguos sin solape</td>
-<td>«Inscripciones por hora»</td>
-</tr>
-<tr>
-<td><strong>Deslizante</strong> (sliding)</td>
-<td>Tamaño y desplazamiento independientes</td>
-<td>«Media de los últimos 10 min, cada minuto»</td>
-</tr>
-<tr>
-<td><strong>De sesión</strong></td>
-<td>Agrupa por inactividad</td>
-<td>«Actividad de un usuario hasta 30 min de pausa»</td>
-</tr>
-<tr>
-<td><strong>Global</strong></td>
-<td>Todo el flujo</td>
-<td>«Total desde siempre»</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="marcas-de-agua">Marcas de agua</h3>
-<p>Una <strong>marca de agua</strong> es la afirmación del sistema: <em>«creo que ya no llegarán eventos anteriores a T»</em>. Es la que permite cerrar una ventana y emitir un resultado.</p>
-<p>Es una <strong>heurística</strong>, no una certeza. De ahí el compromiso central del streaming:</p>
-<pre><code class="language-text">marca de agua agresiva  → resultados rápidos, más eventos rezagados descartados
-marca de agua permisiva → resultados tardíos, menos pérdida
+<h3 id="el-problema-del-consenso">El problema del consenso</h3>
+<p>Varios nodos deben ponerse de acuerdo en un valor, tolerando caídas y mensajes perdidos. Es el problema que subyace a: elegir líder, decidir si una transacción confirma, ordenar un registro replicado.</p>
+<p><strong>Por qué mayoría.</strong> Con <code>2f + 1</code> nodos se toleran <code>f</code> caídas, porque dos mayorías cualesquiera se solapan en al menos un nodo, y ese nodo impide que se tomen dos decisiones contradictorias. Con 5 nodos se toleran 2. Un número par no aporta: 4 nodos toleran 1, igual que 3, y tienen más coordinación.</p>
+<p>Lamport resolvió el problema con Paxos (1998); Ongaro y Ousterhout diseñaron Raft (2014) buscando explícitamente que fuese comprensible, y por eso es el que implementan etcd, Consul, CockroachDB y TiKV.</p>
+<h3 id="raft-en-tres-piezas">Raft en tres piezas</h3>
+<p><strong>1. Elección de líder.</strong> Cada nodo tiene un temporizador aleatorio. Al agotarse sin recibir señal del líder, se declara candidato del mandato <code>t+1</code> y pide votos. Con mayoría, es líder. La aleatoriedad de los temporizadores es lo que evita elecciones empatadas indefinidamente.</p>
+<p><strong>2. Replicación del registro.</strong> El líder recibe las operaciones, las añade a su registro y las envía a los seguidores. Una entrada se <strong>confirma</strong> cuando la mayoría la ha escrito. Solo entonces se aplica y se responde al cliente.</p>
+<p><strong>3. Seguridad.</strong> Un candidato solo obtiene votos si su registro está <strong>al menos tan actualizado</strong> como el del votante. Esa regla garantiza que un líder nuevo contiene todas las entradas confirmadas: nada confirmado se pierde jamás.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Cliente
+    participant L as Líder
+    participant S1 as Seguidor 1
+    participant S2 as Seguidor 2
+    C-&gt;&gt;L: operación
+    L-&gt;&gt;L: añadir al registro (sin confirmar)
+    L-&gt;&gt;S1: AppendEntries
+    L-&gt;&gt;S2: AppendEntries
+    S1--&gt;&gt;L: ok
+    Note over L: mayoría (2 de 3) → CONFIRMADA
+    L-&gt;&gt;L: aplicar
+    L--&gt;&gt;C: respuesta
+    S2--&gt;&gt;L: ok (tardío, no afecta)
 </code></pre>
-<p>Y las tres políticas para lo que llega después de la marca:</p>
+<p>Costo: <strong>una ida y vuelta a la mayoría por operación</strong>. En un centro de datos, ~1 ms; entre regiones, cientos.</p>
+<h3 id="commit-en-dos-fases">Commit en dos fases</h3>
+<pre><code class="language-text">Fase 1 (preparar):  el coordinador pregunta a cada participante &quot;¿puedes confirmar?&quot;
+                    cada uno responde SÍ o NO, y si dice SÍ queda OBLIGADO
+Fase 2 (confirmar): si todos dijeron SÍ, el coordinador ordena confirmar; si no, abortar
+</code></pre>
+<p><strong>El fallo.</strong> Si el coordinador cae después de que todos digan SÍ y antes de enviar la decisión, los participantes quedan <strong>en duda</strong>: no pueden confirmar (quizá alguien dijo NO) ni abortar (quizá todos dijeron SÍ). Mantienen sus bloqueos indefinidamente.</p>
+<p>Por eso 2PC se llama protocolo <strong>bloqueante</strong>. La corrección es un coordinador replicado por consenso —y entonces cada transacción cuesta consenso más dos rondas—. Es lo que hace Spanner, con la ventaja de una red controlada y relojes acotados por TrueTime.</p>
+<p>Helland argumenta que a escala esto no se sostiene, y propone el enfoque alternativo.</p>
+<h3 id="sagas">Sagas</h3>
+<p>Descomponer la operación en pasos locales atómicos, cada uno con su <strong>compensación</strong>:</p>
+<pre><code class="language-text">T1 → T2 → T3 → T4
+      ↓ falla T3
+C2 ← C1                    (compensaciones en orden inverso)
+</code></pre>
+<p>Propiedades que hay que asumir explícitamente:</p>
+<ul>
+<li><strong>No hay aislamiento.</strong> Los estados intermedios son visibles. Otro proceso puede ver el pedido creado y el pago aún no cobrado.</li>
+<li><strong>Las compensaciones son semánticas, no técnicas.</strong> No se «deshace» un correo enviado: se envía uno de disculpa. No se deshace un cobro: se emite un reembolso.</li>
+<li><strong>Todo paso y toda compensación debe ser idempotente</strong> (clase 037), porque se reintentan.</li>
+</ul>
+<h3 id="bandeja-de-salida-transaccional">Bandeja de salida transaccional</h3>
+<p>El problema más común no es una transacción entre dos bases: es «escribir en la base <strong>y</strong> publicar un evento» de forma atómica.</p>
+<pre><code class="language-sql">BEGIN;
+INSERT INTO enrollments (...) VALUES (...);
+INSERT INTO outbox (tipo, carga, creado_en)
+       VALUES ('inscripcion.creada', '{&quot;student_id&quot;:11,...}', now());
+COMMIT;
+-- Un proceso aparte lee outbox y publica. Si falla, reintenta.
+</code></pre>
+<p>Una sola transacción local garantiza que el evento existe si y solo si la inscripción existe. La publicación es al-menos-una-vez, y el consumidor debe ser idempotente. Resuelve el problema real sin ninguna transacción distribuida, y por eso es la primera opción a considerar.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Inscripción que debe: reservar cupo (servicio de cursos), cobrar (servicio de pagos) y emitir credencial (servicio de identidad).</p>
+<p><strong>Opción A — 2PC:</strong></p>
+<pre><code class="language-text">coordinador → prepare → cursos, pagos, identidad
+todos SÍ → commit
+</code></pre>
+<p>Problemas concretos:</p>
+<ul>
+<li>El servicio de pagos es una pasarela externa: <strong>no ofrece <code>prepare</code></strong>. 2PC es inaplicable desde el principio.</li>
+<li>Los tres servicios mantienen bloqueos durante toda la operación, incluida la latencia de la pasarela (segundos).</li>
+<li>Si el coordinador cae, tres servicios quedan bloqueados.</li>
+</ul>
+<p><strong>Opción B — saga:</strong></p>
+<pre><code class="language-python">PASOS = [
+    (&quot;reservar_cupo&quot;,     reservar_cupo,     liberar_cupo),
+    (&quot;cobrar&quot;,            cobrar,            reembolsar),
+    (&quot;emitir_credencial&quot;, emitir_credencial, revocar_credencial),
+]
+
+def ejecutar_saga(saga_id, ctx):
+    hechos = []
+    for nombre, accion, compensacion in PASOS:
+        try:
+            # La clave de idempotencia deriva de la saga y del paso:
+            # un reintento repite exactamente la misma clave.
+            accion(ctx, clave_idem=f&quot;{saga_id}:{nombre}&quot;)
+            hechos.append((nombre, compensacion))
+        except ErrorPermanente:
+            for nombre_h, comp in reversed(hechos):
+                comp(ctx, clave_idem=f&quot;{saga_id}:comp:{nombre_h}&quot;)
+            raise SagaAbortada(nombre)
+    return &quot;ok&quot;
+</code></pre>
+<p><strong>Traza de un fallo en el cobro:</strong></p>
+<pre><code class="language-text">t0  reservar_cupo    → ok (cupo 39/40)
+t1  cobrar           → tarjeta rechazada (ErrorPermanente)
+t2  liberar_cupo     → ok (cupo 40/40)
+resultado: saga abortada, estado coherente
+</code></pre>
+<p><strong>La falta de aislamiento, hecha visible:</strong></p>
+<pre><code class="language-text">t0    reservar_cupo → cupo 39/40
+t0+1s otro usuario consulta → ve 39 plazas libres, no 40
+t1    cobro falla
+t2    liberar_cupo → cupo 40/40
+</code></pre>
+<p>Durante ~1 segundo el sistema mostró un cupo que no estaba realmente comprometido. <strong>Es inherente a la saga y hay que decidir si es aceptable.</strong> Aquí sí lo es: como mucho, alguien vio una plaza menos de las disponibles, lo que es conservador. Si el error fuese al revés —mostrar plazas que no existen— no sería aceptable.</p>
+<p><strong>Opción C — bandeja de salida + coreografía</strong>, la que suele resultar mejor:</p>
+<pre><code class="language-text">inscripciones: BEGIN; INSERT enrollment; INSERT outbox('inscripcion.creada'); COMMIT
+pagos:         consume 'inscripcion.creada' → cobra → publica 'pago.ok' o 'pago.fallido'
+inscripciones: consume 'pago.fallido'      → marca la inscripción como anulada
+identidad:     consume 'pago.ok'           → emite credencial
+</code></pre>
+<p>Ningún coordinador, ninguna transacción distribuida, cada paso atómico en su propia base. A cambio: la coreografía es más difícil de seguir que la orquestación, y hace falta trazabilidad para saber dónde se detuvo una inscripción.</p>
+<h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Política</th>
-<th>Qué hace</th>
+<th>Mecanismo</th>
+<th>Atomicidad</th>
+<th>Aislamiento</th>
+<th>Bloqueante</th>
 <th>Cuándo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Descartar</strong></td>
-<td>Ignora el rezagado</td>
-<td>El error es tolerable</td>
+<td>Transacción local</td>
+<td>Total</td>
+<td>Total</td>
+<td>No</td>
+<td>Una sola base: <strong>siempre que se pueda</strong></td>
 </tr>
 <tr>
-<td><strong>Emitir corrección</strong></td>
-<td>Reemite la ventana actualizada</td>
-<td>El consumidor sabe reconciliar</td>
+<td>Bandeja de salida</td>
+<td>Total en el origen</td>
+<td>Del origen</td>
+<td>No</td>
+<td>Base + evento</td>
 </tr>
 <tr>
-<td><strong>Desviar</strong></td>
-<td>A un canal aparte para revisión</td>
-<td>Auditoría, cumplimiento</td>
-</tr>
-</tbody>
-</table></div>
-<pre><code class="language-mermaid">flowchart LR
-    E[&quot;Eventos&lt;br/&gt;desordenados&quot;] --&gt; B[&quot;Asignar a ventana&lt;br/&gt;por tiempo de EVENTO&quot;]
-    B --&gt; W{&quot;¿Marca de agua&lt;br/&gt;pasó el fin&lt;br/&gt;de la ventana?&quot;}
-    W -- &quot;No&quot; --&gt; ACC[&quot;Acumular&quot;]
-    W -- &quot;Sí&quot; --&gt; EM[&quot;Emitir resultado&quot;]
-    EM --&gt; L{&quot;Llega un rezagado&quot;}
-    L --&gt; P{&quot;Política&quot;}
-    P --&gt; P1[&quot;Descartar&quot;]
-    P --&gt; P2[&quot;Emitir corrección&quot;]
-    P --&gt; P3[&quot;Desviar a revisión&quot;]
-</code></pre>
-<h3 id="semánticas-de-entrega">Semánticas de entrega</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Semántica</th>
-<th>Garantía</th>
-<th>Cómo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Como mucho una vez</strong></td>
-<td>Puede perder</td>
-<td>Sin reintentos</td>
+<td>2PC</td>
+<td>Total</td>
+<td>Total</td>
+<td><strong>Sí</strong></td>
+<td>Pocos participantes, todos con <code>prepare</code>, red controlada</td>
 </tr>
 <tr>
-<td><strong>Al menos una vez</strong></td>
-<td>Puede duplicar</td>
-<td>Reintentos + confirmación tras procesar</td>
+<td>2PC sobre consenso</td>
+<td>Total</td>
+<td>Total</td>
+<td>No</td>
+<td>Spanner, CockroachDB</td>
 </tr>
 <tr>
-<td><strong>Exactamente una vez</strong></td>
-<td>Ni pierde ni duplica</td>
-<td>Al menos una vez <strong>+ receptor idempotente</strong>, o transacciones del propio sistema</td>
-</tr>
-</tbody>
-</table></div>
-<p>La entrega exactamente-una-vez <strong>de extremo a extremo no existe</strong> como propiedad de la red: se construye combinando entrega al-menos-una-vez con un receptor que deduplica por identificador (clase 037). Kafka ofrece transacciones que dan «procesamiento exactamente una vez» dentro de Kafka; en cuanto un efecto sale del sistema —una fila en otra base, un correo—, la idempotencia vuelve a ser responsabilidad del receptor.</p>
-<h3 id="dualidad-flujo-tabla">Dualidad flujo-tabla</h3>
-<ul>
-<li>Un <strong>flujo</strong> es la secuencia de cambios.</li>
-<li>Una <strong>tabla</strong> es el estado acumulado de esos cambios.</li>
-</ul>
-<p>Cada uno se deriva del otro: agregar un flujo produce una tabla; observar los cambios de una tabla produce un flujo. Es exactamente lo que hace la captura de cambios de la clase 056, y es la misma idea del WAL de la clase 036 vista desde otro ángulo.</p>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Métrica: inscripciones por curso y por hora, con paneles casi en tiempo real. Los eventos llegan de móviles con conectividad variable.</p>
-<p><strong>Observación previa, imprescindible:</strong> medir el retraso real antes de elegir la marca de agua.</p>
-<pre><code class="language-sql">SELECT percentile_disc(0.50) WITHIN GROUP (ORDER BY retraso_s) AS p50,
-       percentile_disc(0.95) WITHIN GROUP (ORDER BY retraso_s) AS p95,
-       percentile_disc(0.99) WITHIN GROUP (ORDER BY retraso_s) AS p99,
-       max(retraso_s)                                          AS maximo
-FROM (SELECT extract(epoch FROM (ingerido_en - ocurrido_en)) AS retraso_s
-      FROM eventos WHERE ingerido_en &gt; now() - interval '7 days') t;
-</code></pre>
-<pre><code class="language-text">p50 = 0,8 s      p95 = 45 s      p99 = 340 s      máximo = 3 días
-</code></pre>
-<p>Ese <code>máximo</code> de 3 días es un móvil que estuvo sin cobertura. Esperar tres días para cerrar una ventana horaria es absurdo; descartarlo sin más, tampoco es aceptable si son inscripciones.</p>
-<p><strong>Decisión, justificada con los percentiles:</strong></p>
-<pre><code class="language-text">Marca de agua: tiempo de evento máximo visto − 10 minutos
-   → cubre el p99 (340 s) con margen
-Política para rezagados: emitir corrección hasta 24 h; después, desviar a revisión
-   → el panel se corrige solo; lo muy tardío no se pierde, se revisa
-</code></pre>
-<p><strong>Implementación en SQL de ventanas, sobre la tabla cruda:</strong></p>
-<pre><code class="language-sql">-- Ventana fija de una hora, por tiempo de EVENTO
-CREATE MATERIALIZED VIEW inscripciones_hora AS
-SELECT date_trunc('hour', ocurrido_en) AS hora,
-       course_id,
-       count(*)                        AS n,
-       max(ingerido_en)                AS ultima_actualizacion
-FROM eventos
-WHERE tipo = 'inscripcion.creada'
-GROUP BY 1, 2;
-</code></pre>
-<p>Una ventana que se recalcula incorpora automáticamente los rezagados: es la política de «emitir corrección», implementada sin ningún motor de streaming.</p>
-<p><strong>Marca de agua y estado de cada ventana:</strong></p>
-<pre><code class="language-sql">WITH marca AS (
-  SELECT max(ocurrido_en) - interval '10 minutes' AS w FROM eventos
-)
-SELECT h.hora, h.course_id, h.n,
-       CASE WHEN h.hora + interval '1 hour' &lt; (SELECT w FROM marca)
-            THEN 'cerrada' ELSE 'provisional' END AS estado
-FROM inscripciones_hora h
-ORDER BY h.hora DESC LIMIT 24;
-</code></pre>
-<p><strong>Esta columna <code>estado</code> es el entregable pedagógico de la clase.</strong> Un panel que muestra cifras sin decir si son definitivas o provisionales genera desconfianza: alguien anota el número de las 14:00, vuelve a mirar y ve otro. Con la marca explícita, el cambio es esperado y comprensible.</p>
-<p><strong>Rezagados muy tardíos:</strong></p>
-<pre><code class="language-sql">INSERT INTO eventos_tardios
-SELECT * FROM eventos
-WHERE ingerido_en - ocurrido_en &gt; interval '24 hours';
-</code></pre>
-<p>No se descartan: se desvían. Para inscripciones, perder un evento es perder una matrícula.</p>
-<p><strong>Ventana de sesión</strong>, para «cuánto dura una sesión de estudio»:</p>
-<pre><code class="language-sql">WITH marcado AS (
-  SELECT student_id, ocurrido_en,
-         CASE WHEN ocurrido_en - lag(ocurrido_en)
-                   OVER (PARTITION BY student_id ORDER BY ocurrido_en)
-                   &gt; interval '30 minutes'
-              THEN 1 ELSE 0 END AS nueva
-  FROM eventos WHERE tipo = 'actividad'
-),
-sesiones AS (
-  SELECT student_id, ocurrido_en,
-         sum(nueva) OVER (PARTITION BY student_id ORDER BY ocurrido_en) AS sesion
-  FROM marcado
-)
-SELECT student_id, sesion, min(ocurrido_en) AS inicio, max(ocurrido_en) AS fin,
-       max(ocurrido_en) - min(ocurrido_en) AS duracion, count(*) AS eventos
-FROM sesiones GROUP BY student_id, sesion;
-</code></pre>
-<p>Las funciones de ventana de la clase 018 resuelven ventanas de sesión sin ningún motor de streaming, y sobre datos históricos. Es el recordatorio útil: <strong>muchos problemas de «streaming» son problemas de SQL sobre datos con marca de tiempo</strong>.</p>
-<p><strong>Idempotencia del consumidor</strong>, que cierra el círculo:</p>
-<pre><code class="language-sql">CREATE TABLE eventos (
-  evento_id   UUID PRIMARY KEY,     -- generado por el productor
-  tipo        TEXT NOT NULL,
-  ocurrido_en TIMESTAMPTZ NOT NULL,
-  ingerido_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  carga       JSONB NOT NULL
-);
-
-INSERT INTO eventos (...) VALUES (...) ON CONFLICT (evento_id) DO NOTHING;
-</code></pre>
-<p>Con esto, la entrega al-menos-una-vez de Kafka se convierte en efecto exactamente-una-vez en el destino.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Necesidad</th>
-<th>Herramienta</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Métricas por intervalo</td>
-<td>Ventana fija</td>
+<td>Saga (orquestada)</td>
+<td>Eventual</td>
+<td><strong>Ninguno</strong></td>
+<td>No</td>
+<td>Servicios heterogéneos, pasos largos</td>
 </tr>
 <tr>
-<td>Media móvil</td>
-<td>Ventana deslizante</td>
-</tr>
-<tr>
-<td>Agrupar actividad</td>
-<td>Ventana de sesión</td>
-</tr>
-<tr>
-<td>Analítica histórica con marca de tiempo</td>
-<td><strong>SQL con funciones de ventana</strong></td>
-</tr>
-<tr>
-<td>Latencia de segundos</td>
-<td>Motor de streaming</td>
-</tr>
-<tr>
-<td>Un flujo, muchos consumidores</td>
-<td>Kafka</td>
-</tr>
-<tr>
-<td>No duplicar en el destino</td>
-<td>Clave de evento + <code>ON CONFLICT</code></td>
+<td>Saga (coreografiada)</td>
+<td>Eventual</td>
+<td>Ninguno</td>
+<td>No</td>
+<td>Muchos servicios, bajo acoplamiento</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Usar tiempo de procesamiento para preguntas del mundo.</strong> Reprocesar da otro resultado.</li>
-<li><strong>Marca de agua sin medir el retraso real.</strong> Se elige a ojo y se descartan eventos válidos.</li>
-<li><strong>Descartar rezagados sin registrarlos.</strong> Se pierden datos y nadie lo sabe.</li>
-<li><strong>Mostrar cifras sin marcar si son provisionales.</strong> Destruye la confianza en el panel.</li>
-<li><strong>Suponer entrega exactamente una vez de la infraestructura.</strong> El receptor debe ser idempotente.</li>
-<li><strong>Motor de streaming donde bastaba SQL.</strong> Muchas ventanas se resuelven con <code>OVER</code>.</li>
-<li><strong>Ventanas de sesión con tiempo de procesamiento.</strong> Agrupan por latencia de red, no por conducta.</li>
+<li><strong>2PC entre microservicios por red pública.</strong> Bloqueo garantizado ante fallo del coordinador.</li>
+<li><strong>Sagas sin compensación para algún paso.</strong> Un fallo posterior deja el sistema inconsistente sin remedio.</li>
+<li><strong>Compensaciones no idempotentes.</strong> Un reintento reembolsa dos veces.</li>
+<li><strong>Ignorar la falta de aislamiento de las sagas.</strong> Los estados intermedios se ven y a veces se actúa sobre ellos.</li>
+<li><strong>Publicar el evento antes del <code>COMMIT</code>.</strong> Si la transacción se revierte, el evento ya salió.</li>
+<li><strong>Número par de nodos en consenso.</strong> Más coordinación, misma tolerancia.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La pregunta que ordena cualquier discusión sobre streaming es: <strong>¿cuánto se espera a un evento tardío y qué se hace con el que llega después?</strong> Sin esa respuesta escrita, cada componente del canal toma la suya y las cifras dejan de cuadrar.</p>
+<p>La mayoría de las «transacciones distribuidas» que se plantean en un diseño desaparecen al reunir los datos que deben cambiar juntos en una misma base (clase 024). Antes de coordinar, conviene comprobar si la frontera del agregado está mal trazada.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Mide la distribución real del retraso de tus eventos, con percentiles.</li>
-<li>Elige la marca de agua justificándola con el p99 y define la política de rezagados.</li>
-<li>Implementa una ventana fija con la columna <code>estado</code> de provisional o cerrada.</li>
-<li>Calcula ventanas de sesión con funciones de ventana sobre datos históricos.</li>
+<li>Identifica una operación de tu sistema que abarque dos almacenes.</li>
+<li>Diséñala como saga con compensaciones idempotentes.</li>
+<li>Implementa la bandeja de salida y demuestra la atomicidad entre estado y evento.</li>
+<li>Documenta qué estado intermedio queda visible y por cuánto tiempo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Da una pregunta de tu negocio que exija tiempo de evento y explica qué se rompería con tiempo de procesamiento.</li>
-<li>¿Qué compromiso codifica exactamente una marca de agua?</li>
-<li>Explica por qué la entrega exactamente una vez de extremo a extremo no es una propiedad de la red.</li>
-<li>Da un caso tuyo de «streaming» que en realidad se resuelva con SQL sobre una tabla con marca de tiempo.</li>
+<li>¿Por qué el consenso necesita mayoría estricta y no basta la mitad?</li>
+<li>Traza el fallo del coordinador en 2PC y explica por qué los participantes no pueden decidir.</li>
+<li>Da un paso de tu sistema cuya compensación no sea una simple inversión.</li>
+<li>¿Qué garantiza la bandeja de salida y qué obligación traslada al consumidor?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Cuando no hay ROLLBACK que valga: compensar en vez de deshacer</p>
+<p>Dos servicios, dos bases de datos, una operación: reservar vuelo y hotel. El
+vuelo se confirma; el hotel falla. No hay transacción que abarque a los dos,
+así que <strong>no hay nada que revertir</strong>: la reserva del vuelo se confirmó de
+verdad, existió como reserva válida y alguien pudo verla.</p>
+<p>La respuesta es una <strong>saga</strong>: ejecutar la acción inversa. Y la acción inversa
+no es un <code>ROLLBACK</code>, es una operación de negocio —cancelar— con sus propias
+reglas, su penalización posible y su propia probabilidad de fallar.</p>
+<p>El caso deja las dos cosas por escrito: el hotel fallido y el vuelo
+compensado. Ver <code>compensado</code> en vez de que la fila del vuelo haya
+desaparecido es exactamente la diferencia entre una saga y una transacción.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>paso</th>
+<th>estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hotel</code></td>
+<td><code>fallido</code></td>
+</tr>
+<tr>
+<td><code>vuelo</code></td>
+<td><code>compensado</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 057</code>: 5 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_update.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-prepare-transaction.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/commands/hset/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Google Cloud Spanner</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/spanner/consulta.sql">código</a></td>
+<td><a href="https://cloud.google.com/spanner/docs/transactions">doc oficial</a></td>
+</tr>
+<tr>
+<td>CockroachDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/cockroachdb/consulta.sql">código</a></td>
+<td><a href="https://www.cockroachlabs.com/docs/stable/transactions">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Kafka</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://kafka.apache.org/documentation/#semantics">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_update.html
+-- nota: la fila del vuelo NO desaparece: queda como 'compensado'. Esa
+--       diferencia con un ROLLBACK es la clase entera. Y hay una segunda
+--       leccion escondida: si el proceso muere entre el fallo del hotel y la
+--       compensacion, nadie sabra que habia que compensar. El registro de la
+--       saga tiene que ser duradero ANTES de dar el primer paso.
+
+-- === preparacion ===
+CREATE TABLE reservas (
+    paso   TEXT PRIMARY KEY,
+    estado TEXT NOT NULL
+);
+
+-- Paso 1: el servicio de vuelos confirma. En SU base de datos, esto ya esta
+-- hecho y CONFIRMADO: nadie de fuera puede deshacerlo.
+INSERT INTO reservas (paso, estado) VALUES ('vuelo', 'confirmado');
+
+-- Paso 2: el servicio de hoteles no tiene habitaciones. Falla.
+INSERT INTO reservas (paso, estado) VALUES ('hotel', 'fallido');
+
+-- Compensacion. Y aqui esta toda la clase: esto NO es un ROLLBACK. El vuelo se
+-- confirmo de verdad, existio como reserva valida durante un tiempo, y alguien
+-- pudo verlo. Deshacerlo exige ejecutar la ACCION INVERSA —cancelar—, que es
+-- una operacion de negocio con sus propias reglas: puede tener penalizacion,
+-- puede requerir autorizacion, y puede fallar tambien.
+UPDATE reservas SET estado = 'compensado' WHERE paso = 'vuelo';
+
+-- === consulta ===
+SELECT paso, estado FROM reservas ORDER BY paso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La saga no necesita nada del motor: es un patrón de aplicación con registro de pasos. Verlo aquí, sin infraestructura, deja claro que el problema no es tecnológico sino de diseño.</li>
+<li><strong>Por qué no:</strong> Cada paso y cada compensación hay que escribirlos, y el registro de la saga hay que hacerlo duradero: si el proceso muere entre el fallo y la compensación, nadie sabrá que había que compensar.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_update.html">https://sqlite.org/lang_update.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/select.html
+-- nota: la consulta que de verdad importa aqui es la de auditoria, la que se
+--       ejecuta sobre el registro de todas las sagas:
+--         SELECT saga_id FROM pasos WHERE estado = 'fallido'
+--         AND saga_id NOT IN (SELECT saga_id FROM pasos WHERE estado = 'compensado');
+--       Es decir: que sagas quedaron a medias. Ahi esta el dinero perdido.
+
+-- === preparacion ===
+CREATE TABLE reservas (
+    paso   VARCHAR PRIMARY KEY,
+    estado VARCHAR NOT NULL
+);
+
+-- Paso 1: el servicio de vuelos confirma. En SU base de datos, esto ya esta
+-- hecho y CONFIRMADO: nadie de fuera puede deshacerlo.
+INSERT INTO reservas (paso, estado) VALUES ('vuelo', 'confirmado');
+
+-- Paso 2: el servicio de hoteles no tiene habitaciones. Falla.
+INSERT INTO reservas (paso, estado) VALUES ('hotel', 'fallido');
+
+-- Compensacion. Y aqui esta toda la clase: esto NO es un ROLLBACK. El vuelo se
+-- confirmo de verdad, existio como reserva valida durante un tiempo, y alguien
+-- pudo verlo. Deshacerlo exige ejecutar la ACCION INVERSA —cancelar—, que es
+-- una operacion de negocio con sus propias reglas: puede tener penalizacion,
+-- puede requerir autorizacion, y puede fallar tambien.
+UPDATE reservas SET estado = 'compensado' WHERE paso = 'vuelo';
+
+-- === consulta ===
+SELECT paso, estado FROM reservas ORDER BY paso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para la pregunta que se hace después: <strong>cuántas sagas quedaron a medias</strong>. Analizar el registro de pasos y encontrar los que fallaron sin compensación es una consulta analítica, y es la que descubre el dinero perdido.</li>
+<li><strong>Por qué no:</strong> No participa en la saga: la observa.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/select.html">https://duckdb.org/docs/stable/sql/query_syntax/select.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/sql-prepare-transaction.html
+-- nota: PostgreSQL SI implementa la confirmacion en dos fases:
+--         BEGIN; ...; PREPARE TRANSACTION 'reserva-42';
+--         COMMIT PREPARED 'reserva-42';   -- o ROLLBACK PREPARED
+--       Y conviene saber por que casi nadie la usa: una transaccion preparada
+--       retiene sus bloqueos INDEFINIDAMENTE si el coordinador desaparece, y
+--       basta una olvidada para impedir el vacio de toda la base. Por eso
+--       max_prepared_transactions vale 0 por omision: hay que activarlo a
+--       proposito. La saga existe porque esa alternativa sale peor.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS reservas;
+
+CREATE TABLE reservas (
+    paso   text PRIMARY KEY,
+    estado text NOT NULL
+);
+
+-- Paso 1: el servicio de vuelos confirma. En SU base de datos, esto ya esta
+-- hecho y CONFIRMADO: nadie de fuera puede deshacerlo.
+INSERT INTO reservas (paso, estado) VALUES ('vuelo', 'confirmado');
+
+-- Paso 2: el servicio de hoteles no tiene habitaciones. Falla.
+INSERT INTO reservas (paso, estado) VALUES ('hotel', 'fallido');
+
+-- Compensacion. Y aqui esta toda la clase: esto NO es un ROLLBACK. El vuelo se
+-- confirmo de verdad, existio como reserva valida durante un tiempo, y alguien
+-- pudo verlo. Deshacerlo exige ejecutar la ACCION INVERSA —cancelar—, que es
+-- una operacion de negocio con sus propias reglas: puede tener penalizacion,
+-- puede requerir autorizacion, y puede fallar tambien.
+UPDATE reservas SET estado = 'compensado' WHERE paso = 'vuelo';
+
+-- === consulta ===
+SELECT paso, estado FROM reservas ORDER BY paso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Cada paso local <strong>sí</strong> es transaccional, que es lo que hace viable la saga: el paso y su anotación en el registro se confirman juntos. Y con el patrón de bandeja de salida —escribir el evento en la misma transacción que el cambio— se garantiza que nunca haya un cambio sin su evento.</li>
+<li><strong>Por qué no:</strong> PostgreSQL implementa el estándar XA para confirmación en dos fases (<code>PREPARE TRANSACTION</code>), y precisamente por eso conviene saber por qué casi nadie lo usa: una transacción preparada retiene bloqueos <strong>indefinidamente</strong> si el coordinador desaparece, y basta una para bloquear el vacío de toda la base.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-prepare-transaction.html">https://www.postgresql.org/docs/current/sql-prepare-transaction.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
+// nota: el registro de la saga cabe en un documento por operacion, con los
+//       pasos dentro. Escribir un paso es una escritura atomica: ni transaccion
+//       ni conjunto de replicas. Lo que NO garantiza nada es que el estado
+//       escrito aqui coincida con el mundo real: si el servicio de vuelos no
+//       recibio la cancelacion, el documento dira 'compensado' igualmente.
+
+// === preparacion ===
+db.sagas.drop();
+db.sagas.insertOne({ _id: &quot;reserva-42&quot;, pasos: [] });
+
+// Paso 1: el vuelo se confirma de verdad, en otro sistema.
+db.sagas.updateOne(
+  { _id: &quot;reserva-42&quot; },
+  { $push: { pasos: { paso: &quot;vuelo&quot;, estado: &quot;confirmado&quot; } } },
+);
+
+// Paso 2: el hotel falla.
+db.sagas.updateOne(
+  { _id: &quot;reserva-42&quot; },
+  { $push: { pasos: { paso: &quot;hotel&quot;, estado: &quot;fallido&quot; } } },
+);
+
+// Compensacion: accion inversa sobre el paso ya confirmado.
+db.sagas.updateOne(
+  { _id: &quot;reserva-42&quot;, &quot;pasos.paso&quot;: &quot;vuelo&quot; },
+  { $set: { &quot;pasos.$.estado&quot;: &quot;compensado&quot; } },
+);
+
+// === consulta ===
+db.sagas
+  .aggregate([
+    { $unwind: &quot;$pasos&quot; },
+    { $project: { _id: 0, paso: &quot;$pasos.paso&quot;, estado: &quot;$pasos.estado&quot; } },
+    { $sort: { paso: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.paso + &quot;|&quot; + d.estado));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El registro de la saga cabe en un documento por operación, con sus pasos dentro: escribir el paso y su estado es una sola escritura atómica, sin transacción y sin conjunto de réplicas.</li>
+<li><strong>Por qué no:</strong> Al no haber restricciones entre colecciones, nada impide que el registro diga «compensado» y el servicio de vuelos no se haya enterado: la coherencia entre el registro y el mundo real la sostiene el código, y hay que reconciliarla periódicamente.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/write-operations-atomicity/">https://www.mongodb.com/docs/manual/core/write-operations-atomicity/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/commands/hset/
+# nota: Redis es un buen sitio para el ESTADO EN VUELO de la saga —que pasos van
+#       hechos, cuales faltan— con caducidad para detectar las que se quedaron a
+#       medias:
+#         EXPIRE saga:reserva-42 3600
+#       Lo que NO debe ser es el unico sitio donde vive ese estado: con
+#       appendfsync everysec se puede perder hasta un segundo, y una saga
+#       huerfana es dinero que nadie devuelve.
+
+# === preparacion ===
+FLUSHDB
+HSET saga:reserva-42 vuelo confirmado
+HSET saga:reserva-42 hotel fallido
+HSET saga:reserva-42 vuelo compensado
+
+# === consulta ===
+EVAL &quot;local r={} for _,p in ipairs({'hotel','vuelo'}) do r[#r+1]=p..'|'..redis.call('HGET',KEYS[1],p) end return r&quot; 1 saga:reserva-42
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es un buen sitio para el <strong>estado en vuelo</strong> de la saga: qué pasos van hechos, cuáles faltan y cuáles hay que compensar, con caducidad automática para detectar las que se quedaron a medias.</li>
+<li><strong>Por qué no:</strong> Si ese estado se pierde —y con <code>appendfsync everysec</code> se puede perder—, la saga queda huérfana: nadie sabrá que había que compensar. El registro de una saga es justo lo que <strong>no</strong> debe vivir solo en una caché.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a></li>
+</ul>
+<h4 id="google-cloud-spanner--implementacionesspannerconsultasql">Google Cloud Spanner · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/spanner/consulta.sql"><code>implementaciones/spanner/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: spanner
+-- doc: https://cloud.google.com/spanner/docs/transactions
+-- nota: implementacion declarada, y deliberadamente distinta: aqui NO hay saga.
+--       Si los dos datos caben en el mismo sistema, Spanner ofrece la
+--       alternativa que la saga sustituye: una transaccion distribuida de
+--       verdad, serializable, con confirmacion en dos fases sobre Paxos. El
+--       coordinador tambien esta replicado por consenso, asi que no puede
+--       quedarse colgado como el coordinador XA del que huye la saga.
+--
+--       Y el limite, que es el que importa: esto solo vale si los dos servicios
+--       COMPARTEN base de datos. Una arquitectura de servicios independientes
+--       evita eso a proposito, y por eso la saga sigue existiendo.
+
+-- === preparacion ===
+CREATE TABLE reservas (
+    paso   STRING(MAX) NOT NULL,
+    estado STRING(MAX) NOT NULL,
+) PRIMARY KEY (paso);
+
+-- === consulta ===
+-- Una sola transaccion para las dos reservas. Si la segunda falla, la primera
+-- NO ocurrio: no hay estado intermedio observable y no hay nada que compensar.
+--
+--   BEGIN;
+--     INSERT INTO reservas (paso, estado) VALUES ('vuelo', 'confirmado');
+--     INSERT INTO reservas (paso, estado) VALUES ('hotel', 'confirmado');
+--   COMMIT;   -- o ROLLBACK entero
+--
+SELECT paso, estado FROM reservas ORDER BY paso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es la alternativa a la saga cuando ambos datos caben en el mismo sistema: una transacción distribuida de verdad, serializable, con confirmación en dos fases sobre Paxos y sin coordinador que se pueda quedar colgado, porque el coordinador también está replicado por consenso.</li>
+<li><strong>Por qué no:</strong> Solo sirve si los dos servicios comparten base de datos, que es exactamente lo que una arquitectura de servicios independientes evita a propósito. Y cada transacción distribuida paga la latencia del consenso.</li>
+<li>📄 Documentación oficial: <a href="https://cloud.google.com/spanner/docs/transactions">https://cloud.google.com/spanner/docs/transactions</a></li>
+</ul>
+<h4 id="cockroachdb--implementacionescockroachdbconsultasql">CockroachDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/implementaciones/cockroachdb/consulta.sql"><code>implementaciones/cockroachdb/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cockroachdb
+-- doc: https://www.cockroachlabs.com/docs/stable/transactions
+-- nota: implementacion declarada. Misma alternativa que Spanner —transaccion
+--       distribuida serializable sobre Raft— con protocolo de PostgreSQL, asi
+--       que se puede probar sin reescribir la aplicacion.
+--       Lo que SI hay que escribir es el ciclo de reintento: las transacciones
+--       que abarcan varios rangos pueden abortarse por conflicto con el codigo
+--       de error 40001, y reintentar no es opcional. Parte de la complejidad
+--       que la saga hacia explicita vuelve por esta puerta.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS reservas;
+
+CREATE TABLE reservas (
+    paso   STRING PRIMARY KEY,
+    estado STRING NOT NULL
+);
+
+-- === consulta ===
+--   BEGIN;
+--     SAVEPOINT cockroach_restart;      -- punto de reintento
+--     INSERT INTO reservas VALUES ('vuelo', 'confirmado');
+--     INSERT INTO reservas VALUES ('hotel', 'confirmado');
+--     RELEASE SAVEPOINT cockroach_restart;
+--   COMMIT;
+--
+SELECT paso, estado FROM reservas ORDER BY paso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Da la misma garantía —transacciones distribuidas serializables sobre Raft— con protocolo de PostgreSQL, así que se puede probar la alternativa a la saga sin reescribir la aplicación.</li>
+<li><strong>Por qué no:</strong> Las transacciones que abarcan muchos rangos pueden ser abortadas por conflicto y <strong>hay que reintentarlas siempre</strong>: el ciclo de reintento no es opcional, y eso reintroduce en el código parte de la complejidad que la saga hacía explícita.</li>
+<li>📄 Documentación oficial: <a href="https://www.cockroachlabs.com/docs/stable/transactions">https://www.cockroachlabs.com/docs/stable/transactions</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Kafka</td>
+<td>No es un almacén de estado ni ejecuta pasos: es el registro por el que viajan los eventos entre servicios. La saga se <strong>coordina</strong> con él, pero no se implementa en él.</td>
+<td>El patrón de bandeja de salida: cada servicio escribe el cambio y el evento en la <strong>misma transacción local</strong>, y un proceso de captura de cambios publica el evento en Kafka. Así nunca hay un cambio sin evento ni un evento sin cambio, que es el problema que hunde a las sagas escritas a mano.</td>
+<td><a href="https://kafka.apache.org/documentation/#semantics">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -404,27 +711,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Tyler Akidau, Slava Chernyak, Reuven Lax</strong> (2018). <a href="https://www.oreilly.com/library/view/streaming-systems/9781491983867/">Streaming Systems</a>. O'Reilly. ISBN 978-1-4919-8387-4.<br />
-  Tiempo de evento, ventanas, marcas de agua y la dualidad tabla-flujo.</li>
-<li><strong>Apache Software Foundation</strong> (2026). <a href="https://kafka.apache.org/documentation/">Apache Kafka Documentation</a>.<br />
-  Particiones, orden, retención y semántica de entrega.</li>
-<li><strong>Jay Kreps</strong> (2013). <a href="https://web.archive.org/web/2023/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying">The Log: What Every Software Engineer Should Know About Real-Time Data's Unifying Abstraction</a>. LinkedIn Engineering.<br />
-  El registro append-only como nexo entre replicación, integración y streaming. Se cita la copia archivada: LinkedIn retiro el original.</li>
+<li><strong>Diego Ongaro, John Ousterhout</strong> (2014). <a href="https://raft.github.io/raft.pdf">In Search of an Understandable Consensus Algorithm</a>. USENIX ATC.<br />
+  Raft: consenso equivalente a Paxos con elección de líder explicita.</li>
+<li><strong>Leslie Lamport</strong> (1998). <a href="https://dl.acm.org/doi/10.1145/279227.279229">The Part-Time Parliament</a>. ACM TOCS 16(2). DOI <a href="https://doi.org/10.1145/279227.279229">10.1145/279227.279229</a>.<br />
+  Paxos, el primer algoritmo de consenso práctico demostrado correcto.</li>
+<li><strong>Pat Helland</strong> (2007). <a href="https://www.cidrdb.org/cidr2007/papers/cidr07p15.pdf">Life beyond Distributed Transactions: An Apostate's Opinion</a>. CIDR.<br />
+  Entidades, actividades y por qué las transacciones distribuidas no escalan.</li>
+<li><strong>James C. Corbett, Jeffrey Dean, Michael Epstein</strong> (2012). <a href="https://research.google/pubs/spanner-googles-globally-distributed-database-2/">Spanner: Google's Globally-Distributed Database</a>. USENIX OSDI.<br />
+  Serializabilidad global usando incertidumbre de reloj acotada (TrueTime).</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="056.html">← Anterior</a> · <a href="058.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="057">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="056.html"><span class="sentido">← Anterior · 056</span>Integración: ETL, ELT, captura de cambios y el registro como nexo</a>
-<a class="siguiente" href="058.html"><span class="sentido">Siguiente · 058 →</span>Embeddings y métricas de distancia: qué significa parecido</a>
+<a class="anterior" href="056.html"><span class="sentido">← Anterior · 056</span>Modelos de consistencia y garantías de sesión</a>
+<a class="siguiente" href="058.html"><span class="sentido">Siguiente · 058 →</span>Respaldo y restauración: solo cuenta lo que se ha restaurado</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

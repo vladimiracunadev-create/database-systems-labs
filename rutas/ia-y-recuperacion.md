@@ -9,6 +9,12 @@
 > habituales:** ingeniero de IA aplicada, ingeniero de búsqueda y recuperación, ML engineer de
 > producto.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-avanzado-8250df?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-10-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-151-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 La mayoría de los sistemas de IA que llegan a producción no entrenan modelos: los usan, y
@@ -84,31 +90,54 @@ cubre lo que se rompe primero en producción.
 
 ## 📚 Tu ruta en el programa
 
-9 partes, 131 horas estimadas.
+<!-- recorrido:inicio -->
 
-1. 📚 [**Parte 00 — Fundamentos**](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md)
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P06["📄 06"]
+    P07["🕸️ 07"]
+    P09["🗂️ 09"]
+    P13["🧠 13"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P06 --> P07 --> P09 --> P13 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
+
+9 partes, 151 horas estimadas.
+
+1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 01 — Modelado conceptual**](../classes/part-01-modelado-conceptual-y-requisitos/README.md)
+2. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h).
-3. 📚 [**Parte 02 — Modelo relacional y álgebra**](../classes/part-02-modelo-relacional-y-algebra/README.md)
+3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h).
-4. 📚 [**Parte 03 — SQL en profundidad**](../classes/part-03-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Los filtros y las reuniones que acompañan a cada búsqueda.
-5. 📚 [**Parte 05 — Documentos y clave-valor**](../classes/part-05-documentos-y-clave-valor/README.md)
+5. 📚 [**Parte 06 — Documentos y clave-valor**](../classes/part-06-documentos-y-clave-valor/README.md)
    (4 clases · 13 h). El agregado, la caché y su expiración.
-6. 📚 [**Parte 06 — Grafos, columnas, tiempo y búsqueda**](../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md)
+6. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
    (5 clases · 15 h). Especialmente
-   [031 — Búsqueda de texto: índice invertido y relevancia](../classes/part-06-grafos-columnas-tiempo-y-busqueda/031-busqueda-de-texto-indice-invertido-y-relevancia/README.md).
-7. 📚 [**Parte 08 — Almacenamiento, índices y planes**](../classes/part-08-almacenamiento-indices-y-planes/README.md)
+   [031 — Búsqueda de texto: índice invertido y relevancia](../classes/part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md).
+7. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
    (5 clases · 17 h). Con
-   [041 — Índices especializados](../classes/part-08-almacenamiento-indices-y-planes/041-indices-especializados/README.md).
-8. 📚 [**Parte 12 — Vectores, recuperación y RAG**](../classes/part-12-vectores-recuperacion-y-rag/README.md)
+   [041 — Índices especializados](../classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/README.md).
+8. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
    (4 clases · 13 h). El núcleo:
-   [058 — Embeddings y métricas de distancia](../classes/part-12-vectores-recuperacion-y-rag/058-embeddings-y-metricas-de-distancia/README.md),
-   [059 — Índices vectoriales aproximados](../classes/part-12-vectores-recuperacion-y-rag/059-indices-vectoriales-aproximados/README.md),
-   [060 — Búsqueda híbrida y filtrado](../classes/part-12-vectores-recuperacion-y-rag/060-busqueda-hibrida-y-filtrado/README.md)
-   y [061 — RAG evaluable](../classes/part-12-vectores-recuperacion-y-rag/061-rag-evaluable/README.md).
-9. 📚 [**Parte 13 — Arquitectura y proyecto final**](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+   [058 — Embeddings y métricas de distancia](../classes/part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md),
+   [059 — Índices vectoriales aproximados](../classes/part-13-vectores-recuperacion-y-rag/069-indices-vectoriales-aproximados/README.md),
+   [060 — Búsqueda híbrida y filtrado](../classes/part-13-vectores-recuperacion-y-rag/070-busqueda-hibrida-y-filtrado/README.md)
+   y [061 — RAG evaluable](../classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/README.md).
+9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:
@@ -177,7 +206,7 @@ IA»: casi ninguna declara muestra ni método.
 
 ## 🚀 Siguientes pasos
 
-1. No empieces por la Parte 12: haz antes 00 → 03 y la 08. Un almacén vectorial mal indexado se
+1. No empieces por la Parte 13: haz antes 00 → 03 y la 08. Un almacén vectorial mal indexado se
    diagnostica con las mismas herramientas que cualquier otro.
 2. Ejecuta [`06-vector-search`](../labs/06-vector-search/README.md) y añade dos documentos
    propios; observa cómo cambia el recall.

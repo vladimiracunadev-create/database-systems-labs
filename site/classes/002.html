@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Arquitectura interna de un gestor, del cliente al disco. Parte 00: Fundamentos, sistemas y método.">
+<meta name="description" content="Del archivo y la hoja de cálculo a la base de datos. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/002.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="002 — Arquitectura interna de un gestor, del cliente al disco · Database Systems Labs">
-<meta property="og:description" content="Arquitectura interna de un gestor, del cliente al disco. Parte 00: Fundamentos, sistemas y método.">
+<meta property="og:title" content="002 — Del archivo y la hoja de cálculo a la base de datos · Database Systems Labs">
+<meta property="og:description" content="Del archivo y la hoja de cálculo a la base de datos. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/002.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "002 — Arquitectura interna de un gestor, del cliente al disco", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["analizador", "planificador", "ejecutor", "gestor de almacenamiento", "buffer pool"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>002 — Arquitectura interna de un gestor, del cliente al disco · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "002 — Del archivo y la hoja de cálculo a la base de datos", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["integridad declarada", "concurrencia", "consulta declarativa", "durabilidad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>002 — Del archivo y la hoja de cálculo a la base de datos · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,179 +49,207 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-00.html">Parte 00 · Fundamentos, sistemas y método</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 002</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="002--arquitectura-interna-de-un-gestor-del-cliente-al-disco">002 — Arquitectura interna de un gestor, del cliente al disco</h1>
+<h1 id="002--del-archivo-y-la-hoja-de-cálculo-a-la-base-de-datos">002 — Del archivo y la hoja de cálculo a la base de datos</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-002%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
 <p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="001.html">← Anterior</a> · <a href="003.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>analizador</code> · <code>planificador</code> · <code>ejecutor</code> · <code>gestor de almacenamiento</code> · <code>buffer pool</code></p>
-<p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>integridad declarada</code> · <code>concurrencia</code> · <code>consulta declarativa</code> · <code>durabilidad</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 002&quot;]
+    C --&gt; K1[&quot;integridad declarada&quot;]
+    C --&gt; K2[&quot;concurrencia&quot;]
+    C --&gt; K3[&quot;consulta declarativa&quot;]
+    C --&gt; K4[&quot;durabilidad&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Abrir la caja negra. Saber qué le ocurre a una consulta desde que sale del cliente hasta que vuelve con filas permite razonar sobre rendimiento, bloqueos y fallos en lugar de adivinar.</p>
+<p>Responder con precisión a la pregunta que casi nadie hace en voz alta: <strong>si la
+hoja de cálculo funciona, ¿para qué una base de datos?</strong> La respuesta no es «es
+más profesional». Son cuatro cosas concretas que una hoja no puede hacer y que
+se pueden nombrar, una por una.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Nombrar los cinco componentes de un SGBD relacional y qué hace cada uno.</li>
-<li>Seguir el recorrido de una consulta y señalar en qué etapa se decide el rendimiento.</li>
-<li>Explicar por qué el mismo SQL puede tardar 2 ms o 2 s sin que cambie el dato.</li>
-<li>Distinguir el modelo de proceso por conexión del de hilos, y su consecuencia operativa.</li>
-<li>Localizar cada afirmación en la fuente que la respalda.</li>
+<li>Nombrar las cuatro cosas que una base de datos hace y un archivo no.</li>
+<li>Reproducir mentalmente la anomalía de la escritura perdida en dos hojas
+   abiertas a la vez.</li>
+<li>Decidir, con un criterio explícito, si un caso concreto necesita base de datos.</li>
+<li>Explicar por qué un archivo CSV compartido no es una solución intermedia.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-cinco-componentes">Los cinco componentes</h3>
-<p>Hellerstein, Stonebraker y Hamilton organizan cualquier SGBD relacional en cinco piezas. La lista es estable desde System R y sigue describiendo PostgreSQL, MySQL u Oracle:</p>
-<ol>
-<li><strong>Gestor de procesos y conexiones.</strong> Acepta clientes, autentica y asigna a cada sesión un contexto de ejecución.</li>
-<li><strong>Procesador de consultas.</strong> Analiza, reescribe, planifica y ejecuta. Aquí vive el optimizador.</li>
-<li><strong>Gestor de transacciones.</strong> Bloqueos, registro de escritura anticipada, control de versiones y recuperación.</li>
-<li><strong>Gestor de almacenamiento.</strong> Páginas, buffer, organización de archivos e índices.</li>
-<li><strong>Utilidades compartidas.</strong> Catálogo, memoria, replicación, respaldo, estadísticas.</li>
-</ol>
-<h3 id="el-recorrido-de-una-consulta">El recorrido de una consulta</h3>
-<pre><code class="language-mermaid">flowchart LR
-    C[&quot;Cliente&quot;] --&gt; P[&quot;1. Analizador&lt;br/&gt;sintaxis y nombres&quot;]
-    P --&gt; R[&quot;2. Reescritor&lt;br/&gt;vistas, reglas&quot;]
-    R --&gt; O[&quot;3. Planificador&lt;br/&gt;optimizador por costos&quot;]
-    O --&gt; E[&quot;4. Ejecutor&lt;br/&gt;árbol de operadores&quot;]
-    E --&gt; B[&quot;5. Buffer&lt;br/&gt;páginas en memoria&quot;]
-    B --&gt; D[(&quot;Disco&quot;)]
-    E --&gt; T[&quot;Gestor de&lt;br/&gt;transacciones&quot;]
-    T --&gt; W[&quot;WAL&quot;]
-    E --&gt; C
+<h3 id="lo-que-sí-hace-bien-una-hoja-de-cálculo">Lo que sí hace bien una hoja de cálculo</h3>
+<p>Conviene empezar por aquí, porque el desprecio a la hoja de cálculo es tan común
+como injustificado. Una hoja es <strong>inmejorable</strong> para: explorar datos que no
+conoces, hacer un cálculo puntual, prototipar un modelo antes de escribirlo, y
+enseñar un resultado a alguien sin instalarle nada.</p>
+<p>Millones de decisiones importantes se toman cada día con hojas de cálculo, y eso
+no va a cambiar. El problema no es la herramienta: es usarla como <strong>sistema de
+registro</strong>, es decir, como el sitio donde vive la verdad de un negocio que crece.</p>
+<h3 id="las-cuatro-cosas-que-una-hoja-no-puede-hacer">Las cuatro cosas que una hoja no puede hacer</h3>
+<p><strong>1. Impedir un dato imposible.</strong> En una hoja, la celda de la nota admite <code>130</code>,
+<code>ochenta</code> y una cara sonriente. Se pueden poner validaciones, y se saltan al
+pegar. En una base de datos, la regla vive <strong>con el dato</strong> y la aplica el motor a
+todo el que escriba, incluido el que se conecta por consola.</p>
+<p><strong>2. Dejar que dos personas escriban a la vez sin perder nada.</strong> Dos copias de
+la misma hoja abiertas, dos ediciones distintas, una se guarda encima de la otra:
+la primera desaparece sin aviso. Se llama <strong>actualización perdida</strong>, y es el caso
+que se estudiará a fondo en la parte de transacciones. Un motor de base de datos
+existe, en buena medida, para que eso no ocurra.</p>
+<p><strong>3. Responder preguntas que nadie previó.</strong> En una hoja, cada pregunta nueva es
+una fórmula nueva o una tabla dinámica nueva. En una base de datos se escribe una
+consulta y el motor decide cómo resolverla. Esa separación entre <strong>qué se quiere</strong>
+y <strong>cómo se obtiene</strong> es la idea central del artículo de Codd (1970) y lo que
+hace que el sistema siga sirviendo cuando las preguntas cambian.</p>
+<p><strong>4. Sobrevivir a un fallo a mitad de una operación.</strong> Si se corta la luz
+mientras se guarda una hoja, el archivo puede quedar a medias. Un motor
+transaccional garantiza que una operación se aplica entera o no se aplica: no hay
+estado intermedio.</p>
+<p>Silberschatz y compañía abren <em>Database System Concepts</em> con la lista completa de
+defectos del enfoque «un archivo por aplicación», y todos siguen vigentes:
+redundancia, dificultad de acceso, aislamiento de datos, problemas de integridad,
+problemas de atomicidad, anomalías de concurrencia y problemas de seguridad.</p>
+<h3 id="por-qué-un-csv-compartido-tampoco-sirve">Por qué un CSV compartido tampoco sirve</h3>
+<p>Es la solución intermedia que todo el mundo intenta, y falla por lo mismo: el
+CSV no tiene tipos —todo es texto—, no tiene reglas, no tiene control de
+concurrencia y no tiene forma de decir «esta fila se refiere a aquella otra». Lo
+único que aporta frente a la hoja es que cualquier programa puede leerlo, y eso
+lo convierte en un excelente <strong>formato de intercambio</strong> y en un pésimo sistema de
+registro.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Necesito guardar datos&quot;] --&gt; B{&quot;¿Escribe más&lt;br/&gt;de una persona&lt;br/&gt;o proceso?&quot;}
+    B -- &quot;Sí&quot; --&gt; S[&quot;Base de datos&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Hay reglas que&lt;br/&gt;deben cumplirse&lt;br/&gt;siempre?&quot;}
+    C -- &quot;Sí&quot; --&gt; S
+    C -- &quot;No&quot; --&gt; D{&quot;¿Perder los datos&lt;br/&gt;es aceptable?&quot;}
+    D -- &quot;No&quot; --&gt; S
+    D -- &quot;Sí&quot; --&gt; E[&quot;Un archivo basta&quot;]
 </code></pre>
-<p>Las etapas 1 y 2 son deterministas y baratas. La etapa 3 es donde se juega el rendimiento: el optimizador estima cuántas filas producirá cada operador y elige un plan. La etapa 5 es donde se paga: cada página que no esté en memoria es una lectura de disco.</p>
-<p>El punto pedagógico: <strong>la misma consulta puede recibir planes distintos</strong> según las estadísticas del catálogo, la memoria disponible y los índices existentes. Por eso el rendimiento se diagnostica leyendo el plan (clase 042), no leyendo el SQL.</p>
-<h3 id="buffer-pool-por-qué-la-memoria-manda">Buffer pool: por qué la memoria manda</h3>
-<p>El gestor de almacenamiento no lee filas, lee <strong>páginas</strong> (8 KB en PostgreSQL, configurable en otros motores). Esas páginas se mantienen en un caché compartido. Una lectura servida desde el buffer cuesta cientos de nanosegundos; una que llega al disco, cientos de microsegundos en SSD. Tres órdenes de magnitud de diferencia por el mismo SQL.</p>
-<p>Petrov desarrolla la consecuencia: casi todas las decisiones de diseño de un motor —tamaño de página, estructura del índice, política de compactación— son intentos de reducir el número de páginas tocadas.</p>
-<h3 id="modelo-de-proceso-qué-cambia-en-operación">Modelo de proceso: qué cambia en operación</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Modelo</th>
-<th>Motor típico</th>
-<th>Consecuencia práctica</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Proceso por conexión</td>
-<td>PostgreSQL</td>
-<td>Cada conexión cuesta memoria; hace falta un agrupador de conexiones</td>
-</tr>
-<tr>
-<td>Hilo por conexión</td>
-<td>MySQL, SQL Server</td>
-<td>Conexiones más baratas; más riesgo de contención en estructuras compartidas</td>
-</tr>
-<tr>
-<td>Biblioteca embebida</td>
-<td>SQLite, DuckDB</td>
-<td>No hay servidor: el proceso de la aplicación <em>es</em> el motor</td>
-</tr>
-</tbody>
-</table></div>
-<p>Rogov documenta el caso de PostgreSQL con detalle: el proceso de fondo <code>autovacuum</code>, la memoria compartida y por qué abrir 500 conexiones directas hunde un servidor que soporta sin esfuerzo 500 clientes a través de un agrupador.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Sigamos <code>SELECT nombre FROM students WHERE id = 3</code> sobre el dominio canónico del repositorio.</p>
-<p><strong>Etapa 1 — Análisis.</strong> Se comprueba la sintaxis y se resuelve <code>students</code> en el catálogo. Si la tabla no existe, el error llega aquí, antes de tocar un solo dato.</p>
-<p><strong>Etapa 3 — Planificación.</strong> El planificador tiene dos caminos:</p>
-<pre><code class="language-text">Plan A  Barrido secuencial: leer las N páginas de la tabla y filtrar
-Plan B  Búsqueda por índice: descender el B-Tree de la clave primaria
-</code></pre>
-<p>Con la tabla de ejemplo (4 filas, 1 página), el coste estimado del barrido es menor que el del índice: leer una página y descartar tres filas es más barato que descender un árbol. <strong>El motor elige el barrido y hace bien.</strong> Con 4 millones de filas repartidas en 30 000 páginas, el mismo optimizador elige el índice, porque descender tres niveles del árbol toca 4 páginas frente a 30 000.</p>
-<p>Este es el resultado que sorprende a quien empieza: <em>no usar el índice puede ser la decisión correcta</em>. Depende de la selectividad, y la selectividad la estima el optimizador a partir de estadísticas.</p>
-<p><strong>Etapa 5 — Acceso.</strong> Si esas páginas ya estaban en el buffer por una consulta anterior, no hay lectura física. La segunda ejecución de la misma consulta suele ser mucho más rápida que la primera, y eso <strong>no</strong> significa que la consulta haya mejorado: significa que el caché está caliente. Cualquier medición que ignore este efecto es una medición inválida.</p>
-<p>Comprobación directa en el laboratorio, sin instalar nada:</p>
-<pre><code class="language-sql">EXPLAIN QUERY PLAN SELECT nombre FROM students WHERE id = 3;
-</code></pre>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Etapa</th>
-<th>Qué decide</th>
-<th>Coste típico</th>
-<th>Se diagnostica con</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Análisis</td>
-<td>Validez sintáctica y de nombres</td>
-<td>microsegundos</td>
-<td>mensaje de error</td>
-</tr>
-<tr>
-<td>Reescritura</td>
-<td>Expansión de vistas y reglas</td>
-<td>microsegundos</td>
-<td>plan expandido</td>
-</tr>
-<tr>
-<td>Planificación</td>
-<td>Orden de reunión, uso de índices</td>
-<td>microsegundos a ms</td>
-<td><code>EXPLAIN</code></td>
-</tr>
-<tr>
-<td>Ejecución</td>
-<td>Trabajo real sobre filas</td>
-<td>ms a minutos</td>
-<td><code>EXPLAIN ANALYZE</code></td>
-</tr>
-<tr>
-<td>Almacenamiento</td>
-<td>Páginas leídas y escritas</td>
-<td>dominante</td>
-<td>contadores de E/S y aciertos de buffer</td>
-</tr>
-</tbody>
-</table></div>
+<p>Una academia con tres profesores lleva las notas en una hoja compartida en la
+nube. Todo funciona durante un semestre. Después ocurren estas cuatro cosas, en
+este orden:</p>
+<ol>
+<li>
+<p><strong>Marzo.</strong> Alguien escribe <code>95</code> en la nota de un examen sobre 50. Nadie lo
+   nota hasta que un estudiante reclama en julio. <em>Una base de datos lo habría
+   rechazado en el momento con un <code>CHECK (nota BETWEEN 0 AND 50)</code>.</em></p>
+</li>
+<li>
+<p><strong>Abril.</strong> Dos profesores corrigen a la vez. El segundo en guardar sobrescribe
+   las notas del primero: catorce notas desaparecen y no hay forma de saber
+   cuáles. <em>Una base de datos habría aplicado las dos escrituras, o habría
+   avisado del conflicto.</em></p>
+</li>
+<li>
+<p><strong>Mayo.</strong> La dirección pregunta cuántos estudiantes aprobaron el primer
+   parcial pero suspendieron el segundo. La hoja no está preparada para eso y
+   alguien pasa dos horas con fórmulas. <em>En SQL son cuatro líneas, y el motor
+   decide cómo ejecutarlas.</em></p>
+</li>
+<li>
+<p><strong>Junio.</strong> El archivo se corrompe al sincronizarse. La copia más reciente es
+   de hace nueve días. <em>Un motor con registro anticipado no pierde lo confirmado
+   ni siquiera ante un corte de energía.</em></p>
+</li>
+</ol>
+<p>Ninguno de los cuatro problemas es de la hoja de cálculo: son de haberla usado
+como sistema de registro. La misma academia puede seguir usando hojas para
+<strong>mirar</strong> los datos —exportando desde la base— sin ninguno de los cuatro
+problemas.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>«El motor no usa mi índice, está roto.»</strong> Casi siempre el optimizador estimó que el barrido era más barato, y con pocas filas suele acertar. Antes de forzar nada, mira la estimación frente al conteo real.</li>
-<li><strong>«Mido el tiempo de la primera ejecución.»</strong> Esa medición incluye el llenado del buffer. Compara siempre ejecuciones en frío contra ejecuciones en frío.</li>
-<li><strong>«Más conexiones, más rendimiento.»</strong> Por encima del paralelismo útil, cada conexión adicional añade contención y memoria. La curva baja, no sube.</li>
-<li><strong>«El plan es estable.»</strong> Cambia con las estadísticas, el volumen y la versión del motor. Un plan bueno hoy puede degradarse tras una carga masiva sin recolección de estadísticas.</li>
-<li><strong>«SQLite no tiene arquitectura.»</strong> Tiene los mismos componentes; lo que no tiene es un proceso servidor. Precisamente por eso es el mejor motor para leer un gestor entero.</li>
+<li><strong>Migrar a base de datos «porque toca».</strong> Sin nombrar cuál de las cuatro
+   cosas hacía falta, la migración añade trabajo sin resolver nada.</li>
+<li><strong>Creer que un CSV compartido es un paso intermedio.</strong> No lo es: tiene los
+   mismos problemas y menos herramientas.</li>
+<li><strong>Reproducir la hoja tal cual en una tabla.</strong> Una tabla con las mismas
+   columnas mal diseñadas hereda todos los problemas; lo que cambia el resultado
+   es el modelo, no el motor.</li>
+<li><strong>Descartar la hoja de cálculo para todo.</strong> Para explorar, prototipar y
+   comunicar sigue siendo mejor herramienta que cualquier consola de SQL.</li>
+<li><strong>Suponer que la base de datos hace los datos verdaderos.</strong> Solo hace cumplir
+   las reglas que alguien declaró. Si nadie declaró que la nota va de 0 a 50, el
+   motor guarda <code>95</code> sin protestar.</li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los incidentes de bases de datos casi nunca son «la consulta es lenta»: son «el plan cambió tras una migración», «el buffer se quedó pequeño al crecer los datos», «el agrupador de conexiones se agotó». Reconocer en qué componente ocurre un síntoma reduce el diagnóstico de horas a minutos.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>La misma decisión aparece cada vez que un programa necesita guardar algo: un
+archivo de configuración (archivo, sin duda), el registro de una aplicación de
+escritorio (archivo o SQLite), el catálogo de productos de una tienda (base de
+datos), la caché de una página (ni una cosa ni la otra: memoria). El criterio no
+cambia con el tamaño de los datos, cambia con <strong>quién escribe y qué hay que
+garantizar</strong>.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
-<p>Ejecuta la misma consulta dos veces sobre el dominio del repositorio y documenta:</p>
 <ol>
-<li>El plan elegido en cada caso, con la salida literal.</li>
-<li>La diferencia de tiempo, y a qué componente la atribuyes.</li>
-<li>Una modificación (índice, volumen de datos o filtro) que haga cambiar el plan, con la evidencia del cambio.</li>
-<li>Qué medirías para demostrar que la mejora es real y no un efecto de caché.</li>
+<li>Elige un archivo o una hoja que uses de verdad para guardar algo.</li>
+<li>Contesta las tres preguntas del diagrama: ¿escribe más de uno?, ¿hay reglas
+   que deban cumplirse siempre?, ¿perderlo es aceptable?</li>
+<li>Escribe la decisión y el motivo en dos frases.</li>
+<li>Si la respuesta fue «base de datos», nombra <strong>cuál</strong> de las cuatro cosas es la
+   que de verdad hacía falta. Si no puedes nombrar ninguna, la respuesta era
+   «archivo».</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿En qué etapa se detecta un nombre de columna mal escrito, y por qué no puede detectarse antes ni después?</li>
-<li>Explica con números por qué un barrido secuencial puede ganarle a una búsqueda por índice.</li>
-<li>Tu servidor pasa de 50 a 500 conexiones y el rendimiento cae. Da dos causas plausibles ligadas al modelo de proceso.</li>
-<li>¿Qué componente falla si, tras un corte de energía, aparecen filas de una transacción que nunca se confirmó?</li>
+<li>Enumera las cuatro cosas que una base de datos hace y un archivo no.</li>
+<li>Explica con tus palabras cómo se pierde una escritura con dos copias de una
+   hoja abiertas a la vez.</li>
+<li>¿Por qué un CSV compartido no resuelve el problema? Da dos motivos distintos.</li>
+<li>Da un caso propio en el que <strong>no</strong> usarías base de datos, y justifica con el
+   criterio del diagrama.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Qué hay entre la consulta y el disco, motor por motor</p>
-<p>Una consulta atraviesa siempre las mismas capas —protocolo, analizador,
-planificador, ejecutor, gestor de almacenamiento y caché de páginas—, pero
-cada motor las reparte de forma distinta entre procesos, hilos y archivos.
-Aquí no hay una salida que comparar: lo que se compara es <strong>dónde vive cada
-capa</strong> en cada motor, porque de ese reparto salen sus límites de operación.</p>
-<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
-resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
-cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
-afirmación.</p>
+<p><strong>Caso:</strong> La nota imposible que el archivo acepta y la base de datos rechaza</p>
+<p>Un examen se califica sobre 100. Alguien escribe 130. En una hoja de cálculo
+o en un CSV, ese valor entra sin protestar y se descubre meses después,
+cuando un estudiante reclama.</p>
+<p>El caso intenta guardar cuatro notas, y una de ellas es 130. El programa <strong>no
+comprueba nada</strong>: la comprobación tiene que hacerla el sistema de datos. Al
+terminar, la consulta devuelve las notas guardadas ordenadas por estudiante,
+y la imposible no está.</p>
+<p>Es la primera de las cuatro cosas que una base de datos hace y un archivo no:
+<strong>impedir un dato imposible</strong>. Las otras tres —concurrencia, consultas no
+previstas y recuperación ante fallos— tienen sus propias clases.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>58</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 002</code>: 4 de
+las 4 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -234,112 +262,195 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.postgresql.org/docs/current/tutorial-arch.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">doc oficial</a></td>
-</tr>
-<tr>
 <td>SQLite</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://sqlite.org/arch.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://duckdb.org/docs/stable/internals/overview.html">doc oficial</a></td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">doc oficial</a></td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/schema-validation/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>conceptual</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>ClickHouse</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://clickhouse.com/docs/en/development/architecture">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="postgresql">PostgreSQL</h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: OR IGNORE deja ver el rechazo sin abortar el guion. Sin el, la tercera
+--       insercion lanza un error, que es exactamente la garantia que se estaba
+--       comprando al elegir una base de datos en vez de un archivo.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante TEXT NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100)
+);
+
+INSERT INTO notas (estudiante, nota) VALUES ('Ada', 90);
+INSERT INTO notas (estudiante, nota) VALUES ('Linus', 58);
+INSERT INTO notas (estudiante, nota) VALUES ('Grace', 72);
+-- El examen era sobre 100. Un archivo aceptaria este 130 sin decir nada.
+INSERT OR IGNORE INTO notas (estudiante, nota) VALUES ('Bob', 130);
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Un proceso supervisor (<code>postmaster</code>) acepta la conexión y lanza <strong>un proceso del sistema operativo por sesión</strong>. Ese proceso analiza, planifica y ejecuta; las páginas se comparten en memoria (<code>shared_buffers</code>) y los cambios se escriben antes al registro anticipado (WAL) y después a los archivos de datos, con procesos auxiliares para el vaciado y el autovacío.</li>
-<li><strong>Por qué sí:</strong> El aislamiento entre procesos hace que la caída de una sesión no arrastre al servidor, y permite extensiones cargadas por sesión sin recompilar nada.</li>
-<li><strong>Por qué no:</strong> Un proceso por conexión cuesta memoria y cambio de contexto: por encima de unos cientos de conexiones hace falta un agrupador (PgBouncer) delante, y eso es una pieza más que operar.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-arch.html">https://www.postgresql.org/docs/current/tutorial-arch.html</a></li>
+<li><strong>Por qué sí:</strong> <code>CHECK</code> es parte de la definición de la tabla: la regla vive con el dato y se aplica a quien escriba, venga de donde venga. Eso es exactamente lo que un archivo no puede hacer.</li>
+<li><strong>Por qué no:</strong> Su tipado por afinidad deja pasar un texto en una columna numérica si no lo puede convertir: la regla de rango se cumple, la de tipo no, salvo que la tabla se declare <code>STRICT</code>.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
 </ul>
-<h4 id="mysql">MySQL</h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene OR IGNORE para violaciones de CHECK: la fila invalida
+--       aborta la sentencia. Por eso el intento prohibido va comentado;
+--       descomentarlo hace fallar el guion, que es la prueba de que la regla
+--       existe.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    estudiante VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100)
+);
+
+INSERT INTO notas VALUES ('Ada', 90);
+INSERT INTO notas VALUES ('Linus', 58);
+INSERT INTO notas VALUES ('Grace', 72);
+-- INSERT INTO notas VALUES ('Bob', 130);   -- Constraint Error: CHECK
+-- INSERT INTO notas VALUES ('Bob', 'alto');-- Conversion Error: aqui el TIPO
+--                                          -- tambien se comprueba, cosa que
+--                                          -- SQLite no hace sin STRICT.
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> Un servidor multihilo con <strong>un hilo por conexión</strong> y, debajo, un motor de almacenamiento intercambiable: InnoDB aporta el buffer pool, el registro de rehacer y el control de concurrencia. La capa SQL y la capa de almacenamiento están separadas por una interfaz.</li>
-<li><strong>Por qué sí:</strong> Los hilos pesan menos que los procesos y el arranque de conexión es más barato; la separación por motores permitió que InnoDB sustituyera a MyISAM sin reescribir el SQL.</li>
-<li><strong>Por qué no:</strong> Esa misma separación deja al optimizador con menos información sobre el almacenamiento, y explica varias de sus decisiones de plan peores que las de PostgreSQL en consultas anidadas.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html">https://dev.mysql.com/doc/refman/8.4/en/pluggable-storage-overview.html</a></li>
+<li><strong>Por qué sí:</strong> Aquí el tipo <strong>sí</strong> se comprueba siempre: una nota escrita como texto falla al insertar. Sirve para ver que «impedir un dato imposible» tiene dos niveles: el tipo y la regla.</li>
+<li><strong>Por qué no:</strong> No tiene forma de saltarse la fila inválida sin abortar la sentencia, así que cargar datos sucios exige limpiarlos antes: es un almacén para analizar lo que otro ya validó.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
 </ul>
-<h4 id="sqlite">SQLite</h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: el intento prohibido se ejecuta DE VERDAD, capturando el error: asi la
+--       prueba de que la regla actua queda en el guion y no en un comentario.
+--       Y con un dominio, «nota valida» se define una vez para todo el sistema:
+--         CREATE DOMAIN nota_valida AS integer CHECK (VALUE BETWEEN 0 AND 100);
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    estudiante text NOT NULL,
+    nota       integer NOT NULL CHECK (nota BETWEEN 0 AND 100)
+);
+
+INSERT INTO notas (estudiante, nota) VALUES ('Ada', 90);
+INSERT INTO notas (estudiante, nota) VALUES ('Linus', 58);
+INSERT INTO notas (estudiante, nota) VALUES ('Grace', 72);
+
+DO $$
+BEGIN
+    INSERT INTO notas (estudiante, nota) VALUES ('Bob', 130);
+    RAISE EXCEPTION 'el esquema acepto una nota de 130 sobre 100';
+EXCEPTION
+    WHEN check_violation THEN
+        RAISE NOTICE 'la regla actuo, como debia';
+END;
+$$;
+
+-- === consulta ===
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> No hay servidor: la biblioteca se enlaza dentro del proceso de la aplicación y <strong>la base de datos es un archivo</strong>. El analizador genera un programa para una máquina virtual de bytecode (VDBE) que el propio proceso ejecuta; el bloqueo lo da el sistema de archivos y el registro es el archivo WAL de al lado.</li>
-<li><strong>Por qué sí:</strong> Cero administración, cero red, cero latencia de conexión: es el motor más desplegado del mundo justamente por lo que no tiene.</li>
-<li><strong>Por qué no:</strong> Sin servidor no hay control de acceso por usuario, ni conexiones remotas, ni escrituras concurrentes de varios procesos más allá de lo que el bloqueo de archivo permite.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/arch.html">https://sqlite.org/arch.html</a></li>
+<li><strong>Por qué sí:</strong> Además de <code>CHECK</code> permite dar nombre a la regla con un dominio y reutilizarla en cuantas tablas haga falta, de modo que «una nota válida» se define una vez para todo el sistema.</li>
+<li><strong>Por qué no:</strong> Añadir la regla a una tabla que ya tiene millones de filas la bloquea mientras las valida: endurecer un esquema existente es una operación planificada, no un despliegue más.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
 </ul>
-<h4 id="duckdb">DuckDB</h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/schema-validation/
+// nota: la validacion es OPCIONAL y hay que pedirla. Con validationAction &quot;warn&quot;
+//       el documento invalido se guardaria igual y solo quedaria una linea en un
+//       registro que nadie lee. Y se aplica solo a las escrituras POSTERIORES:
+//       lo que ya estaba mal, sigue mal.
+
+// === preparacion ===
+db.notas.drop();
+db.createCollection(&quot;notas&quot;, {
+  validator: {
+    $jsonSchema: {
+      bsonType: &quot;object&quot;,
+      required: [&quot;estudiante&quot;, &quot;nota&quot;],
+      properties: {
+        estudiante: { bsonType: &quot;string&quot; },
+        nota: { bsonType: &quot;int&quot;, minimum: 0, maximum: 100 },
+      },
+    },
+  },
+  validationAction: &quot;error&quot;,
+});
+
+db.notas.insertOne({ estudiante: &quot;Ada&quot;, nota: NumberInt(90) });
+db.notas.insertOne({ estudiante: &quot;Linus&quot;, nota: NumberInt(58) });
+db.notas.insertOne({ estudiante: &quot;Grace&quot;, nota: NumberInt(72) });
+
+let rechazado = false;
+try {
+  db.notas.insertOne({ estudiante: &quot;Bob&quot;, nota: NumberInt(130) });
+} catch (e) {
+  rechazado = true;
+}
+if (!rechazado) throw new Error(&quot;el validador acepto una nota de 130 sobre 100&quot;);
+
+// === consulta ===
+db.notas
+  .find({}, { _id: 0, estudiante: 1, nota: 1 })
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
 <ul>
-<li><strong>Cómo se hace aquí:</strong> También embebido y sin servidor, pero el ejecutor es <strong>vectorizado y columnar</strong>: procesa lotes de miles de valores de una columna por operación, en vez de una fila cada vez, y paraleliza por trozos del archivo.</li>
-<li><strong>Por qué sí:</strong> Ese ejecutor es la razón de que consultas analíticas sobre millones de filas terminen en un portátil sin clúster.</li>
-<li><strong>Por qué no:</strong> El mismo diseño hace caras las escrituras fila a fila y no ofrece concurrencia entre escritores: no es el sitio donde vive la verdad del negocio.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/internals/overview.html">https://duckdb.org/docs/stable/internals/overview.html</a></li>
-</ul>
-<h4 id="mongodb">MongoDB</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Servidor multihilo cuyo almacenamiento es WiredTiger: control de concurrencia por documento con múltiples versiones, caché propia fuera del montón del proceso y un registro de diario para durabilidad. El planificador prueba varios planes en paralelo y <strong>guarda en caché el que gana</strong>.</li>
-<li><strong>Por qué sí:</strong> La caché de planes con reevaluación automática ahorra estadísticas manuales, y la concurrencia por documento evita bloqueos de colección enteros.</li>
-<li><strong>Por qué no:</strong> Los planes en caché pueden envejecer mal cuando la distribución de datos cambia, y diagnosticar eso exige leer <code>explain</code> con detalle, no adivinar.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/wiredtiger/">https://www.mongodb.com/docs/manual/core/wiredtiger/</a></li>
-</ul>
-<h4 id="redis">Redis</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> Un <strong>único hilo</strong> ejecuta las órdenes una tras otra sobre estructuras de datos en memoria; la red se atiende con multiplexación de eventos y la persistencia es opcional (instantáneas RDB o registro AOF) y la hace un proceso hijo.</li>
-<li><strong>Por qué sí:</strong> Un solo hilo elimina los bloqueos: cada orden es atómica sin que nadie escriba una sola línea de sincronización, y la latencia es de microsegundos.</li>
-<li><strong>Por qué no:</strong> Una orden lenta (<code>KEYS *</code>, un script Lua largo) bloquea a todos los demás clientes, y la memoria es el límite duro del tamaño del conjunto de datos.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">https://redis.io/docs/latest/develop/reference/protocol-spec/</a></li>
-</ul>
-<h4 id="apache-cassandra">Apache Cassandra</h4>
-<ul>
-<li><strong>Cómo se hace aquí:</strong> <strong>No hay nodo maestro</strong>: cualquier nodo actúa de coordinador, calcula el token de la clave, reenvía a las réplicas y espera tantas respuestas como pida el nivel de consistencia. Debajo, cada nodo escribe en memoria (memtable) y en el registro de compromiso, y vuelca a archivos inmutables (SSTables) que después se compactan.</li>
-<li><strong>Por qué sí:</strong> Esa arquitectura da escritura lineal y disponibilidad ante caídas de nodos: no hay una pieza cuya caída detenga el sistema.</li>
-<li><strong>Por qué no:</strong> El precio es que la lectura puede tener que consultar varias SSTables y varias réplicas, y que la compactación consume entrada y salida de forma sostenida.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html">https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html</a></li>
+<li><strong>Por qué sí:</strong> Con <code>$jsonSchema</code> se consigue lo mismo sin renunciar a la flexibilidad: se puede empezar sin esquema y endurecerlo cuando el dominio se entiende, que es como suelen ocurrir los proyectos de verdad.</li>
+<li><strong>Por qué no:</strong> La validación es <strong>opcional</strong> y solo se aplica a las escrituras posteriores: los documentos que ya estaban mal siguen estando mal, y nada en el documento delata que hay una regla detrás.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/schema-validation/">https://www.mongodb.com/docs/manual/core/schema-validation/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -354,10 +465,16 @@ afirmación.</p>
 </thead>
 <tbody>
 <tr>
-<td>ClickHouse</td>
-<td>Su arquitectura no es una variante de las anteriores sino otra cosa: <code>MergeTree</code> ordena y comprime por partes, la ejecución es vectorizada y masivamente paralela, y las actualizaciones fila a fila son operaciones pesadas y asíncronas. Compararlo aquí como si fuera un motor transaccional induce a error.</td>
-<td>Se estudia donde le corresponde, en la parte de analítica columnar, junto a DuckDB, con su propio caso y su propia medición.</td>
-<td><a href="https://clickhouse.com/docs/en/development/architecture">doc</a></td>
+<td>Redis</td>
+<td>No hay esquema ni validación: cualquier clave admite cualquier valor. La nota 130 se guarda igual que la 90, y el sistema no tiene forma de opinar.</td>
+<td>Validar en el código antes de escribir, sabiendo que la regla vive en la aplicación: si alguien escribe desde otra herramienta, no hay red.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>CQL declara tipos, pero no tiene <code>CHECK</code> ni restricciones de dominio: no hay forma de decir «entre 0 y 100». Comprobarlo exigiría leer antes de escribir, que es justo lo que su diseño evita.</td>
+<td>Validar en la capa de servicio que está delante del clúster, y aceptar que quien escriba con <code>cqlsh</code> se salta la regla.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -408,12 +525,12 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
-  Descripción completa de los componentes internos de un SGBD relacional.</li>
-<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
-  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
-<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
-  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Michael J. Hernandez</strong> (2020). <a href="https://www.informit.com/store/database-design-for-mere-mortals-a-hands-on-guide-to-9780136788041">Database Design for Mere Mortals</a>. 4.a ed. Addison-Wesley. ISBN 978-0-13-678804-1.<br />
+  Método de diseño paso a paso, independiente de producto.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
 </ul>
 <hr />
 <blockquote>
@@ -422,13 +539,13 @@ enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="002">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="001.html"><span class="sentido">← Anterior · 001</span>Qué resuelve un sistema de bases de datos y qué no</a>
-<a class="siguiente" href="003.html"><span class="sentido">Siguiente · 003 →</span>Independencia de datos y los tres niveles de esquema</a>
+<a class="anterior" href="001.html"><span class="sentido">← Anterior · 001</span>Qué es un dato, un registro y una tabla</a>
+<a class="siguiente" href="003.html"><span class="sentido">Siguiente · 003 →</span>Tu primera base de datos: crear, insertar y leer</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

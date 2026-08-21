@@ -1,0 +1,139 @@
+---
+caso:
+  titulo: >-
+    Cuando no hay ROLLBACK que valga: compensar en vez de deshacer
+  contrato: |
+    Dos servicios, dos bases de datos, una operación: reservar vuelo y hotel. El
+    vuelo se confirma; el hotel falla. No hay transacción que abarque a los dos,
+    así que **no hay nada que revertir**: la reserva del vuelo se confirmó de
+    verdad, existió como reserva válida y alguien pudo verla.
+
+    La respuesta es una **saga**: ejecutar la acción inversa. Y la acción inversa
+    no es un `ROLLBACK`, es una operación de negocio —cancelar— con sus propias
+    reglas, su penalización posible y su propia probabilidad de fallar.
+
+    El caso deja las dos cosas por escrito: el hotel fallido y el vuelo
+    compensado. Ver `compensado` en vez de que la fila del vuelo haya
+    desaparecido es exactamente la diferencia entre una saga y una transacción.
+  columnas: [paso, estado]
+  esperado:
+    - [hotel, fallido]
+    - [vuelo, compensado]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      La saga no necesita nada del motor: es un patrón de aplicación con
+      registro de pasos. Verlo aquí, sin infraestructura, deja claro que el
+      problema no es tecnológico sino de diseño.
+    porque_no: >-
+      Cada paso y cada compensación hay que escribirlos, y el registro de la
+      saga hay que hacerlo duradero: si el proceso muere entre el fallo y la
+      compensación, nadie sabrá que había que compensar.
+    doc: https://sqlite.org/lang_update.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Sirve para la pregunta que se hace después: **cuántas sagas quedaron a
+      medias**. Analizar el registro de pasos y encontrar los que fallaron sin
+      compensación es una consulta analítica, y es la que descubre el dinero
+      perdido.
+    porque_no: >-
+      No participa en la saga: la observa.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/select.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Cada paso local **sí** es transaccional, que es lo que hace viable la
+      saga: el paso y su anotación en el registro se confirman juntos. Y con el
+      patrón de bandeja de salida —escribir el evento en la misma transacción
+      que el cambio— se garantiza que nunca haya un cambio sin su evento.
+    porque_no: >-
+      PostgreSQL implementa el estándar XA para confirmación en dos fases
+      (`PREPARE TRANSACTION`), y precisamente por eso conviene saber por qué casi
+      nadie lo usa: una transacción preparada retiene bloqueos **indefinidamente**
+      si el coordinador desaparece, y basta una para bloquear el vacío de toda
+      la base.
+    doc: https://www.postgresql.org/docs/current/sql-prepare-transaction.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El registro de la saga cabe en un documento por operación, con sus pasos
+      dentro: escribir el paso y su estado es una sola escritura atómica, sin
+      transacción y sin conjunto de réplicas.
+    porque_no: >-
+      Al no haber restricciones entre colecciones, nada impide que el registro
+      diga «compensado» y el servicio de vuelos no se haya enterado: la
+      coherencia entre el registro y el mundo real la sostiene el código, y hay
+      que reconciliarla periódicamente.
+    doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Es un buen sitio para el **estado en vuelo** de la saga: qué pasos van
+      hechos, cuáles faltan y cuáles hay que compensar, con caducidad automática
+      para detectar las que se quedaron a medias.
+    porque_no: >-
+      Si ese estado se pierde —y con `appendfsync everysec` se puede perder—, la
+      saga queda huérfana: nadie sabrá que había que compensar. El registro de
+      una saga es justo lo que **no** debe vivir solo en una caché.
+    doc: https://redis.io/docs/latest/commands/hset/
+
+  - id: spanner
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/spanner/consulta.sql
+    porque_si: >-
+      Es la alternativa a la saga cuando ambos datos caben en el mismo sistema:
+      una transacción distribuida de verdad, serializable, con confirmación en
+      dos fases sobre Paxos y sin coordinador que se pueda quedar colgado,
+      porque el coordinador también está replicado por consenso.
+    porque_no: >-
+      Solo sirve si los dos servicios comparten base de datos, que es
+      exactamente lo que una arquitectura de servicios independientes evita a
+      propósito. Y cada transacción distribuida paga la latencia del consenso.
+    doc: https://cloud.google.com/spanner/docs/transactions
+
+  - id: cockroachdb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cockroachdb/consulta.sql
+    porque_si: >-
+      Da la misma garantía —transacciones distribuidas serializables sobre
+      Raft— con protocolo de PostgreSQL, así que se puede probar la alternativa
+      a la saga sin reescribir la aplicación.
+    porque_no: >-
+      Las transacciones que abarcan muchos rangos pueden ser abortadas por
+      conflicto y **hay que reintentarlas siempre**: el ciclo de reintento no es
+      opcional, y eso reintroduce en el código parte de la complejidad que la
+      saga hacía explícita.
+    doc: https://www.cockroachlabs.com/docs/stable/transactions
+
+  - id: kafka
+    aplica: no
+    porque_no: >-
+      No es un almacén de estado ni ejecuta pasos: es el registro por el que
+      viajan los eventos entre servicios. La saga se **coordina** con él, pero
+      no se implementa en él.
+    alternativa: >-
+      El patrón de bandeja de salida: cada servicio escribe el cambio y el
+      evento en la **misma transacción local**, y un proceso de captura de
+      cambios publica el evento en Kafka. Así nunca hay un cambio sin evento ni
+      un evento sin cambio, que es el problema que hunde a las sagas escritas a
+      mano.
+    doc: https://kafka.apache.org/documentation/#semantics

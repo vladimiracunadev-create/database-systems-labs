@@ -1,0 +1,36 @@
+{
+  "_comentario": [
+    "motor: qdrant",
+    "doc: https://qdrant.tech/documentation/concepts/search/",
+    "nota: implementacion declarada. Lo que distingue a Qdrant de calcular la",
+    "distancia a mano no es la formula: es que el FILTRO por carga util se",
+    "aplica DENTRO del recorrido del grafo HNSW, no despues. Filtrar despues",
+    "de recuperar los k mas cercanos puede dejar cero resultados utiles cuando",
+    "el filtro es selectivo; ese es el problema del filtrado en busqueda",
+    "vectorial, y resolverlo es su razon de ser.",
+    "El precio: los vectores viven en un sistema distinto del de los datos de",
+    "negocio, sin transaccion que abarque a los dos. Un documento borrado en la",
+    "base puede seguir apareciendo aqui hasta que alguien lo sincronice.",
+    "Se aplica con:  PUT /collections/documentos  (bloque coleccion)",
+    "y se consulta:  POST /collections/documentos/points/query  (bloque consulta)"
+  ],
+
+  "coleccion": {
+    "vectors": { "size": 3, "distance": "Euclid" }
+  },
+
+  "puntos": {
+    "points": [
+      { "id": 1, "vector": [2, 0, 0], "payload": { "doc": "A" } },
+      { "id": 2, "vector": [0, 2, 0], "payload": { "doc": "B" } },
+      { "id": 3, "vector": [1, 1, 0], "payload": { "doc": "C" } }
+    ]
+  },
+
+  "consulta": {
+    "query": [2, 0, 0],
+    "limit": 3,
+    "with_payload": true,
+    "_orden_esperado": ["A", "C", "B"]
+  }
+}

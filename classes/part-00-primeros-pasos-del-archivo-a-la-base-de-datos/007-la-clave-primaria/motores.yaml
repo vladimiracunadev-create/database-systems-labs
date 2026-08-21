@@ -1,0 +1,102 @@
+---
+caso:
+  titulo: Corregir el correo de una de las dos Ada
+  contrato: |
+    Dos estudiantes se llaman Ada. No es un caso rebuscado: es lo normal en
+    cuanto hay más de cien personas. Hay que corregir el correo de **una** de
+    las dos.
+
+    Con una clave primaria, la orden es exacta: `WHERE id = 2`. Sin ella, la
+    única forma de señalar la fila sería por nombre, y `WHERE nombre = 'Ada'`
+    cambiaría las dos —y además fallaría, porque dejaría dos correos iguales en
+    una columna `UNIQUE`.
+
+    Eso es lo que garantiza una clave primaria: que **existe una forma de
+    referirse a una fila y solo a una**. Sin ella, actualizar y borrar dejan de
+    ser operaciones precisas.
+  columnas: [id, nombre, correo]
+  esperado:
+    - ["1", Ada, ada@example.org]
+    - ["2", Ada, nuevo@example.org]
+    - ["3", Linus, linus@example.org]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `INTEGER PRIMARY KEY` es un alias de su identificador interno de fila, así
+      que la clave sustituta no ocupa ni una columna extra: la identidad estable
+      sale gratis.
+    porque_no: >-
+      SQLite **permite** tablas sin clave primaria y, salvo en tablas `STRICT`,
+      incluso admite nulos en una columna declarada `PRIMARY KEY`, que es una
+      desviación del estándar y una fuente de sorpresas.
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Impone la clave primaria y el `UNIQUE`, y sirve para la comprobación que
+      hay que hacer antes de declarar una clave sobre datos existentes: contar
+      cuántos valores repetidos hay.
+    porque_no: >-
+      No genera identificadores con la comodidad de una secuencia de un motor
+      transaccional: la identidad hay que traerla ya asignada.
+    doc: https://duckdb.org/docs/stable/sql/constraints
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `GENERATED ALWAYS AS IDENTITY` es la forma normalizada de la clave
+      sustituta, y permite tener las dos identidades a la vez: la estable para
+      las referencias y la de negocio —el correo— declarada `UNIQUE`.
+    porque_no: >-
+      La clave sustituta no exime de declarar la natural: sin el `UNIQUE` sobre
+      el correo, el sistema acepta dos personas con el mismo y nadie lo nota
+      hasta que una intenta recuperar su contraseña.
+    doc: https://www.postgresql.org/docs/current/ddl-identity-columns.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      `AUTO_INCREMENT` cumple el mismo papel y es la forma más extendida de clave
+      sustituta que se encuentra en código ajeno.
+    porque_no: >-
+      InnoDB organiza físicamente la tabla por la clave primaria, así que una
+      clave ancha —un UUID en texto— engorda **todos** los índices secundarios a
+      la vez. La elección de clave tiene aquí un costo de almacenamiento que en
+      otros motores no tiene.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/example-auto-increment.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El `_id` es obligatorio: la identidad existe siempre, aunque nadie la haya
+      diseñado, y por omisión es un `ObjectId` que el cliente puede generar sin
+      ir al servidor.
+    porque_no: >-
+      Es **inmutable**. Si alguien cede a la tentación de usar el correo como
+      `_id`, cambiarlo deja de ser una actualización: hay que borrar el documento
+      y crear otro, con todo lo que apunte a él.
+    doc: https://www.mongodb.com/docs/manual/core/document/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Aquí la clave primaria decide en qué nodo vive la fila, así que **no se
+      puede actualizar**; y la comprobación de unicidad sobre otra columna no
+      existe: un `INSERT` con una clave que ya está sobrescribe en silencio.
+    alternativa: >-
+      Un identificador estable (UUID) como clave de partición y una tabla aparte
+      `estudiante_por_correo` que haga de índice, mantenida por la aplicación.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html

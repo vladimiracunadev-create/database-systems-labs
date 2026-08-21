@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#05090f">
+<meta name="description" content="RAG evaluable: medir la recuperación antes que la generación. Parte 13: Vectores, recuperación y RAG.">
+<meta name="author" content="Vladimir Acuña">
+<link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/071.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Database Systems Labs">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="071 — RAG evaluable: medir la recuperación antes que la generación · Database Systems Labs">
+<meta property="og:description" content="RAG evaluable: medir la recuperación antes que la generación. Parte 13: Vectores, recuperación y RAG.">
+<meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/071.html">
+<meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
+<link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/class.css">
+<script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "071 — RAG evaluable: medir la recuperación antes que la generación", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["recall@k", "precisión@k", "MRR", "fragmentación", "trazabilidad de la cita"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>071 — RAG evaluable: medir la recuperación antes que la generación · Database Systems Labs</title>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<header class="nav">
+  <a class="marca" href="../index.html">
+    <img src="../assets/icon.svg" alt="" width="26" height="26">Database Systems Labs</a>
+  <nav aria-label="Secciones del programa">
+    <a href="../classes/indice.html" aria-current="page">Clases</a>
+    <a href="../rutas/index.html">Rutas por rol</a>
+    <a href="../laboratorios.html">Laboratorios</a>
+    <a href="../certificaciones/index.html">Certificaciones</a>
+    <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../fuentes.html">Fuentes</a>
+    <a href="../motores.html">Motores</a>
+    <a href="../docs/index.html">Documentación</a>
+    <a href="https://github.com/vladimiracunadev-create/database-systems-labs" rel="noopener">GitHub</a>
+  </nav>
+  <button id="tema" class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">☾</button>
+</header>
+<div class="avance" role="presentation"></div>
+<nav class="migas" aria-label="Ruta de navegación">
+  <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
+  <a href="parte-13.html">Parte 13 · Vectores, recuperación y RAG</a>
+  <span aria-hidden="true">/</span><span>Clase 071</span>
+</nav>
+<main class="content" id="principal">
+<h1 id="071--rag-evaluable-medir-la-recuperación-antes-que-la-generación">071 — RAG evaluable: medir la recuperación antes que la generación</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-13-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-071%20%2F%2074-6e7781?style=flat-square" /></p>
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="070.html">← Anterior</a> · <a href="072.html">Siguiente →</a></p>
+</blockquote>
+<p>Parte 13 — Vectores, recuperación y RAG · Avanzado ·
+3 horas estimadas · motores <code>qdrant</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>recall@k</code> · <code>precisión@k</code> · <code>MRR</code> · <code>fragmentación</code> · <code>trazabilidad de la cita</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 071&quot;]
+    C --&gt; K1[&quot;recall@k&quot;]
+    C --&gt; K2[&quot;precisión@k&quot;]
+    C --&gt; K3[&quot;MRR&quot;]
+    C --&gt; K4[&quot;fragmentación&quot;]
+    C --&gt; K5[&quot;trazabilidad de la cita&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
+<hr />
+<h2 id="propósito">Propósito</h2>
+<p>Construir un sistema de generación aumentada por recuperación cuya calidad se pueda medir. La parte de bases de datos —la recuperación— se evalúa por separado y <strong>antes</strong> que la generación.</p>
+<h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
+<p>Al terminar podrás:</p>
+<ol>
+<li>Descomponer un sistema RAG y localizar dónde falla.</li>
+<li>Construir un conjunto de evaluación de recuperación.</li>
+<li>Calcular recall@k, precision@k, MRR y NDCG@k.</li>
+<li>Explicar por qué el techo de la generación es el recall de la recuperación.</li>
+<li>Diseñar la trazabilidad de las citas.</li>
+</ol>
+<h2 id="fundamentos">Fundamentos</h2>
+<h3 id="la-arquitectura-y-sus-puntos-de-fallo">La arquitectura y sus puntos de fallo</h3>
+<p>Lewis et al. definieron RAG: recuperar pasajes relevantes y dárselos al modelo generador como contexto.</p>
+<pre><code class="language-mermaid">flowchart LR
+    D[&quot;Documentos&quot;] --&gt; C[&quot;Fragmentar&lt;br/&gt;FALLO 1: mal corte&quot;]
+    C --&gt; E[&quot;Embeddings&lt;br/&gt;FALLO 2: modelo inadecuado&quot;]
+    E --&gt; I[(&quot;Índice + metadatos&quot;)]
+    Q[&quot;Pregunta&quot;] --&gt; R[&quot;Recuperar top k&lt;br/&gt;FALLO 3: recall bajo&quot;]
+    I --&gt; R
+    R --&gt; RR[&quot;Reordenar&lt;br/&gt;FALLO 4: mal orden&quot;]
+    RR --&gt; P[&quot;Construir contexto&lt;br/&gt;FALLO 5: no cabe&quot;]
+    P --&gt; G[&quot;Generar&lt;br/&gt;FALLO 6: ignora o inventa&quot;]
+    G --&gt; A[&quot;Respuesta + citas&lt;br/&gt;FALLO 7: cita no verificable&quot;]
+</code></pre>
+<p>Los fallos 1 a 5 son <strong>de bases de datos</strong>. Solo el 6 es del modelo generador. La consecuencia práctica es que la mayor parte del trabajo de mejora de un RAG es trabajo de recuperación.</p>
+<h3 id="el-techo">El techo</h3>
+<p><strong>Si el pasaje que contiene la respuesta no está entre los <code>k</code> recuperados, ningún modelo puede responder correctamente.</strong> Como mucho, dirá que no lo sabe; en el peor caso, inventará.</p>
+<pre><code class="language-text">recall@5 = 0,60  →  el 40 % de las preguntas son irrespondibles
+                    por muy bueno que sea el generador
+</code></pre>
+<p>De ahí la regla operativa del programa: <strong>medir la recuperación antes de tocar el generador</strong>. Es también la más barata: no consume tokens.</p>
+<h3 id="las-métricas">Las métricas</h3>
+<p>Con un conjunto de preguntas y, para cada una, los fragmentos relevantes conocidos:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Fórmula</th>
+<th>Qué mide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall@k</strong></td>
+<td>relevantes en el top k / relevantes totales</td>
+<td>¿Está la respuesta ahí?</td>
+</tr>
+<tr>
+<td><strong>Precision@k</strong></td>
+<td>relevantes en el top k / k</td>
+<td>¿Cuánto ruido acompaña?</td>
+</tr>
+<tr>
+<td><strong>MRR</strong></td>
+<td>media de 1/posición del primer relevante</td>
+<td>¿Cómo de arriba aparece?</td>
+</tr>
+<tr>
+<td><strong>NDCG@k</strong></td>
+<td>ganancia descontada / ideal</td>
+<td>Relevancia graduada y posición</td>
+</tr>
+</tbody>
+</table></div>
+<p>Para RAG, <strong>recall@k es la métrica principal</strong>: define el techo. Precision importa porque el contexto es finito y el ruido distrae al generador.</p>
+<h3 id="el-conjunto-de-evaluación">El conjunto de evaluación</h3>
+<p>Es el activo central y hay que construirlo:</p>
+<ol>
+<li>Reunir 50–100 preguntas <strong>reales</strong> (de usuarios, de soporte, de registros).</li>
+<li>Para cada una, identificar a mano los fragmentos que contienen la respuesta.</li>
+<li>Guardarlo versionado, junto al código.</li>
+<li>Ejecutarlo en cada cambio de fragmentación, modelo, índice o fusión.</li>
+</ol>
+<p>Sin él, cualquier afirmación sobre la calidad del sistema es una impresión.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>RAG sobre este programa: 64 clases fragmentadas, preguntas de estudiantes.</p>
+<p><strong>Conjunto de evaluación:</strong></p>
+<pre><code class="language-json">[
+  {&quot;pregunta&quot;: &quot;¿Por qué NOT IN falla con nulos?&quot;,
+   &quot;relevantes&quot;: [&quot;019#3&quot;, &quot;012#5&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Cuándo conviene un índice parcial?&quot;,
+   &quot;relevantes&quot;: [&quot;041#2&quot;, &quot;039#4&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Qué se pierde con appendfsync everysec?&quot;,
+   &quot;relevantes&quot;: [&quot;027#2&quot;]},
+  {&quot;pregunta&quot;: &quot;¿Cómo evito el doble conteo al reunir dos tablas hijas?&quot;,
+   &quot;relevantes&quot;: [&quot;016#4&quot;, &quot;017#1&quot;]}
+]
+</code></pre>
+<p><strong>Evaluación de la recuperación, sin generar nada:</strong></p>
+<pre><code class="language-python">def evaluar(recuperar, conjunto, k=5):
+    recalls, precisions, rr = [], [], []
+    for caso in conjunto:
+        obtenidos = [d.id for d in recuperar(caso[&quot;pregunta&quot;], k=k)]
+        relevantes = set(caso[&quot;relevantes&quot;])
+        aciertos = [d for d in obtenidos if d in relevantes]
+
+        recalls.append(len(aciertos) / len(relevantes))
+        precisions.append(len(aciertos) / k)
+        # MRR: solo cuenta la posición del PRIMER relevante
+        pos = next((i + 1 for i, d in enumerate(obtenidos) if d in relevantes), None)
+        rr.append(1 / pos if pos else 0.0)
+
+    n = len(conjunto)
+    return {&quot;recall@k&quot;: sum(recalls)/n, &quot;precision@k&quot;: sum(precisions)/n,
+            &quot;mrr&quot;: sum(rr)/n}
+</code></pre>
+<p><strong>Iteraciones medidas, en orden cronológico:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Configuración</th>
+<th style="text-align: right;">recall@5</th>
+<th style="text-align: right;">precision@5</th>
+<th style="text-align: right;">MRR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fragmentos de 2 000 car., solo vectorial</td>
+<td style="text-align: right;">0,58</td>
+<td style="text-align: right;">0,23</td>
+<td style="text-align: right;">0,51</td>
+</tr>
+<tr>
+<td>Fragmentos de 600 car. con 15 % de solape</td>
+<td style="text-align: right;">0,71</td>
+<td style="text-align: right;">0,31</td>
+<td style="text-align: right;">0,62</td>
+</tr>
+<tr>
+<td>+ cabecera de sección en cada fragmento</td>
+<td style="text-align: right;">0,78</td>
+<td style="text-align: right;">0,34</td>
+<td style="text-align: right;">0,69</td>
+</tr>
+<tr>
+<td>+ híbrida RRF (clase 060)</td>
+<td style="text-align: right;">0,89</td>
+<td style="text-align: right;">0,39</td>
+<td style="text-align: right;">0,81</td>
+</tr>
+<tr>
+<td>+ reordenador sobre 50</td>
+<td style="text-align: right;">0,89</td>
+<td style="text-align: right;"><strong>0,52</strong></td>
+<td style="text-align: right;"><strong>0,88</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Observaciones que enseñan más que las cifras:</p>
+<ul>
+<li><strong>Fragmentar mejor fue la mejora más grande</strong> (+13 puntos) y no costó ni un modelo nuevo ni un servicio nuevo.</li>
+<li><strong>Añadir la cabecera de sección</strong> al texto del fragmento (+7 puntos) fue casi gratis: da contexto al embedding sobre de qué trata el fragmento.</li>
+<li><strong>El reordenador no cambia el recall</strong> (0,89 → 0,89) y sube mucho la precisión y el MRR: no recupera más, ordena mejor. Exactamente lo previsto en la clase 060.</li>
+<li>El techo de la generación pasó del 58 % al 89 % <strong>sin tocar el generador</strong>.</li>
+</ul>
+<p><strong>Construcción del contexto</strong>, donde está el fallo 5:</p>
+<pre><code class="language-python">def construir_contexto(fragmentos, presupuesto_tokens=3000):
+    partes, usados = [], 0
+    for f in fragmentos:                       # ya reordenados: lo mejor primero
+        bloque = (f&quot;[{f.id}] {f.clase} · {f.seccion}\n{f.texto}\n&quot;)
+        t = contar_tokens(bloque)
+        if usados + t &gt; presupuesto_tokens:
+            break                              # truncar por el final, nunca por el principio
+        partes.append(bloque)
+        usados += t
+    return &quot;\n---\n&quot;.join(partes)
+</code></pre>
+<p>Dos decisiones deliberadas:</p>
+<ul>
+<li><strong>Truncar por el final.</strong> Los fragmentos mejor puntuados van primero y nunca se descartan.</li>
+<li><strong>El identificador <code>[019#3]</code> viaja en el contexto.</strong> Es lo que hace verificable la cita.</li>
+</ul>
+<p><strong>Trazabilidad de la cita:</strong></p>
+<pre><code class="language-python">def verificar_citas(respuesta, contexto_ids):
+    citadas = set(re.findall(r&quot;\[(\d{3}#\d+)\]&quot;, respuesta))
+    inventadas = citadas - set(contexto_ids)
+    if inventadas:
+        raise CitaInvalida(f&quot;cita no presente en el contexto: {inventadas}&quot;)
+    return citadas
+</code></pre>
+<p>Una cita a un identificador que no estaba en el contexto es una alucinación <strong>detectable mecánicamente</strong>. Es la comprobación más barata y más efectiva de todo el sistema, y no requiere ningún modelo evaluador.</p>
+<p><strong>Registro por consulta</strong>, para poder diagnosticar en producción:</p>
+<pre><code class="language-sql">CREATE TABLE rag_traza (
+  id            BIGSERIAL PRIMARY KEY,
+  pregunta      TEXT NOT NULL,
+  modelo_emb    TEXT NOT NULL,
+  ids_recuperados TEXT[] NOT NULL,
+  ids_citados     TEXT[] NOT NULL,
+  latencia_ms   INTEGER NOT NULL,
+  ocurrido_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+</code></pre>
+<p>Con esta traza, una queja concreta —«me respondió mal»— se diagnostica: si el fragmento correcto no está en <code>ids_recuperados</code>, el problema es de recuperación; si estaba y no se citó, es del generador. <strong>Dos equipos distintos, dos arreglos distintos</strong>, y la traza dice cuál.</p>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Síntoma</th>
+<th>Causa probable</th>
+<th>Diagnóstico</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«No encuentra información que existe»</td>
+<td>Recall bajo</td>
+<td>Medir recall@k</td>
+</tr>
+<tr>
+<td>«Responde con datos de otro tema»</td>
+<td>Precision baja o fragmentos grandes</td>
+<td>Medir precision, revisar fragmentación</td>
+</tr>
+<tr>
+<td>«Inventa citas»</td>
+<td>Contexto insuficiente o mal construido</td>
+<td>Verificar citas mecánicamente</td>
+</tr>
+<tr>
+<td>«Responde bien a unas y mal a otras»</td>
+<td>Conjunto de evaluación poco representativo</td>
+<td>Ampliar y desglosar</td>
+</tr>
+<tr>
+<td>«Va lento»</td>
+<td><code>ef_search</code> alto o reordenador sobre demasiados</td>
+<td>Curva de la clase 059</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="errores-frecuentes">Errores frecuentes</h2>
+<ol>
+<li><strong>Evaluar solo la respuesta final.</strong> No dice dónde está el fallo.</li>
+<li><strong>No medir la recuperación.</strong> Se optimiza el generador contra un techo que no se mueve.</li>
+<li><strong>Conjunto de evaluación con preguntas inventadas.</strong> No refleja el uso real.</li>
+<li><strong>Fragmentos demasiado grandes.</strong> La señal se diluye y el contexto se llena de ruido.</li>
+<li><strong>Fragmentos sin contexto de origen.</strong> Un párrafo suelto no se entiende ni se cita.</li>
+<li><strong>Citas no verificables.</strong> Impide detectar alucinaciones mecánicamente.</li>
+<li><strong>Cambiar el modelo de embeddings sin recalcular la colección</strong> (clase 058).</li>
+</ol>
+<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
+<p>Un RAG en producción se degrada por causas de base de datos: documentos nuevos sin indexar, un cambio de modelo a medias, el recall del índice cayendo al crecer la colección. La traza por consulta y la ejecución periódica del conjunto de evaluación son el equivalente aquí de la prueba de restauración de la clase 048.</p>
+<h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<ol>
+<li>Construye un conjunto de 50 preguntas reales con sus fragmentos relevantes.</li>
+<li>Mide recall@5, precision@5 y MRR con tu configuración actual.</li>
+<li>Prueba tres tamaños de fragmento y quédate con el mejor medido.</li>
+<li>Implementa la verificación mecánica de citas y la traza por consulta.</li>
+</ol>
+<h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
+<ol>
+<li>¿Por qué recall@k es el techo de la calidad de la respuesta?</li>
+<li>Explica por qué el reordenador sube la precisión y no el recall.</li>
+<li>¿Cómo distingues un fallo de recuperación de uno de generación con la traza?</li>
+<li>Da una comprobación mecánica de alucinación que no requiera otro modelo.</li>
+</ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Medir si el documento correcto llegó al contexto, antes de juzgar ninguna respuesta</p>
+<p>En un sistema de generación aumentada por recuperación, la parte que más se
+mira es la que menos se puede arreglar: el modelo. La que sí se puede
+arreglar es la recuperación, y la regla es dura y simple: <strong>si el documento
+correcto no llega al contexto, el modelo no puede responder bien</strong>; como
+mucho, puede inventar algo plausible.</p>
+<p>Por eso la evaluación empieza antes de la generación, con métricas de
+recuperación sobre un conjunto de preguntas con respuesta conocida. El caso
+calcula dos: cuántas preguntas tienen su documento entre los tres primeros, y
+el <strong>MRR</strong> —la media del inverso de la posición—, que premia que el documento
+correcto esté arriba y no solo presente.</p>
+<p>Con tres preguntas, una acertada en el primer puesto, otra en el tercero y
+una fallada: 2 de 3 en el top 3, y MRR = 0,44. Esos dos números son el punto
+de partida de cualquier mejora, y se pueden calcular con SQL: no hace falta
+ninguna plataforma.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>metrica</th>
+<th>valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aciertos_top3</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>mrr</code></td>
+<td><code>0.44</code></td>
+</tr>
+<tr>
+<td><code>preguntas</code></td>
+<td><code>3</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 071</code>: 4 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/aggregates">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_aggfunc.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-aggregate.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/opensearch/consulta.json">código</a></td>
+<td><a href="https://docs.opensearch.org/latest/api-reference/rank-eval/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Qdrant</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://qdrant.tech/documentation/concepts/search/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/aggregates
+-- nota: en un trabajo real, la tabla de evaluacion no se escribe a mano: es el
+--       fichero que produjo la corrida de recuperacion.
+--         SELECT ... FROM read_parquet('corrida-2026-08-19.parquet')
+--       Y comparar dos configuraciones es anadir una columna y un GROUP BY.
+
+-- === preparacion ===
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            VARCHAR PRIMARY KEY,
+    posicion_relevante  INTEGER
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS VARCHAR) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante &lt;= 3 THEN 1 ELSE 0 END) AS VARCHAR)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS VARCHAR)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es la herramienta natural de la evaluación: los resultados de la recuperación son un fichero, las métricas son agregaciones, y comparar dos configuraciones es un <code>GROUP BY</code> más. Sin servicios y sin plataforma.</li>
+<li><strong>Por qué no:</strong> No recupera nada: evalúa lo que otro recuperó. La calidad del conjunto de evaluación —que es lo que de verdad decide si la métrica significa algo— sigue siendo trabajo humano.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/aggregates">https://duckdb.org/docs/stable/sql/functions/aggregates</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_aggfunc.html
+-- nota: el nulo de q3 es la parte delicada. Si se escribiera
+--         AVG(1.0 / posicion_relevante)
+--       SQLite ignoraria la fila nula y el MRR saldria 0,67 en vez de 0,44: el
+--       fallo de recuperacion desapareceria de la metrica. Por eso el CASE
+--       convierte el nulo en 0,0 explicitamente.
+
+-- === preparacion ===
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            TEXT PRIMARY KEY,
+    posicion_relevante  INTEGER
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS TEXT) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante &lt;= 3 THEN 1 ELSE 0 END) AS TEXT)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS TEXT)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para lo mismo sin instalar nada, y deja la fórmula del MRR a la vista: es una división y una media, no una caja negra.</li>
+<li><strong>Por qué no:</strong> Con conjuntos de evaluación grandes y muchas configuraciones que comparar, se queda corto; y no tiene funciones estadísticas para acompañar la métrica con un intervalo de confianza, que es lo que separa una medición de una anécdota.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_aggfunc.html">https://sqlite.org/lang_aggfunc.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-aggregate.html
+-- nota: el valor de tenerlo aqui no es el calculo —es aritmetica— sino la
+--       compania: el corpus, los vectores y el historico de evaluaciones en la
+--       misma base permiten preguntar como evoluciono el MRR entre versiones
+--       sin exportar nada.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS evaluacion;
+
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            text PRIMARY KEY,
+    posicion_relevante  integer
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS text) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante &lt;= 3 THEN 1 ELSE 0 END) AS text)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS text)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Permite guardar el histórico de evaluaciones junto al corpus y a los vectores: se puede consultar cómo evolucionó el MRR entre versiones del sistema con una sola consulta, sin exportar nada.</li>
+<li><strong>Por qué no:</strong> No aporta nada específico a la evaluación: es aritmética. Su valor está en tener los datos juntos, no en el cálculo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-aggregate.html">https://www.postgresql.org/docs/current/functions-aggregate.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html
+-- nota: mismo aviso sobre los nulos que en SQLite, y aqui con mas motivo: los
+--       agregados de MySQL ignoran nulos en silencio, asi que un fallo de
+--       recuperacion se convierte en una metrica inflada sin que nada avise.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS evaluacion;
+
+-- El resultado de una recuperacion sobre un conjunto de evaluacion: para cada
+-- pregunta, en que posicion aparecio el documento que de verdad la responde.
+-- Nulo significa que NO se recupero en absoluto.
+CREATE TABLE evaluacion (
+    pregunta            VARCHAR(20) PRIMARY KEY,
+    posicion_relevante  INT
+);
+INSERT INTO evaluacion (pregunta, posicion_relevante) VALUES
+    ('q1', 1),
+    ('q2', 3),
+    ('q3', NULL);   -- el sistema no encontro el documento correcto
+
+-- === consulta ===
+-- Dos metricas que hay que calcular ANTES de mirar ninguna respuesta generada:
+--
+--   aciertos en el top 3  cuantas preguntas tienen su documento entre los tres
+--                         primeros. Si el documento correcto no llega al
+--                         contexto, el modelo NO puede responder bien: como
+--                         mucho, puede inventar algo plausible.
+--   MRR                   media del inverso de la posicion. Premia que el
+--                         documento correcto este ARRIBA, no solo presente.
+--
+-- Con estos datos: 2 de 3 en el top 3, y MRR = (1/1 + 1/3 + 0) / 3 = 0,44.
+SELECT metrica, valor
+FROM (
+    SELECT 'preguntas' AS metrica,
+           CAST(COUNT(*) AS CHAR) AS valor
+    FROM evaluacion
+    UNION ALL
+    SELECT 'aciertos_top3',
+           CAST(SUM(CASE WHEN posicion_relevante IS NOT NULL
+                          AND posicion_relevante &lt;= 3 THEN 1 ELSE 0 END) AS CHAR)
+    FROM evaluacion
+    UNION ALL
+    SELECT 'mrr',
+           CAST(ROUND(SUM(CASE WHEN posicion_relevante IS NULL THEN 0.0
+                               ELSE 1.0 / posicion_relevante END) / COUNT(*), 2) AS CHAR)
+    FROM evaluacion
+) metricas
+ORDER BY metrica;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La misma aritmética con la misma sintaxis estándar: la evaluación no depende del motor, y eso es precisamente lo que conviene demostrar.</li>
+<li><strong>Por qué no:</strong> Su tratamiento de la división decimal y de los nulos en agregados obliga a escribir los <code>CASE</code> con cuidado: un nulo mal tratado convierte un fallo de recuperación en un cero silencioso y <strong>infla</strong> la métrica.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html">https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html</a></li>
+</ul>
+<h4 id="opensearch--implementacionesopensearchconsultajson">OpenSearch · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/implementaciones/opensearch/consulta.json"><code>implementaciones/opensearch/consulta.json</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-json">{
+  &quot;_comentario&quot;: [
+    &quot;motor: opensearch&quot;,
+    &quot;doc: https://docs.opensearch.org/latest/api-reference/rank-eval/&quot;,
+    &quot;nota: implementacion declarada. La API _rank_eval calcula precision, recall,&quot;,
+    &quot;MRR y nDCG DENTRO del motor, contra un conjunto de juicios de relevancia:&quot;,
+    &quot;se evalua la configuracion real de busqueda, no una reproduccion.&quot;,
+    &quot;Su limite: solo evalua su propia recuperacion. Para comparar contra un&quot;,
+    &quot;sistema vectorial externo hay que volver al calculo de este caso, que es&quot;,
+    &quot;independiente del motor y por eso sirve para todos.&quot;,
+    &quot;Se consulta con:  POST /documentos/_rank_eval&quot;
+  ],
+
+  &quot;requests&quot;: [
+    {
+      &quot;id&quot;: &quot;q1&quot;,
+      &quot;request&quot;: { &quot;query&quot;: { &quot;match&quot;: { &quot;titulo&quot;: &quot;bases de datos&quot; } } },
+      &quot;ratings&quot;: [{ &quot;_index&quot;: &quot;documentos&quot;, &quot;_id&quot;: &quot;d1&quot;, &quot;rating&quot;: 1 }]
+    },
+    {
+      &quot;id&quot;: &quot;q2&quot;,
+      &quot;request&quot;: { &quot;query&quot;: { &quot;match&quot;: { &quot;titulo&quot;: &quot;replicacion&quot; } } },
+      &quot;ratings&quot;: [{ &quot;_index&quot;: &quot;documentos&quot;, &quot;_id&quot;: &quot;d2&quot;, &quot;rating&quot;: 1 }]
+    },
+    {
+      &quot;id&quot;: &quot;q3&quot;,
+      &quot;request&quot;: { &quot;query&quot;: { &quot;match&quot;: { &quot;titulo&quot;: &quot;protocolos de red&quot; } } },
+      &quot;ratings&quot;: [{ &quot;_index&quot;: &quot;documentos&quot;, &quot;_id&quot;: &quot;d9&quot;, &quot;rating&quot;: 1 }]
+    }
+  ],
+
+  &quot;metric&quot;: {
+    &quot;mean_reciprocal_rank&quot;: { &quot;k&quot;: 3, &quot;relevant_rating_threshold&quot;: 1 }
+  }
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene una API dedicada a esto, <code>_rank_eval</code>, que calcula precisión, recall, MRR y nDCG contra un conjunto de juicios de relevancia <strong>dentro del propio motor</strong>: se evalúa la configuración real de búsqueda, no una reproducción aproximada.</li>
+<li><strong>Por qué no:</strong> Solo evalúa su propia recuperación: no sirve para comparar contra otro motor ni contra un sistema vectorial externo, que es justamente lo que hay que hacer al elegir.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/api-reference/rank-eval/">https://docs.opensearch.org/latest/api-reference/rank-eval/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qdrant</td>
+<td>Devuelve resultados, no métricas: no hay API de evaluación. Y no la necesita, porque la evaluación tiene que ser <strong>externa al sistema evaluado</strong> para poder comparar alternativas.</td>
+<td>Guardar las posiciones devueltas en un fichero y calcular las métricas fuera, exactamente como hace este caso: así el mismo cálculo sirve para Qdrant, para pgvector y para lo que venga después.</td>
+<td><a href="https://qdrant.tech/documentation/concepts/search/">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No participa en la evaluación: no guarda el conjunto de juicios ni calcula agregados sobre él.</td>
+<td>Cachear las respuestas de las preguntas frecuentes ya evaluadas, para no pagar la recuperación y la generación dos veces por la misma pregunta.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="laboratorio">Laboratorio</h2>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/06-vector-search/run_vector_lab.py
+</code></pre>
+<p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
+los parámetros usados. Una captura sin comando no es evidencia: no se puede
+repetir.</p>
+<h2 id="evaluación">Evaluación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th style="text-align: right;">Peso</th>
+<th>Qué se comprueba</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprensión conceptual</td>
+<td style="text-align: right;">25 %</td>
+<td>Explica el mecanismo, no solo el resultado</td>
+</tr>
+<tr>
+<td>Ejecución reproducible</td>
+<td style="text-align: right;">25 %</td>
+<td>Otra persona obtiene lo mismo con las instrucciones dadas</td>
+</tr>
+<tr>
+<td>Interpretación basada en evidencia</td>
+<td style="text-align: right;">25 %</td>
+<td>Cada conclusión se apoya en una salida o una medición</td>
+</tr>
+<tr>
+<td>Límites y riesgos declarados</td>
+<td style="text-align: right;">25 %</td>
+<td>Dice qué no demuestra el ejercicio y qué faltaría en producción</td>
+</tr>
+</tbody>
+</table></div>
+<p>La clase se da por superada cuando la respuesta explica el mecanismo, muestra
+la salida que la respalda y declara al menos un límite del ejercicio.</p>
+<h2 id="fuentes-de-esta-clase">Fuentes de esta clase</h2>
+<p>Todo lo afirmado arriba procede de estas obras. Los identificadores viven en
+<a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
+enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
+<ul>
+<li><strong>Patrick Lewis, Ethan Perez, Aleksandra Piktus</strong> (2020). <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. NeurIPS.<br />
+  Artículo que define RAG: la base de datos es parte del sistema, no un accesorio.</li>
+<li><strong>Vladimir Karpukhin, Barlas Oguz, Sewon Min</strong> (2020). <a href="https://arxiv.org/abs/2004.04906">Dense Passage Retrieval for Open-Domain Question Answering</a>. EMNLP.<br />
+  Recuperación densa entrenada, y su comparación honesta contra BM25.</li>
+<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
+  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
+</ul>
+<hr />
+<blockquote>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="070.html">← Anterior</a> · <a href="072.html">Siguiente →</a></p>
+</blockquote>
+<button id="completar" class="completar" type="button" aria-pressed="false"
+        data-clase="071">Marcar como completada</button>
+<nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
+<a class="anterior" href="070.html"><span class="sentido">← Anterior · 070</span>Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a>
+<a class="siguiente" href="072.html"><span class="sentido">Siguiente · 072 →</span>Persistencia políglota: decidir por evidencia y no por moda</a>
+</nav>
+</main>
+<footer>
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
+  Los productos citados conservan sus licencias y marcas.</p>
+  <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
+  <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
+     <a href="../fuentes.html">Bibliografía</a> ·
+     <a href="../laboratorios.html">Laboratorios</a> ·
+     <a href="../docs/index.html">Documentación</a> ·
+     <a href="../classes/indice.html">Todas las clases</a></p>
+</footer>
+<script src="../assets/comun.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    for (const code of document.querySelectorAll("pre > code.language-mermaid")) {
+      const caja = document.createElement("pre");
+      caja.className = "mermaid";
+      caja.textContent = code.textContent;
+      code.parentElement.replaceWith(caja);
+    }
+    const claro = document.documentElement.dataset.tema === "claro" ||
+      (!document.documentElement.dataset.tema &&
+       window.matchMedia("(prefers-color-scheme: light)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: claro ? "default" : "dark",
+                         themeVariables: { fontFamily: "Inter, system-ui, sans-serif" } });
+  </script>
+  <script src="../assets/class.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("../service-worker.js"));</script>
+</body>
+</html>

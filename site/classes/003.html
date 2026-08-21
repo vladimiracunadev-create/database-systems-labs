@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Independencia de datos y los tres niveles de esquema. Parte 00: Fundamentos, sistemas y método.">
+<meta name="description" content="Tu primera base de datos: crear, insertar y leer. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/003.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="003 — Independencia de datos y los tres niveles de esquema · Database Systems Labs">
-<meta property="og:description" content="Independencia de datos y los tres niveles de esquema. Parte 00: Fundamentos, sistemas y método.">
+<meta property="og:title" content="003 — Tu primera base de datos: crear, insertar y leer · Database Systems Labs">
+<meta property="og:description" content="Tu primera base de datos: crear, insertar y leer. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/003.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "003 — Independencia de datos y los tres niveles de esquema", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["esquema conceptual", "esquema físico", "vista externa", "independencia lógica"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>003 — Independencia de datos y los tres niveles de esquema · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "003 — Tu primera base de datos: crear, insertar y leer", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["CREATE TABLE", "INSERT", "SELECT", "definición frente a manipulación", "NULL"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>003 — Tu primera base de datos: crear, insertar y leer · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,225 +49,235 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-00.html">Parte 00 · Fundamentos, sistemas y método</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 003</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="003--independencia-de-datos-y-los-tres-niveles-de-esquema">003 — Independencia de datos y los tres niveles de esquema</h1>
+<h1 id="003--tu-primera-base-de-datos-crear-insertar-y-leer">003 — Tu primera base de datos: crear, insertar y leer</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-003%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
 <p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="002.html">← Anterior</a> · <a href="004.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 00 — Fundamentos, sistemas y método · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mysql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>esquema conceptual</code> · <code>esquema físico</code> · <code>vista externa</code> · <code>independencia lógica</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>CREATE TABLE</code> · <code>INSERT</code> · <code>SELECT</code> · <code>definición frente a manipulación</code> · <code>NULL</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 003&quot;]
+    C --&gt; K1[&quot;CREATE TABLE&quot;]
+    C --&gt; K2[&quot;INSERT&quot;]
+    C --&gt; K3[&quot;SELECT&quot;]
+    C --&gt; K4[&quot;definición frente a manipulación&quot;]
+    C --&gt; K5[&quot;NULL&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender la idea que hizo posible la industria de las bases de datos: separar <strong>qué</strong> datos existen de <strong>cómo</strong> se almacenan. Sin independencia de datos, cada cambio de índice obligaría a reescribir la aplicación.</p>
+<p>Crear una base de datos, una tabla y guardar datos dentro, con la menor cantidad
+de ceremonia posible. Al terminar esta clase habrás ejecutado las tres órdenes
+que sostienen todo lo demás —<code>CREATE TABLE</code>, <code>INSERT</code> y <code>SELECT</code>— y sabrás qué
+hace cada una.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Describir los tres niveles de esquema y qué se declara en cada uno.</li>
-<li>Distinguir independencia física de independencia lógica con ejemplos propios.</li>
-<li>Explicar qué aportó exactamente Codd (1970) frente a los sistemas jerárquicos y de red.</li>
-<li>Identificar en tu propio código las fugas de independencia más comunes.</li>
-<li>Usar vistas como capa externa y conocer sus límites.</li>
+<li>Crear una tabla declarando sus campos y sus tipos.</li>
+<li>Insertar filas y leerlas.</li>
+<li>Explicar la diferencia entre <strong>definir</strong> el esquema y <strong>modificar</strong> los datos.</li>
+<li>Reconocer el error de sintaxis más común y corregirlo sin buscarlo.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-argumento-de-codd">El argumento de Codd</h3>
-<p>Antes de 1970, los sistemas de gestión exponían al programador la estructura física: para recorrer datos había que seguir punteros entre registros en el orden en que estaban guardados. Cambiar el almacenamiento significaba reescribir programas.</p>
-<p>Codd propuso exponer los datos como <strong>relaciones</strong> —conjuntos de tuplas— y acceder a ellos <strong>por valor</strong>, nunca por posición ni por puntero. La consecuencia práctica está en el propio título del artículo: <em>large shared data banks</em>. Compartidos significa que muchos programas distintos, escritos en momentos distintos, usan los mismos datos; si cada uno dependiera de la disposición física, ninguno podría evolucionar.</p>
-<blockquote>
-<p>La independencia de datos no es una comodidad: es la condición para que un esquema sobreviva a las aplicaciones que lo usan.</p>
-</blockquote>
-<h3 id="los-tres-niveles">Los tres niveles</h3>
-<p>La arquitectura de tres esquemas (formulada por el comité ANSI/SPARC y recogida en Silberschatz) separa:</p>
+<h3 id="tres-órdenes-y-dos-familias">Tres órdenes y dos familias</h3>
+<p>Todo lo que se hace con SQL cae en dos familias, y conviene separarlas desde el
+primer día:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Nivel</th>
-<th>Qué describe</th>
-<th>Quién lo define</th>
-<th>Ejemplo</th>
+<th>Familia</th>
+<th>Qué hace</th>
+<th>Órdenes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Externo</strong> (vistas)</td>
-<td>Lo que ve cada grupo de usuarios</td>
-<td>Diseñador de la aplicación</td>
-<td><code>VIEW notas_publicas</code> sin el RUT</td>
+<td><strong>Definición</strong> (DDL)</td>
+<td>Describe la <strong>forma</strong> de los datos</td>
+<td><code>CREATE</code>, <code>ALTER</code>, <code>DROP</code></td>
 </tr>
 <tr>
-<td><strong>Conceptual</strong> (lógico)</td>
-<td>Qué entidades, atributos y reglas existen</td>
-<td>Modelador de datos</td>
-<td>Tablas, claves, restricciones</td>
-</tr>
-<tr>
-<td><strong>Interno</strong> (físico)</td>
-<td>Cómo se guarda y se accede</td>
-<td>Motor y administrador</td>
-<td>Páginas, B-Tree, particiones, compresión</td>
+<td><strong>Manipulación</strong> (DML)</td>
+<td>Trabaja con los <strong>datos</strong></td>
+<td><code>INSERT</code>, <code>SELECT</code>, <code>UPDATE</code>, <code>DELETE</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>De ahí salen dos independencias distintas, y conviene no confundirlas:</p>
-<ul>
-<li><strong>Independencia física:</strong> cambiar el nivel interno sin tocar el conceptual. Crear un índice, cambiar el tipo de índice, particionar una tabla o comprimirla no debería alterar ninguna consulta. Los motores relacionales la consiguen casi por completo.</li>
-<li><strong>Independencia lógica:</strong> cambiar el nivel conceptual sin tocar el externo. Dividir una tabla en dos no debería romper a los clientes si existe una vista que reconstruye la forma anterior. Se consigue <strong>parcialmente</strong>: es fácil para lectura y difícil para escritura, porque no toda vista es actualizable.</li>
-</ul>
-<pre><code class="language-mermaid">flowchart TD
-    U1[&quot;Aplicación A&quot;] --&gt; V1[&quot;Vista: notas_publicas&quot;]
-    U2[&quot;Aplicación B&quot;] --&gt; V2[&quot;Vista: ficha_docente&quot;]
-    V1 --&gt; C[&quot;Esquema conceptual&lt;br/&gt;students, courses, enrollments&quot;]
-    V2 --&gt; C
-    C --&gt; F[&quot;Esquema interno&lt;br/&gt;páginas, B-Tree, particiones&quot;]
-    F --&gt; D[(&quot;Almacenamiento&quot;)]
-    C -. &quot;independencia lógica&lt;br/&gt;(parcial)&quot; .-&gt; V1
-    F -. &quot;independencia física&lt;br/&gt;(casi total)&quot; .-&gt; C
+<p>La distinción importa porque las dos familias se usan en momentos distintos: la
+definición, pocas veces y con cuidado; la manipulación, todo el rato. Y porque
+en la mayoría de los motores un cambio de definición <strong>no se puede deshacer</strong> con
+la misma facilidad que un cambio de datos.</p>
+<h3 id="create-table-declarar-la-forma"><code>CREATE TABLE</code>: declarar la forma</h3>
+<pre><code class="language-sql">CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    correo TEXT
+);
 </code></pre>
-<h3 id="dónde-se-rompe-en-la-práctica">Dónde se rompe en la práctica</h3>
-<p>Date insiste en un punto incómodo: SQL debilita la independencia que el modelo relacional prometía. Las fugas más habituales:</p>
-<ul>
-<li><strong><code>SELECT *</code>.</strong> Fija implícitamente el número y el orden de las columnas. Añadir una columna rompe al cliente que lee por posición.</li>
-<li><strong>Depender del orden sin <code>ORDER BY</code>.</strong> El orden de las filas es una propiedad del plan físico, no del dato. Un índice nuevo cambia el orden observado.</li>
-<li><strong>Consultas que nombran índices o pistas del optimizador.</strong> Atan la aplicación al nivel interno.</li>
-<li><strong>Lógica de negocio en la aplicación en vez de en restricciones.</strong> Cada cliente nuevo debe reimplementarla, y alguno no lo hará.</li>
-<li><strong>Claves primarias con significado de negocio.</strong> Si la clave es el RUT y la ley cambia el formato, cambia el nivel conceptual entero (clase 007).</li>
-</ul>
+<p>Se lee de arriba abajo: una tabla llamada <code>estudiantes</code>, con tres campos. <code>id</code> es
+un número entero y es la clave primaria —el campo que distingue una fila de otra,
+que se estudiará en su propia clase—. <code>nombre</code> es texto y <strong>no puede quedar
+vacío</strong>. <code>correo</code> es texto y sí puede.</p>
+<p>Eso es todo lo que hace <code>CREATE TABLE</code>: escribir en el catálogo del motor cómo
+tienen que ser las filas de esa tabla. No guarda ningún dato.</p>
+<h3 id="insert-añadir-filas"><code>INSERT</code>: añadir filas</h3>
+<pre><code class="language-sql">INSERT INTO estudiantes (id, nombre, correo)
+VALUES (1, 'Ada Lovelace', 'ada@example.org');
+</code></pre>
+<p>Se nombran los campos que se van a rellenar y se dan los valores en el mismo
+orden. Nombrar los campos parece redundante y no lo es: el día que la tabla gane
+una columna, el <code>INSERT</code> que no los nombraba deja de funcionar o, peor, empieza a
+poner cada valor en el sitio equivocado.</p>
+<p><strong>El texto va entre comillas simples. Los números, no.</strong> Es el error de sintaxis
+más frecuente de las primeras horas, y da un mensaje distinto en cada motor.</p>
+<h3 id="select-leer"><code>SELECT</code>: leer</h3>
+<pre><code class="language-sql">SELECT nombre, correo FROM estudiantes;
+</code></pre>
+<p>«De la tabla <code>estudiantes</code>, dame los campos <code>nombre</code> y <code>correo</code> de todas las
+filas.» El <code>*</code> sirve para pedir todos los campos, y conviene acostumbrarse a <strong>no
+usarlo</strong> fuera de la exploración: una consulta con <code>SELECT *</code> cambia de resultado
+cuando alguien añade una columna, y quien la escribió ya no está para explicarlo.</p>
+<h3 id="dónde-ocurre-todo-esto">Dónde ocurre todo esto</h3>
+<p>Para esta clase no hace falta instalar nada: SQLite viene incluido con Python, y
+una base de datos es un archivo —o ni siquiera eso, si se pide en memoria—. El
+laboratorio del repositorio funciona así, y por eso se puede ejecutar en
+cualquier máquina.</p>
+<pre><code class="language-mermaid">flowchart LR
+    A[&quot;CREATE TABLE&lt;br/&gt;declara la forma&quot;] --&gt; B[&quot;INSERT&lt;br/&gt;añade filas&quot;]
+    B --&gt; C[&quot;SELECT&lt;br/&gt;lee filas&quot;]
+    C --&gt;|&quot;la forma no cambia&quot;| B
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Partimos de una tabla que mezcla dos conceptos:</p>
-<pre><code class="language-sql">CREATE TABLE students (
-  id       INTEGER PRIMARY KEY,
-  nombre   TEXT NOT NULL,
-  email    TEXT,
-  telefono TEXT
+<p>Una academia quiere registrar sus tres primeros estudiantes.</p>
+<pre><code class="language-sql">CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    correo TEXT
 );
+
+INSERT INTO estudiantes (id, nombre, correo) VALUES (1, 'Ada Lovelace', 'ada@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (2, 'Linus Torvalds', 'linus@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (3, 'Grace Hopper', NULL);
+
+SELECT id, nombre FROM estudiantes ORDER BY nombre;
 </code></pre>
-<p>Un requisito nuevo pide <strong>varios contactos por estudiante</strong>. El cambio conceptual correcto es dividir:</p>
-<pre><code class="language-sql">CREATE TABLE student_contacts (
-  student_id INTEGER NOT NULL REFERENCES students(id),
-  tipo       TEXT NOT NULL CHECK (tipo IN ('email','telefono')),
-  valor      TEXT NOT NULL,
-  PRIMARY KEY (student_id, tipo, valor)
-);
-</code></pre>
-<p>Sin capa externa, cada cliente que hacía <code>SELECT id, nombre, email FROM students</code> se rompe. Con capa externa, no:</p>
-<pre><code class="language-sql">CREATE VIEW students_v1 AS
-SELECT s.id,
-       s.nombre,
-       (SELECT c.valor FROM student_contacts c
-         WHERE c.student_id = s.id AND c.tipo = 'email'  LIMIT 1) AS email,
-       (SELECT c.valor FROM student_contacts c
-         WHERE c.student_id = s.id AND c.tipo = 'telefono' LIMIT 1) AS telefono
-FROM students s;
-</code></pre>
-<p>Los clientes antiguos siguen funcionando contra <code>students_v1</code>; los nuevos usan las tablas reales. Aquí está el límite honesto: la vista es <strong>legible pero no escribible</strong> sin ayuda. Un <code>UPDATE students_v1 SET email = ...</code> no tiene traducción única, porque la vista pierde información sobre cuál de los contactos actualizar. Para conseguir independencia lógica también en escritura hace falta un disparador <code>INSTEAD OF</code> que declare esa decisión de forma explícita.</p>
-<p>Traza del efecto: si tres aplicaciones consumían la tabla original, dividir sin vista genera 3 despliegues coordinados; dividir con vista genera 1 despliegue de base de datos y 3 migraciones independientes, cada una a su ritmo. Ese es todo el valor de la capa externa (y el fundamento de las migraciones sin caída de la clase 049).</p>
-<h2 id="comparación">Comparación</h2>
+<p>Resultado:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Cambio</th>
-<th>¿Rompe a los clientes sin capa externa?</th>
-<th>¿Con vista de compatibilidad?</th>
+<th>id</th>
+<th>nombre</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Crear un índice</td>
-<td>No</td>
-<td>No</td>
+<td>1</td>
+<td>Ada Lovelace</td>
 </tr>
 <tr>
-<td>Particionar una tabla</td>
-<td>No</td>
-<td>No</td>
+<td>3</td>
+<td>Grace Hopper</td>
 </tr>
 <tr>
-<td>Renombrar una columna</td>
-<td>Sí</td>
-<td>No</td>
-</tr>
-<tr>
-<td>Dividir una tabla en dos</td>
-<td>Sí</td>
-<td>No, en lectura</td>
-</tr>
-<tr>
-<td>Cambiar el tipo de una columna</td>
-<td>Sí</td>
-<td>Depende de la conversión</td>
-</tr>
-<tr>
-<td>Añadir una columna</td>
-<td>Solo si se usa <code>SELECT *</code></td>
-<td>No</td>
+<td>2</td>
+<td>Linus Torvalds</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Tres cosas que merece la pena mirar.</strong></p>
+<p>El orden del resultado <strong>no</strong> es el de inserción: es el que pidió <code>ORDER BY</code>. Sin
+esa cláusula, ningún motor está obligado a devolver las filas en un orden
+concreto, aunque en una tabla pequeña casi siempre lo parezca. Es una de las
+confusiones más persistentes y tiene su propia clase más adelante.</p>
+<p><code>NULL</code> —sin comillas— no es la palabra «NULL»: es la marca de <strong>ausencia de
+valor</strong>. Grace no tiene correo, y eso es distinto de tener un correo vacío.</p>
+<p>Y si se intenta insertar un cuarto estudiante con <code>id</code> 1, el motor lo rechaza:
+la clave primaria no admite repetidos. Esa negativa es exactamente lo que se
+compró al elegir una base de datos.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>«La independencia de datos es total.»</strong> La física casi lo es; la lógica solo en lectura y con trabajo explícito.</li>
-<li><strong>«Las vistas son lentas por definición.»</strong> El motor las expande en la fase de reescritura; una vista simple no añade coste. Lo que puede ser lento es la consulta que hay dentro.</li>
-<li><strong>«El orden de las filas se mantiene.»</strong> No existe orden sin <code>ORDER BY</code>. Cualquier código que dependa de él es un fallo latente.</li>
-<li><strong>«El nivel externo es cosmético.»</strong> Es el mecanismo con el que se cambia el esquema sin coordinar despliegues, y la base del control de acceso por columna.</li>
-<li><strong>«Codd inventó SQL.»</strong> Codd definió el modelo relacional; SQL llegó después (System R) y se apartó del modelo en varios puntos, empezando por permitir tablas con filas duplicadas.</li>
+<li><strong>Olvidar las comillas en el texto o ponerlas en los números.</strong> <code>VALUES (1,
+   Ada)</code> falla; <code>VALUES ('1', 'Ada')</code> a veces funciona y guarda el número como
+   texto, que es peor.</li>
+<li><strong>Usar comillas dobles para el texto.</strong> En SQL estándar, las comillas dobles
+   son para los <strong>nombres</strong> de tabla y columna; el texto va en comillas simples.
+   Algunos motores lo perdonan y otros no.</li>
+<li><strong><code>INSERT</code> sin nombrar los campos.</strong> Funciona hasta que la tabla cambia.</li>
+<li><strong>Confundir <code>NULL</code> con <code>'NULL'</code>.</strong> El primero es ausencia de valor; el segundo
+   es un texto de cuatro letras.</li>
+<li><strong>Suponer que el orden de salida es el de entrada.</strong> Sin <code>ORDER BY</code> no hay
+   orden garantizado.</li>
+<li><strong>Ejecutar <code>DROP TABLE</code> para «volver a empezar» en la base equivocada.</strong> La
+   definición no se deshace con <code>Ctrl+Z</code>.</li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Todo esquema de larga vida termina necesitando cambiar mientras hay clientes conectados. La diferencia entre un cambio de diez minutos y una madrugada completa es si la capa externa existía desde el principio. Es una decisión de diseño barata al inicio y carísima de añadir después.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>Estas tres órdenes son las mismas —con diferencias mínimas de sintaxis— en
+PostgreSQL, MySQL, SQL Server, Oracle y DuckDB. Lo que se aprende aquí no es
+SQLite: es el subconjunto de SQL que la norma ISO/IEC 9075 define y que todos
+implementan. Cambiar de motor no obliga a reaprender esto.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
-<p>Sobre el esquema del repositorio:</p>
 <ol>
-<li>Propón un cambio conceptual real (dividir, renombrar o extraer una entidad).</li>
-<li>Escribe la vista que preserva la interfaz anterior y demuestra con una consulta que el cliente antiguo sigue funcionando.</li>
-<li>Documenta qué operación de escritura deja de funcionar y qué haría falta para restaurarla.</li>
-<li>Estima cuántos despliegues coordinados evita la vista.</li>
+<li>Crea una tabla para algo que lleves de verdad: libros, gastos, plantas,
+   partidas. Declara al menos cuatro campos y decide cuáles no pueden quedar
+   vacíos.</li>
+<li>Inserta cinco filas, y que una de ellas tenga un campo sin valor.</li>
+<li>Escribe tres consultas distintas sobre esos datos.</li>
+<li>Intenta insertar una fila que viole una de tus reglas, y <strong>guarda el mensaje
+   de error</strong>: es la prueba de que la regla existe.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Da un cambio de tu propio código que rompió clientes y clasifícalo: ¿fue una fuga de independencia física o lógica?</li>
-<li>¿Por qué <code>SELECT *</code> es una dependencia del nivel externo respecto del conceptual?</li>
-<li>Una vista con <code>GROUP BY</code> no es actualizable. Explica por qué en términos de información perdida.</li>
-<li>¿Qué garantiza y qué no garantiza la independencia física cuando se cambia un índice B-Tree por uno hash?</li>
+<li>¿Qué diferencia hay entre la familia de definición y la de manipulación?</li>
+<li>¿Por qué conviene nombrar los campos en un <code>INSERT</code>?</li>
+<li>¿Qué significa <code>NOT NULL</code> y qué ocurre exactamente al violarlo?</li>
+<li>Explica por qué <code>SELECT *</code> es cómodo para explorar y mala idea en el código de
+   una aplicación.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Cambiar la forma física de los datos sin tocar la consulta de la aplicación</p>
-<p>La aplicación consulta siempre lo mismo: <code>SELECT ... FROM panel_inscripciones</code>.
-Debajo, la tabla cambia de forma —el estado deja de ser un texto repetido en
-cada fila y pasa a ser un código con su tabla de referencia—, y la vista
-absorbe el cambio. La consulta de la aplicación no se toca y devuelve
-exactamente las mismas filas antes y después.</p>
-<p>Eso es la independencia lógica de datos: la vista es la frontera entre el
-esquema externo que la aplicación ve y el esquema conceptual que el
-administrador puede reorganizar.</p>
+<p><strong>Caso:</strong> Crear una tabla, guardar tres filas y leerlas</p>
+<p>Las tres órdenes que sostienen todo lo demás, en su forma mínima: crear la
+tabla, insertar filas y leerlas. Tres estudiantes, uno de ellos sin correo
+—porque la ausencia de dato es un caso normal y hay que saber escribirla— y
+la lista devuelta <strong>ordenada por nombre</strong>, que es una decisión que hay que
+pedir explícitamente.</p>
+<p>Que el resultado salga en orden alfabético y no en el de inserción es lo
+único sorprendente del caso, y es deliberado: una tabla no tiene orden, y
+creer lo contrario es la primera confusión que hay que quitarse de encima.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>estudiante</th>
-<th>estado</th>
+<th>id</th>
+<th>nombre</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><code>1</code></td>
 <td><code>Ada</code></td>
-<td><code>activa</code></td>
 </tr>
 <tr>
+<td><code>3</code></td>
 <td><code>Grace</code></td>
-<td><code>retirada</code></td>
 </tr>
 <tr>
+<td><code>2</code></td>
 <td><code>Linus</code></td>
-<td><code>completada</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 003</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -287,362 +297,185 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_createview.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_insert.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/insert">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/sql-createview.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/sql-insert.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/insert.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/views/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/method/db.collection.insertMany/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_createview.html
--- nota: la vista es el esquema externo; las dos tablas de debajo son el
---       conceptual. Cambia el segundo sin tocar el primero.
+-- doc: https://sqlite.org/lang_insert.html
+-- nota: el resultado NO sale en orden de insercion, sale en el que pidio el
+--       ORDER BY. Sin esa clausula, ningun motor esta obligado a devolver nada
+--       en un orden concreto.
 
 -- === preparacion ===
--- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
-CREATE TABLE inscripciones_v1 (
-    estudiante TEXT NOT NULL,
-    estado     TEXT NOT NULL
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    correo TEXT
 );
-INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
-    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
 
--- 2. El esquema externo: lo unico que la aplicacion conoce.
-CREATE VIEW panel_inscripciones AS
-    SELECT estudiante, estado FROM inscripciones_v1;
-
--- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
-CREATE TABLE estados (
-    codigo INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL
-);
-INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
-
-CREATE TABLE inscripciones_v2 (
-    estudiante    TEXT NOT NULL,
-    estado_codigo INTEGER NOT NULL REFERENCES estados(codigo)
-);
-INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
-SELECT i.estudiante, e.codigo
-FROM inscripciones_v1 i
-JOIN estados e ON e.nombre = i.estado;
-
--- 4. La vista absorbe el cambio. La aplicacion no se entera.
-DROP VIEW panel_inscripciones;
-DROP TABLE inscripciones_v1;
-CREATE VIEW panel_inscripciones AS
-    SELECT i.estudiante, e.nombre AS estado
-    FROM inscripciones_v2 i
-    JOIN estados e ON e.codigo = i.estado_codigo;
+INSERT INTO estudiantes (id, nombre, correo) VALUES (1, 'Ada', 'ada@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (2, 'Linus', 'linus@example.org');
+-- Grace no tiene correo. NULL sin comillas: ausencia de valor, no la palabra.
+INSERT INTO estudiantes (id, nombre, correo) VALUES (3, 'Grace', NULL);
 
 -- === consulta ===
--- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
-SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+SELECT id, nombre FROM estudiantes ORDER BY nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Las vistas son parte del estándar y SQLite las tiene desde siempre: sirven para enseñar el mecanismo sin ninguna infraestructura.</li>
-<li><strong>Por qué no:</strong> Sus vistas son de solo lectura salvo que se añadan disparadores <code>INSTEAD OF</code>, así que la frontera protege la lectura y no la escritura.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createview.html">https://sqlite.org/lang_createview.html</a></li>
+<li><strong>Por qué sí:</strong> Cero instalación: viene con Python y la base de datos puede vivir en memoria. Es donde conviene escribir las primeras cien sentencias, sin que nada más se interponga.</li>
+<li><strong>Por qué no:</strong> Al no haber servidor tampoco hay usuarios ni permisos, así que la mitad de lo que después importa en producción no se puede ni practicar aquí.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_insert.html">https://sqlite.org/lang_insert.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/statements/create_view.html
--- nota: la misma frontera sirve para cambiar de tabla a archivo Parquet sin
---       que la consulta de la aplicacion cambie.
+-- doc: https://duckdb.org/docs/stable/sql/statements/insert
+-- nota: insertar filas de una en una es lo que peor hace un motor columnar.
+--       Funciona, y va contra su diseno: aqui se hace asi para que la sentencia
+--       sea identica a la de los demas.
 
 -- === preparacion ===
--- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
-CREATE TABLE inscripciones_v1 (
-    estudiante VARCHAR NOT NULL,
-    estado     VARCHAR NOT NULL
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL,
+    correo VARCHAR
 );
-INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
-    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
 
--- 2. El esquema externo: lo unico que la aplicacion conoce.
-CREATE VIEW panel_inscripciones AS
-    SELECT estudiante, estado FROM inscripciones_v1;
-
--- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
-CREATE TABLE estados (
-    codigo INTEGER PRIMARY KEY,
-    nombre VARCHAR NOT NULL
-);
-INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
-
-CREATE TABLE inscripciones_v2 (
-    estudiante    VARCHAR NOT NULL,
-    estado_codigo INTEGER NOT NULL
-);
-INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
-SELECT i.estudiante, e.codigo
-FROM inscripciones_v1 i
-JOIN estados e ON e.nombre = i.estado;
-
--- 4. La vista absorbe el cambio. La aplicacion no se entera.
-DROP VIEW panel_inscripciones;
-DROP TABLE inscripciones_v1;
-CREATE VIEW panel_inscripciones AS
-    SELECT i.estudiante, e.nombre AS estado
-    FROM inscripciones_v2 i
-    JOIN estados e ON e.codigo = i.estado_codigo;
+INSERT INTO estudiantes (id, nombre, correo) VALUES (1, 'Ada', 'ada@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (2, 'Linus', 'linus@example.org');
+-- Grace no tiene correo. NULL sin comillas: ausencia de valor, no la palabra.
+INSERT INTO estudiantes (id, nombre, correo) VALUES (3, 'Grace', NULL);
 
 -- === consulta ===
--- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
-SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+SELECT id, nombre FROM estudiantes ORDER BY nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Misma semántica de vista, y además permite que la vista apunte a un archivo Parquet o CSV: la independencia deja de ser entre tablas y pasa a ser entre formatos de almacenamiento.</li>
-<li><strong>Por qué no:</strong> Sin catálogo compartido ni permisos por usuario, la vista organiza el trabajo de quien la escribe, pero no es una frontera de seguridad frente a nadie.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">https://duckdb.org/docs/stable/sql/statements/create_view.html</a></li>
+<li><strong>Por qué sí:</strong> Las mismas tres órdenes con la misma sintaxis: confirma desde el primer día que lo aprendido es transferible.</li>
+<li><strong>Por qué no:</strong> Insertar filas de una en una es justo lo que peor hace un motor columnar: funciona, y va contra su diseño.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/insert">https://duckdb.org/docs/stable/sql/statements/insert</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/sql-createview.html
--- nota: en produccion el paso 4 se hace con CREATE OR REPLACE VIEW, que
---       sustituye la definicion de forma atomica y sin dejar un instante en
---       el que la vista no exista.
-
-DROP VIEW IF EXISTS panel_inscripciones;
-DROP TABLE IF EXISTS inscripciones_v1, inscripciones_v2, estados;
+-- doc: https://www.postgresql.org/docs/current/sql-insert.html
+-- nota: en cuanto hay mas de un cliente escribiendo, el identificador no lo
+--       pone la aplicacion: lo pone el motor.
+--         id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+--       Aqui se escribe a mano para que las tres filas sean comparables con las
+--       de los demas motores.
 
 -- === preparacion ===
--- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
-CREATE TABLE inscripciones_v1 (
-    estudiante text NOT NULL,
-    estado     text NOT NULL
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL,
+    correo text
 );
-INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
-    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
 
--- 2. El esquema externo: lo unico que la aplicacion conoce.
-CREATE VIEW panel_inscripciones AS
-    SELECT estudiante, estado FROM inscripciones_v1;
-
--- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
-CREATE TABLE estados (
-    codigo integer PRIMARY KEY,
-    nombre text NOT NULL
-);
-INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
-
-CREATE TABLE inscripciones_v2 (
-    estudiante    text NOT NULL,
-    estado_codigo integer NOT NULL REFERENCES estados(codigo)
-);
-INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
-SELECT i.estudiante, e.codigo
-FROM inscripciones_v1 i
-JOIN estados e ON e.nombre = i.estado;
-
--- 4. La vista absorbe el cambio. La aplicacion no se entera.
-DROP VIEW panel_inscripciones;
-DROP TABLE inscripciones_v1;
-CREATE VIEW panel_inscripciones AS
-    SELECT i.estudiante, e.nombre AS estado
-    FROM inscripciones_v2 i
-    JOIN estados e ON e.codigo = i.estado_codigo;
+INSERT INTO estudiantes (id, nombre, correo) VALUES (1, 'Ada', 'ada@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (2, 'Linus', 'linus@example.org');
+-- Grace no tiene correo. NULL sin comillas: ausencia de valor, no la palabra.
+INSERT INTO estudiantes (id, nombre, correo) VALUES (3, 'Grace', NULL);
 
 -- === consulta ===
--- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
-SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+SELECT id, nombre FROM estudiantes ORDER BY nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La vista es también una frontera de permisos: se puede conceder <code>SELECT</code> sobre la vista y negarlo sobre las tablas de debajo, de modo que la independencia lógica y el control de acceso se apoyan en el mismo objeto. Con <code>CREATE OR REPLACE VIEW</code> el cambio es atómico.</li>
-<li><strong>Por qué no:</strong> Una vista no es un índice: si la consulta de debajo es cara, la vista la hace cómoda pero no rápida, y quien la usa deja de ver ese costo. Para eso están las vistas materializadas, que ya no son transparentes porque hay que refrescarlas.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createview.html">https://www.postgresql.org/docs/current/sql-createview.html</a></li>
+<li><strong>Por qué sí:</strong> Las mismas tres órdenes contra un servidor real. Y con <code>GENERATED ALWAYS AS IDENTITY</code> el identificador lo pone el motor, que es como se hace en cuanto hay más de un cliente escribiendo.</li>
+<li><strong>Por qué no:</strong> Hay que instalarlo, arrancarlo, crear usuario y base, y conectarse. Nada de eso enseña sobre datos, y en la primera hora solo estorba.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-insert.html">https://www.postgresql.org/docs/current/sql-insert.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/views.html
--- nota: esta vista es una simple proyeccion con reunion, asi que MySQL usa el
---       algoritmo MERGE y no materializa nada. Con agregacion o UNION caeria
---       en TEMPTABLE y perderia los indices de debajo.
-
-DROP VIEW IF EXISTS panel_inscripciones;
-DROP TABLE IF EXISTS inscripciones_v1;
-DROP TABLE IF EXISTS inscripciones_v2;
-DROP TABLE IF EXISTS estados;
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/insert.html
+-- nota: casi identico. La diferencia que no se ve aqui y muerde despues: la
+--       comparacion de texto ignora mayusculas por omision, asi que un UNIQUE
+--       sobre un correo trata 'Ada@x.org' y 'ada@x.org' como el mismo valor.
 
 -- === preparacion ===
--- 1. El esquema conceptual de partida: el estado es un texto repetido en cada fila.
-CREATE TABLE inscripciones_v1 (
-    estudiante VARCHAR(50) NOT NULL,
-    estado     VARCHAR(50) NOT NULL
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    correo VARCHAR(50)
 );
-INSERT INTO inscripciones_v1 (estudiante, estado) VALUES
-    ('Ada', 'activa'), ('Linus', 'completada'), ('Grace', 'retirada');
 
--- 2. El esquema externo: lo unico que la aplicacion conoce.
-CREATE VIEW panel_inscripciones AS
-    SELECT estudiante, estado FROM inscripciones_v1;
-
--- 3. El administrador reorganiza: el estado pasa a codigo con tabla de referencia.
-CREATE TABLE estados (
-    codigo INT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL
-);
-INSERT INTO estados (codigo, nombre) VALUES (1, 'activa'), (2, 'completada'), (3, 'retirada');
-
-CREATE TABLE inscripciones_v2 (
-    estudiante    VARCHAR(50) NOT NULL,
-    estado_codigo INT NOT NULL REFERENCES estados(codigo)
-);
-INSERT INTO inscripciones_v2 (estudiante, estado_codigo)
-SELECT i.estudiante, e.codigo
-FROM inscripciones_v1 i
-JOIN estados e ON e.nombre = i.estado;
-
--- 4. La vista absorbe el cambio. La aplicacion no se entera.
-DROP VIEW panel_inscripciones;
-DROP TABLE inscripciones_v1;
-CREATE VIEW panel_inscripciones AS
-    SELECT i.estudiante, e.nombre AS estado
-    FROM inscripciones_v2 i
-    JOIN estados e ON e.codigo = i.estado_codigo;
+INSERT INTO estudiantes (id, nombre, correo) VALUES (1, 'Ada', 'ada@example.org');
+INSERT INTO estudiantes (id, nombre, correo) VALUES (2, 'Linus', 'linus@example.org');
+-- Grace no tiene correo. NULL sin comillas: ausencia de valor, no la palabra.
+INSERT INTO estudiantes (id, nombre, correo) VALUES (3, 'Grace', NULL);
 
 -- === consulta ===
--- Exactamente la misma consulta que antes del cambio: ni una letra distinta.
-SELECT estudiante, estado FROM panel_inscripciones ORDER BY estudiante;
+SELECT id, nombre FROM estudiantes ORDER BY nombre;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Ofrece el mismo mecanismo y, con el algoritmo <code>MERGE</code>, la vista se funde con la consulta que la usa y no cuesta nada frente a escribirla a mano.</li>
-<li><strong>Por qué no:</strong> Cuando la vista tiene agregación o <code>UNION</code>, MySQL cae al algoritmo <code>TEMPTABLE</code>: materializa el resultado en una tabla temporal y pierde los índices de debajo. La misma vista puede ser gratis o carísima según lo que contenga.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/views.html">https://dev.mysql.com/doc/refman/8.4/en/views.html</a></li>
+<li><strong>Por qué sí:</strong> Es el motor que más aparece en alojamientos compartidos y en tutoriales, así que reconocer su sintaxis —casi idéntica— ahorra confusión al leer código ajeno.</li>
+<li><strong>Por qué no:</strong> Su comparación de texto ignora mayúsculas por omisión, y ese detalle, que aquí no se nota, cambia resultados en cuanto haya un <code>UNIQUE</code> sobre un correo.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/insert.html">https://dev.mysql.com/doc/refman/8.4/en/insert.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-fundamentos-datos-sistemas-y-metodo/003-independencia-de-datos-y-niveles-de-esquema/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/views/
-// nota: una vista es una tuberia de agregacion con nombre. Aqui el cambio
-//       fisico es el mismo: el estado deja de ser una cadena repetida y pasa a
-//       ser un codigo con su coleccion de referencia.
+// doc: https://www.mongodb.com/docs/manual/reference/method/db.collection.insertMany/
+// nota: no hay CREATE. Insertar un documento crea la coleccion, y cada
+//       documento puede tener campos distintos. Grace no lleva el campo correo:
+//       en una tabla habria una celda vacia, aqui no hay celda.
 
 // === preparacion ===
-db.panel_inscripciones.drop();
-db.inscripciones_v1.drop();
-db.inscripciones_v2.drop();
-db.estados.drop();
-
-// 1. Esquema de partida.
-db.inscripciones_v1.insertMany([
-  { estudiante: &quot;Ada&quot;, estado: &quot;activa&quot; },
-  { estudiante: &quot;Linus&quot;, estado: &quot;completada&quot; },
-  { estudiante: &quot;Grace&quot;, estado: &quot;retirada&quot; },
-]);
-
-// 2. Esquema externo: lo unico que la aplicacion conoce.
-db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v1&quot;, [
-  { $project: { _id: 0, estudiante: 1, estado: 1 } },
-]);
-
-// 3. Reorganizacion fisica.
-db.estados.insertMany([
-  { _id: 1, nombre: &quot;activa&quot; },
-  { _id: 2, nombre: &quot;completada&quot; },
-  { _id: 3, nombre: &quot;retirada&quot; },
-]);
-db.inscripciones_v2.insertMany([
-  { estudiante: &quot;Ada&quot;, estado_codigo: 1 },
-  { estudiante: &quot;Linus&quot;, estado_codigo: 2 },
-  { estudiante: &quot;Grace&quot;, estado_codigo: 3 },
-]);
-
-// 4. La vista absorbe el cambio.
-db.panel_inscripciones.drop();
-db.inscripciones_v1.drop();
-db.createView(&quot;panel_inscripciones&quot;, &quot;inscripciones_v2&quot;, [
-  { $lookup: { from: &quot;estados&quot;, localField: &quot;estado_codigo&quot;,
-               foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
-  { $unwind: &quot;$e&quot; },
-  { $project: { _id: 0, estudiante: 1, estado: &quot;$e.nombre&quot; } },
+db.estudiantes.drop();
+db.estudiantes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot;, correo: &quot;ada@example.org&quot; },
+  { _id: 2, nombre: &quot;Linus&quot;, correo: &quot;linus@example.org&quot; },
+  { _id: 3, nombre: &quot;Grace&quot; },
 ]);
 
 // === consulta ===
-// La misma consulta de siempre, contra el mismo nombre de siempre.
-db.panel_inscripciones
-  .find()
-  .sort({ estudiante: 1 })
-  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.estado));
+db.estudiantes
+  .find({}, { _id: 1, nombre: 1 })
+  .sort({ nombre: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.nombre));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Una vista de MongoDB es una tubería de agregación con nombre: da la misma frontera entre lo que la aplicación consulta y cómo están guardados los documentos, y permite reorganizar el modelo documental sin cambiar el cliente.</li>
-<li><strong>Por qué no:</strong> Son de solo lectura y no admiten índices propios: cada consulta a la vista ejecuta la tubería entera, así que la frontera se paga en cada lectura.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/views/">https://www.mongodb.com/docs/manual/core/views/</a></li>
+<li><strong>Por qué sí:</strong> No hace falta crear nada: insertar un documento crea la colección. Para empezar a guardar algo sin decidir todavía su forma, es lo más directo que existe.</li>
+<li><strong>Por qué no:</strong> Ese «no hace falta decidir» se paga después: sin esquema, la forma de los documentos la fija quien escribió el último, y descubrir qué campos existen de verdad exige recorrer la colección.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/method/db.collection.insertMany/">https://www.mongodb.com/docs/manual/reference/method/db.collection.insertMany/</a></li>
 </ul>
-<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
-<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Por qué no</th>
-<th>Qué se hace en su lugar</th>
-<th>Fuente</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Apache Cassandra</td>
-<td>No hay vistas que reescriban una consulta. Existen vistas materializadas, pero mantienen una copia real de los datos y su propia documentación advierte de que se consideran experimentales por los problemas de coherencia entre la tabla base y la vista.</td>
-<td>Escribir a mano la tabla que la consulta necesita y mantenerla desde la aplicación, aceptando que el cambio de forma física obliga a migrar datos, no solo a redefinir un objeto.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/mvs.html">doc</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>No existe una capa lógica sobre los datos: la clave <strong>es</strong> la forma física. Cambiar cómo se guarda algo cambia la clave, y todo cliente que la conocía deja de encontrarla.</td>
-<td>Poner una capa de servicio delante que traduzca nombres estables a claves concretas: la independencia se implementa en el código, no en el almacén.</td>
-<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc</a></td>
-</tr>
-</tbody>
-</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
@@ -690,12 +523,12 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
-  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
-<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
-  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
+  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
+<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
+  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
 </ul>
 <hr />
 <blockquote>
@@ -704,13 +537,13 @@ enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="003">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="002.html"><span class="sentido">← Anterior · 002</span>Arquitectura interna de un gestor, del cliente al disco</a>
-<a class="siguiente" href="004.html"><span class="sentido">Siguiente · 004 →</span>Entorno reproducible y evidencia comprobable</a>
+<a class="anterior" href="002.html"><span class="sentido">← Anterior · 002</span>Del archivo y la hoja de cálculo a la base de datos</a>
+<a class="siguiente" href="004.html"><span class="sentido">Siguiente · 004 →</span>Leer datos: SELECT, WHERE y ORDER BY</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

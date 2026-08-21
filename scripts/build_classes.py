@@ -23,6 +23,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 
@@ -90,6 +91,15 @@ SELLO = {
 }
 
 
+def celda(texto: str) -> str:
+    """Texto seguro dentro de una celda de tabla.
+
+    Una barra vertical en el texto —y aparece de verdad: `||` es el operador de
+    concatenacion— parte la fila y markdownlint lo detecta como columnas de mas.
+    """
+    return texto.replace("|", "\\|")
+
+
 def bloque_motores(comparacion: ml.Comparacion, catalogo: dict[str, dict]) -> str:
     """La sección comparada: el mismo caso resuelto —o no— en cada motor.
 
@@ -135,7 +145,8 @@ def bloque_motores(comparacion: ml.Comparacion, catalogo: dict[str, dict]) -> st
     tabla_descartados = ""
     if descartados:
         cuerpo_descartados = "\n".join(
-            f"| {nombre(m.id)} | {m.porque_no} | {m.alternativa or '—'} | [doc]({m.doc}) |"
+            f"| {nombre(m.id)} | {celda(m.porque_no)} "
+            f"| {celda(m.alternativa or '—')} | [doc]({m.doc}) |"
             for m in descartados
         )
         tabla_descartados = (
@@ -159,7 +170,7 @@ afirmación."""
     else:
         cabecera_tabla = " | ".join(caso.columnas) if caso.columnas else "resultado"
         separador = "|".join("---" for _ in (caso.columnas or ["x"]))
-        filas = "\n".join("| " + " | ".join(f"`{v}`" for v in fila) + " |"
+        filas = "\n".join("| " + " | ".join(f"`{celda(v)}`" for v in fila) + " |"
                           for fila in caso.esperado)
         contrato = f"""{caso.contrato}
 
@@ -193,10 +204,55 @@ no ejecutado."""
 """
 
 
+# Color de la insignia de nivel, para que el vistazo distinga fundamentos de avanzado.
+NIVEL_COLOR = {"fundamentos": "2e8b57", "intermedio": "1f6feb", "avanzado": "8250df"}
+
+
+def _insignia(etiqueta: str, valor: str, color: str) -> str:
+    """Una insignia de shields.io como imagen markdown (sin `<div>`).
+
+    Se deja como línea de imágenes y no dentro de un `<div align=center>` a
+    propósito: el generador del sitio no procesa markdown dentro de HTML en
+    bloque, así que un `<div>` mostraría el markdown en crudo. Sin envoltorio,
+    las insignias renderizan igual en GitHub y en el sitio.
+    """
+    return (f"![{etiqueta}](https://img.shields.io/badge/"
+            f"{quote(etiqueta, safe='')}-{quote(valor, safe='')}-{color}?style=flat-square)")
+
+
+def insignias(parte: dict, clase: dict, total: int) -> str:
+    return " ".join([
+        _insignia("🗂️ parte", str(parte["id"]), "2e8b57"),
+        _insignia("🎚️ nivel", NIVEL_ETIQUETA[clase["level"]], NIVEL_COLOR[clase["level"]]),
+        _insignia("⏱️ duración", f"{clase['hours']} h", "24292f"),
+        _insignia("📗 clase", f"{clase['id']} / {total}", "6e7781"),
+    ])
+
+
+def mapa_conceptos(clase: dict) -> str:
+    """Diagrama Mermaid que abre los conceptos centrales de la clase en abanico.
+
+    Renderiza en GitHub y en el sitio (que convierte los bloques ```mermaid).
+    Es la «gráfica por clase»: el mismo dato que la línea de conceptos, pero
+    visto de un golpe.
+    """
+    conceptos = [str(c).replace('"', "'") for c in clase["concepts"] if c]
+    nodos = "\n".join(f'    C --> K{i}["{c}"]' for i, c in enumerate(conceptos, 1))
+    return (
+        "```mermaid\n"
+        "flowchart LR\n"
+        f'    C["🗄️ Clase {clase["id"]}"]\n'
+        f"{nodos}\n"
+        "    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff\n"
+        "    class C raiz\n"
+        "```"
+    )
+
+
 def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
            anterior: tuple[dict, dict] | None, siguiente: tuple[dict, dict] | None,
            laboratorios: dict[str, dict], comparacion: ml.Comparacion | None,
-           catalogo: dict[str, dict]) -> str:
+           catalogo: dict[str, dict], total_clases: int) -> str:
     ruta_parte = f"part-{parte['id']}-{parte['slug']}"
     lab = laboratorios.get(clase["lab"], {})
     comando_lab = lab.get("comando") or (
@@ -234,6 +290,8 @@ def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
 
     return f"""# {clase['id']} — {clase['title']}
 
+{insignias(parte, clase, total_clases)}
+
 > {nav}
 
 Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
@@ -241,6 +299,8 @@ Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
 [`{clase['lab']}`](../../../{clase['lab']}/README.md) · {len(clase['sources'])} fuentes.
 
 **Conceptos centrales:** {conceptos}{resumen_motores}
+
+{mapa_conceptos(clase)}
 
 ---
 
@@ -370,7 +430,7 @@ def main() -> int:
             parte, clase, leccion.read_text(encoding="utf-8"), fuentes,
             plano[posicion - 1] if posicion > 0 else None,
             plano[posicion + 1] if posicion + 1 < len(plano) else None,
-            laboratorios, comparacion, catalogo,
+            laboratorios, comparacion, catalogo, len(plano),
         )
 
     for parte in curriculo["parts"]:

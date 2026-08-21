@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Búsqueda de texto: índice invertido, análisis y relevancia. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta name="description" content="PostgreSQL: tipos, extensiones y modelo de procesos. Parte 05: Motores relacionales y dialectos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/031.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="031 — Búsqueda de texto: índice invertido, análisis y relevancia · Database Systems Labs">
-<meta property="og:description" content="Búsqueda de texto: índice invertido, análisis y relevancia. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta property="og:title" content="031 — PostgreSQL: tipos, extensiones y modelo de procesos · Database Systems Labs">
+<meta property="og:description" content="PostgreSQL: tipos, extensiones y modelo de procesos. Parte 05: Motores relacionales y dialectos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/031.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "031 — Búsqueda de texto: índice invertido, análisis y relevancia", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["índice invertido", "analizador", "TF-IDF", "BM25", "precisión y exhaustividad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>031 — Búsqueda de texto: índice invertido, análisis y relevancia · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "031 — PostgreSQL: tipos, extensiones y modelo de procesos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["extensión", "tipo compuesto", "proceso por conexión", "autovacuum"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>031 — PostgreSQL: tipos, extensiones y modelo de procesos · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,291 +49,620 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-06.html">Parte 06 · Grafos, columnas, tiempo y búsqueda</a>
+  <a href="parte-05.html">Parte 05 · Motores relacionales y dialectos</a>
   <span aria-hidden="true">/</span><span>Clase 031</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="031--búsqueda-de-texto-índice-invertido-análisis-y-relevancia">031 — Búsqueda de texto: índice invertido, análisis y relevancia</h1>
+<h1 id="031--postgresql-tipos-extensiones-y-modelo-de-procesos">031 — PostgreSQL: tipos, extensiones y modelo de procesos</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-05-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-031%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 06 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
-3 horas estimadas · motores <code>opensearch</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>índice invertido</code> · <code>analizador</code> · <code>TF-IDF</code> · <code>BM25</code> · <code>precisión y exhaustividad</code></p>
+<p>Parte 05 — Motores relacionales y dialectos · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>extensión</code> · <code>tipo compuesto</code> · <code>proceso por conexión</code> · <code>autovacuum</code></p>
+<p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 031&quot;]
+    C --&gt; K1[&quot;extensión&quot;]
+    C --&gt; K2[&quot;tipo compuesto&quot;]
+    C --&gt; K3[&quot;proceso por conexión&quot;]
+    C --&gt; K4[&quot;autovacuum&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender cómo se busca texto: qué es un índice invertido, qué hace el analizador y cómo se ordena por relevancia. Es también la base de comparación honesta para la búsqueda vectorial de la parte 12.</p>
+<p>Conocer PostgreSQL lo suficiente para usarlo bien y para saber qué de él <strong>no</strong> es transferible a otros motores. Es el motor de referencia del programa por su cobertura de la norma y su documentación.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Construir a mano un índice invertido y explicar su costo.</li>
-<li>Describir la cadena de análisis y por qué debe ser la misma al indexar y al consultar.</li>
-<li>Calcular una puntuación BM25 y explicar cada uno de sus términos.</li>
-<li>Medir relevancia con precisión, exhaustividad y NDCG.</li>
-<li>Decidir entre la búsqueda de texto del motor relacional y un motor de búsqueda dedicado.</li>
+<li>Describir el modelo de proceso de PostgreSQL y su consecuencia sobre las conexiones.</li>
+<li>Explicar por qué existe <code>VACUUM</code> y qué ocurre si no se ejecuta.</li>
+<li>Elegir entre <code>json</code> y <code>jsonb</code> con criterio.</li>
+<li>Usar extensiones sin convertir el esquema en algo irreproducible.</li>
+<li>Dimensionar la memoria compartida frente a la de sesión.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-índice-invertido">El índice invertido</h3>
-<p>Un índice normal va de documento a contenido. El <strong>invertido</strong> va de término a documentos:</p>
-<pre><code class="language-text">documentos:
-  d1 &quot;Bases de datos relacionales&quot;
-  d2 &quot;Bases de datos distribuidas&quot;
-  d3 &quot;Sistemas distribuidos&quot;
-
-índice invertido (tras analizar):
-  base        -&gt; d1, d2
-  dato        -&gt; d1, d2
-  relacional  -&gt; d1
-  distribuido -&gt; d2, d3
-  sistema     -&gt; d3
-</code></pre>
-<p>Buscar «datos distribuidos» es intersecar las listas de <code>dato</code> y <code>distribuido</code> → <code>{d2}</code>. La operación es una intersección de listas ordenadas: costo proporcional a la longitud de la lista más corta, no al número de documentos.</p>
-<p>Cada término guarda además la frecuencia y las posiciones dentro del documento, lo que permite puntuar y buscar frases exactas.</p>
-<h3 id="el-analizador">El analizador</h3>
-<p>Convierte texto en términos, y <strong>debe ser el mismo al indexar y al consultar</strong>. Si no lo es, se busca algo que nunca se indexó.</p>
-<pre><code class="language-text">&quot;Las Bases de Datos Relacionales&quot;
-  → normalización de caracteres  → &quot;Las Bases de Datos Relacionales&quot;
-  → segmentación                 → [Las, Bases, de, Datos, Relacionales]
-  → minúsculas                   → [las, bases, de, datos, relacionales]
-  → vacías (español)             → [bases, datos, relacionales]
-  → sin acentos                  → [bases, datos, relacionales]
-  → lematización (español)       → [base, dato, relacional]
-</code></pre>
-<p>Cada paso es una decisión con consecuencias. Quitar acentos hace que «canción» encuentre «cancion», y también que «peso» encuentre «pesó». Eliminar palabras vacías ahorra espacio y hace imposible buscar la frase «ser o no ser».</p>
-<h3 id="bm25">BM25</h3>
-<p>Robertson y Zaragoza formalizan la función de ranking que sigue siendo la referencia:</p>
-<pre><code class="language-text">score(D,Q) = Σ_{t∈Q}  IDF(t) ·  ( f(t,D) · (k1+1) ) / ( f(t,D) + k1·(1 - b + b·|D|/avgdl) )
-
-IDF(t) = ln( (N - n(t) + 0,5) / (n(t) + 0,5) + 1 )
-</code></pre>
-<p>Los tres componentes, en lenguaje llano:</p>
+<h3 id="un-proceso-por-conexión">Un proceso por conexión</h3>
+<p>PostgreSQL arranca un proceso del sistema operativo por cada conexión. Ventaja: aislamiento fuerte, un fallo no derriba el servidor. Costo: cada conexión reserva memoria propia y su creación no es barata.</p>
+<p>De ahí la regla operativa más importante del motor: <strong>usar siempre un agrupador de conexiones</strong>. Sin él, 1 000 clientes web abren 1 000 procesos, y el servidor pasa más tiempo cambiando de contexto que trabajando.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Componente</th>
-<th>Qué expresa</th>
+<th>Parámetro</th>
+<th>Ámbito</th>
+<th>Nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>IDF(t)</code></td>
-<td>Un término raro discrimina más que uno común</td>
+<td><code>shared_buffers</code></td>
+<td>Compartido</td>
+<td>Caché de páginas. Típicamente 25 % de la RAM</td>
 </tr>
 <tr>
-<td><code>f(t,D)</code> con saturación</td>
-<td>Repetir un término 20 veces no vale 20 veces más que una</td>
+<td><code>work_mem</code></td>
+<td><strong>Por operación</strong>, no por conexión</td>
+<td>Un plan con 3 ordenamientos puede usar 3 × <code>work_mem</code></td>
 </tr>
 <tr>
-<td><code>\|D\|/avgdl</code> con <code>b</code></td>
-<td>Un documento largo tiene más ocurrencias por azar: se penaliza</td>
+<td><code>maintenance_work_mem</code></td>
+<td>Por operación de mantenimiento</td>
+<td>Afecta a <code>VACUUM</code> y a la creación de índices</td>
+</tr>
+<tr>
+<td><code>effective_cache_size</code></td>
+<td>Estimación para el planificador</td>
+<td>No reserva memoria: informa al optimizador</td>
 </tr>
 </tbody>
 </table></div>
-<p>Valores habituales: <code>k1 = 1,2</code> (saturación), <code>b = 0,75</code> (normalización por longitud).</p>
-<p>La saturación es lo que distingue BM25 de TF-IDF puro y lo que impide el relleno de palabras clave.</p>
-<h3 id="medir-relevancia">Medir relevancia</h3>
+<p>El error de configuración más caro es tratar <code>work_mem</code> como si fuese por conexión. Con 200 conexiones y planes que usan tres ordenamientos, el consumo real es 600 × <code>work_mem</code>.</p>
+<h3 id="mvcc-y-vacuum">MVCC y <code>VACUUM</code></h3>
+<p>PostgreSQL implementa control de concurrencia multiversión (clase 035): un <code>UPDATE</code> <strong>no</strong> modifica la fila, escribe una versión nueva y marca la anterior como muerta. Un <code>DELETE</code> solo marca.</p>
+<p>Consecuencias que hay que aceptar:</p>
+<ul>
+<li>Las filas muertas ocupan espacio hasta que <code>VACUUM</code> las recupera.</li>
+<li>Una tabla con muchas actualizaciones <strong>se hincha</strong> si el autovacuum no va al ritmo.</li>
+<li>Los identificadores de transacción son finitos; sin vacuum, el motor llega a un punto en que se detiene para protegerse.</li>
+</ul>
+<pre><code class="language-sql">SELECT relname, n_live_tup, n_dead_tup,
+       round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 1) AS pct_muertas
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC LIMIT 10;
+</code></pre>
+<p>Rogov documenta el mecanismo completo. Lo relevante aquí: <code>VACUUM</code> no es «limpieza opcional», es parte del funcionamiento normal, y su ausencia se manifiesta como degradación progresiva.</p>
+<h3 id="tipos-que-evitan-tablas">Tipos que evitan tablas</h3>
+<p>PostgreSQL ofrece tipos que resuelven modelados que en otros motores exigen tablas adicionales:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Métrica</th>
-<th>Qué mide</th>
-<th>Cuándo usarla</th>
+<th>Tipo</th>
+<th>Reemplaza a</th>
+<th>Cuidado</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Precisión@k</td>
-<td>De los k devueltos, cuántos son relevantes</td>
-<td>El usuario mira solo los primeros</td>
+<td><code>jsonb</code></td>
+<td>Tabla de atributos dinámicos</td>
+<td>Sin restricciones dentro; se indexa con GIN</td>
 </tr>
 <tr>
-<td>Exhaustividad@k</td>
-<td>De los relevantes, cuántos aparecen en los k</td>
-<td>Cobertura (legal, cumplimiento)</td>
+<td><code>tstzrange</code></td>
+<td>Par de columnas desde/hasta</td>
+<td>Habilita <code>EXCLUDE</code> contra solapamientos</td>
 </tr>
 <tr>
-<td>MRR</td>
-<td>Posición del primer resultado relevante</td>
-<td>Hay una única respuesta correcta</td>
+<td><code>text[]</code></td>
+<td>Tabla puente para etiquetas</td>
+<td>Rompe la 1FN; sin integridad referencial</td>
 </tr>
 <tr>
-<td>NDCG@k</td>
-<td>Ganancia acumulada descontada por posición</td>
-<td>Relevancia graduada, no binaria</td>
+<td><code>inet</code>, <code>cidr</code></td>
+<td>Texto con validación manual</td>
+<td>Valida y permite operadores de red</td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td><code>CHAR(36)</code></td>
+<td>16 bytes en vez de 36</td>
+</tr>
+<tr>
+<td><code>numeric</code></td>
+<td>Decimal exacto</td>
+<td>Más lento que <code>bigint</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>Sin un conjunto de consultas con juicios de relevancia, «mejoré la búsqueda» es una opinión. Construir ese conjunto —30 a 100 consultas reales con sus resultados esperados— es el trabajo que hace evaluable todo lo demás, y es el mismo requisito de la clase 061.</p>
-<pre><code class="language-mermaid">flowchart LR
-    D[&quot;Documento&quot;] --&gt; A[&quot;Analizador&quot;]
-    A --&gt; I[&quot;Índice invertido&lt;br/&gt;término → posteo&quot;]
-    Q[&quot;Consulta&quot;] --&gt; A2[&quot;El MISMO analizador&quot;]
-    A2 --&gt; M[&quot;Intersección de listas&quot;]
-    I --&gt; M
-    M --&gt; S[&quot;Puntuación BM25&quot;]
-    S --&gt; R[&quot;Resultados ordenados&quot;]
-    R --&gt; E[&quot;Evaluación:&lt;br/&gt;P@k · R@k · NDCG&quot;]
+<p><strong><code>json</code> frente a <code>jsonb</code>:</strong> <code>json</code> guarda el texto tal cual (conserva orden de claves y espacios, no se indexa bien); <code>jsonb</code> guarda una representación binaria descompuesta (más rápida de consultar, indexable con GIN, no conserva el orden de claves ni los duplicados). Para casi todo uso, <code>jsonb</code>.</p>
+<p>La advertencia importante: <code>jsonb</code> <strong>no</strong> es una excusa para no modelar. Dentro de un <code>jsonb</code> no hay tipos, ni <code>NOT NULL</code>, ni claves foráneas. Es adecuado para datos genuinamente heterogéneos —una carga útil de un proveedor externo, atributos que varían por categoría—, no para las columnas del dominio.</p>
+<h3 id="extensiones">Extensiones</h3>
+<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS vector;      -- pgvector, parte 12
+</code></pre>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Extensión</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pg_stat_statements</code></td>
+<td>Consultas más costosas acumuladas: la primera que instalar</td>
+</tr>
+<tr>
+<td><code>pg_trgm</code></td>
+<td>Búsqueda por similitud y <code>LIKE '%x%'</code> indexado</td>
+</tr>
+<tr>
+<td><code>postgis</code></td>
+<td>Datos geográficos</td>
+</tr>
+<tr>
+<td><code>pgvector</code></td>
+<td>Búsqueda vectorial dentro del mismo motor (clase 059)</td>
+</tr>
+<tr>
+<td><code>citext</code></td>
+<td>Texto insensible a mayúsculas sin depender de la colación</td>
+</tr>
+</tbody>
+</table></div>
+<p>Regla de reproducibilidad: cada <code>CREATE EXTENSION</code> debe estar en una migración versionada. Una extensión instalada a mano en producción convierte el esquema en algo que nadie puede recrear.</p>
+<pre><code class="language-mermaid">flowchart TD
+    C[&quot;Clientes&quot;] --&gt; POOL[&quot;Agrupador de conexiones&lt;br/&gt;(pgbouncer)&quot;]
+    POOL --&gt; PM[&quot;postmaster&quot;]
+    PM --&gt; B1[&quot;backend 1&quot;]
+    PM --&gt; B2[&quot;backend 2&quot;]
+    B1 --&gt; SB[&quot;shared_buffers&lt;br/&gt;(memoria compartida)&quot;]
+    B2 --&gt; SB
+    B1 --&gt; WM1[&quot;work_mem&lt;br/&gt;por operación&quot;]
+    SB --&gt; WAL[&quot;WAL&quot;]
+    SB --&gt; D[(&quot;Archivos de datos&quot;)]
+    AV[&quot;autovacuum&quot;] --&gt; D
+    WR[&quot;writer / checkpointer&quot;] --&gt; D
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Colección de 3 cursos, buscamos «bases distribuidas».</p>
-<pre><code class="language-text">N = 3 documentos, longitud media avgdl = 3,33 términos
-d1 [base, dato, relacional]     |d1| = 3
-d2 [base, dato, distribuido]    |d2| = 3
-d3 [sistema, distribuido]       |d3| = 2
-</code></pre>
-<p><strong>IDF:</strong></p>
-<pre><code class="language-text">n(base)        = 2  →  IDF = ln((3-2+0,5)/(2+0,5) + 1) = ln(1,6)  = 0,470
-n(distribuido) = 2  →  IDF = 0,470
-</code></pre>
-<p><strong>Puntuación de d2</strong> (<code>k1=1,2</code>, <code>b=0,75</code>, <code>f=1</code> para ambos términos, <code>|d2|=3</code>):</p>
-<pre><code class="language-text">denominador = 1 + 1,2·(1 - 0,75 + 0,75·3/3,33) = 1 + 1,2·(0,25 + 0,676) = 2,111
-por término = 0,470 · (1 · 2,2) / 2,111 = 0,490
-score(d2)   = 0,490 + 0,490 = 0,980
-</code></pre>
-<p><strong>Puntuación de d3</strong> (solo contiene <code>distribuido</code>, <code>|d3|=2</code>):</p>
-<pre><code class="language-text">denominador = 1 + 1,2·(0,25 + 0,75·2/3,33) = 1 + 1,2·(0,25 + 0,450) = 1,840
-score(d3)   = 0,470 · 2,2 / 1,840 = 0,562
-</code></pre>
-<p>Orden final: <strong>d2 (0,980) &gt; d3 (0,562) &gt; d1 (0,470)</strong>. d2 gana por contener ambos términos; d3 supera a d1 pese a tener un solo término coincidente porque es más corto y ese término aporta lo mismo.</p>
-<p><strong>En un motor real:</strong></p>
-<pre><code class="language-json">POST /cursos/_search
-{ &quot;query&quot;: { &quot;multi_match&quot;: {
-      &quot;query&quot;: &quot;bases distribuidas&quot;,
-      &quot;fields&quot;: [&quot;nombre^3&quot;, &quot;descripcion&quot;],
-      &quot;type&quot;: &quot;best_fields&quot; } },
-  &quot;highlight&quot;: { &quot;fields&quot;: { &quot;descripcion&quot;: {} } } }
-</code></pre>
-<p><code>nombre^3</code> triplica el peso del título: una decisión de negocio expresada en el ranking.</p>
-<p><strong>Alternativa en PostgreSQL</strong>, que evita añadir un sistema:</p>
-<pre><code class="language-sql">ALTER TABLE courses ADD COLUMN busqueda tsvector
-  GENERATED ALWAYS AS (
-    setweight(to_tsvector('spanish', coalesce(nombre,'')), 'A') ||
-    setweight(to_tsvector('spanish', coalesce(descripcion,'')), 'B')
-  ) STORED;
-CREATE INDEX courses_busqueda ON courses USING gin (busqueda);
+<p>Modelamos atributos que varían por tipo de curso: los presenciales tienen sala y aforo; los remotos, plataforma y enlace.</p>
+<p><strong>Opción A — columnas para todo:</strong> seis columnas nulas la mitad del tiempo, sin forma de exigir que las de presencial estén presentes justo cuando el curso es presencial.</p>
+<p><strong>Opción B — <code>jsonb</code> con validación explícita:</strong></p>
+<pre><code class="language-sql">CREATE TABLE courses (
+  id        INTEGER PRIMARY KEY,
+  nombre    TEXT NOT NULL,
+  modalidad TEXT NOT NULL CHECK (modalidad IN ('presencial','remoto')),
+  detalles  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT detalles_coherentes CHECK (
+    (modalidad = 'presencial' AND detalles ? 'sala'       AND detalles ? 'aforo') OR
+    (modalidad = 'remoto'     AND detalles ? 'plataforma' AND detalles ? 'enlace')
+  )
+);
 
-SELECT id, nombre, ts_rank(busqueda, query) AS score
-FROM courses, plainto_tsquery('spanish', 'bases distribuidas') query
-WHERE busqueda @@ query ORDER BY score DESC LIMIT 10;
+CREATE INDEX courses_detalles_gin ON courses USING gin (detalles);
+CREATE INDEX courses_sala ON courses ((detalles-&gt;&gt;'sala')) WHERE modalidad = 'presencial';
 </code></pre>
-<p><strong>Comparación honesta:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Capacidad</th>
-<th>PostgreSQL <code>tsvector</code></th>
-<th>OpenSearch</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Índice invertido</td>
-<td>Sí (GIN)</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Lematización en español</td>
-<td>Sí</td>
-<td>Sí, con más opciones</td>
-</tr>
-<tr>
-<td>BM25</td>
-<td>No: <code>ts_rank</code> es más simple</td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Tolerancia a erratas</td>
-<td>Con <code>pg_trgm</code></td>
-<td>Nativa (<em>fuzzy</em>)</td>
-</tr>
-<tr>
-<td>Sugerencias y autocompletado</td>
-<td>Manual</td>
-<td>Nativo</td>
-</tr>
-<tr>
-<td>Facetas</td>
-<td><code>GROUP BY</code></td>
-<td>Nativas</td>
-</tr>
-<tr>
-<td>Escala horizontal</td>
-<td>Limitada</td>
-<td>Diseñada para ello</td>
-</tr>
-<tr>
-<td>Sistemas que operar</td>
-<td><strong>Cero adicionales</strong></td>
-<td>Uno más</td>
-</tr>
-</tbody>
-</table></div>
-<p>Criterio: si la búsqueda es una funcionalidad secundaria sobre menos de unos millones de documentos, PostgreSQL basta y ahorra un sistema entero. Si la búsqueda <strong>es</strong> el producto, el motor dedicado se justifica.</p>
+<p>Lo que aporta cada pieza:</p>
+<ul>
+<li>El <code>CHECK</code> con el operador <code>?</code> («la clave existe») recupera parte de la integridad que <code>jsonb</code> no da por sí solo.</li>
+<li>El índice GIN permite <code>WHERE detalles @&gt; '{"sala":"B-201"}'</code> sin barrido.</li>
+<li>El índice de expresión <strong>parcial</strong> sirve la consulta más frecuente con una fracción del tamaño: solo indexa las filas presenciales.</li>
+</ul>
+<p><strong>Medición del índice parcial</strong> con 100 000 cursos, 30 % presenciales:</p>
+<pre><code class="language-text">Índice completo sobre (detalles-&gt;&gt;'sala')  ~ 100 000 entradas
+Índice parcial WHERE modalidad='presencial' ~ 30 000 entradas
+</code></pre>
+<p>Menos entradas significa menos páginas, más aciertos de caché y mantenimiento más barato en cada escritura de un curso remoto (que ya no toca ese índice).</p>
+<p><strong>Opción C — tablas por subtipo:</strong> dos tablas hijas con clave foránea al curso. Integridad total, sin <code>jsonb</code>, a cambio de una reunión y de DDL para cada modalidad nueva.</p>
+<p>La elección honesta: si las modalidades son dos y estables, C. Si el proveedor añade campos cada mes, B.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>Necesidad</th>
-<th>Herramienta</th>
+<th>PostgreSQL</th>
+<th>Equivalente portable</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>LIKE 'prefijo%'</code></td>
-<td>Índice B-Tree ordinario</td>
+<td>Atributos dinámicos</td>
+<td><code>jsonb</code> + GIN</td>
+<td>Tabla clave-valor</td>
 </tr>
 <tr>
-<td><code>LIKE '%infijo%'</code></td>
-<td>Trigramas (<code>pg_trgm</code>)</td>
+<td>Unicidad condicional</td>
+<td>Índice único parcial</td>
+<td>Columna generada con nulos</td>
 </tr>
 <tr>
-<td>Palabras con lematización</td>
-<td><code>tsvector</code> o motor de búsqueda</td>
+<td>Sin solapamiento de rangos</td>
+<td><code>EXCLUDE USING gist</code></td>
+<td>Comprobación en la aplicación</td>
 </tr>
 <tr>
-<td>Ranking por relevancia</td>
-<td>BM25 (motor dedicado)</td>
+<td>Texto insensible a mayúsculas</td>
+<td><code>citext</code> o <code>lower()</code> indexado</td>
+<td>Normalizar al escribir</td>
 </tr>
 <tr>
-<td>Erratas y sinónimos</td>
-<td>Motor dedicado</td>
-</tr>
-<tr>
-<td>Similitud semántica</td>
-<td>Vectores (parte 12)</td>
+<td>Consultas más caras</td>
+<td><code>pg_stat_statements</code></td>
+<td>Registro de consultas lentas</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Analizadores distintos al indexar y al consultar.</strong> Cero resultados sin ningún error.</li>
-<li><strong><code>LIKE '%x%'</code> sobre tablas grandes.</strong> Barrido completo; ningún B-Tree ayuda.</li>
-<li><strong>Ajustar pesos sin conjunto de evaluación.</strong> Se mejora una consulta y se empeoran diez.</li>
-<li><strong>Eliminar palabras vacías y luego querer buscar frases.</strong></li>
-<li><strong>Idioma del analizador equivocado.</strong> El lematizador inglés destroza el español.</li>
-<li><strong>Confundir puntuación con probabilidad.</strong> BM25 no está acotada ni es comparable entre consultas.</li>
+<li><strong>Conexiones directas sin agrupador.</strong> Es la causa más común de caída bajo carga.</li>
+<li><strong><code>work_mem</code> alto con muchas conexiones.</strong> Multiplica por operación, no por sesión.</li>
+<li><strong>Desactivar el autovacuum «porque consume».</strong> Consume más lo que ocurre después.</li>
+<li><strong><code>jsonb</code> para el dominio.</strong> Se pierden tipos, restricciones y claves foráneas.</li>
+<li><strong>Extensiones instaladas a mano.</strong> El entorno deja de ser reproducible.</li>
+<li><strong>Índices sin usar.</strong> Cada uno se mantiene en cada escritura; revísalos con <code>pg_stat_user_indexes</code>.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los cambios de relevancia se hacen a ciegas si no hay medición: alguien se queja, se ajusta un peso, se rompe otra cosa y nadie lo sabe. El conjunto de consultas juzgadas es el activo que convierte la búsqueda en ingeniería.</p>
+<p>Los incidentes típicos de PostgreSQL son tres: agotamiento de conexiones, hinchazón por vacuum insuficiente y un plan que cambia tras una carga masiva sin <code>ANALYZE</code>. Los tres se previenen con configuración, no con hardware.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Construye a mano el índice invertido de 5 documentos de tu dominio.</li>
-<li>Calcula BM25 para una consulta de dos términos y ordena los resultados.</li>
-<li>Implementa la búsqueda en PostgreSQL y en OpenSearch sobre los mismos datos.</li>
-<li>Construye 20 consultas juzgadas y mide P@5 y NDCG@10 en ambos.</li>
+<li>Levanta el perfil relacional del <code>docker-compose</code> y consulta <code>pg_stat_user_tables</code>.</li>
+<li>Provoca hinchazón con actualizaciones repetidas y mide <code>n_dead_tup</code> antes y después de <code>VACUUM</code>.</li>
+<li>Modela un atributo dinámico de tu dominio con <code>jsonb</code> y añade el <code>CHECK</code> que recupera la integridad.</li>
+<li>Crea el índice parcial equivalente y compara tamaño y plan con el índice completo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué la saturación de la frecuencia de término mejora el ranking frente a TF-IDF puro?</li>
-<li>Da un caso donde eliminar acentos empeore los resultados en español.</li>
-<li>Calcula el IDF de un término presente en 999 de 1 000 documentos e interpreta el valor.</li>
-<li>Justifica con cifras si tu caso necesita un motor de búsqueda dedicado.</li>
+<li>¿Por qué <code>work_mem</code> puede consumirse varias veces en una sola consulta?</li>
+<li>Explica qué ocurre en una tabla con muchas actualizaciones si el autovacuum no llega a tiempo.</li>
+<li>Da un caso de tu dominio donde <code>jsonb</code> sea correcto y otro donde sea una excusa para no modelar.</li>
+<li>¿Qué pierdes al migrar de PostgreSQL a un motor sin índices parciales, y cómo lo compensas?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Qué cursos llevan la etiqueta «datos», con las etiquetas dentro de la fila</p>
+<p>Un curso tiene varias etiquetas. La solución relacional ortodoxa es una
+tabla <code>etiquetas_de_curso</code>, y sigue siendo la correcta muchas veces. Pero
+PostgreSQL permite algo que la norma no contempla: guardar el conjunto
+<strong>dentro</strong> de la fila, como un arreglo con su propio índice invertido.</p>
+<p>El caso pregunta qué cursos llevan la etiqueta <code>datos</code>, ordenados por
+código, con las etiquetas guardadas en la propia fila. Sirve para ver la
+misma idea —una colección dentro del registro— en seis motores que la
+resuelven de seis maneras distintas, y para tener a la vista lo que se paga
+por salirse del modelo plano.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>curso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AR-301</code></td>
+</tr>
+<tr>
+<td><code>DB-101</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 031</code>: 6 de
+las 7 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/arrays.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/json1.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/data_types/list.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/json.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/index-multikey/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/commands/sinter/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/json/json-data-sql-server">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/arrays.html
+-- nota: el indice GIN es lo que hace viable esta forma. Sin el, @&gt; recorre la
+--       tabla; con el, va directo a las filas que contienen la etiqueta. Es un
+--       indice invertido dentro de un motor relacional.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cursos;
+
+CREATE TABLE cursos (
+    codigo    text PRIMARY KEY,
+    etiquetas text[] NOT NULL DEFAULT '{}'
+);
+CREATE INDEX cursos_etiquetas ON cursos USING GIN (etiquetas);
+
+INSERT INTO cursos (codigo, etiquetas) VALUES
+    ('DB-101', ARRAY['sql', 'datos']),
+    ('SE-201', ARRAY['proceso']),
+    ('AR-301', ARRAY['datos', 'diseno']);
+
+-- === consulta ===
+SELECT codigo AS curso
+FROM cursos
+WHERE etiquetas @&gt; ARRAY['datos']
+ORDER BY codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es su terreno: tipo <code>text[]</code> nativo, operador de contención <code>@&gt;</code> e índice GIN que lo resuelve sin recorrer la tabla. Y con <code>jsonb</code>, rangos, tipos enumerados y extensiones como PostGIS o pgvector, el mismo motor cubre casos que en otro exigirían un sistema aparte.</li>
+<li><strong>Por qué no:</strong> Nada de eso es portable: un <code>text[]</code> con GIN no existe en MySQL ni en SQL Server, y una migración obliga a rediseñar el modelo, no solo a traducir la consulta. Además el arreglo no admite integridad referencial: nada impide una etiqueta que no está en el catálogo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/arrays.html">https://www.postgresql.org/docs/current/arrays.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/json1.html
+-- nota: json_each convierte el arreglo en filas para poder filtrarlo. Funciona,
+--       y no hay indice que lo acelere: recorre la tabla entera. Con cientos de
+--       filas da igual; con millones, no.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo    TEXT PRIMARY KEY,
+    etiquetas TEXT NOT NULL   -- un arreglo JSON guardado como texto
+);
+
+INSERT INTO cursos (codigo, etiquetas) VALUES
+    ('DB-101', '[&quot;sql&quot;,&quot;datos&quot;]'),
+    ('SE-201', '[&quot;proceso&quot;]'),
+    ('AR-301', '[&quot;datos&quot;,&quot;diseno&quot;]');
+
+-- === consulta ===
+SELECT c.codigo AS curso
+FROM cursos c
+WHERE EXISTS (
+    SELECT 1 FROM json_each(c.etiquetas) e WHERE e.value = 'datos'
+)
+ORDER BY c.codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con las funciones JSON integradas —que dejaron de ser una extensión en la versión 3.38— guarda la lista como texto JSON y la recorre con <code>json_each</code>, sin tabla adicional.</li>
+<li><strong>Por qué no:</strong> No hay índice que acelere esa búsqueda: <code>json_each</code> recorre la tabla entera. Funciona con cientos de filas y deja de funcionar con millones.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/json1.html">https://sqlite.org/json1.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/data_types/list.html
+-- nota: LIST es un tipo nativo con tipo interno declarado, no texto: la columna
+--       sigue siendo columnar y comprimible.
+
+-- === preparacion ===
+CREATE TABLE cursos (
+    codigo    VARCHAR PRIMARY KEY,
+    etiquetas VARCHAR[] NOT NULL
+);
+
+INSERT INTO cursos VALUES
+    ('DB-101', ['sql', 'datos']),
+    ('SE-201', ['proceso']),
+    ('AR-301', ['datos', 'diseno']);
+
+-- === consulta ===
+SELECT codigo AS curso
+FROM cursos
+WHERE list_contains(etiquetas, 'datos')
+ORDER BY codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene un tipo <code>LIST</code> nativo y con tipo interno declarado, así que la columna sigue siendo columnar y comprimible; <code>list_contains</code> la consulta sin desanidar nada.</li>
+<li><strong>Por qué no:</strong> Tampoco hay índice invertido: la ventaja aquí no es el índice sino la lectura columnar, y eso solo compensa cuando se leen muchas filas de pocas columnas.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/list.html">https://duckdb.org/docs/stable/sql/data_types/list.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/json.html
+-- nota: el tipo JSON valida al escribir, pero NO se puede indexar directamente.
+--       Para indexar esta busqueda haria falta un indice multivaluado:
+--         ALTER TABLE cursos ADD INDEX idx_etiquetas
+--           ((CAST(etiquetas AS CHAR(20) ARRAY)));
+
+-- === preparacion ===
+DROP TABLE IF EXISTS cursos;
+
+CREATE TABLE cursos (
+    codigo    VARCHAR(20) PRIMARY KEY,
+    etiquetas JSON NOT NULL
+) ENGINE=InnoDB;
+
+INSERT INTO cursos (codigo, etiquetas) VALUES
+    ('DB-101', JSON_ARRAY('sql', 'datos')),
+    ('SE-201', JSON_ARRAY('proceso')),
+    ('AR-301', JSON_ARRAY('datos', 'diseno'));
+
+-- === consulta ===
+SELECT codigo AS curso
+FROM cursos
+WHERE JSON_CONTAINS(etiquetas, JSON_QUOTE('datos'))
+ORDER BY codigo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El tipo <code>JSON</code> valida el documento al escribir y <code>JSON_CONTAINS</code> responde la pregunta sin tabla intermedia.</li>
+<li><strong>Por qué no:</strong> No se puede indexar un <code>JSON</code> directamente: hay que crear una columna generada por cada camino que se quiera indexar, o un índice multivaluado con <code>CAST(... AS CHAR(20) ARRAY)</code>, que es reciente y con reglas propias. La comodidad de escritura se paga en el diseño del índice.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/json.html">https://dev.mysql.com/doc/refman/8.4/en/json.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/indexes/index-types/index-multikey/
+// nota: el indice sobre un campo de arreglo es MULTICLAVE: crea una entrada por
+//       elemento. Es lo que hace que { etiquetas: &quot;datos&quot; } sea una busqueda
+//       indexada y no un recorrido.
+
+// === preparacion ===
+db.cursos.drop();
+db.cursos.insertMany([
+  { _id: &quot;DB-101&quot;, etiquetas: [&quot;sql&quot;, &quot;datos&quot;] },
+  { _id: &quot;SE-201&quot;, etiquetas: [&quot;proceso&quot;] },
+  { _id: &quot;AR-301&quot;, etiquetas: [&quot;datos&quot;, &quot;diseno&quot;] },
+]);
+db.cursos.createIndex({ etiquetas: 1 });
+
+// === consulta ===
+db.cursos
+  .find({ etiquetas: &quot;datos&quot; }, { _id: 1 })
+  .sort({ _id: 1 })
+  .forEach((d) =&gt; print(d._id));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí no hay nada que decidir: el arreglo es un tipo de primera clase y un índice sobre él es un índice multiclave que indexa cada elemento. Es el caso para el que el modelo documental existe.</li>
+<li><strong>Por qué no:</strong> Un índice multiclave crea una entrada por elemento del arreglo: con arreglos grandes, el índice crece más rápido que los datos, y no se pueden combinar dos campos de arreglo en un mismo índice compuesto.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/index-multikey/">https://www.mongodb.com/docs/manual/core/indexes/index-types/index-multikey/</a></li>
+</ul>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/commands/sinter/
+# nota: el problema se invierte. No se guardan las etiquetas del curso: se
+#       guardan los cursos de cada etiqueta. Preguntar por una etiqueta es leer
+#       un conjunto; cruzar dos es SINTER. La pregunta inversa —que etiquetas
+#       tiene este curso— exige mantener tambien la otra direccion.
+
+# === preparacion ===
+FLUSHDB
+SADD etiqueta:sql DB-101
+SADD etiqueta:datos DB-101
+SADD etiqueta:proceso SE-201
+SADD etiqueta:datos AR-301
+SADD etiqueta:diseno AR-301
+
+# === consulta ===
+SORT etiqueta:datos ALPHA
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Invierte el problema: en vez de guardar las etiquetas del curso, guarda los cursos de cada etiqueta. Preguntar por una etiqueta es leer un conjunto —O(1) para llegar—, y cruzar dos etiquetas es <code>SINTER</code>.</li>
+<li><strong>Por qué no:</strong> La pregunta inversa —«¿qué etiquetas tiene este curso?»— exige mantener también la otra dirección, y ninguna de las dos estructuras sabe de la existencia de la otra: la coherencia entre ambas la sostiene el código.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/sinter/">https://redis.io/docs/latest/commands/sinter/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html
+-- nota: implementacion declarada. El indice secundario sobre una coleccion
+--       existe, pero es LOCAL a cada nodo: la consulta pregunta a todos los
+--       nodos del anillo. Con pocas etiquetas distintas es aceptable; con
+--       muchas, es el antipatron clasico de Cassandra.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS escuela
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS escuela.cursos;
+
+CREATE TABLE escuela.cursos (
+    codigo    text PRIMARY KEY,
+    etiquetas set&lt;text&gt;
+);
+CREATE INDEX IF NOT EXISTS cursos_por_etiqueta ON escuela.cursos (VALUES(etiquetas));
+
+INSERT INTO escuela.cursos (codigo, etiquetas) VALUES ('DB-101', {'sql', 'datos'});
+INSERT INTO escuela.cursos (codigo, etiquetas) VALUES ('SE-201', {'proceso'});
+INSERT INTO escuela.cursos (codigo, etiquetas) VALUES ('AR-301', {'datos', 'diseno'});
+
+-- === consulta ===
+-- La forma idiomatica seria una tabla cursos_por_etiqueta escrita a mano, con
+-- la etiqueta como clave de particion: una sola particion, un solo nodo.
+SELECT codigo FROM escuela.cursos WHERE etiquetas CONTAINS 'datos';
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene colecciones (<code>set&lt;text&gt;</code>) dentro de la fila y permite indexarlas con un índice secundario sobre los valores de la colección.</li>
+<li><strong>Por qué no:</strong> Un índice secundario en Cassandra consulta a <strong>todos</strong> los nodos, porque el índice es local a cada uno: es aceptable con pocos valores distintos y catastrófico con muchos. La forma idiomática sigue siendo una tabla <code>cursos_por_etiqueta</code> escrita a mano.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>No tiene tipo arreglo ni tipo JSON: el JSON se guarda como <code>nvarchar</code> y se consulta con <code>OPENJSON</code>, sin índice invertido. La colección dentro de la fila no es un ciudadano del modelo, es texto con funciones alrededor.</td>
+<td>La tabla de unión de toda la vida, <code>curso_etiqueta</code>, con su índice: menos vistosa y, en este motor, casi siempre más rápida.</td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/json/json-data-sql-server">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/06-vector-search/run_vector_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -377,27 +706,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
-  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
-<li><strong>OpenSearch Project</strong> (2026). <a href="https://docs.opensearch.org/latest/">OpenSearch Documentation</a>.<br />
-  Índice invertido, analizadores, relevancia y búsqueda k-NN.</li>
 <li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
   Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 05</a> · <a href="030.html">← Anterior</a> · <a href="032.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="031">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="030.html"><span class="sentido">← Anterior · 030</span>Series temporales: cardinalidad, retención y agregados continuos</a>
-<a class="siguiente" href="032.html"><span class="sentido">Siguiente · 032 →</span>Analítica columnar: por qué el formato cambia el orden de magnitud</a>
+<a class="anterior" href="030.html"><span class="sentido">← Anterior · 030</span>Portabilidad: qué exige la norma y qué añade cada motor</a>
+<a class="siguiente" href="032.html"><span class="sentido">Siguiente · 032 →</span>MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

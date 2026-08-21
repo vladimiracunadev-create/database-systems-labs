@@ -1,0 +1,124 @@
+---
+caso:
+  titulo: >-
+    Un evento que ocurrió a las 10:50 y llegó a las 11:10, y en qué ventana
+    tiene que contar
+  contrato: |
+    En un flujo hay dos relojes y confundirlos falsea todos los informes. El
+    **tiempo de evento** es cuándo ocurrió la cosa; el **tiempo de proceso** es
+    cuándo llegó al sistema. Entre los dos hay una diferencia variable: una red
+    lenta, un móvil sin cobertura, un reintento.
+
+    El caso tiene cuatro eventos, y uno ocurrió a las 10:50 pero llegó a las
+    11:10, veinte minutos tarde y con la ventana de las 10 aparentemente
+    cerrada. Agrupando por tiempo de evento —lo correcto— la ventana de las 10
+    tiene tres eventos. Agrupando por tiempo de llegada tendría dos, y el informe
+    diría que a las 10 pasaron dos cosas cuando pasaron tres.
+
+    En una tabla, esto es un `GROUP BY` y ya está. En un flujo, la pregunta se
+    vuelve difícil: **¿cuánto se espera antes de dar una ventana por cerrada?**
+    Ahí es donde aparecen las marcas de agua y los periodos de gracia.
+  columnas: [ventana, eventos]
+  esperado:
+    - ["10:00", "3"]
+    - ["11:00", "1"]
+
+motores:
+  - id: kafka
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/kafka/consulta.txt
+    porque_si: >-
+      Es donde el problema se plantea de verdad y donde existe el vocabulario
+      para resolverlo: ventanas por tiempo de evento, **marcas de agua** para
+      decidir cuándo cerrar, **periodo de gracia** para admitir tardíos y
+      semántica de exactamente una vez con productor idempotente y
+      transacciones.
+    porque_no: >-
+      Nada de eso es gratis: la semántica de exactamente una vez exige
+      transacciones en el productor y consumidores que las respeten, el estado de
+      las ventanas hay que guardarlo, y un evento que llegue **después** del
+      periodo de gracia se descarta en silencio salvo que se recoja aparte.
+    doc: https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      Resuelve el problema por otro camino: en vez de cerrar ventanas, **guarda
+      todo** y agrega por tiempo de evento cuando se pregunta. Un evento tardío
+      simplemente se inserta, y la próxima consulta ya lo incluye. No hace falta
+      marca de agua porque no hay nada que cerrar.
+    porque_no: >-
+      Eso significa que el resultado de un informe puede cambiar después de
+      publicado, lo que en contabilidad no se acepta; y las vistas materializadas
+      que agregan al insertar **no** recolocan al tardío en su ventana correcta
+      salvo que se diseñen para ello.
+    doc: https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es la herramienta para la pregunta que precede a todo diseño de flujo:
+      **cuánto tarda de verdad en llegar un evento**. Con el histórico, el
+      percentil 99 del retraso es lo que decide el periodo de gracia, y sin ese
+      número se elige a ojo.
+    porque_no: >-
+      No procesa flujos: analiza lo que ya se guardó. Aquí no hay ventana que
+      cerrar porque no hay tiempo real.
+    doc: https://duckdb.org/docs/stable/sql/functions/timestamp.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Muestra el problema en su forma más desnuda: dos columnas de tiempo y un
+      `GROUP BY` que puede usar la correcta o la equivocada. Elegir mal no da
+      ningún error; da un informe falso.
+    porque_no: >-
+      Sobre una tabla completa la respuesta es fácil porque **ya están todos los
+      eventos**. La dificultad del flujo —decidir sin tener todavía todos los
+      datos— no se puede reproducir aquí.
+    doc: https://sqlite.org/lang_datefunc.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Con `date_trunc` y ventanas resuelve el caso, y con `LISTEN`/`NOTIFY` o
+      decodificación lógica puede alimentar un flujo. Para volúmenes moderados
+      evita añadir una plataforma entera.
+    porque_no: >-
+      No es un procesador de flujos: no hay estado de ventana, ni marcas de
+      agua, ni reintentos con garantías. Simular todo eso con tablas y trabajos
+      periódicos funciona hasta que deja de funcionar, y entonces la migración es
+      completa.
+    doc: https://www.postgresql.org/docs/current/functions-datetime.html
+
+  - id: influxdb
+    aplica: no
+    porque_no: >-
+      Su modelo asume que la marca de tiempo del punto **es** el tiempo de
+      evento y que los datos llegan más o menos en orden: escribir puntos muy
+      viejos es posible pero funciona contra su organización por bloques
+      temporales y degrada la escritura.
+    alternativa: >-
+      Corregir el retraso antes de escribir, o acumular los tardíos y
+      reescribir el bloque afectado, aceptando el costo.
+    doc: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      Las colecciones de series temporales están optimizadas para escritura
+      cercana al presente: insertar datos muy antiguos es correcto pero
+      ineficiente, porque obliga a tocar bloques ya cerrados.
+    alternativa: >-
+      Tratar los tardíos como una carga aparte y reprocesar la ventana afectada,
+      en vez de esperar que el motor los recoloque solo.
+    doc: https://www.mongodb.com/docs/manual/core/timeseries-collections/

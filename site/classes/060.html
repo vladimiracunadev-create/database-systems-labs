@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Búsqueda híbrida: léxica más vectorial y filtrado por metadatos. Parte 12: Vectores, recuperación y RAG.">
+<meta name="description" content="Control de acceso: privilegio mínimo, roles y seguridad por fila. Parte 11: Operación, seguridad y gobierno.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/060.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos · Database Systems Labs">
-<meta property="og:description" content="Búsqueda híbrida: léxica más vectorial y filtrado por metadatos. Parte 12: Vectores, recuperación y RAG.">
+<meta property="og:title" content="060 — Control de acceso: privilegio mínimo, roles y seguridad por fila · Database Systems Labs">
+<meta property="og:description" content="Control de acceso: privilegio mínimo, roles y seguridad por fila. Parte 11: Operación, seguridad y gobierno.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/060.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["BM25", "fusión de rangos", "filtro previo", "filtro posterior"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "060 — Control de acceso: privilegio mínimo, roles y seguridad por fila", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["privilegio mínimo", "rol", "seguridad por fila", "separación de funciones"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>060 — Control de acceso: privilegio mínimo, roles y seguridad por fila · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,351 +49,635 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-12.html">Parte 12 · Vectores, recuperación y RAG</a>
+  <a href="parte-11.html">Parte 11 · Operación, seguridad y gobierno</a>
   <span aria-hidden="true">/</span><span>Clase 060</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="060--búsqueda-híbrida-léxica-más-vectorial-y-filtrado-por-metadatos">060 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</h1>
+<h1 id="060--control-de-acceso-privilegio-mínimo-roles-y-seguridad-por-fila">060 — Control de acceso: privilegio mínimo, roles y seguridad por fila</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-11-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-060%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 12 — Vectores, recuperación y RAG · Avanzado ·
-3 horas estimadas · motores <code>opensearch</code>, <code>qdrant</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>BM25</code> · <code>fusión de rangos</code> · <code>filtro previo</code> · <code>filtro posterior</code></p>
+<p>Parte 11 — Operación, seguridad y gobierno · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>privilegio mínimo</code> · <code>rol</code> · <code>seguridad por fila</code> · <code>separación de funciones</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 060&quot;]
+    C --&gt; K1[&quot;privilegio mínimo&quot;]
+    C --&gt; K2[&quot;rol&quot;]
+    C --&gt; K3[&quot;seguridad por fila&quot;]
+    C --&gt; K4[&quot;separación de funciones&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Combinar búsqueda léxica y vectorial, porque fallan de formas distintas. La híbrida no es «lo mejor de dos mundos» automáticamente: hay que fusionar bien y medir que mejora.</p>
+<p>Declarar quién puede ver y hacer qué, en el motor y no solo en la aplicación. El control de acceso que vive únicamente en el código se salta con una consola y unas credenciales.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Enumerar los fallos característicos de cada método.</li>
-<li>Aplicar la fusión recíproca de rangos y explicar por qué no necesita normalizar.</li>
-<li>Comparar fusión por rango y por puntuación.</li>
-<li>Diseñar el filtrado por metadatos con la estrategia adecuada.</li>
-<li>Demostrar con medición que la híbrida mejora sobre cada método aislado.</li>
+<li>Diseñar roles con privilegio mínimo y separación de funciones.</li>
+<li>Distinguir privilegios de objeto, de columna y de fila.</li>
+<li>Implementar seguridad por fila para multiinquilino.</li>
+<li>Reconocer los riesgos de <code>SECURITY DEFINER</code> y del rol <code>PUBLIC</code>.</li>
+<li>Auditar los privilegios efectivos de una base.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="dónde-falla-cada-método">Dónde falla cada método</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Consulta</th>
-<th>BM25 (léxico)</th>
-<th>Vectorial (semántico)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>«error 1451 foreign key»</td>
-<td><strong>Acierta</strong>: coincidencia exacta</td>
-<td>Falla: los códigos no tienen semántica</td>
-</tr>
-<tr>
-<td>«cómo evito que se pierdan datos»</td>
-<td>Falla: no comparte términos</td>
-<td><strong>Acierta</strong>: entiende la intención</td>
-</tr>
-<tr>
-<td>«pgvector» (término nuevo)</td>
-<td><strong>Acierta</strong> si está indexado</td>
-<td>Falla si el modelo no lo conoce</td>
-</tr>
-<tr>
-<td>«bd» frente a «base de datos»</td>
-<td>Falla sin sinónimos</td>
-<td><strong>Acierta</strong></td>
-</tr>
-<tr>
-<td>Nombre propio poco frecuente</td>
-<td><strong>Acierta</strong></td>
-<td>Puede fallar</td>
-</tr>
-<tr>
-<td>Paráfrasis completa</td>
-<td>Falla</td>
-<td><strong>Acierta</strong></td>
-</tr>
-</tbody>
-</table></div>
-<p>Los fallos son <strong>complementarios</strong>, y por eso la combinación funciona. BM25 no entiende, pero no inventa; el vectorial entiende, y a veces se acerca a algo relacionado pero incorrecto.</p>
-<h3 id="fusión-recíproca-de-rangos-rrf">Fusión recíproca de rangos (RRF)</h3>
-<p>El problema de combinar: las puntuaciones de BM25 (no acotada, ~0 a 30) y las de coseno (−1 a 1) no son comparables ni entre sí ni entre consultas distintas.</p>
-<p>RRF ignora las puntuaciones y usa solo las <strong>posiciones</strong>:</p>
-<pre><code class="language-text">RRF(d) = Σ_sistemas  1 / (k + rango_sistema(d))       con k = 60 habitualmente
+<h3 id="privilegio-mínimo">Privilegio mínimo</h3>
+<p>Cada actor recibe <strong>solo</strong> lo que necesita. NIST SP 800-53 lo formaliza como control AC-6; OWASP lo sitúa como A01 (control de acceso roto), la categoría número uno de su Top 10.</p>
+<p>La estructura habitual separa el <strong>rol</strong> (permisos) del <strong>usuario</strong> (identidad):</p>
+<pre><code class="language-sql">-- Roles por función, sin capacidad de conectarse
+CREATE ROLE app_lectura   NOLOGIN;
+CREATE ROLE app_escritura NOLOGIN;
+CREATE ROLE app_migracion NOLOGIN;
+
+GRANT USAGE ON SCHEMA public TO app_lectura, app_escritura, app_migracion;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_lectura;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_escritura;
+GRANT ALL ON SCHEMA public TO app_migracion;
+
+-- Los futuros objetos también, o el rol se queda obsoleto en la próxima migración
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO app_lectura;
+
+-- Usuarios: identidades que se conectan
+CREATE USER svc_api        LOGIN PASSWORD '...' IN ROLE app_escritura;
+CREATE USER svc_informes   LOGIN PASSWORD '...' IN ROLE app_lectura;
+CREATE USER svc_migraciones LOGIN PASSWORD '...' IN ROLE app_migracion;
 </code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Documento</th>
-<th style="text-align: right;">Rango BM25</th>
-<th style="text-align: right;">Rango vectorial</th>
-<th>RRF</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>A</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">8</td>
-<td>1/61 + 1/68 = 0,0311</td>
-</tr>
-<tr>
-<td>B</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">2</td>
-<td>1/64 + 1/62 = 0,0318</td>
-</tr>
-<tr>
-<td>C</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">40</td>
-<td>1/62 + 1/100 = 0,0261</td>
-</tr>
-<tr>
-<td>D</td>
-<td style="text-align: right;">—</td>
-<td style="text-align: right;">1</td>
-<td>0 + 1/61 = 0,0164</td>
-</tr>
-</tbody>
-</table></div>
-<p>Orden final: <strong>B &gt; A &gt; C &gt; D</strong>. B gana por estar bien en ambos, aunque no fuera primero en ninguno. Esa es exactamente la propiedad buscada: <strong>premiar el consenso</strong>.</p>
-<p>La constante <code>k = 60</code> amortigua las primeras posiciones para que un primer puesto en un solo sistema no domine.</p>
-<p>Ventajas de RRF, y por qué se usa tanto: no requiere normalizar, no requiere entrenar, es robusto a escalas distintas y funciona con cualquier número de sistemas.</p>
-<h3 id="la-alternativa-fusión-por-puntuación">La alternativa: fusión por puntuación</h3>
-<pre><code class="language-text">score = α · norm(BM25) + (1-α) · norm(coseno)
+<p>Tres cuentas con tres alcances distintos. Si se filtran las credenciales de <code>svc_informes</code>, el atacante lee; no borra.</p>
+<p><strong><code>ALTER DEFAULT PRIVILEGES</code> es imprescindible:</strong> sin él, cada tabla nueva creada por una migración queda invisible para el rol de lectura, y alguien acaba «arreglándolo» con un <code>GRANT ALL</code>.</p>
+<h3 id="errores-estructurales-de-postgresql-por-defecto">Errores estructurales de PostgreSQL por defecto</h3>
+<pre><code class="language-sql">-- Hasta PG 14, cualquiera podía crear objetos en el esquema public
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- Cualquiera puede conectarse a cualquier base
+REVOKE CONNECT ON DATABASE mi_base FROM PUBLIC;
 </code></pre>
-<p>Requiere normalizar por consulta (min-max sobre los resultados devueltos) y ajustar <code>α</code>. Puede superar a RRF <strong>si se ajusta con datos de evaluación</strong>; sin ellos, RRF es la elección segura.</p>
-<h3 id="filtrado">Filtrado</h3>
-<p>Es el mismo problema de la clase 059, y la regla de decisión es la misma:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Selectividad del filtro</th>
-<th>Estrategia</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>&gt; 20 %</td>
-<td>Post-filtrado con <code>k</code> ampliado</td>
-</tr>
-<tr>
-<td>1–20 %</td>
-<td>Filtrado integrado en el índice</td>
-</tr>
-<tr>
-<td>&lt; 1 %</td>
-<td>Pre-filtrado y búsqueda exhaustiva en el subconjunto</td>
-</tr>
-</tbody>
-</table></div>
-<pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta + filtros&quot;] --&gt; L[&quot;Rama léxica&lt;br/&gt;BM25 · top 50&quot;]
-    Q --&gt; V[&quot;Rama vectorial&lt;br/&gt;HNSW · top 50&quot;]
-    F[&quot;Filtros de metadatos&quot;] --&gt; L
-    F --&gt; V
-    L --&gt; R[&quot;Fusión RRF&quot;]
-    V --&gt; R
-    R --&gt; RR{&quot;¿Hay reordenador?&quot;}
-    RR -- &quot;Sí&quot; --&gt; CE[&quot;Reordenar top 50&lt;br/&gt;con modelo cruzado&quot;]
-    RR -- &quot;No&quot; --&gt; T[&quot;Top k&quot;]
-    CE --&gt; T
-    T --&gt; E[&quot;Evaluar: P@k · NDCG@k&quot;]
+<p><code>PUBLIC</code> no es «los administradores»: es <strong>todo rol existente</strong>. Los CIS Benchmarks incluyen ambas revocaciones entre sus controles de configuración endurecida.</p>
+<h3 id="seguridad-por-fila">Seguridad por fila</h3>
+<p>Los privilegios de tabla son de todo o nada. Para multiinquilino hace falta filtrar por fila <strong>en el motor</strong>:</p>
+<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;   -- aplicar también al dueño
+
+CREATE POLICY inquilino_aislado ON enrollments
+  USING       (tenant_id = current_setting('app.tenant_id')::int)
+  WITH CHECK  (tenant_id = current_setting('app.tenant_id')::int);
 </code></pre>
-<h3 id="el-reordenador">El reordenador</h3>
-<p>Un modelo de codificación cruzada procesa <strong>el par (consulta, documento) junto</strong> y produce una relevancia mucho más precisa que comparar dos vectores independientes. Es caro: no se puede aplicar a un millón de documentos, sí a los 50 que la fusión seleccionó.</p>
-<p>Patrón habitual: recuperar 50 con la híbrida (rápido), reordenar esos 50 (preciso), devolver 10.</p>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Buscador del programa: 200 000 fragmentos, consultas mezcladas de códigos de error y de intención.</p>
-<p><strong>Implementación en PostgreSQL, un solo motor:</strong></p>
-<pre><code class="language-sql">WITH lexico AS (
-  SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(busqueda, q) DESC) AS rango
-  FROM fragmentos, plainto_tsquery('spanish', :consulta) q
-  WHERE busqueda @@ q AND (:curso IS NULL OR curso_id = :curso)
-  ORDER BY ts_rank(busqueda, q) DESC LIMIT 50
-),
-vectorial AS (
-  SELECT id, ROW_NUMBER() OVER (ORDER BY embedding &lt;=&gt; :qvec) AS rango
-  FROM fragmentos
-  WHERE modelo = 'e5-base-v2' AND (:curso IS NULL OR curso_id = :curso)
-  ORDER BY embedding &lt;=&gt; :qvec LIMIT 50
-)
-SELECT f.id, f.texto,
-       COALESCE(1.0/(60 + l.rango), 0) + COALESCE(1.0/(60 + v.rango), 0) AS rrf
-FROM fragmentos f
-LEFT JOIN lexico    l ON l.id = f.id
-LEFT JOIN vectorial v ON v.id = f.id
-WHERE l.id IS NOT NULL OR v.id IS NOT NULL
-ORDER BY rrf DESC
-LIMIT 10;
-</code></pre>
-<p>Los <code>COALESCE</code> son importantes: un documento que solo aparece en una rama recibe la contribución de esa rama y cero de la otra, en vez de un nulo que anularía la suma.</p>
-<p><strong>Evaluación sobre 60 consultas juzgadas</strong>, mitad léxicas y mitad de intención:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Método</th>
-<th style="text-align: right;">P@5</th>
-<th style="text-align: right;">NDCG@10</th>
-<th style="text-align: right;">Recall@50</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Solo BM25</td>
-<td style="text-align: right;">0,52</td>
-<td style="text-align: right;">0,61</td>
-<td style="text-align: right;">0,74</td>
-</tr>
-<tr>
-<td>Solo vectorial</td>
-<td style="text-align: right;">0,58</td>
-<td style="text-align: right;">0,66</td>
-<td style="text-align: right;">0,81</td>
-</tr>
-<tr>
-<td>RRF (<code>k</code>=60)</td>
-<td style="text-align: right;"><strong>0,71</strong></td>
-<td style="text-align: right;"><strong>0,78</strong></td>
-<td style="text-align: right;"><strong>0,91</strong></td>
-</tr>
-<tr>
-<td>RRF + reordenador</td>
-<td style="text-align: right;"><strong>0,83</strong></td>
-<td style="text-align: right;"><strong>0,87</strong></td>
-<td style="text-align: right;">0,91</td>
-</tr>
-<tr>
-<td>Fusión por puntuación (<code>α</code>=0,5)</td>
-<td style="text-align: right;">0,64</td>
-<td style="text-align: right;">0,71</td>
-<td style="text-align: right;">0,89</td>
-</tr>
-<tr>
-<td>Fusión por puntuación (<code>α</code> ajustada = 0,35)</td>
-<td style="text-align: right;">0,73</td>
-<td style="text-align: right;">0,79</td>
-<td style="text-align: right;">0,91</td>
-</tr>
-</tbody>
-</table></div>
-<p>Lecturas:</p>
 <ul>
-<li>La híbrida gana claramente a cada método aislado: <strong>+13 puntos de P@5 sobre el mejor individual</strong>.</li>
-<li>El reordenador añade otros 12 puntos sin cambiar el recall@50: reordena lo ya recuperado, no recupera más.</li>
-<li>La fusión por puntuación <strong>sin ajustar</strong> es peor que RRF; <strong>ajustada</strong> con datos la supera ligeramente. Ese ajuste requiere el conjunto de evaluación, así que RRF sigue siendo el punto de partida correcto.</li>
+<li><code>USING</code> filtra lo que se <strong>lee</strong> (y lo que se puede actualizar o borrar).</li>
+<li><code>WITH CHECK</code> valida lo que se <strong>escribe</strong>: sin él, un inquilino podría insertar filas atribuidas a otro.</li>
 </ul>
-<p><strong>Desglose por tipo de consulta</strong>, que es donde se ve el mecanismo:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tipo</th>
-<th style="text-align: right;">Solo BM25</th>
-<th style="text-align: right;">Solo vectorial</th>
-<th style="text-align: right;">RRF</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Códigos y términos exactos</td>
-<td style="text-align: right;">0,81</td>
-<td style="text-align: right;">0,34</td>
-<td style="text-align: right;">0,79</td>
-</tr>
-<tr>
-<td>Preguntas de intención</td>
-<td style="text-align: right;">0,23</td>
-<td style="text-align: right;">0,74</td>
-<td style="text-align: right;">0,68</td>
-</tr>
-<tr>
-<td>Mixtas</td>
-<td style="text-align: right;">0,48</td>
-<td style="text-align: right;">0,61</td>
-<td style="text-align: right;">0,72</td>
-</tr>
-</tbody>
-</table></div>
-<p>En cada categoría, RRF pierde algo frente al especialista y <strong>gana en el conjunto</strong>. Ese es el compromiso real de la fusión, y conviene saberlo: si el 100 % de las consultas fueran códigos de error, BM25 solo sería mejor.</p>
-<p><strong>Filtrado, con la regla aplicada:</strong></p>
-<pre><code class="language-sql">-- Filtro por curso: cada curso es ~0,5 % del corpus → pre-filtrado exhaustivo
-SELECT id, texto, embedding &lt;=&gt; :qvec AS d
-FROM fragmentos WHERE curso_id = 42
-ORDER BY d LIMIT 10;
--- 1 000 fragmentos: exhaustivo en 3 ms, recall 1,000
+<p>La aplicación fija la variable al tomar la conexión del agrupador:</p>
+<pre><code class="language-python">with pool.connection() as conn:
+    conn.execute(&quot;SELECT set_config('app.tenant_id', %s, true)&quot;, (tenant,))
+    # `true` = local a la transacción: se limpia al terminar, y una conexión
+    # reutilizada del agrupador no hereda el inquilino de la petición anterior.
 </code></pre>
-<p>Con 1 000 fragmentos, la búsqueda exacta es más rápida <strong>y</strong> más exacta que cualquier índice aproximado. La decisión correcta es no usar el índice.</p>
+<p>El tercer argumento <code>true</code> es la diferencia entre un aislamiento correcto y una fuga entre inquilinos con agrupadores de conexiones.</p>
+<p><strong>Advertencia:</strong> la seguridad por fila <strong>no</strong> se aplica a superusuarios ni a roles con <code>BYPASSRLS</code>. La aplicación nunca debe conectarse como superusuario, aquí menos que nunca.</p>
+<h3 id="security-definer"><code>SECURITY DEFINER</code></h3>
+<p>Una función <code>SECURITY DEFINER</code> se ejecuta con los privilegios de quien la creó, no de quien la llama. Es útil y es la vía habitual de escalada de privilegios si se escribe mal:</p>
+<pre><code class="language-sql">CREATE FUNCTION resumen_curso(cid int) RETURNS TABLE(...) AS $$
+  SELECT ... FROM enrollments WHERE course_id = cid;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, public;
+</code></pre>
+<p><code>SET search_path</code> es obligatorio: sin él, quien llama puede crear un objeto en un esquema propio que sombree al real y hacer que la función ejecute su código con privilegios ajenos.</p>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;Petición&quot;] --&gt; A[&quot;Autenticación&lt;br/&gt;quién eres&quot;]
+    A --&gt; C[&quot;Conexión con usuario&lt;br/&gt;de mínimo privilegio&quot;]
+    C --&gt; R[&quot;Roles: qué operaciones&quot;]
+    R --&gt; O[&quot;Privilegios de objeto&lt;br/&gt;tabla, columna&quot;]
+    O --&gt; RLS[&quot;Política por fila&lt;br/&gt;qué filas&quot;]
+    RLS --&gt; D[(&quot;Datos&quot;)]
+    RLS -.-&gt;|&quot;no se aplica a&quot;| SU[&quot;superusuario · BYPASSRLS&quot;]
+    O --&gt; AUD[&quot;Registro de auditoría&quot;]
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Plataforma multiinquilino: cada institución ve solo sus datos. Además, los docentes ven las notas de sus cursos y los estudiantes solo las propias.</p>
+<pre><code class="language-sql">ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments FORCE  ROW LEVEL SECURITY;
+
+-- Aislamiento entre instituciones: se aplica SIEMPRE, encima de todo lo demás
+CREATE POLICY p_inquilino ON enrollments
+  AS RESTRICTIVE
+  USING (tenant_id = current_setting('app.tenant_id')::int);
+
+-- Un estudiante ve sus propias inscripciones
+CREATE POLICY p_estudiante ON enrollments
+  FOR SELECT TO rol_estudiante
+  USING (student_id = current_setting('app.user_id')::int);
+
+-- Un docente ve las de los cursos que dicta
+CREATE POLICY p_docente ON enrollments
+  FOR SELECT TO rol_docente
+  USING (EXISTS (SELECT 1 FROM teaching t
+                 WHERE t.course_id = enrollments.course_id
+                   AND t.teacher_id = current_setting('app.user_id')::int));
+
+-- Y solo el docente puede calificar, solo sus cursos
+CREATE POLICY p_docente_califica ON enrollments
+  FOR UPDATE TO rol_docente
+  USING      (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
+                        AND t.teacher_id = current_setting('app.user_id')::int))
+  WITH CHECK (EXISTS (SELECT 1 FROM teaching t WHERE t.course_id = enrollments.course_id
+                        AND t.teacher_id = current_setting('app.user_id')::int));
+</code></pre>
+<p><strong>Cómo se combinan las políticas</strong> —esto es lo que se entiende mal—:</p>
+<ul>
+<li>Las políticas <strong>permisivas</strong> (por defecto) se combinan con <strong>OR</strong>: basta que una permita.</li>
+<li>Las <strong>restrictivas</strong> se combinan con <strong>AND</strong>: todas deben permitir.</li>
+</ul>
+<p>Por eso <code>p_inquilino</code> es <code>RESTRICTIVE</code>: garantiza que ninguna política permisiva futura pueda saltarse el aislamiento entre instituciones. Si fuera permisiva, añadir mañana una política de «administrador ve todo» abriría un agujero entre inquilinos.</p>
+<p><strong>Privilegios de columna</strong> para datos sensibles:</p>
+<pre><code class="language-sql">REVOKE SELECT ON students FROM app_lectura;
+GRANT  SELECT (id, nombre, email) ON students TO app_lectura;   -- sin RUT ni dirección
+</code></pre>
+<p><strong>Verificación, que es lo que convierte esto en ingeniería:</strong></p>
+<pre><code class="language-sql">SET app.tenant_id = '1';
+SET app.user_id   = '11';
+SET ROLE rol_estudiante;
+
+SELECT count(*) FROM enrollments;             -- solo las del estudiante 11
+SELECT count(*) FROM enrollments WHERE student_id &lt;&gt; 11;   -- debe ser 0
+INSERT INTO enrollments (tenant_id, student_id, course_id) VALUES (2, 11, 1);
+-- ERROR: new row violates row-level security policy
+RESET ROLE;
+</code></pre>
+<p>Estas comprobaciones deben ser <strong>pruebas automatizadas</strong>. Una política de seguridad sin prueba es una intención.</p>
+<p><strong>Auditoría de privilegios efectivos:</strong></p>
+<pre><code class="language-sql">SELECT grantee, table_name, string_agg(privilege_type, ', ') AS privilegios
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
+GROUP BY grantee, table_name ORDER BY grantee, table_name;
+
+SELECT rolname, rolsuper, rolbypassrls, rolcreatedb FROM pg_roles
+WHERE rolsuper OR rolbypassrls;    -- debe ser una lista muy corta y conocida
+</code></pre>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Situación</th>
-<th>Método</th>
+<th>Necesidad</th>
+<th>Mecanismo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Términos técnicos, códigos, nombres</td>
-<td>BM25</td>
+<td>Servicio que solo lee</td>
+<td>Rol con <code>SELECT</code></td>
 </tr>
 <tr>
-<td>Preguntas en lenguaje natural</td>
-<td>Vectorial</td>
+<td>Ocultar columnas sensibles</td>
+<td>Privilegios de columna o vista</td>
 </tr>
 <tr>
-<td>Consultas mezcladas (el caso real)</td>
-<td><strong>Híbrida con RRF</strong></td>
+<td>Aislar inquilinos</td>
+<td>Política restrictiva por fila</td>
 </tr>
 <tr>
-<td>Máxima precisión en el top 10</td>
-<td>Híbrida + reordenador</td>
+<td>Un usuario ve solo lo suyo</td>
+<td>Política permisiva por fila</td>
 </tr>
 <tr>
-<td>Sin conjunto de evaluación</td>
-<td>RRF (no requiere ajuste)</td>
+<td>Operación privilegiada acotada</td>
+<td><code>SECURITY DEFINER</code> con <code>search_path</code> fijo</td>
 </tr>
 <tr>
-<td>Con conjunto de evaluación</td>
-<td>Fusión por puntuación ajustada</td>
-</tr>
-<tr>
-<td>Filtro muy selectivo</td>
-<td>Exhaustivo sobre el subconjunto</td>
+<td>Saber quién hizo qué</td>
+<td>Registro de auditoría</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Sumar puntuaciones de escalas distintas.</strong> BM25 y coseno no son comparables.</li>
-<li><strong>Adoptar la híbrida sin medir.</strong> Puede empeorar si una rama está mal configurada.</li>
-<li><strong>Post-filtrado con filtros selectivos.</strong> Devuelve poco o nada.</li>
-<li><strong>Reordenar demasiados candidatos.</strong> El codificador cruzado es caro.</li>
-<li><strong>Un solo tipo de consulta en la evaluación.</strong> El conjunto debe reflejar el tráfico real.</li>
-<li><strong>Analizadores distintos entre indexación y consulta en la rama léxica</strong> (clase 031).</li>
-<li><strong>Creer que el reordenador aumenta el recall.</strong> Solo reordena lo ya recuperado.</li>
+<li><strong>La aplicación se conecta como superusuario.</strong> Ignora toda la seguridad por fila.</li>
+<li><strong>Un solo usuario para todo.</strong> Una filtración lo compromete todo.</li>
+<li><strong><code>set_config</code> sin <code>local = true</code>.</strong> El inquilino persiste en la conexión reutilizada del agrupador: fuga entre inquilinos.</li>
+<li><strong>Política sin <code>WITH CHECK</code>.</strong> Se puede escribir en el ámbito de otro.</li>
+<li><strong>Olvidar <code>ALTER DEFAULT PRIVILEGES</code>.</strong> Las tablas nuevas quedan mal permisionadas.</li>
+<li><strong><code>PUBLIC</code> con privilegios.</strong> Aplica a todos los roles.</li>
+<li><strong><code>SECURITY DEFINER</code> sin <code>search_path</code>.</strong> Escalada de privilegios.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>La mejora de un buscador se demuestra o no existe. El conjunto de consultas juzgadas —60 a 100 consultas reales con sus resultados esperados— es el activo que permite cambiar de modelo, de fusión o de parámetros sabiendo si se avanza o se retrocede.</p>
+<p>Las filtraciones de datos multiinquilino rara vez son un fallo del motor: son un <code>WHERE tenant_id = ?</code> que faltaba en una consulta nueva. La seguridad por fila hace que ese olvido sea imposible, porque el filtro deja de depender de que alguien lo escriba.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Construye 60 consultas juzgadas que reflejen tu tráfico real, con las tres categorías.</li>
-<li>Mide P@5 y NDCG@10 con BM25, con vectorial y con RRF.</li>
-<li>Añade un reordenador sobre los 50 primeros y vuelve a medir.</li>
-<li>Desglosa por tipo de consulta y decide si la fusión compensa en tu caso.</li>
+<li>Diseña tres roles con privilegio mínimo para tu sistema.</li>
+<li>Implementa el aislamiento entre inquilinos con una política restrictiva.</li>
+<li>Escribe pruebas automatizadas que intenten leer y escribir fuera del ámbito.</li>
+<li>Audita los privilegios efectivos y los roles con <code>BYPASSRLS</code>.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué RRF no necesita normalizar las puntuaciones?</li>
-<li>Da una consulta de tu dominio donde el vectorial falle y BM25 acierte, y explica por qué.</li>
-<li>Calcula el RRF de un documento que quedó 3.º en léxico y 15.º en vectorial.</li>
-<li>¿En qué caso la búsqueda solo léxica sería la decisión correcta?</li>
+<li>¿Por qué la política de inquilino debe ser restrictiva y no permisiva?</li>
+<li>Explica la fuga que produce <code>set_config</code> sin ámbito local en un agrupador.</li>
+<li>¿Qué añade <code>WITH CHECK</code> que <code>USING</code> no cubre?</li>
+<li>Da un caso donde <code>SECURITY DEFINER</code> sea necesario y cómo lo asegurarías.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Cada cliente ve sus filas y solo las suyas</p>
+<p>Tres notas de dos clientes en la misma tabla. La aplicación del cliente
+<code>acme</code> tiene que ver dos filas y <strong>no puede</strong> ver la tercera. La pregunta de
+la clase no es cómo filtrar —eso es un <code>WHERE</code>— sino <strong>dónde vive ese
+filtro</strong>: si está en cada consulta, basta que una lo olvide para filtrar los
+datos de otro cliente, y ese error no se detecta con pruebas funcionales
+porque la consulta devuelve resultados perfectamente plausibles.</p>
+<p>Cada motor ofrece un sitio distinto donde poner la frontera: una política de
+fila que el servidor aplica siempre, una vista con permisos, un usuario por
+inquilino o nada en absoluto. El caso muestra la forma mínima —la vista— y
+la matriz dice hasta dónde llega cada uno.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>estudiante</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Bea</code></td>
+<td><code>58</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 060</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-view.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/views/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Microsoft SQL Server</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/sql-server/consulta.sql">código</a></td>
+<td><a href="https://learn.microsoft.com/sql/relational-databases/security/row-level-security">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+-- nota: aqui la frontera NO esta en la consulta: la aplica el servidor. El
+--       SELECT de abajo no lleva ningun WHERE sobre el inquilino y aun asi
+--       devuelve solo dos filas.
+--
+--       TRES trampas, y las tres se descubren tarde:
+--       1) El SUPERUSUARIO se salta TODAS las politicas, siempre, y no hay
+--          FORCE que lo impida. Como el usuario de la aplicacion en un entorno
+--          de desarrollo suele ser superusuario, la proteccion parece no
+--          funcionar. Por eso este guion crea un rol sin privilegios y cambia a
+--          el antes de consultar: sin ese SET ROLE, esta consulta devuelve las
+--          TRES filas.
+--       2) FORCE ROW LEVEL SECURITY: sin el, el DUENO de la tabla tambien se
+--          salta sus propias politicas.
+--       3) La politica se evalua por fila: si consulta otras tablas, puede
+--          impedir el uso de indices y costar mas que la propia consulta.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    inquilino  text NOT NULL,
+    estudiante text NOT NULL,
+    nota       integer NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+ALTER TABLE notas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notas FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY solo_mi_inquilino ON notas
+    USING (inquilino = current_setting('app.inquilino', true));
+
+-- El rol de la aplicacion: sin privilegios especiales, que es la unica forma de
+-- que las politicas se le apliquen.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_inquilino') THEN
+        CREATE ROLE app_inquilino NOLOGIN;
+    END IF;
+END;
+$$;
+-- Y los permisos minimos: ver el esquema y leer la tabla. Nada mas.
+DO $$
+BEGIN
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO app_inquilino', current_schema());
+END;
+$$;
+GRANT SELECT ON notas TO app_inquilino;
+
+-- === consulta ===
+-- La aplicacion fija su identidad al abrir la conexion. A partir de ahi,
+-- ninguna consulta necesita —ni puede— saltarse el filtro.
+SET app.inquilino = 'acme';
+SET ROLE app_inquilino;
+
+SELECT estudiante, nota FROM notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La seguridad a nivel de fila la aplica <strong>el servidor</strong>, no la consulta: con <code>ENABLE ROW LEVEL SECURITY</code> y una política, una consulta sin <code>WHERE</code> devuelve solo las filas permitidas. Es la única forma de que olvidarse del filtro deje de ser posible.</li>
+<li><strong>Por qué no:</strong> La política se evalúa por fila y puede impedir el uso de índices si está mal escrita; y hay que recordar <code>FORCE ROW LEVEL SECURITY</code>, porque el dueño de la tabla <strong>se salta sus propias políticas</strong> por omisión. Es una trampa que aparece justo en las pruebas, donde todo se ejecuta como dueño.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">https://www.postgresql.org/docs/current/ddl-rowsecurity.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createview.html
+-- nota: la vista es una CONVENCION, no un control de acceso: nada impide que el
+--       mismo proceso consulte `notas` directamente. En SQLite, quien tiene el
+--       archivo lo tiene todo.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inquilino  TEXT NOT NULL,
+    estudiante TEXT NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La vista es la forma mínima y portable de la frontera: la aplicación consulta <code>mis_notas</code> y nunca <code>notas</code>, así que el filtro está en un solo sitio.</li>
+<li><strong>Por qué no:</strong> No hay usuarios ni permisos: nada impide que el mismo proceso consulte la tabla de debajo. La frontera es una convención, no un control de acceso, y quien tenga el archivo lo tiene todo.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createview.html">https://sqlite.org/lang_createview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_view
+-- nota: la auditoria que precede a cualquier control de acceso:
+--         SELECT inquilino, COUNT(*) FROM notas GROUP BY inquilino;
+--         SELECT COUNT(*) FROM notas WHERE inquilino IS NULL OR inquilino = '';
+--       La segunda busca el agujero clasico del esquema multiinquilino: filas
+--       sin inquilino, que las politicas no saben de quien son.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    inquilino  VARCHAR NOT NULL,
+    estudiante VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sirve para la auditoría que precede a cualquier control de acceso: contar cuántas filas de cada inquilino hay y comprobar que ninguna tiene el campo vacío, que es el agujero clásico de los esquemas multiinquilino.</li>
+<li><strong>Por qué no:</strong> No tiene usuarios, roles ni políticas: no es un sitio donde poner una frontera de seguridad, sino donde analizar los datos que ya cruzaron una.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_view">https://duckdb.org/docs/stable/sql/statements/create_view</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-view.html
+-- nota: MySQL NO tiene seguridad a nivel de fila. Lo mas parecido es una vista
+--       con SQL SECURITY DEFINER y permisos:
+--         GRANT SELECT ON learning.mis_notas TO 'app_acme'@'%';
+--         REVOKE ALL ON learning.notas FROM 'app_acme'@'%';
+--       Asi la vista deja de ser una convencion y pasa a ser una frontera. El
+--       limite: para cien inquilinos hacen falta cien vistas o cien bases.
+
+-- === preparacion ===
+DROP VIEW IF EXISTS mis_notas;
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    inquilino  VARCHAR(50) NOT NULL,
+    estudiante VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO notas (inquilino, estudiante, nota) VALUES
+    ('acme',   'Ada', 90),
+    ('acme',   'Bea', 58),
+    ('globex', 'Cid', 77);
+
+-- La vista ES la frontera. La aplicacion consulta `mis_notas`, nunca `notas`,
+-- y el filtro por inquilino deja de depender de que cada consulta se acuerde
+-- de escribirlo. Basta UNA consulta que lo olvide para filtrar los datos de
+-- otro cliente.
+CREATE VIEW mis_notas AS
+SELECT estudiante, nota
+FROM notas
+WHERE inquilino = 'acme';
+
+-- === consulta ===
+SELECT estudiante, nota FROM mis_notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene vistas con <code>SQL SECURITY DEFINER</code>, que ejecutan con los privilegios de quien las creó: se puede dar acceso a la vista y negarlo a la tabla, lo que convierte la vista en una frontera de verdad y no solo en una convención.</li>
+<li><strong>Por qué no:</strong> <strong>No tiene seguridad a nivel de fila.</strong> Todo se apoya en vistas y permisos, y para muchos inquilinos hace falta una vista o una base por inquilino: la solución no escala a cientos de clientes.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-view.html">https://dev.mysql.com/doc/refman/8.4/en/create-view.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/views/
+// nota: la vista de solo lectura con la tuberia filtrada, mas un rol que de
+//       acceso a la vista y NO a la coleccion, consigue la misma frontera:
+//         db.createRole({ role: &quot;acme_lector&quot;,
+//                         privileges: [{ resource: { db: &quot;learning&quot;,
+//                                                    collection: &quot;mis_notas&quot; },
+//                                        actions: [&quot;find&quot;] }], roles: [] })
+//       En la version Community no hay control por documento: es por coleccion.
+
+// === preparacion ===
+db.mis_notas.drop();
+db.notas.drop();
+
+db.notas.insertMany([
+  { inquilino: &quot;acme&quot;, estudiante: &quot;Ada&quot;, nota: 90 },
+  { inquilino: &quot;acme&quot;, estudiante: &quot;Bea&quot;, nota: 58 },
+  { inquilino: &quot;globex&quot;, estudiante: &quot;Cid&quot;, nota: 77 },
+]);
+
+db.createView(&quot;mis_notas&quot;, &quot;notas&quot;, [
+  { $match: { inquilino: &quot;acme&quot; } },
+  { $project: { _id: 0, estudiante: 1, nota: 1 } },
+]);
+
+// === consulta ===
+db.mis_notas
+  .find()
+  .sort({ estudiante: 1 })
+  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una vista de solo lectura con la tubería filtrada, más un rol que dé acceso a la vista y no a la colección, consigue lo mismo. Y con la versión Enterprise existe redacción a nivel de campo.</li>
+<li><strong>Por qué no:</strong> No hay seguridad a nivel de documento en la versión Community: el control es por colección. Y el modelo habitual —un campo <code>inquilino</code> en cada documento— depende por completo de que la aplicación no se equivoque.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/views/">https://www.mongodb.com/docs/manual/core/views/</a></li>
+</ul>
+<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: sql-server
+-- doc: https://learn.microsoft.com/sql/relational-databases/security/row-level-security
+-- nota: implementacion declarada. SQL Server separa dos cosas que conviene no
+--       confundir:
+--         predicado de FILTRO   -&gt; que filas se VEN
+--         predicado de BLOQUEO  -&gt; que filas se pueden ESCRIBIR
+--       Sin el segundo, un usuario puede insertar filas de otro inquilino que
+--       despues no podra ver: el dato se pierde de vista sin haberse borrado.
+
+-- === preparacion ===
+DROP SECURITY POLICY IF EXISTS dbo.politica_inquilino;
+DROP FUNCTION IF EXISTS dbo.fn_inquilino;
+DROP TABLE IF EXISTS dbo.notas;
+
+CREATE TABLE dbo.notas (
+    inquilino  NVARCHAR(50) NOT NULL,
+    estudiante NVARCHAR(50) NOT NULL,
+    nota       INT NOT NULL,
+    CONSTRAINT pk_notas PRIMARY KEY (inquilino, estudiante)
+);
+INSERT INTO dbo.notas (inquilino, estudiante, nota) VALUES
+    (N'acme', N'Ada', 90), (N'acme', N'Bea', 58), (N'globex', N'Cid', 77);
+GO
+
+-- SCHEMABINDING y una funcion simple: se ejecuta POR FILA.
+CREATE FUNCTION dbo.fn_inquilino(@inquilino AS NVARCHAR(50))
+RETURNS TABLE
+WITH SCHEMABINDING
+AS
+RETURN SELECT 1 AS visible
+       WHERE @inquilino = CAST(SESSION_CONTEXT(N'inquilino') AS NVARCHAR(50));
+GO
+
+CREATE SECURITY POLICY dbo.politica_inquilino
+ADD FILTER PREDICATE dbo.fn_inquilino(inquilino) ON dbo.notas,
+ADD BLOCK PREDICATE dbo.fn_inquilino(inquilino) ON dbo.notas AFTER INSERT
+WITH (STATE = ON);
+GO
+
+-- === consulta ===
+EXEC sp_set_session_context @key = N'inquilino', @value = N'acme';
+
+SELECT estudiante, nota FROM dbo.notas ORDER BY estudiante;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su seguridad a nivel de fila se declara con una función con valores de tabla y una política de seguridad, y distingue <strong>predicados de filtro</strong> —qué se ve— de <strong>predicados de bloqueo</strong> —qué se puede escribir—, una separación que PostgreSQL cubre con dos cláusulas distintas.</li>
+<li><strong>Por qué no:</strong> La función de predicado se ejecuta por fila y se convierte en el cuello de botella si consulta otras tablas; hay que escribirla con <code>SCHEMABINDING</code> y mantenerla simple, o el filtro cuesta más que la consulta.</li>
+<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/relational-databases/security/row-level-security">https://learn.microsoft.com/sql/relational-databases/security/row-level-security</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>El control de acceso llega hasta el patrón de clave: las ACL permiten restringir a <code>~acme:*</code>, pero no hay forma de filtrar <strong>dentro</strong> de un valor. Si los datos de dos inquilinos comparten una estructura, no hay frontera posible.</td>
+<td>Separar por prefijo de clave desde el diseño (<code>acme:notas:...</code>) y usar ACL por usuario sobre ese patrón: la frontera se consigue por nomenclatura, y hay que sostenerla en cada escritura.</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/06-vector-search/run_vector_lab.py
+python labs/03-transactions/run_transactions_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -437,29 +721,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
-  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
-<li><strong>OpenSearch Project</strong> (2026). <a href="https://docs.opensearch.org/latest/">OpenSearch Documentation</a>.<br />
-  Índice invertido, analizadores, relevancia y búsqueda k-NN.</li>
-<li><strong>Andrew Kane</strong> (2026). <a href="https://github.com/pgvector/pgvector">pgvector</a>.<br />
-  Búsqueda vectorial dentro de PostgreSQL: evita un sistema adicional cuando no hace falta.</li>
-<li><strong>Qdrant</strong> (2026). <a href="https://qdrant.tech/documentation/">Qdrant Documentation</a>.<br />
-  Colecciones, filtros con carga útil y parametros HNSW.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL: Row Security Policies</a>.<br />
+  Control de acceso por fila declarado en el propio motor.</li>
+<li><strong>NIST</strong> (2020). <a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final">NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems</a>.<br />
+  Controles de auditoria, cifrado y acceso aplicables a bases de datos.</li>
+<li><strong>Center for Internet Security</strong> (2026). <a href="https://www.cisecurity.org/cis-benchmarks">CIS Benchmarks</a>.<br />
+  Guias de configuración endurecida para PostgreSQL, MySQL, MongoDB y otros.</li>
+<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
+  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="059.html">← Anterior</a> · <a href="061.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="060">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="059.html"><span class="sentido">← Anterior · 059</span>Índices vectoriales aproximados: HNSW, IVF y el recall</a>
-<a class="siguiente" href="061.html"><span class="sentido">Siguiente · 061 →</span>RAG evaluable: medir la recuperación antes que la generación</a>
+<a class="anterior" href="059.html"><span class="sentido">← Anterior · 059</span>Migraciones evolutivas sin ventana de caída</a>
+<a class="siguiente" href="061.html"><span class="sentido">Siguiente · 061 →</span>Inyección SQL y el contrato de parametrización</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

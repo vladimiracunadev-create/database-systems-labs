@@ -30,6 +30,7 @@ import markdown
 import yaml
 
 import brand_assets
+import motores_lib as ml
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
@@ -960,26 +961,68 @@ repositorio que la integración continua valida.</p>
 </main>""")
 
     # ---------- motores ----------
+    # La tabla no se escribe a mano: se cuenta sobre las comparaciones reales,
+    # asi que ninguna cifra de cobertura puede quedarse vieja.
+    comparaciones = ml.todas(ROOT)
+    cobertura: dict[str, dict[str, int]] = {}
+    for comparacion in comparaciones:
+        for motor in comparacion.motores:
+            registro = cobertura.setdefault(
+                motor.id, {"clases": 0, "resuelve": 0, "ejecutadas": 0, "descartado": 0})
+            registro["clases"] += 1
+            if motor.aplica:
+                registro["resuelve"] += 1
+                if motor.ejecutable:
+                    registro["ejecutadas"] += 1
+            else:
+                registro["descartado"] += 1
+
+    ejecutadas_total = sum(c["ejecutadas"] for c in cobertura.values())
+    implementaciones_total = sum(c["resuelve"] for c in cobertura.values())
+
+    def sello(mid: str) -> str:
+        c = cobertura.get(mid)
+        if not c or not c["resuelve"]:
+            return '<span class="etiqueta">solo catálogo</span>'
+        if c["ejecutadas"]:
+            return (f'<span class="etiqueta etiqueta-ok">{c["ejecutadas"]} ejecutadas</span>')
+        return '<span class="etiqueta">declarado</span>'
+
     filas = "\n".join(
         f'<tr><td><a href="{escapar(s["official_docs"])}">{escapar(s["name"])}</a></td>'
         f'<td>{", ".join(s["families"])}</td>'
         f'<td>{", ".join(s["query"])}</td>'
-        f'<td>{"núcleo ejecutable" if s["core_lab"] else "ficha comparativa"}</td></tr>'
-        for s in motores["systems"])
+        f'<td>{cobertura.get(s["id"], {}).get("resuelve", 0)}</td>'
+        f'<td>{cobertura.get(s["id"], {}).get("descartado", 0)}</td>'
+        f'<td>{sello(s["id"])}</td></tr>'
+        for s in sorted(motores["systems"],
+                        key=lambda x: (-cobertura.get(x["id"], {}).get("resuelve", 0), x["name"])))
 
     salidas[SITE / "motores.html"] = pagina(
         titulo="Catálogo de motores · Database Systems Labs",
-        descripcion="Motores cubiertos por el programa, con su documentación oficial.",
+        descripcion="Motores cubiertos por el programa, con su documentación oficial "
+                    "y cuántas veces resuelven —o no— el caso de una clase.",
         prefijo="", ruta="motores.html", programa=programa, activo="motores",
         extra_css='<link rel="stylesheet" href="assets/class.css">\n',
         cuerpo=f"""<main class="content" id="principal">
 <h1>Catálogo de motores</h1>
 <p class="lead">{escapar(motores['policy'])}</p>
-<p class="fuente-meta">Aparecer en el catálogo no equivale a dominar la tecnología:
-el <strong>núcleo ejecutable</strong> tiene laboratorios completos; las
-<strong>fichas comparativas</strong> remiten a la documentación oficial.</p>
+
+<p>Cada clase del programa declara un caso y lo resuelve —o explica por qué no—
+en varios motores. Esta tabla cuenta ese trabajo: en cuántas clases cada motor
+<strong>resuelve</strong> el caso, en cuántas se <strong>descarta con un
+argumento</strong>, y cuántas de sus implementaciones ejecuta la máquina de
+verdad contra el motor real.</p>
+
+<p class="fuente-meta">Total: <strong>{implementaciones_total} implementaciones</strong>
+en {len(comparaciones)} clases, de las que <strong>{ejecutadas_total} se ejecutan</strong>
+en integración continua. El resto se muestra y se revisa contra la documentación
+citada, y así se dice en cada clase. Descartar un motor con un motivo cuenta
+tanto como usarlo: por eso la columna «se descarta» está aquí y no escondida.</p>
+
 <div class="tabla-scroll"><table>
-<thead><tr><th>Motor</th><th>Familias</th><th>Lenguaje</th><th>Cobertura</th></tr></thead>
+<thead><tr><th>Motor</th><th>Familias</th><th>Lenguaje</th>
+<th>Resuelve el caso</th><th>Se descarta</th><th>Prueba</th></tr></thead>
 <tbody>
 {filas}
 </tbody></table></div>

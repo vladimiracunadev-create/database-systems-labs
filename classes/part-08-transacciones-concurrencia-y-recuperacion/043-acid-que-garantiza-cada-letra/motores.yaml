@@ -1,0 +1,121 @@
+---
+caso:
+  titulo: Una transferencia que se completa y otra que se deshace sin dejar rastro
+  contrato: |
+    ACID son cuatro promesas distintas y conviene no confundirlas. **A**tomicidad:
+    o todo o nada. **C**onsistencia: las reglas declaradas siguen siendo ciertas
+    al terminar. **I**slamiento: las transacciones concurrentes no se ven a
+    medias. **D**urabilidad: lo confirmado sobrevive a un corte de luz.
+
+    El caso ejercita las dos primeras. Una transferencia de 30 de A a B se
+    confirma; otra de 500 se deshace, y con ella la mitad que ya se había
+    escrito. Entre las dos sentencias de la transferencia hay un instante en el
+    que el dinero está duplicado: la atomicidad es la garantía de que ese
+    instante no existe para nadie más, y que al deshacer no queda rastro.
+
+    Al final, A tiene 70 y B tiene 80: la suma sigue siendo 150, que es el
+    invariante que ninguna transferencia debe romper.
+  columnas: [cuenta, saldo]
+  esperado:
+    - [A, "70"]
+    - [B, "80"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Es ACID completo desde su primera versión, sobre un archivo y sin
+      servidor: la atomicidad se implementa con un diario de reversión o con
+      WAL, y sobrevive a un corte de luz igual que un motor grande.
+    porque_no: >-
+      El aislamiento es de grano grueso: en el modo por omisión, un escritor
+      bloquea la base entera. Y la durabilidad depende de `PRAGMA synchronous`,
+      que muchas aplicaciones bajan a `NORMAL` para ganar velocidad sin declarar
+      que están cambiando la «D» por rendimiento.
+    doc: https://sqlite.org/transactional.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      También es ACID sobre su archivo, con control de concurrencia por
+      versiones: sirve para comprobar el invariante en el mismo sitio donde se
+      analizan los datos.
+    porque_no: >-
+      Un solo proceso escritor: no hay transacciones entre aplicaciones, y por
+      tanto el problema real de la concurrencia no se puede ni plantear aquí.
+    doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Las cuatro letras están, y además el DDL es transaccional: se puede crear
+      una tabla, cargarla y deshacerlo todo. Esa propiedad —que MySQL y Oracle no
+      tienen— es la que hace seguras las migraciones de esquema.
+    porque_no: >-
+      La durabilidad se puede aflojar por sesión con `synchronous_commit = off`,
+      que multiplica el rendimiento a cambio de poder perder las últimas
+      transacciones confirmadas. Es legítimo y hay que declararlo, porque deja
+      de ser ACID en el sentido estricto.
+    doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      InnoDB es ACID: registro de rehacer, registro de deshacer y confirmación
+      en dos fases con el registro binario.
+    porque_no: >-
+      Dos trampas históricas. El DDL **no** es transaccional: un `ALTER TABLE`
+      dentro de una transacción la confirma implícitamente y ya no hay vuelta
+      atrás. Y `innodb_flush_log_at_trx_commit` distinto de 1 significa perder
+      hasta un segundo de transacciones confirmadas tras una caída.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Desde la versión 4.0 tiene transacciones de varios documentos con la misma
+      semántica: `startTransaction`, `commitTransaction`, `abortTransaction`.
+      Sobre un solo documento, la atomicidad es automática y no hace falta nada.
+    porque_no: >-
+      **Exigen un conjunto de réplicas**: en un servidor suelto —como el de este
+      repositorio— sencillamente no se pueden usar, y por eso esta
+      implementación se declara en vez de ejecutarse. Además tienen un límite de
+      60 segundos por omisión y un costo notable frente a escribir un solo
+      documento, que es la señal de que el modelo debería haberse diseñado para
+      no necesitarlas.
+    doc: https://www.mongodb.com/docs/manual/core/transactions/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      `MULTI`/`EXEC` no es una transacción ACID: garantiza que las órdenes se
+      ejecutan seguidas y sin intercalación, pero **no hay reversión**. Si una
+      orden falla en medio, las anteriores ya se aplicaron y las siguientes se
+      aplican igual. Su documentación lo dice sin rodeos.
+    alternativa: >-
+      Un script Lua, que sí es atómico y aislado, comprobando las condiciones
+      **antes** de escribir nada: la reversión se sustituye por no llegar a
+      empezar.
+    doc: https://redis.io/docs/latest/develop/interact/transactions/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay transacciones entre particiones ni reversión. `BATCH` solo es
+      atómico y aislado dentro de una partición, y su uso entre particiones lo
+      desaconseja la propia documentación por el costo del registro de lotes.
+    alternativa: >-
+      Diseñar para que la operación quepa en una partición, o implementar una
+      saga con pasos compensatorios en la aplicación, asumiendo que hay estados
+      intermedios visibles.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

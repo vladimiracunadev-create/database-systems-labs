@@ -1,0 +1,120 @@
+---
+caso:
+  titulo: >-
+    Igualdad primero, rango después: por qué el orden de las columnas del
+    índice decide todo
+  contrato: |
+    Un índice B-Tree ordena las filas por la concatenación de sus columnas, en
+    el orden en que se declararon. De ahí sale la única regla de diseño de
+    índices que hay que recordar: **las columnas de igualdad van primero, la de
+    rango va al final**, y después de una columna de rango el índice deja de
+    poder acotar nada.
+
+    El caso pide los alumnos de DB-101 con nota entre 60 y 90. Con el índice
+    `(curso, nota)`, el motor entra por la igualdad y recorre un rango contiguo:
+    lee exactamente las filas que devuelve. Con `(nota, curso)` tendría que
+    recorrer todas las notas entre 60 y 90 de **todos** los cursos y descartar
+    después. El resultado es idéntico en los dos casos; el trabajo, no.
+  columnas: [estudiante, nota]
+  esperado:
+    - [Bob, "61"]
+    - [Grace, "72"]
+    - [Ada, "90"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `EXPLAIN QUERY PLAN` dice en una línea si hubo `SEARCH ... USING INDEX` o
+      `SCAN`: es la forma más directa que existe de comprobar si el índice sirvió.
+    porque_no: >-
+      Su planificador solo usa **un** índice por tabla y no tiene reunión hash ni
+      por fusión: las conclusiones sobre estrategias de índice no se transfieren
+      a un motor grande.
+    doc: https://sqlite.org/optoverview.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Sirve para ver el contraste: aquí el índice apenas importa, porque el
+      filtro se resuelve leyendo la columna comprimida y descartando bloques por
+      sus valores mínimo y máximo. El mismo problema, otra solución.
+    porque_no: >-
+      Sus índices ART están pensados para restricciones de unicidad y búsquedas
+      muy selectivas, no para sostener planes: razonar sobre orden de columnas
+      aquí no lleva a ninguna parte.
+    doc: https://duckdb.org/docs/stable/sql/indexes.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Es donde la regla se puede medir: `EXPLAIN (ANALYZE, BUFFERS)` muestra las
+      filas leídas frente a las devueltas, y `Rows Removed by Filter` delata al
+      índice con las columnas en mal orden. Además tiene índices cubrientes con
+      `INCLUDE`, para responder sin ir a la tabla.
+    porque_no: >-
+      Cada índice es una estructura más que mantener en cada `INSERT`, `UPDATE`
+      y `DELETE`, y en su modelo MVCC un `UPDATE` puede tener que escribir en
+      **todos** los índices de la tabla aunque no cambie ninguna columna
+      indexada.
+    doc: https://www.postgresql.org/docs/current/indexes-multicolumn.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      La regla es la misma y `EXPLAIN` muestra `key_len`, que dice **cuántos
+      bytes del índice se usaron de verdad**: es la forma más precisa de
+      comprobar hasta qué columna llegó a acotar el motor.
+    porque_no: >-
+      InnoDB organiza la tabla por la clave primaria, así que todo índice
+      secundario guarda la clave primaria como puntero: una clave primaria ancha
+      —un UUID en texto— engorda todos los índices de la tabla a la vez.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      La regla se llama aquí «igualdad, orden, rango» y está documentada con ese
+      nombre: es la misma idea, y `explain("executionStats")` compara
+      `totalKeysExamined` con `nReturned` para ver cuánto se leyó de más.
+    porque_no: >-
+      El límite de 64 índices por colección y el costo de mantenerlos en cada
+      escritura son los mismos que en un relacional, con un agravante: sin
+      esquema, es fácil acabar con índices sobre campos que solo existen en la
+      mitad de los documentos.
+    doc: https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      No hay índices que diseñar sobre una tabla existente: el orden lo fija la
+      clave primaria al crearla, y cambiarlo significa crear otra tabla y
+      reescribir los datos. La decisión de esta clase se toma una vez, al
+      modelar, y no se puede corregir después.
+    alternativa: >-
+      La clave de agrupamiento **es** el índice: `PRIMARY KEY ((curso), nota,
+      estudiante)` da exactamente el mismo acceso por igualdad y rango que el
+      índice `(curso, nota)` de esta clase.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay índices sobre valores: el acceso es por clave. Un rango solo se
+      puede pedir sobre la puntuación de un conjunto ordenado, y eso hay que
+      haberlo previsto al escribir.
+    alternativa: >-
+      Un conjunto ordenado por curso (`notas:DB-101`) con la nota como
+      puntuación, que da el mismo acceso por rango que el índice de esta clase,
+      a cambio de mantener una estructura por criterio.
+    doc: https://redis.io/docs/latest/commands/zrangebyscore/

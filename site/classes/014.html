@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="DDL: el esquema como contrato ejecutable. Parte 03: SQL en profundidad.">
+<meta name="description" content="Entorno reproducible y evidencia comprobable. Parte 01: Fundamentos, sistemas y método.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/014.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="014 — DDL: el esquema como contrato ejecutable · Database Systems Labs">
-<meta property="og:description" content="DDL: el esquema como contrato ejecutable. Parte 03: SQL en profundidad.">
+<meta property="og:title" content="014 — Entorno reproducible y evidencia comprobable · Database Systems Labs">
+<meta property="og:description" content="Entorno reproducible y evidencia comprobable. Parte 01: Fundamentos, sistemas y método.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/014.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "014 — DDL: el esquema como contrato ejecutable", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["tipo de dato", "restricción", "valor por defecto", "DDL transaccional"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>014 — DDL: el esquema como contrato ejecutable · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "014 — Entorno reproducible y evidencia comprobable", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["reproducibilidad", "semilla", "contenedor", "invariante", "evidencia"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>014 — Entorno reproducible y evidencia comprobable · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,284 +49,227 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-03.html">Parte 03 · SQL en profundidad</a>
+  <a href="parte-01.html">Parte 01 · Fundamentos, sistemas y método</a>
   <span aria-hidden="true">/</span><span>Clase 014</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="014--ddl-el-esquema-como-contrato-ejecutable">014 — DDL: el esquema como contrato ejecutable</h1>
+<h1 id="014--entorno-reproducible-y-evidencia-comprobable">014 — Entorno reproducible y evidencia comprobable</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-01-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-014%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 03 — SQL en profundidad · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<p>Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores <code>sqlite</code>, <code>postgresql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>tipo de dato</code> · <code>restricción</code> · <code>valor por defecto</code> · <code>DDL transaccional</code></p>
-<p><strong>En este caso se comparan 8 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>reproducibilidad</code> · <code>semilla</code> · <code>contenedor</code> · <code>invariante</code> · <code>evidencia</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 014&quot;]
+    C --&gt; K1[&quot;reproducibilidad&quot;]
+    C --&gt; K2[&quot;semilla&quot;]
+    C --&gt; K3[&quot;contenedor&quot;]
+    C --&gt; K4[&quot;invariante&quot;]
+    C --&gt; K5[&quot;evidencia&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Escribir el esquema como un contrato ejecutable: cada línea de DDL es una promesa que el motor hace cumplir. Un esquema laxo traslada esa responsabilidad a cada programa cliente, presente y futuro.</p>
+<p>Montar un entorno donde toda afirmación sobre datos pueda comprobarse por otra persona. En bases de datos, «a mí me funciona» es una afirmación especialmente débil: el resultado depende de la versión, la configuración, los datos previos y el estado del caché.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Elegir tipos por el dominio del dato, no por costumbre.</li>
-<li>Justificar por qué el dinero no se guarda en coma flotante, con una demostración.</li>
-<li>Aplicar el criterio de tipos para fechas, horas y zonas horarias.</li>
-<li>Aprovechar el DDL transaccional donde existe y protegerte donde no.</li>
-<li>Escribir un esquema en el que un dato inválido sea imposible, no improbable.</li>
+<li>Ejecutar el laboratorio base sin instalar ningún servidor.</li>
+<li>Levantar motores por perfiles con Docker Compose, sin arrancarlos todos.</li>
+<li>Distinguir evidencia de captura de pantalla, y saber qué debe acompañar a un resultado.</li>
+<li>Escribir una comprobación de invariante que falle cuando el dato está mal.</li>
+<li>Explicar por qué una medición sin condiciones declaradas no sirve para decidir.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-tipo-es-la-primera-restricción">El tipo es la primera restricción</h3>
-<p>Antes de cualquier <code>CHECK</code>, el tipo ya limita el dominio. Elegirlo mal deja pasar valores que ninguna restricción posterior recupera.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Dato</th>
-<th>Tipo correcto</th>
-<th>Tipo frecuente y equivocado</th>
-<th>Qué se rompe</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Dinero</td>
-<td><code>NUMERIC(12,2)</code> / entero de centavos</td>
-<td><code>FLOAT</code>, <code>REAL</code></td>
-<td>Errores de redondeo acumulativos</td>
-</tr>
-<tr>
-<td>Fecha y hora con huso</td>
-<td><code>TIMESTAMPTZ</code></td>
-<td><code>TIMESTAMP</code> sin huso</td>
-<td>Ambigüedad en cambios de hora</td>
-</tr>
-<tr>
-<td>Fecha sin hora</td>
-<td><code>DATE</code></td>
-<td><code>TEXT</code></td>
-<td>Comparaciones y aritmética imposibles</td>
-</tr>
-<tr>
-<td>Identificador externo</td>
-<td><code>TEXT</code> con <code>CHECK</code> de formato</td>
-<td><code>INTEGER</code></td>
-<td>Se pierden ceros a la izquierda</td>
-</tr>
-<tr>
-<td>Booleano</td>
-<td><code>BOOLEAN</code></td>
-<td><code>INTEGER</code>, <code>CHAR(1)</code></td>
-<td>Tres estados donde debe haber dos</td>
-</tr>
-<tr>
-<td>Enumeración corta</td>
-<td><code>TEXT</code> + <code>CHECK IN (...)</code></td>
-<td><code>TEXT</code> libre</td>
-<td>Valores nuevos sin control</td>
-</tr>
-<tr>
-<td>Duración</td>
-<td>Entero de segundos o <code>INTERVAL</code></td>
-<td><code>TEXT</code> «2h 30m»</td>
-<td>Aritmética imposible</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="dinero-en-coma-flotante-la-demostración">Dinero en coma flotante: la demostración</h3>
-<p>Los tipos <code>FLOAT</code> y <code>DOUBLE</code> siguen IEEE 754, que representa en binario. El valor decimal <code>0,1</code> no tiene representación binaria finita, igual que 1/3 no la tiene en decimal.</p>
-<pre><code class="language-sql">SELECT 0.1 + 0.2 = 0.3;             -- en coma flotante: falso
-SELECT CAST(0.1 AS REAL) + CAST(0.2 AS REAL);   -- 0.30000000000000004
+<h3 id="el-núcleo-sin-dependencias">El núcleo sin dependencias</h3>
+<p>SQLite permite estudiar un gestor completo sin instalar nada: es una biblioteca que se enlaza al proceso, con soporte para transacciones, índices, planes de ejecución y registro anticipado. La biblioteca estándar de Python la expone en <code>sqlite3</code>, conforme a la especificación PEP 249.</p>
+<p>Eso da una propiedad valiosa para un programa formativo: <strong>el primer laboratorio no puede fallar por instalación</strong>. Si <code>python labs/01-sql-foundations/run_lab.py</code> no corre, el problema está en el código, no en el entorno.</p>
+<h3 id="los-motores-con-contenedores">Los motores con contenedores</h3>
+<p>El resto de los motores llega por Docker Compose, organizado en <strong>perfiles</strong> para no levantar diez servicios a la vez:</p>
+<pre><code class="language-bash">docker compose --profile relational up -d
+docker compose --profile document   up -d
+docker compose --profile cache      up -d
 </code></pre>
-<p>Con 10 000 transacciones de un producto de 19,99, el error acumulado deja de ser teórico y aparece en la conciliación contable como un descuadre de céntimos que nadie sabe explicar. <code>NUMERIC</code> almacena en base 10 y es exacto para estos valores; a cambio, la aritmética es más lenta. Para dinero, esa lentitud es irrelevante y la exactitud no lo es.</p>
-<h3 id="fechas-y-husos-horarios">Fechas y husos horarios</h3>
-<p><code>TIMESTAMP WITHOUT TIME ZONE</code> guarda una pared de reloj sin decir de qué reloj. Dos consecuencias:</p>
+<p>Dos reglas del repositorio, ambas de seguridad:</p>
 <ul>
-<li>Un evento registrado a las 02:30 durante el retroceso del horario de verano es <strong>ambiguo</strong>: ocurrió dos veces.</li>
-<li>Comparar registros de dos regiones da resultados incorrectos sin conversión explícita.</li>
+<li>Las credenciales del <code>compose</code> son locales y están escritas a la vista. Nunca se copian a otro entorno.</li>
+<li>Los servicios no publican puertos hacia fuera de la máquina más allá de lo necesario para el laboratorio.</li>
 </ul>
-<p><code>TIMESTAMPTZ</code> (en PostgreSQL) guarda un instante absoluto normalizado a UTC y lo presenta en el huso de la sesión. Regla operativa: <strong>almacenar instantes en UTC, convertir solo al presentar</strong>. La excepción legítima es la fecha civil sin instante —un cumpleaños, un feriado—, que es <code>DATE</code> y no tiene huso.</p>
-<h3 id="ddl-transaccional">DDL transaccional</h3>
+<h3 id="qué-es-evidencia">Qué es evidencia</h3>
+<p>El libro de SRE de Google formula el criterio que aquí adoptamos: una afirmación operativa vale lo que vale su medición, y una medición vale lo que valen sus condiciones declaradas. Aplicado a este programa, una evidencia válida incluye:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Motor</th>
-<th>¿<code>CREATE</code>/<code>ALTER</code> dentro de una transacción con reversión?</th>
+<th>Elemento</th>
+<th>Por qué sin él la evidencia se cae</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>PostgreSQL</td>
-<td>Sí, casi todo el DDL</td>
+<td>Comando exacto</td>
+<td>Sin él, nadie puede repetir</td>
 </tr>
 <tr>
-<td>SQLite</td>
-<td>Sí</td>
+<td>Versión del motor</td>
+<td>El plan y la semántica cambian entre versiones</td>
 </tr>
 <tr>
-<td>SQL Server</td>
-<td>Sí, en su mayor parte</td>
+<td>Datos de entrada (o su semilla)</td>
+<td>Un resultado sobre otros datos no es el mismo resultado</td>
 </tr>
 <tr>
-<td>MySQL / MariaDB</td>
-<td><strong>No</strong>: cada sentencia DDL confirma implícitamente</td>
+<td>Salida literal, no resumida</td>
+<td>El resumen ya es una interpretación</td>
 </tr>
 <tr>
-<td>Oracle</td>
-<td>No: confirmación implícita</td>
+<td>Estado previo (caché frío o caliente)</td>
+<td>Cambia el tiempo en órdenes de magnitud</td>
+</tr>
+<tr>
+<td>Qué <strong>no</strong> demuestra</td>
+<td>Evita extrapolar una demo a producción</td>
 </tr>
 </tbody>
 </table></div>
-<p>La consecuencia es enorme para las migraciones. En PostgreSQL, una migración de cinco pasos que falla en el cuarto revierte entera. En MySQL, deja el esquema a medias y hay que escribir el camino de vuelta a mano. Quien despliega sobre MySQL necesita migraciones idempotentes y verificadas paso a paso (clase 049).</p>
-<pre><code class="language-mermaid">flowchart TD
-    D[&quot;Regla del dominio&quot;] --&gt; T{&quot;¿La limita&lt;br/&gt;el tipo?&quot;}
-    T -- &quot;Sí&quot; --&gt; TY[&quot;Elegir el tipo exacto&quot;]
-    T -- &quot;No&quot; --&gt; N{&quot;¿Puede faltar&lt;br/&gt;el valor?&quot;}
-    N -- &quot;No&quot; --&gt; NN[&quot;NOT NULL&quot;]
-    N -- &quot;Sí&quot; --&gt; NU[&quot;Nulo con semántica documentada&quot;]
-    TY --&gt; C{&quot;¿Hay valores del tipo&lt;br/&gt;que el dominio prohíbe?&quot;}
-    NN --&gt; C
-    C -- &quot;Sí&quot; --&gt; CK[&quot;CHECK&quot;]
-    C -- &quot;No&quot; --&gt; OK[&quot;Listo&quot;]
-    CK --&gt; U{&quot;¿Debe ser único?&quot;}
-    U -- &quot;Sí&quot; --&gt; UQ[&quot;UNIQUE (parcial si aplica)&quot;]
-    U -- &quot;No&quot; --&gt; OK
+<p>Una captura de pantalla sin comando no es evidencia: no se puede repetir.</p>
+<pre><code class="language-mermaid">flowchart LR
+    H[&quot;Hipótesis&lt;br/&gt;«el índice mejora esta consulta»&quot;] --&gt; C[&quot;Condiciones declaradas&lt;br/&gt;versión, datos, caché&quot;]
+    C --&gt; E[&quot;Ejecución&lt;br/&gt;comando reproducible&quot;]
+    E --&gt; S[&quot;Salida literal&quot;]
+    S --&gt; I{&quot;¿La salida&lt;br/&gt;respalda la hipótesis?&quot;}
+    I -- &quot;Sí&quot; --&gt; A[&quot;Conclusión + límites&quot;]
+    I -- &quot;No&quot; --&gt; R[&quot;Refutación:&lt;br/&gt;también es resultado&quot;]
+    R --&gt; H
 </code></pre>
+<h3 id="invariantes-la-prueba-que-sí-falla">Invariantes: la prueba que sí falla</h3>
+<p>Una prueba que siempre pasa no informa. En datos, la forma útil es la <strong>invariante</strong>: una propiedad que debe cumplirse siempre y que se comprueba con una consulta que devuelve cero filas cuando todo está bien.</p>
+<pre><code class="language-sql">-- Invariante: ninguna inscripción apunta a un curso inexistente.
+SELECT e.id
+FROM enrollments e
+LEFT JOIN courses c ON c.id = e.course_id
+WHERE c.id IS NULL;
+</code></pre>
+<p>Si esa consulta devuelve filas, el dato está mal y el nombre de la invariante dice exactamente qué se rompió.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Esquema laxo, del tipo que se escribe en el primer prototipo y sobrevive tres años:</p>
-<pre><code class="language-sql">CREATE TABLE pagos (
-  id      INTEGER,
-  alumno  TEXT,
-  monto   REAL,
-  fecha   TEXT,
-  estado  TEXT
-);
+<p>Comprobemos que el dominio canónico del repositorio cumple lo que promete.</p>
+<pre><code class="language-bash">python scripts/validate_repository.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
-<p>Valores que este esquema acepta sin protestar, y que no significan nada:</p>
-<pre><code class="language-sql">INSERT INTO pagos VALUES (1, NULL, -0.1, 'ayer', 'PAGADO');
-INSERT INTO pagos VALUES (1, 'Ana', 1e308, '2026-13-45', 'pagadoo');
+<p>El laboratorio carga el esquema y los datos en SQLite <strong>en memoria</strong>, ejecuta consultas y comprueba invariantes. Tres decisiones de diseño, con su razón:</p>
+<ol>
+<li><strong>En memoria.</strong> No deja archivos entre ejecuciones, así que la ejecución número 20 es idéntica a la número 1. Un laboratorio que acumula estado produce resultados que dependen del historial de quien lo ejecuta.</li>
+<li><strong>Datos fijos, no aleatorios.</strong> Con 4 estudiantes conocidos, el resultado esperado se puede escribir a mano y contrastar. Los datos aleatorios sin semilla producen fallos irreproducibles.</li>
+<li><strong>Comprobación de claves foráneas.</strong> <code>PRAGMA foreign_key_check</code> detecta referencias colgantes que un <code>SELECT</code> normal no muestra.</li>
+</ol>
+<p>Ejemplo de traza de evidencia bien formada:</p>
+<pre><code class="language-text">Comando   : python labs/01-sql-foundations/run_lab.py
+Python    : 3.12.9
+SQLite    : 3.45.1   (SELECT sqlite_version();)
+Datos     : reference-data/school/seed.sqlite.sql (4 estudiantes, 3 cursos)
+Estado    : base en memoria, recién creada
+Salida    : LAB_OK  filas=4  invariantes=3/3
+No demuestra: nada sobre concurrencia ni sobre volumen; el conjunto cabe en una página
 </code></pre>
-<p>Dos filas con <code>id = 1</code>, un monto negativo, otro que desborda cualquier moneda real, dos fechas imposibles y un estado con una errata. Todo dentro del contrato, porque el contrato no dice nada.</p>
-<p>Esquema como contrato:</p>
-<pre><code class="language-sql">CREATE TABLE pagos (
-  id          INTEGER PRIMARY KEY,
-  student_id  INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-  monto_clp   INTEGER NOT NULL CHECK (monto_clp &gt; 0),
-  pagado_en   TEXT    NOT NULL CHECK (pagado_en LIKE '____-__-__T__:__:__Z'),
-  estado      TEXT    NOT NULL DEFAULT 'pendiente'
-              CHECK (estado IN ('pendiente','pagado','anulado')),
-  referencia  TEXT    UNIQUE
-);
-</code></pre>
-<p>Decisiones y su motivo:</p>
-<ul>
-<li><strong><code>monto_clp</code> como entero.</strong> El peso chileno no tiene decimales, así que el entero es exacto y natural. Para monedas con decimales, <code>NUMERIC(12,2)</code> o enteros de centavos con el nombre del campo diciéndolo (<code>monto_centavos</code>).</li>
-<li><strong><code>pagado_en</code> en texto ISO-8601 con <code>Z</code>.</strong> SQLite no tiene tipo de fecha; el patrón fuerza el formato y el sufijo declara UTC. En PostgreSQL sería <code>TIMESTAMPTZ NOT NULL</code>.</li>
-<li><strong><code>estado</code> enumerado con <code>CHECK</code>.</strong> «pagadoo» ahora falla en la inserción, no en el informe trimestral.</li>
-<li><strong><code>referencia UNIQUE</code>.</strong> Impide registrar dos veces el mismo pago del proveedor: es idempotencia declarada en el esquema (clase 037).</li>
-<li><strong><code>ON DELETE RESTRICT</code>.</strong> Un pago es evidencia contable; borrar al estudiante no puede borrarlo.</li>
-</ul>
-<p><strong>Comprobación de que el contrato funciona:</strong></p>
-<pre><code class="language-sql">INSERT INTO pagos (id, student_id, monto_clp, pagado_en, estado)
-VALUES (1, 999, -500, 'ayer', 'pagadoo');
--- FOREIGN KEY constraint failed  /  CHECK constraint failed
-</code></pre>
-<p>Cuatro errores detectados en la inserción en lugar de cuatro incidencias en producción.</p>
-<p><strong>Unicidad condicional.</strong> Regla frecuente: «solo puede haber un pago pendiente por estudiante». Un <code>UNIQUE (student_id)</code> prohibiría también los pagados. La forma correcta es un índice único parcial:</p>
-<pre><code class="language-sql">CREATE UNIQUE INDEX pagos_un_pendiente
-  ON pagos (student_id) WHERE estado = 'pendiente';
-</code></pre>
-<p>Disponible en PostgreSQL y SQLite. En MySQL se emula con una columna generada que vale <code>student_id</code> cuando el estado es pendiente y <code>NULL</code> en otro caso, aprovechando que los nulos no colisionan en un índice único.</p>
+<p>La última línea es la que distingue un informe honesto de uno vendedor. El laboratorio demuestra que las consultas son correctas sobre datos pequeños; <strong>no</strong> demuestra nada sobre rendimiento, concurrencia ni durabilidad.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Decisión</th>
-<th>Esquema laxo</th>
-<th>Esquema como contrato</th>
+<th>Enfoque</th>
+<th>Reproducible</th>
+<th>Coste de arranque</th>
+<th>Qué permite estudiar</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Dónde falla un dato malo</td>
-<td>En el informe, semanas después</td>
-<td>En el <code>INSERT</code>, al instante</td>
-</tr>
-<tr>
-<td>Quién valida</td>
-<td>Cada cliente, si se acuerda</td>
-<td>El motor, siempre</td>
-</tr>
-<tr>
-<td>Costo de un cliente nuevo</td>
-<td>Reimplementar las validaciones</td>
+<td>SQLite en memoria</td>
+<td>Total</td>
 <td>Ninguno</td>
+<td>SQL, planes, transacciones de una sesión</td>
 </tr>
 <tr>
-<td>Migración de datos sucios</td>
-<td>Inevitable</td>
-<td>Innecesaria</td>
+<td>SQLite en archivo</td>
+<td>Alto</td>
+<td>Ninguno</td>
+<td>Además: WAL, durabilidad, recuperación</td>
 </tr>
 <tr>
-<td>Coste de escritura</td>
-<td>Mínimo</td>
-<td>Comprobaciones por fila (despreciable)</td>
+<td>Contenedor con perfil</td>
+<td>Alto si se fija la etiqueta</td>
+<td>Minutos</td>
+<td>Concurrencia real, réplica, dialectos</td>
+</tr>
+<tr>
+<td>Servidor instalado a mano</td>
+<td>Bajo</td>
+<td>Alto</td>
+<td>Nada que no permitan los anteriores</td>
+</tr>
+<tr>
+<td>Servicio gestionado en la nube</td>
+<td>Bajo, y con costo</td>
+<td>Variable</td>
+<td>Operación real; mal sitio para aprender</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>REAL</code> para dinero.</strong> Error garantizado, solo cuestión de volumen.</li>
-<li><strong><code>TEXT</code> para todo.</strong> Traslada el análisis sintáctico a cada consulta y hace imposible ordenar y comparar.</li>
-<li><strong><code>VARCHAR(255)</code> por inercia.</strong> El 255 viene de un límite histórico de MySQL, no del dominio. Si el límite real es 40, escribe 40.</li>
-<li><strong>Guardar horas locales sin huso.</strong> Se descubre en el cambio de horario, con datos ya escritos.</li>
-<li><strong>Enumeraciones sin <code>CHECK</code>.</strong> El estado con errata entra y contamina todos los agregados.</li>
-<li><strong>Suponer DDL transaccional en MySQL.</strong> Una migración a medias en producción.</li>
+<li><strong>Usar la etiqueta <code>latest</code> en el <code>compose</code>.</strong> El mismo archivo produce entornos distintos según el día. Fija la versión.</li>
+<li><strong>Medir sobre una base con caché caliente y llamarlo mejora.</strong> Declara siempre si la ejecución fue en frío.</li>
+<li><strong>Datos aleatorios sin semilla.</strong> El fallo aparece una vez y no vuelve; es el peor tipo de fallo.</li>
+<li><strong>Confundir «la prueba pasa» con «el sistema es correcto».</strong> Una prueba que nunca ha fallado puede estar comprobando la nada. Rómpela a propósito una vez.</li>
+<li><strong>Copiar las credenciales del laboratorio a otro entorno.</strong> Son públicas: están en un archivo versionado.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los proyectos de «limpieza de datos» existen porque en su día el esquema aceptó lo que no debía. Cada <code>CHECK</code> escrito hoy es un proyecto de limpieza que no ocurrirá.</p>
+<p>El mismo criterio de evidencia sirve en un incidente real: quien afirma «la consulta empeoró tras el despliegue» necesita el plan antes, el plan después, la versión y el volumen. Sin eso, la conversación se decide por antigüedad en la empresa y no por datos.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma una tabla real y lista los valores absurdos que hoy acepta.</li>
-<li>Reescribe su DDL como contrato, con tipos, <code>NOT NULL</code>, <code>CHECK</code> y <code>UNIQUE</code>.</li>
-<li>Demuestra con inserciones fallidas que cada regla se aplica.</li>
-<li>Escribe la consulta que encuentra los datos existentes que el nuevo contrato rechazaría, y decide qué hacer con ellos.</li>
+<li>Añade al laboratorio una invariante nueva que hoy no se comprueba y que sea cierta en el dominio.</li>
+<li>Rómpela a propósito modificando los datos y captura la salida que la delata.</li>
+<li>Restaura y vuelve a ejecutar, mostrando que la salida vuelve al estado correcto.</li>
+<li>Escribe el informe de evidencia con las seis filas de la tabla de la sección de fundamentos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Demuestra numéricamente por qué <code>REAL</code> no sirve para dinero.</li>
-<li>¿Qué diferencia práctica hay entre <code>TIMESTAMP</code> y <code>TIMESTAMPTZ</code> durante un cambio de horario?</li>
-<li>Escribe la unicidad condicional de tu dominio en dos motores distintos.</li>
-<li>Tu migración falla a mitad en MySQL. Describe el estado del esquema y cómo lo recuperas.</li>
+<li>¿Por qué una base en memoria produce ejecuciones más comparables que una en archivo?</li>
+<li>Un compañero muestra un tiempo de 3 ms como prueba de que su índice funciona. ¿Qué tres datos le pedirías antes de aceptarlo?</li>
+<li>Escribe una invariante del dominio que no pueda expresarse como clave foránea, y la consulta que la comprueba.</li>
+<li>¿Qué afirmación <em>no</em> puede sostenerse con el laboratorio base, por bien que se ejecute?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Un esquema que rechaza por su cuenta los datos que no cumplen el contrato</p>
-<p>El DDL no describe los datos: los <strong>restringe</strong>. Un esquema es un contrato
-ejecutable, y la forma de comprobar que existe es intentar romperlo.</p>
-<p>El caso intenta guardar cuatro notas. Dos son válidas. Una trae nota 130
-—fuera del rango declarado— y otra trae el nombre del estudiante vacío. El
-programa no comprueba nada; las dos inválidas tienen que rebotar contra el
-esquema. La consulta devuelve lo que quedó guardado, ordenado por
-estudiante: exactamente las dos válidas.</p>
+<p><strong>Caso:</strong> La misma semilla, la misma cifra, en cualquier motor</p>
+<p>Una medición sin semilla ni protocolo no es evidencia: es una anécdota. El
+caso carga un conjunto de datos fijo —seis inscripciones con su nota— y
+devuelve dos cifras que resumen el estado del conjunto: cuántas filas hay y
+cuánto suman las notas.</p>
+<p>La prueba no es que el número sea interesante, sino que <strong>es el mismo en
+seis motores distintos y en dos ejecuciones seguidas</strong>. Cuando esas dos
+cifras coinciden, comparar tiempos entre motores empieza a significar algo;
+mientras no coincidan, no se está midiendo lo mismo.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>estudiante</th>
-<th>nota</th>
+<th>filas</th>
+<th>suma_notas</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Ada</code></td>
-<td><code>90</code></td>
-</tr>
-<tr>
-<td><code>Linus</code></td>
-<td><code>58</code></td>
+<td><code>6</code></td>
+<td><code>402</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 014</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -346,255 +289,207 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/stricttables.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/inmemorydb.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/datatype-numeric.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/schema-validation/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
-</tr>
-<tr>
-<td>OpenSearch</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://docs.opensearch.org/latest/field-types/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/stricttables.html
--- nota: la clausula STRICT es lo que hace que el tipo se comprueba de verdad.
---       Sin ella, la afinidad de tipos deja pasar una cadena en una columna
---       INTEGER si no puede convertirla.
+-- doc: https://sqlite.org/inmemorydb.html
+-- nota: el verificador abre la base en memoria, asi que cada ejecucion parte
+--       del mismo estado exacto. Esa es la condicion de una medicion repetible.
 
 -- === preparacion ===
 CREATE TABLE notas (
-    estudiante TEXT NOT NULL CHECK (length(estudiante) &gt; 0),
-    curso      TEXT NOT NULL,
-    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
-    PRIMARY KEY (estudiante, curso)
-) STRICT;
+    inscripcion INTEGER PRIMARY KEY,
+    estudiante  TEXT NOT NULL,
+    nota        INTEGER NOT NULL
+);
 
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
--- Las dos siguientes rebotan contra el contrato. OR IGNORE deja verlo sin
--- abortar el guion; sin OR IGNORE, cada una lanza un error.
-INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
-INSERT OR IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
 
 -- === consulta ===
-SELECT estudiante, nota FROM notas ORDER BY estudiante;
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene <code>CHECK</code>, <code>NOT NULL</code>, <code>UNIQUE</code> y claves foráneas, y <code>INSERT OR IGNORE</code> permite ver el rechazo sin abortar el guion: el contrato actúa a la vista.</li>
-<li><strong>Por qué no:</strong> Su tipado es dinámico por afinidad: en una columna <code>INTEGER</code> cabe la cadena <code>'alto'</code> si el motor no la puede convertir. Desde 3.37 existen las tablas <code>STRICT</code>, pero no son las de por omisión, así que casi ninguna base SQLite existente comprueba tipos.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/stricttables.html">https://sqlite.org/stricttables.html</a></li>
+<li><strong>Por qué sí:</strong> Una base de datos en memoria se crea y se destruye con el proceso: cada ejecución parte exactamente del mismo estado, que es la condición de toda medición repetible.</li>
+<li><strong>Por qué no:</strong> Precisamente por partir siempre de cero, no reproduce lo que más afecta a un sistema real: cachés calientes, archivos fragmentados y estadísticas envejecidas.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/inmemorydb.html">https://sqlite.org/inmemorydb.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/constraints.html
--- nota: DuckDB no tiene INSERT OR IGNORE para violaciones de CHECK: la fila
---       invalida aborta la sentencia. Por eso los dos intentos prohibidos van
---       comentados; descomentar cualquiera de los dos hace fallar el guion, que
---       es precisamente la prueba de que el contrato existe.
+-- doc: https://duckdb.org/docs/stable/sql/data_types/numeric.html
+-- nota: la nota se guarda como entero a proposito. Con coma flotante, dos
+--       motores pueden dar 402 y 401.99999999999994 para la misma suma, y la
+--       comparacion entre ellos dejaria de significar nada.
 
 -- === preparacion ===
 CREATE TABLE notas (
-    estudiante VARCHAR NOT NULL CHECK (length(estudiante) &gt; 0),
-    curso      VARCHAR NOT NULL,
-    nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 100),
-    PRIMARY KEY (estudiante, curso)
+    inscripcion INTEGER PRIMARY KEY,
+    estudiante  VARCHAR NOT NULL,
+    nota        INTEGER NOT NULL
 );
 
-INSERT INTO notas VALUES ('Ada', 'DB-101', 90);
-INSERT INTO notas VALUES ('Linus', 'DB-101', 58);
--- INSERT INTO notas VALUES ('Grace', 'DB-101', 130);  -- Constraint Error: CHECK
--- INSERT INTO notas VALUES ('',      'DB-101', 70);   -- Constraint Error: CHECK
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
 
 -- === consulta ===
-SELECT estudiante, nota FROM notas ORDER BY estudiante;
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> El tipado sí es estricto: una nota <code>'alto'</code> en una columna entera falla al insertar, sin conversiones silenciosas. Es el motor donde el contrato de tipos se cumple sin pedirlo.</li>
-<li><strong>Por qué no:</strong> No tiene <code>INSERT OR IGNORE</code> para violaciones de <code>CHECK</code>: la fila inválida aborta la sentencia entera. Para cargar datos sucios hay que filtrarlos antes, que es justo lo que un almacén analítico espera que hayas hecho ya.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Además de la misma reproducibilidad en memoria, tiene tipos exactos: la nota se guarda como entero a propósito, porque una suma en coma flotante puede devolver 402 en un motor y 401.99999999999994 en otro y arruinar la comparación.</li>
+<li><strong>Por qué no:</strong> Su velocidad puede ocultar el problema que se quería medir: una consulta que aquí tarda milisegundos puede tardar segundos en el motor transaccional del que salieron los datos.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/numeric.html">https://duckdb.org/docs/stable/sql/data_types/numeric.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
--- nota: el dominio da NOMBRE a la restriccion y la hace reutilizable: cualquier
---       columna declarada `nota_valida` hereda el rango, y cambiarlo en un solo
---       sitio lo cambia en todas.
+-- doc: https://www.postgresql.org/docs/current/datatype-numeric.html
+-- nota: acompanar la cifra con EXPLAIN (ANALYZE, BUFFERS) convierte el
+--       resultado en evidencia: dice tambien cuanto trabajo costo obtenerlo.
+
+DROP TABLE IF EXISTS notas;
 
 -- === preparacion ===
-DROP TABLE IF EXISTS notas;
-DROP DOMAIN IF EXISTS nota_valida;
-
-CREATE DOMAIN nota_valida AS integer CHECK (VALUE BETWEEN 0 AND 100);
-
 CREATE TABLE notas (
-    estudiante text NOT NULL CHECK (length(estudiante) &gt; 0),
-    curso      text NOT NULL,
-    nota       nota_valida NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+    inscripcion integer PRIMARY KEY,
+    estudiante  text NOT NULL,
+    nota        integer NOT NULL
 );
 
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
-
--- Los dos intentos prohibidos se ejecutan de verdad, capturando el error: la
--- prueba de que el contrato actua queda en el guion, no en un comentario.
-DO $$
-DECLARE rechazadas integer := 0;
-BEGIN
-    BEGIN
-        INSERT INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
-    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
-    END;
-    BEGIN
-        INSERT INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
-    EXCEPTION WHEN check_violation THEN rechazadas := rechazadas + 1;
-    END;
-    IF rechazadas &lt;&gt; 2 THEN
-        RAISE EXCEPTION 'el esquema acepto datos que su contrato prohibe';
-    END IF;
-END;
-$$;
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
 
 -- === consulta ===
-SELECT estudiante, nota FROM notas ORDER BY estudiante;
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es el que más lejos lleva la idea de contrato: además de <code>CHECK</code> tiene dominios (<code>CREATE DOMAIN</code>) para dar nombre a una restricción y reutilizarla, tipos enumerados y restricciones de exclusión. La regla se declara una vez y vale para toda tabla que use el tipo.</li>
-<li><strong>Por qué no:</strong> Añadir un <code>CHECK</code> a una tabla grande la bloquea mientras valida las filas existentes, salvo que se declare <code>NOT VALID</code> y se valide después: el contrato se endurece con una ventana de mantenimiento, no con un despliegue.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Con tipos exactos (<code>integer</code>, <code>numeric</code>) la suma es reproducible dígito a dígito, y <code>EXPLAIN (ANALYZE, BUFFERS)</code> permite acompañar la cifra con el trabajo que costó obtenerla: número y costo en la misma evidencia.</li>
+<li><strong>Por qué no:</strong> El estado del servidor forma parte del resultado: sin <code>VACUUM ANALYZE</code> y sin declarar si la caché estaba caliente, dos mediciones del mismo día no son comparables.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/datatype-numeric.html">https://www.postgresql.org/docs/current/datatype-numeric.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html
--- nota: antes de 8.0.16, MySQL analizaba los CHECK y los ignoraba en silencio.
---       Comprobar la version del servidor es parte de leer el esquema.
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html
+-- nota: al declarar la evidencia hay que declarar tambien la version del
+--       servidor y los parametros que importan; la configuracion por omision
+--       varia mucho entre imagenes y distribuciones.
 
--- === preparacion ===
 DROP TABLE IF EXISTS notas;
 
+-- === preparacion ===
 CREATE TABLE notas (
-    estudiante VARCHAR(50) NOT NULL CHECK (CHAR_LENGTH(estudiante) &gt; 0),
-    curso      VARCHAR(50) NOT NULL,
-    nota       INT NOT NULL CHECK (nota BETWEEN 0 AND 100),
-    PRIMARY KEY (estudiante, curso)
+    inscripcion INT PRIMARY KEY,
+    estudiante  VARCHAR(50) NOT NULL,
+    nota        INT NOT NULL
 );
 
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Ada', 'DB-101', 90);
-INSERT INTO notas (estudiante, curso, nota) VALUES ('Linus', 'DB-101', 58);
-INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('Grace', 'DB-101', 130);
-INSERT IGNORE INTO notas (estudiante, curso, nota) VALUES ('', 'DB-101', 70);
+-- La semilla: seis filas fijas, siempre las mismas, siempre en este orden.
+INSERT INTO notas (inscripcion, estudiante, nota) VALUES
+    (1, 'Ada',   90),
+    (2, 'Ada',   58),
+    (3, 'Linus', 78),
+    (4, 'Linus', 66),
+    (5, 'Grace', 55),
+    (6, 'Grace', 55);
 
 -- === consulta ===
-SELECT estudiante, nota FROM notas ORDER BY estudiante;
+SELECT COUNT(*) AS filas, SUM(nota) AS suma_notas FROM notas;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde 8.0.16 los <code>CHECK</code> se comprueban de verdad, y <code>INSERT IGNORE</code> convierte el rechazo en aviso, lo que permite cargar por lotes sin perder el lote entero.</li>
-<li><strong>Por qué no:</strong> Antes de 8.0.16 el <code>CHECK</code> se analizaba y se <strong>ignoraba en silencio</strong>: hay esquemas heredados llenos de restricciones que nunca comprobaron nada. Y sin el modo estricto, un <code>INSERT</code> con un valor imposible se convertía en un aviso y guardaba un cero.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> El conjunto de datos se carga con las mismas órdenes en cualquier instalación, así que la evidencia se puede repetir en la máquina de otra persona sin negociar nada.</li>
+<li><strong>Por qué no:</strong> La configuración por omisión varía mucho entre distribuciones e imágenes (tamaño del buffer pool, modo estricto, intercalación), así que la versión no basta: hay que declarar también los parámetros que importan.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html">https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/014-ddl-el-esquema-como-contrato/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/014-entorno-reproducible-y-evidencia/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/schema-validation/
-// nota: validationAction &quot;error&quot; es lo que convierte el esquema en contrato.
-//       Con &quot;warn&quot; el documento invalido se guarda igual y solo queda una
-//       linea en el registro que nadie lee.
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
+// nota: $group sin _id agrega sobre toda la coleccion. Los enteros de mongosh
+//       son de doble precision salvo que se use NumberInt o NumberDecimal: por
+//       eso las notas se escriben como enteros exactos y no como decimales.
 
 // === preparacion ===
 db.notas.drop();
-db.createCollection(&quot;notas&quot;, {
-  validator: {
-    $jsonSchema: {
-      bsonType: &quot;object&quot;,
-      required: [&quot;estudiante&quot;, &quot;curso&quot;, &quot;nota&quot;],
-      properties: {
-        estudiante: { bsonType: &quot;string&quot;, minLength: 1 },
-        curso: { bsonType: &quot;string&quot; },
-        nota: { bsonType: &quot;int&quot;, minimum: 0, maximum: 100 },
-      },
-    },
-  },
-  validationAction: &quot;error&quot;,
-  validationLevel: &quot;strict&quot;,
-});
-
-db.notas.insertOne({ estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(90) });
-db.notas.insertOne({ estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(58) });
-
-let rechazadas = 0;
-for (const malo of [
-  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(130) },
-  { estudiante: &quot;&quot;, curso: &quot;DB-101&quot;, nota: NumberInt(70) },
-]) {
-  try {
-    db.notas.insertOne(malo);
-  } catch (e) {
-    rechazadas += 1;
-  }
-}
-if (rechazadas !== 2) throw new Error(&quot;el validador acepto lo que prohibe&quot;);
+db.notas.insertMany([
+  { _id: 1, estudiante: &quot;Ada&quot;, nota: NumberInt(90) },
+  { _id: 2, estudiante: &quot;Ada&quot;, nota: NumberInt(58) },
+  { _id: 3, estudiante: &quot;Linus&quot;, nota: NumberInt(78) },
+  { _id: 4, estudiante: &quot;Linus&quot;, nota: NumberInt(66) },
+  { _id: 5, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
+  { _id: 6, estudiante: &quot;Grace&quot;, nota: NumberInt(55) },
+]);
 
 // === consulta ===
 db.notas
-  .find({}, { _id: 0, estudiante: 1, nota: 1 })
-  .sort({ estudiante: 1 })
-  .forEach((d) =&gt; print(d.estudiante + &quot;|&quot; + d.nota));
+  .aggregate([
+    { $group: { _id: null, filas: { $sum: 1 }, suma_notas: { $sum: &quot;$nota&quot; } } },
+  ])
+  .forEach((d) =&gt; print(d.filas + &quot;|&quot; + d.suma_notas));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> <code>$jsonSchema</code> con <code>validationAction: "error"</code> da un contrato equivalente —tipos, rangos, campos obligatorios— sin renunciar a que el documento evolucione: se puede empezar sin esquema y endurecerlo cuando el dominio se entiende.</li>
-<li><strong>Por qué no:</strong> Es opcional y se aplica solo a las escrituras posteriores: con <code>validationLevel: "moderate"</code> los documentos que ya estaban mal siguen estando mal, y nada en el documento delata que hay un contrato detrás.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/schema-validation/">https://www.mongodb.com/docs/manual/core/schema-validation/</a></li>
+<li><strong>Por qué sí:</strong> Permite comprobar que el conjunto de datos es el mismo aunque el modelo no lo sea: seis documentos y la misma suma, con la tubería de agregación haciendo el papel del <code>GROUP BY</code>.</li>
+<li><strong>Por qué no:</strong> Los números son de coma flotante salvo que se use <code>NumberDecimal</code> explícitamente, y esa diferencia aparece justo cuando se compara con un motor relacional y las sumas no cuadran en el último decimal.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -609,22 +504,10 @@ db.notas
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
-<td>CQL declara tipos, pero no tiene <code>CHECK</code> ni restricciones de dominio: no hay forma de decir «la nota está entre 0 y 100». Cualquier comprobación de ese tipo exigiría leer o validar en el servidor, y su modelo de escritura no lee nada.</td>
-<td>Validar en la capa de servicio que está delante del clúster, y aceptar que el contrato vive en el código, no en el almacén: si alguien escribe con <code>cqlsh</code>, no hay red de seguridad.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc</a></td>
-</tr>
-<tr>
 <td>Redis</td>
-<td>No hay esquema en absoluto: toda clave admite cualquier valor. La única «restricción» es el tipo de la estructura —no se puede hacer <code>INCR</code> sobre una lista—, y eso no es un contrato de dominio.</td>
-<td>Validar antes de escribir en el cliente, o usar RedisJSON con un esquema comprobado en la aplicación; en cualquier caso, la regla la sostiene el código.</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
-</tr>
-<tr>
-<td>OpenSearch</td>
-<td>Un <code>mapping</code> fija tipos, pero su comportamiento por omisión es el contrario al de un contrato: el mapeo dinámico <strong>crea</strong> el campo que aparezca. Y un campo mal tipado no se puede cambiar sin reindexar.</td>
-<td><code>dynamic: strict</code> en el mapeo, que rechaza los documentos con campos no declarados; sigue sin haber rangos ni condiciones sobre los valores.</td>
-<td><a href="https://docs.opensearch.org/latest/field-types/">doc</a></td>
+<td>No hay agregación sobre un conjunto de registros: habría que traerse los seis valores al cliente y sumarlos allí, con lo que la cifra ya no la calcula el almacén y deja de ser evidencia sobre él.</td>
+<td>Mantener el contador y la suma como claves que se actualizan en cada escritura (<code>INCRBYFLOAT</code>), asumiendo que son un resumen mantenido a mano y no un cálculo sobre los datos.</td>
+<td><a href="https://redis.io/docs/latest/commands/incrbyfloat/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -675,29 +558,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
-  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
-<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
-  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
 <li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
   Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
+  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
+<li><strong>Docker, Inc.</strong> (2026). <a href="https://docs.docker.com/compose/">Docker Compose Documentation</a>.<br />
+  Perfiles y comprobaciones de salud usados por los laboratorios con contenedores.</li>
+<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
+  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="013.html">← Anterior</a> · <a href="015.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="014">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="013.html"><span class="sentido">← Anterior · 013</span>Integridad: restricciones, claves foraneas y acciones referenciales</a>
-<a class="siguiente" href="015.html"><span class="sentido">Siguiente · 015 →</span>SELECT: filtrado, proyección y orden con semántica precisa</a>
+<a class="anterior" href="013.html"><span class="sentido">← Anterior · 013</span>Independencia de datos y los tres niveles de esquema</a>
+<a class="siguiente" href="015.html"><span class="sentido">Siguiente · 015 →</span>De requisitos ambiguos a entidades defendibles</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

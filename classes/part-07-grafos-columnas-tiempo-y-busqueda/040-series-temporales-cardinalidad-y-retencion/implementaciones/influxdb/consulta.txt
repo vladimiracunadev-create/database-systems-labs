@@ -1,0 +1,31 @@
+# motor: influxdb
+# doc: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/
+# nota: implementacion declarada. Lo importante de este archivo no es la
+#       consulta: es la linea de escritura de arriba.
+#
+#       En el protocolo de linea, lo que va antes del primer espacio son
+#       ETIQUETAS (indexadas) y lo que va despues son CAMPOS (no indexados).
+#       Cada combinacion distinta de valores de etiqueta crea una SERIE, y el
+#       indice de series vive en memoria. Poner como etiqueta algo con muchos
+#       valores distintos —un id de usuario, un id de peticion, una traza— es
+#       el error que tumba servidores de InfluxDB, y no avisa: simplemente deja
+#       de arrancar cuando el indice no cabe.
+#
+#       Regla: etiqueta lo que tenga POCOS valores distintos y sirva para
+#       filtrar; deja como campo todo lo demas.
+
+# === preparacion ===
+# Escritura con el protocolo de linea (measurement,tags fields timestamp):
+#   lecturas,sensor=sensor-1 valor=20 1787133600000000000
+#   lecturas,sensor=sensor-1 valor=21 1787134500000000000
+#   lecturas,sensor=sensor-1 valor=25 1787136300000000000
+#   lecturas,sensor=sensor-1 valor=22 1787137500000000000
+#   lecturas,sensor=sensor-1 valor=23 1787139000000000000
+
+# === consulta ===
+# Flux. La ventana es una primitiva del lenguaje, no una funcion sobre la fecha.
+from(bucket: "telemetria")
+  |> range(start: 2026-08-19T10:00:00Z, stop: 2026-08-19T12:00:00Z)
+  |> filter(fn: (r) => r._measurement == "lecturas" and r._field == "valor")
+  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)
+  |> keep(columns: ["_time", "_value"])

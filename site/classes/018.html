@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="CTE, subconsultas y funciones de ventana. Parte 03: SQL en profundidad.">
+<meta name="description" content="Normalización de 1FN a BCFN con dependencias funcionales. Parte 02: Modelado conceptual y requisitos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/018.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="018 — CTE, subconsultas y funciones de ventana · Database Systems Labs">
-<meta property="og:description" content="CTE, subconsultas y funciones de ventana. Parte 03: SQL en profundidad.">
+<meta property="og:title" content="018 — Normalización de 1FN a BCFN con dependencias funcionales · Database Systems Labs">
+<meta property="og:description" content="Normalización de 1FN a BCFN con dependencias funcionales. Parte 02: Modelado conceptual y requisitos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/018.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "018 — CTE, subconsultas y funciones de ventana", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["CTE", "recursión", "subconsulta correlacionada", "partición de ventana", "marco"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>018 — CTE, subconsultas y funciones de ventana · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "018 — Normalización de 1FN a BCFN con dependencias funcionales", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["dependencia funcional", "anomalía de actualización", "BCFN", "descomposición sin pérdida"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>018 — Normalización de 1FN a BCFN con dependencias funcionales · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,308 +49,275 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-03.html">Parte 03 · SQL en profundidad</a>
+  <a href="parte-02.html">Parte 02 · Modelado conceptual y requisitos</a>
   <span aria-hidden="true">/</span><span>Clase 018</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="018--cte-subconsultas-y-funciones-de-ventana">018 — CTE, subconsultas y funciones de ventana</h1>
+<h1 id="018--normalización-de-1fn-a-bcfn-con-dependencias-funcionales">018 — Normalización de 1FN a BCFN con dependencias funcionales</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-02-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-018%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 03 — SQL en profundidad · Intermedio ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
+<p>Parte 02 — Modelado conceptual y requisitos · Intermedio ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>CTE</code> · <code>recursión</code> · <code>subconsulta correlacionada</code> · <code>partición de ventana</code> · <code>marco</code></p>
-<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>dependencia funcional</code> · <code>anomalía de actualización</code> · <code>BCFN</code> · <code>descomposición sin pérdida</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 018&quot;]
+    C --&gt; K1[&quot;dependencia funcional&quot;]
+    C --&gt; K2[&quot;anomalía de actualización&quot;]
+    C --&gt; K3[&quot;BCFN&quot;]
+    C --&gt; K4[&quot;descomposición sin pérdida&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Resolver con SQL preguntas que exigen comparar una fila con su grupo, recorrer jerarquías o numerar dentro de particiones — sin sacar los datos a la aplicación para procesarlos allí.</p>
+<p>Normalizar con un criterio demostrable, no por costumbre. Las formas normales no son etiquetas de calidad: son teoremas sobre qué anomalías puede o no puede sufrir un esquema.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Elegir entre subconsulta, CTE y función de ventana con criterio.</li>
-<li>Escribir funciones de ventana con <code>PARTITION BY</code>, <code>ORDER BY</code> y marco explícito.</li>
-<li>Distinguir <code>ROWS</code> de <code>RANGE</code> y explicar cuándo cambia el resultado.</li>
-<li>Escribir una CTE recursiva y acotarla para que termine.</li>
-<li>Resolver «el más reciente por grupo» de tres formas y compararlas.</li>
+<li>Escribir dependencias funcionales a partir de reglas de negocio.</li>
+<li>Calcular el cierre de un conjunto de atributos y encontrar las claves candidatas.</li>
+<li>Justificar 1FN, 2FN, 3FN y BCFN señalando la anomalía que cada una elimina.</li>
+<li>Descomponer sin pérdida y comprobarlo.</li>
+<li>Explicar por qué BCFN puede no preservar dependencias, y qué hacer entonces.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="las-tres-herramientas">Las tres herramientas</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Herramienta</th>
-<th>Qué aporta</th>
-<th>Coste típico</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Subconsulta no correlacionada</td>
-<td>Se evalúa una vez</td>
-<td>Bajo</td>
-</tr>
-<tr>
-<td>Subconsulta correlacionada</td>
-<td>Se evalúa por fila del exterior</td>
-<td>Alto si no hay índice</td>
-</tr>
-<tr>
-<td>CTE (<code>WITH</code>)</td>
-<td>Nombra un resultado intermedio; permite recursión</td>
-<td>Depende de si el motor la materializa</td>
-</tr>
-<tr>
-<td>Función de ventana</td>
-<td>Calcula sobre un grupo <strong>sin colapsar filas</strong></td>
-<td>Un ordenamiento por partición</td>
-</tr>
-</tbody>
-</table></div>
-<p>La diferencia esencial entre agregado y ventana: <code>GROUP BY</code> <strong>reduce</strong> N filas a una; la función de ventana <strong>conserva</strong> las N y añade una columna con el valor del grupo. Por eso la ventana es la respuesta natural a «compara cada fila con su grupo».</p>
-<h3 id="anatomía-de-una-ventana">Anatomía de una ventana</h3>
-<pre><code class="language-sql">funcion() OVER (
-    PARTITION BY expr      -- grupos independientes
-    ORDER BY     expr      -- orden dentro del grupo
-    ROWS BETWEEN ... AND ...   -- marco: qué filas entran
-)
+<h3 id="dependencia-funcional">Dependencia funcional</h3>
+<p><code>X → Y</code> significa: si dos filas coinciden en <code>X</code>, coinciden necesariamente en <code>Y</code>. Es una afirmación sobre <strong>todas las instancias posibles</strong>, no sobre los datos de hoy. Que hoy no haya dos estudiantes con el mismo nombre no permite escribir <code>nombre → id</code>.</p>
+<p>Las dependencias vienen del dominio, no del dato. Por eso se descubren preguntando, no consultando.</p>
+<h3 id="cierre-y-claves-candidatas">Cierre y claves candidatas</h3>
+<p>El cierre <code>X⁺</code> es el conjunto de atributos determinables desde <code>X</code>. Algoritmo:</p>
+<pre><code class="language-text">X⁺ := X
+repetir hasta que no cambie:
+    para cada dependencia A → B:
+        si A ⊆ X⁺ entonces X⁺ := X⁺ ∪ B
 </code></pre>
-<p>Familias de funciones:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Familia</th>
-<th>Funciones</th>
-<th>Necesita <code>ORDER BY</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Numeración</td>
-<td><code>ROW_NUMBER</code>, <code>RANK</code>, <code>DENSE_RANK</code>, <code>NTILE</code></td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Desplazamiento</td>
-<td><code>LAG</code>, <code>LEAD</code>, <code>FIRST_VALUE</code>, <code>LAST_VALUE</code></td>
-<td>Sí</td>
-</tr>
-<tr>
-<td>Agregación</td>
-<td><code>SUM</code>, <code>AVG</code>, <code>COUNT</code>, <code>MIN</code>, <code>MAX</code> sobre <code>OVER</code></td>
-<td>Opcional</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="rows-frente-a-range-la-trampa-del-marco"><code>ROWS</code> frente a <code>RANGE</code>: la trampa del marco</h3>
-<p>Si hay <code>ORDER BY</code> y no se especifica marco, el implícito es:</p>
-<pre><code class="language-sql">RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-</code></pre>
-<p><code>RANGE</code> agrupa por <strong>valor</strong>: todas las filas con el mismo valor de ordenación entran juntas en el marco. <code>ROWS</code> cuenta <strong>filas físicas</strong>.</p>
-<p>Con notas <code>4.0, 5.0, 5.0, 6.0</code> y <code>SUM(nota) OVER (ORDER BY nota)</code>:</p>
-<pre><code class="language-text">RANGE (implícito)  -&gt;  4.0, 14.0, 14.0, 20.0
-ROWS  UNBOUNDED PRECEDING -&gt; 4.0,  9.0, 14.0, 20.0
-</code></pre>
-<p>Las dos filas empatadas en 5,0 reciben con <code>RANGE</code> el mismo acumulado (14,0), porque el marco incluye a ambas. Para un total acumulado fila a fila, hay que escribir <code>ROWS</code> explícitamente. Esta es la causa número uno de acumulados «raros» y no aparece hasta que hay empates.</p>
-<p>Lo mismo afecta a <code>LAST_VALUE</code>: con el marco implícito, «el último valor» es la fila actual, no el último del grupo. Hay que escribir <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>.</p>
-<h3 id="cte-recursiva">CTE recursiva</h3>
-<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, requiere_id, profundidad) AS (
-    SELECT curso_id, requiere_id, 1
-    FROM prerequisitos WHERE curso_id = :inicio
-  UNION ALL
-    SELECT p.curso_id, pr.requiere_id, p.profundidad + 1
-    FROM prereq p
-    JOIN prerequisitos pr ON pr.curso_id = p.requiere_id
-    WHERE p.profundidad &lt; 10                 -- cota obligatoria
-)
-SELECT DISTINCT requiere_id, MIN(profundidad) FROM prereq GROUP BY requiere_id;
-</code></pre>
-<p>Dos advertencias que no son opcionales:</p>
-<ul>
-<li><strong><code>UNION ALL</code> no elimina duplicados</strong>, así que un ciclo en los datos produce un bucle infinito. La cota de profundidad, o un <code>UNION</code> que sí deduplica, es obligatoria en datos no verificados.</li>
-<li>El cierre transitivo es exactamente lo que el cálculo relacional no expresa (clase 012). Si estas consultas dominan la carga, el modelo de grafos es la alternativa (clase 028).</li>
-</ul>
-<pre><code class="language-mermaid">flowchart TD
-    P[&quot;¿Qué necesito?&quot;] --&gt; A{&quot;¿Colapsar filas&lt;br/&gt;a un resumen?&quot;}
-    A -- &quot;Sí&quot; --&gt; G[&quot;GROUP BY&quot;]
-    A -- &quot;No&quot; --&gt; B{&quot;¿Comparar cada fila&lt;br/&gt;con su grupo?&quot;}
-    B -- &quot;Sí&quot; --&gt; W[&quot;Función de ventana&quot;]
-    B -- &quot;No&quot; --&gt; C{&quot;¿Profundidad&lt;br/&gt;variable?&quot;}
-    C -- &quot;Sí&quot; --&gt; R[&quot;CTE recursiva&lt;br/&gt;con cota&quot;]
-    C -- &quot;No&quot; --&gt; D{&quot;¿Reutilizo el&lt;br/&gt;resultado intermedio?&quot;}
-    D -- &quot;Sí&quot; --&gt; CT[&quot;CTE&quot;]
-    D -- &quot;No&quot; --&gt; S[&quot;Subconsulta&quot;]
-</code></pre>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Pregunta: <em>«la nota más reciente de cada estudiante en cada curso, junto con su diferencia respecto de la anterior»</em>.</p>
-<p><strong>Forma 1 — ventana (recomendada):</strong></p>
-<pre><code class="language-sql">WITH ordenadas AS (
-  SELECT student_id, course_id, nota, registrada_en,
-         ROW_NUMBER() OVER (PARTITION BY student_id, course_id
-                            ORDER BY registrada_en DESC, id DESC) AS rn,
-         LAG(nota)    OVER (PARTITION BY student_id, course_id
-                            ORDER BY registrada_en ASC,  id ASC)  AS nota_anterior
-  FROM notas
-)
-SELECT student_id, course_id, nota,
-       nota - nota_anterior AS variacion
-FROM ordenadas
-WHERE rn = 1;
-</code></pre>
-<p>Puntos clave:</p>
-<ul>
-<li>El <code>WHERE rn = 1</code> va en la CTE exterior porque las ventanas se calculan en el paso 5 y no se pueden filtrar en <code>WHERE</code> (clase 015).</li>
-<li>El desempate por <code>id</code> hace la selección <strong>determinista</strong> si dos registros comparten marca de tiempo. Sin él, dos ejecuciones pueden devolver notas distintas.</li>
-<li><code>LAG</code> usa orden ascendente porque «la anterior» es cronológicamente previa.</li>
-</ul>
-<p><strong>Forma 2 — subconsulta correlacionada:</strong></p>
-<pre><code class="language-sql">SELECT n.* FROM notas n
-WHERE n.registrada_en = (
-  SELECT MAX(n2.registrada_en) FROM notas n2
-  WHERE n2.student_id = n.student_id AND n2.course_id = n.course_id
-);
-</code></pre>
-<p>Legible, pero devuelve <strong>dos filas</strong> si hay empate en la marca de tiempo, y se evalúa una vez por fila del exterior.</p>
-<p><strong>Forma 3 — <code>DISTINCT ON</code> (solo PostgreSQL):</strong></p>
-<pre><code class="language-sql">SELECT DISTINCT ON (student_id, course_id) *
-FROM notas ORDER BY student_id, course_id, registrada_en DESC, id DESC;
-</code></pre>
-<p>La más corta y la más rápida en PostgreSQL, y no portable.</p>
-<p><strong>Comparación medida</strong> sobre 5 millones de filas de <code>notas</code> con índice en <code>(student_id, course_id, registrada_en)</code>:</p>
+<p><code>X</code> es superclave si <code>X⁺</code> incluye todos los atributos; es clave candidata si además ningún subconjunto propio lo consigue.</p>
+<h3 id="las-formas-normales-y-su-anomalía">Las formas normales y su anomalía</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>Forma</th>
-<th>Recorridos</th>
-<th>Determinista ante empates</th>
-<th>Portable</th>
+<th>Exige</th>
+<th>Anomalía que elimina</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Ventana</td>
-<td>1 + ordenamiento por partición</td>
-<td>Sí, con desempate</td>
-<td>Sí</td>
+<td><strong>1FN</strong></td>
+<td>Valores atómicos; sin grupos repetidos</td>
+<td>No se puede consultar ni restringir lo que está dentro de un campo compuesto</td>
 </tr>
 <tr>
-<td>Correlacionada</td>
-<td>1 + 1 por fila (o índice)</td>
-<td>No</td>
-<td>Sí</td>
+<td><strong>2FN</strong></td>
+<td>1FN + ningún atributo no primo depende de <strong>parte</strong> de una clave</td>
+<td>Redundancia en claves compuestas</td>
 </tr>
 <tr>
-<td><code>DISTINCT ON</code></td>
-<td>1</td>
-<td>Sí</td>
-<td>No</td>
+<td><strong>3FN</strong></td>
+<td>2FN + ningún atributo no primo depende de otro no primo</td>
+<td>Dependencia transitiva: actualizar en un sitio y no en otro</td>
+</tr>
+<tr>
+<td><strong>BCFN</strong></td>
+<td>Todo determinante es superclave</td>
+<td>Redundancia residual con claves candidatas solapadas</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Acumulado con marco explícito</strong> — nota acumulada por estudiante:</p>
-<pre><code class="language-sql">SELECT student_id, registrada_en, nota,
-       SUM(nota) OVER (PARTITION BY student_id ORDER BY registrada_en, id
-                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado
-FROM notas;
+<p>Las tres anomalías clásicas que aparecen si no se normaliza:</p>
+<ul>
+<li><strong>De inserción:</strong> no se puede registrar un hecho porque falta otro no relacionado.</li>
+<li><strong>De actualización:</strong> el mismo hecho está en N filas y se actualizan N−1.</li>
+<li><strong>De eliminación:</strong> borrar una fila destruye un hecho independiente.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;Tabla universal&quot;] --&gt; A{&quot;¿Valores atómicos?&quot;}
+    A -- &quot;No&quot; --&gt; A1[&quot;Separar → 1FN&quot;]
+    A -- &quot;Sí&quot; --&gt; B{&quot;¿Dependencia parcial&lt;br/&gt;de una clave compuesta?&quot;}
+    B -- &quot;Sí&quot; --&gt; B1[&quot;Extraer el determinante → 2FN&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Dependencia transitiva&lt;br/&gt;entre no primos?&quot;}
+    C -- &quot;Sí&quot; --&gt; C1[&quot;Extraer el intermedio → 3FN&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Todo determinante&lt;br/&gt;es superclave?&quot;}
+    D -- &quot;No&quot; --&gt; D1[&quot;Descomponer → BCFN&lt;br/&gt;(puede perder dependencias)&quot;]
+    D -- &quot;Sí&quot; --&gt; E[&quot;BCFN&quot;]
 </code></pre>
-<p>Escribir <code>ROWS</code> es lo que garantiza que dos notas registradas en el mismo instante no compartan el mismo acumulado.</p>
+<h3 id="descomposición-sin-pérdida">Descomposición sin pérdida</h3>
+<p>Descomponer <code>R</code> en <code>R1</code> y <code>R2</code> es <strong>sin pérdida</strong> si <code>R1 ∩ R2</code> es superclave de al menos una de las dos. Si no, la reunión de las partes produce filas que no existían: se han inventado datos. Garcia-Molina, Ullman y Widom lo demuestran; en la práctica basta con comprobar la condición de la intersección antes de partir una tabla.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Tabla sin normalizar:</p>
+<pre><code class="language-text">inscripcion(student_id, course_id, student_nombre, course_nombre,
+            teacher_id, teacher_nombre, nota)
+</code></pre>
+<p><strong>Dependencias del dominio:</strong></p>
+<pre><code class="language-text">D1  student_id                -&gt; student_nombre
+D2  course_id                 -&gt; course_nombre, teacher_id
+D3  teacher_id                -&gt; teacher_nombre
+D4  student_id, course_id     -&gt; nota
+</code></pre>
+<p><strong>Clave candidata.</strong> Calculamos <code>(student_id, course_id)⁺</code>:</p>
+<pre><code class="language-text">inicio        {student_id, course_id}
+por D1  +     student_nombre
+por D2  +     course_nombre, teacher_id
+por D3  +     teacher_nombre
+por D4  +     nota
+</code></pre>
+<p>El cierre cubre todos los atributos, y ninguna de las dos columnas por separado lo consigue. Clave candidata: <code>(student_id, course_id)</code>.</p>
+<p><strong>Diagnóstico:</strong></p>
+<ul>
+<li><strong>2FN falla</strong> por D1 y D2: <code>student_nombre</code> depende solo de <code>student_id</code>, que es <em>parte</em> de la clave. Consecuencia medible: con 2 000 estudiantes y 8 inscripciones de media, el nombre de cada estudiante se almacena 8 veces. 16 000 copias para 2 000 hechos.</li>
+<li><strong>3FN falla</strong> por D3: <code>teacher_nombre</code> depende de <code>teacher_id</code>, que no es primo. Es transitiva.</li>
+</ul>
+<p><strong>Descomposición:</strong></p>
+<pre><code class="language-sql">CREATE TABLE teachers (
+  id     INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE students (
+  id     INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE courses (
+  id         INTEGER PRIMARY KEY,
+  nombre     TEXT NOT NULL,
+  teacher_id INTEGER NOT NULL REFERENCES teachers(id)
+);
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p><strong>Comprobación de no pérdida.</strong> <code>enrollments ∩ students = {student_id}</code>, que es clave de <code>students</code>. Se cumple. Igual para <code>courses</code> y <code>teachers</code>.</p>
+<p><strong>Las tres anomalías, ya resueltas:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Anomalía</th>
+<th>Antes</th>
+<th>Después</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inserción</td>
+<td>No se puede registrar un curso nuevo sin un estudiante inscrito</td>
+<td><code>INSERT INTO courses</code> basta</td>
+</tr>
+<tr>
+<td>Actualización</td>
+<td>Corregir el nombre de un profesor toca N filas</td>
+<td>Toca 1</td>
+</tr>
+<tr>
+<td>Eliminación</td>
+<td>Borrar la última inscripción borra el curso</td>
+<td>El curso persiste</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>El caso BCFN.</strong> Añadamos la regla «cada curso lo dicta un solo profesor, y cada profesor dicta un solo curso por período». Aparecen dos claves candidatas solapadas y una dependencia <code>teacher_id, periodo → course_id</code> cuyo determinante no es superclave de la tabla resultante. Descomponer para llegar a BCFN elimina la redundancia, pero la dependencia queda repartida entre dos tablas y ya no puede comprobarse sin reunirlas.</p>
+<p>Ese es el compromiso real: <strong>BCFN no siempre preserva dependencias; 3FN siempre se puede alcanzar preservándolas</strong>. Cuando entran en conflicto, la decisión defendible suele ser quedarse en 3FN y auditar la dependencia con una invariante, en vez de perder la capacidad del motor de hacerla cumplir.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Pregunta</th>
-<th>Herramienta</th>
+<th>Nivel</th>
+<th>Redundancia</th>
+<th>Dependencias preservadas</th>
+<th>Costo de consulta</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>«Total por grupo»</td>
-<td><code>GROUP BY</code></td>
+<td>Sin normalizar</td>
+<td>Alta</td>
+<td>—</td>
+<td>Bajo (sin reuniones)</td>
 </tr>
 <tr>
-<td>«Porcentaje de cada fila sobre su grupo»</td>
-<td><code>SUM() OVER (PARTITION BY ...)</code></td>
+<td>3FN</td>
+<td>Baja</td>
+<td>Siempre alcanzable</td>
+<td>Medio</td>
 </tr>
 <tr>
-<td>«Top N por grupo»</td>
-<td><code>ROW_NUMBER()</code> + filtro externo</td>
+<td>BCFN</td>
+<td>Mínima</td>
+<td>No siempre</td>
+<td>Medio-alto</td>
 </tr>
 <tr>
-<td>«Diferencia con la fila anterior»</td>
-<td><code>LAG</code></td>
-</tr>
-<tr>
-<td>«Todos los ancestros»</td>
-<td>CTE recursiva</td>
-</tr>
-<tr>
-<td>«¿Existe alguno?»</td>
-<td><code>EXISTS</code> (clase 016)</td>
-</tr>
-<tr>
-<td>«Media móvil de 7 días»</td>
-<td><code>AVG() OVER (... ROWS 6 PRECEDING)</code></td>
+<td>Desnormalizado a propósito (clase 009)</td>
+<td>Controlada y documentada</td>
+<td>Vigiladas por invariantes</td>
+<td>Bajo en lectura, alto en escritura</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Filtrar una ventana en <code>WHERE</code>.</strong> No existe todavía; hace falta CTE o subconsulta.</li>
-<li><strong>Omitir el marco y esperar acumulado fila a fila.</strong> El implícito es <code>RANGE</code> y agrupa empates.</li>
-<li><strong><code>LAST_VALUE</code> sin marco completo.</strong> Devuelve la fila actual.</li>
-<li><strong>CTE recursiva sin cota.</strong> Un ciclo en los datos bloquea la sesión.</li>
-<li><strong><code>RANK</code> cuando se quería <code>ROW_NUMBER</code>.</strong> <code>RANK</code> deja huecos y repite posiciones en empates.</li>
-<li><strong>Ordenación no determinista.</strong> Sin desempate, el «más reciente» cambia entre ejecuciones.</li>
+<li><strong>Deducir dependencias de los datos actuales.</strong> Los datos muestran lo que ha ocurrido; la dependencia afirma lo que puede ocurrir.</li>
+<li><strong>Normalizar hasta BCFN por reflejo.</strong> Si perder la dependencia obliga a comprobarla en la aplicación, puede ser peor remedio que enfermedad.</li>
+<li><strong>Descomponer sin comprobar la no pérdida.</strong> Reunir dos partes mal elegidas fabrica filas que nunca existieron.</li>
+<li><strong>Creer que 1FN prohíbe los tipos compuestos.</strong> Prohíbe los grupos repetidos y los valores no atómicos <em>para el dominio</em>; un <code>jsonb</code> opaco que nunca se consulta por dentro es discutible, pero uno que se filtra por sus claves internas viola el espíritu de 1FN.</li>
+<li><strong>Confundir normalización con rendimiento.</strong> La normalización decide qué anomalías son posibles; el rendimiento se decide con índices y planes (parte 08).</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Bajar 5 millones de filas a la aplicación para calcular un acumulado consume ancho de banda, memoria y tiempo, y produce un resultado que el motor habría calculado usando un índice ya existente. Las funciones de ventana son, en la práctica, la diferencia entre un informe de 200 ms y uno de 40 s.</p>
+<p>Los datos sucios que aparecen en los informes casi siempre son anomalías de actualización que nadie previno. Un esquema en 3FN convierte esos errores en imposibles por construcción, y eso vale más que cualquier proceso de limpieza posterior.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Busca en tu código un cálculo por grupo que hoy se hace en la aplicación y llévalo a una ventana.</li>
-<li>Mide el volumen transferido antes y después.</li>
-<li>Escribe la misma consulta con <code>RANGE</code> y con <code>ROWS</code> y demuestra la diferencia con empates.</li>
-<li>Implementa una CTE recursiva sobre una jerarquía tuya, con cota, y prueba qué pasa al introducir un ciclo.</li>
+<li>Toma una tabla ancha real de tu trabajo y escribe sus dependencias funcionales.</li>
+<li>Calcula el cierre y determina las claves candidatas.</li>
+<li>Diagnostica en qué forma normal está, nombrando la dependencia que la rompe.</li>
+<li>Descompón, comprueba la no pérdida y cuantifica cuántas copias redundantes eliminaste.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué no se puede filtrar <code>ROW_NUMBER()</code> en <code>WHERE</code>?</li>
-<li>Da un conjunto de datos donde <code>ROWS</code> y <code>RANGE</code> produzcan acumulados distintos.</li>
-<li>Explica por qué la subconsulta correlacionada puede devolver dos filas donde la ventana devuelve una.</li>
-<li>Escribe la cota de una CTE recursiva sobre tu jerarquía y justifica el valor elegido.</li>
+<li>Da una dependencia funcional cierta en tu dominio que hoy los datos no reflejarían.</li>
+<li>Demuestra con un ejemplo pequeño que una descomposición con intersección no clave inventa filas.</li>
+<li>¿Qué anomalía concreta elimina 3FN que 2FN no elimina?</li>
+<li>Presenta un caso donde te quedarías en 3FN pudiendo llegar a BCFN, y di quién vigila entonces la dependencia perdida.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> El mejor de cada curso, con su nota, sin perder ninguna columna</p>
-<p>«El máximo por grupo» es fácil; «la fila del máximo por grupo» es la
-pregunta que rompe a <code>GROUP BY</code>. Al agrupar, las filas del grupo se
-colapsan y con ellas desaparece el nombre del estudiante que sacó esa nota.</p>
-<p>La función de ventana calcula por grupo <strong>sin</strong> colapsar: numera las filas
-dentro de cada curso por nota descendente y deja intacta cada fila. Después
-basta quedarse con la primera. El caso devuelve, por curso ordenado, quién
-obtuvo la nota más alta y cuál fue.</p>
+<p><strong>Caso:</strong> Corregir el nombre de un profesor con una sola escritura</p>
+<p>La prueba práctica de que un esquema está normalizado no es recitar formas
+normales: es que <strong>cada hecho está escrito una sola vez</strong>, así que
+corregirlo cuesta una escritura y no puede quedar a medias.</p>
+<p>El caso parte del esquema descompuesto —profesores, cursos, inscripciones—
+y corrige el nombre del profesor de DB-101 con un solo <code>UPDATE</code>. La consulta
+devuelve, por curso, el nombre del profesor y cuántas inscripciones tiene.
+En la tabla sin descomponer, ese nombre estaría repetido en cada
+inscripción y bastaría olvidar una fila para que el mismo profesor tuviera
+dos nombres distintos: la anomalía de actualización.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
 <th>curso</th>
-<th>estudiante</th>
-<th>nota</th>
+<th>profesor</th>
+<th>inscripciones</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>DB-101</code></td>
-<td><code>Ada</code></td>
-<td><code>90</code></td>
+<td><code>Ada Lovelace</code></td>
+<td><code>2</code></td>
 </tr>
 <tr>
 <td><code>SE-201</code></td>
-<td><code>Grace</code></td>
-<td><code>78</code></td>
+<td><code>Grace Hopper</code></td>
+<td><code>1</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 018</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -370,263 +337,307 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/windowfunctions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_update.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/functions/window_functions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/update.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/tutorial-window.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/window-functions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/windowfunctions.html
--- nota: ROW_NUMBER, RANK y DENSE_RANK no son lo mismo con empates: ROW_NUMBER
---       elige uno arbitrario salvo que el ORDER BY desempate, y por eso aqui
---       lleva `, estudiante` al final.
+-- doc: https://sqlite.org/lang_update.html
+-- nota: la prueba de la normalizacion esta en el UPDATE, no en el SELECT: una
+--       sola escritura corrige el hecho en todas partes.
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+CREATE TABLE cursos (
+    id          INTEGER PRIMARY KEY,
+    codigo      TEXT NOT NULL,
+    profesor_id INTEGER NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante TEXT NOT NULL,
+    curso_id   INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
 
 -- === consulta ===
--- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
--- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
--- nombre siguen disponibles al filtrar por la posicion.
-WITH clasificacion AS (
-    SELECT curso,
-           estudiante,
-           nota,
-           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
-    FROM notas
-)
-SELECT curso, estudiante, nota
-FROM clasificacion
-WHERE puesto = 1
-ORDER BY curso;
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene funciones de ventana y CTE desde la versión 3.25 (2018), con la sintaxis del estándar: lo que se escribe aquí se lleva tal cual a PostgreSQL.</li>
-<li><strong>Por qué no:</strong> No tiene <code>CTE</code> materializadas ni control sobre cómo se evalúan, así que en consultas grandes puede recalcular la misma subexpresión varias veces sin que haya forma de impedirlo.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/windowfunctions.html">https://sqlite.org/windowfunctions.html</a></li>
+<li><strong>Por qué sí:</strong> La descomposición y la reunión que la deshace son operaciones del modelo relacional puro: aquí se ven sin ruido de infraestructura.</li>
+<li><strong>Por qué no:</strong> No tiene forma de declarar una dependencia funcional distinta de una clave, así que la normalización queda documentada en la cabeza de quien diseñó y no en el esquema.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_update.html">https://sqlite.org/lang_update.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/functions/window_functions.html
--- nota: la forma corta de DuckDB seria
---         SELECT curso, estudiante, nota FROM notas
---         QUALIFY ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC) = 1
---       Aqui se escribe la portable, que es la que sirve en los demas motores.
+-- doc: https://duckdb.org/docs/stable/sql/statements/update.html
+-- nota: para DESCUBRIR dependencias funcionales en datos existentes:
+--       SELECT curso, COUNT(DISTINCT profesor) FROM plano GROUP BY curso
+--       HAVING COUNT(DISTINCT profesor) &gt; 1;  -- si devuelve filas, la
+--       dependencia esta rota y hay anomalias ya presentes.
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    nota       INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+CREATE TABLE cursos (
+    id          INTEGER PRIMARY KEY,
+    codigo      VARCHAR NOT NULL,
+    profesor_id INTEGER NOT NULL
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR NOT NULL,
+    curso_id   INTEGER NOT NULL,
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
 
 -- === consulta ===
--- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
--- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
--- nombre siguen disponibles al filtrar por la posicion.
-WITH clasificacion AS (
-    SELECT curso,
-           estudiante,
-           nota,
-           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
-    FROM notas
-)
-SELECT curso, estudiante, nota
-FROM clasificacion
-WHERE puesto = 1
-ORDER BY curso;
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Las ventanas están implementadas de forma vectorizada y admite además <code>QUALIFY</code>, que filtra por el resultado de la ventana sin necesidad de la CTE envolvente: la consulta se reduce a la mitad.</li>
-<li><strong>Por qué no:</strong> <code>QUALIFY</code> no es estándar: es cómodo aquí y hay que reescribirlo al migrar a cualquier otro motor salvo Snowflake y Teradata.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/window_functions.html">https://duckdb.org/docs/stable/sql/functions/window_functions.html</a></li>
+<li><strong>Por qué sí:</strong> Es la herramienta ideal para el paso previo: descubrir las dependencias funcionales que hay <strong>de verdad</strong> en un volcado, contando cuántos valores distintos toma una columna por cada valor de otra.</li>
+<li><strong>Por qué no:</strong> En analítica la normalización se revierte a propósito: el esquema en estrella repite el nombre del profesor en cada fila de hechos porque ahorrarse la reunión vale más que ahorrarse el espacio.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/update.html">https://duckdb.org/docs/stable/sql/statements/update.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/tutorial-window.html
--- nota: la forma propia de PostgreSQL es
---         SELECT DISTINCT ON (curso) curso, estudiante, nota
---         FROM notas ORDER BY curso, nota DESC, estudiante;
---       que suele ser mas barata. Ata la consulta a PostgreSQL, y eso hay que
---       decidirlo, no descubrirlo al migrar.
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: las claves foraneas hacen cumplir la descomposicion; sin ellas, la
+--       normalizacion es solo una promesa del diagrama.
 
-DROP TABLE IF EXISTS notas;
+DROP TABLE IF EXISTS inscripciones, cursos, profesores;
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante text NOT NULL,
-    curso      text NOT NULL,
-    nota       integer NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+CREATE TABLE cursos (
+    id          integer PRIMARY KEY,
+    codigo      text NOT NULL,
+    profesor_id integer NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante text NOT NULL,
+    curso_id   integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
 
 -- === consulta ===
--- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
--- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
--- nombre siguen disponibles al filtrar por la posicion.
-WITH clasificacion AS (
-    SELECT curso,
-           estudiante,
-           nota,
-           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
-    FROM notas
-)
-SELECT curso, estudiante, nota
-FROM clasificacion
-WHERE puesto = 1
-ORDER BY curso;
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene el catálogo completo de ventanas y, además, <code>DISTINCT ON</code>, que resuelve exactamente esta pregunta en una línea y suele ser más barato que la ventana.</li>
-<li><strong>Por qué no:</strong> Una ventana obliga a ordenar dentro de cada partición: sin un índice que ya provea ese orden, la consulta ordena todas las filas antes de descartar casi todas.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-window.html">https://www.postgresql.org/docs/current/tutorial-window.html</a></li>
+<li><strong>Por qué sí:</strong> Las claves foráneas hacen cumplir la descomposición: no se puede insertar un curso cuyo profesor no exista, que es la mitad de lo que la normalización promete.</li>
+<li><strong>Por qué no:</strong> Cada nivel de normalización añade una reunión a las consultas de lectura; en un panel que se abre mil veces por minuto, esas reuniones son el costo que después justifica desnormalizar a propósito.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/window-functions.html
--- nota: esta consulta NO funciona en MySQL 5.7: alli habia que emularla con
---       variables de sesion, cuyo resultado dependia del orden de evaluacion y
---       dejo de estar garantizado en 8.0.
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html
+-- nota: con ONLY_FULL_GROUP_BY activo (por omision desde 5.7) esta consulta es
+--       legal porque cada columna no agregada esta en el GROUP BY. Sin ese
+--       modo, MySQL aceptaba consultas ambiguas y devolvia cualquier fila.
 
-DROP TABLE IF EXISTS notas;
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+DROP TABLE IF EXISTS profesores;
 
 -- === preparacion ===
-CREATE TABLE notas (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    nota       INT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
+-- Forma normalizada: el nombre del profesor vive UNA vez.
+CREATE TABLE profesores (
+    id     INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL
 );
-INSERT INTO notas (estudiante, curso, nota) VALUES
-    ('Ada',   'DB-101', 90),
-    ('Linus', 'DB-101', 58),
-    ('Grace', 'DB-101', 72),
-    ('Ada',   'SE-201', 66),
-    ('Grace', 'SE-201', 78);
+CREATE TABLE cursos (
+    id          INT PRIMARY KEY,
+    codigo      VARCHAR(50) NOT NULL,
+    profesor_id INT NOT NULL REFERENCES profesores(id)
+);
+CREATE TABLE inscripciones (
+    estudiante VARCHAR(50) NOT NULL,
+    curso_id   INT NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante, curso_id)
+);
+
+INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
+INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
+INSERT INTO inscripciones (estudiante, curso_id) VALUES
+    ('Ada', 10), ('Linus', 10), ('Grace', 20);
+
+-- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
+-- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
+-- mismo profesor tuviera dos nombres.
+UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
 
 -- === consulta ===
--- La CTE nombra el paso intermedio y la ventana hace lo que GROUP BY no puede:
--- calcular por grupo SIN colapsar las filas del grupo. Por eso la nota y el
--- nombre siguen disponibles al filtrar por la posicion.
-WITH clasificacion AS (
-    SELECT curso,
-           estudiante,
-           nota,
-           ROW_NUMBER() OVER (PARTITION BY curso ORDER BY nota DESC, estudiante) AS puesto
-    FROM notas
-)
-SELECT curso, estudiante, nota
-FROM clasificacion
-WHERE puesto = 1
-ORDER BY curso;
+SELECT c.codigo AS curso,
+       p.nombre AS profesor,
+       COUNT(i.estudiante) AS inscripciones
+FROM cursos c
+JOIN profesores p ON p.id = c.profesor_id
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo, p.nombre
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde 8.0 tiene CTE y funciones de ventana con la sintaxis estándar, lo que retiró de circulación los trucos con variables de sesión que se usaban antes y que dependían del orden de evaluación.</li>
-<li><strong>Por qué no:</strong> En 5.7 y anteriores no existen, y todavía hay mucha base en producción con esas versiones: la consulta portable de esta clase no se puede usar allí.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/window-functions.html">https://dev.mysql.com/doc/refman/8.4/en/window-functions.html</a></li>
+<li><strong>Por qué sí:</strong> Mismo esquema y mismas garantías con InnoDB; es además el motor donde más se encuentran tablas heredadas sin normalizar, así que es donde más se practica la descomposición sobre datos reales.</li>
+<li><strong>Por qué no:</strong> Su modo <code>ONLY_FULL_GROUP_BY</code> no siempre estuvo activo: hay código antiguo que agrupa mal y sigue devolviendo un resultado, lo que esconde justo los errores que la normalización previene.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/018-cte-subconsultas-y-funciones-de-ventana/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/
-// nota: $setWindowFields es la ventana: partitionBy es el PARTITION BY y
-//       sortBy es el ORDER BY de dentro de la ventana. Y aqui aparece un
-//       limite que SQL no tiene: $documentNumber, $rank y $denseRank exigen un
-//       sortBy de UNA sola clave, asi que no se puede desempatar por un
-//       segundo criterio como hace el ROW_NUMBER de la version SQL.
+// doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+// nota: modelo normalizado A PROPOSITO. Es lo correcto cuando el dato
+//       referenciado cambia y lo comparten muchos documentos; si el nombre del
+//       profesor estuviera incrustado en cada inscripcion, este updateOne
+//       tendria que ser un updateMany sobre miles de documentos.
 
 // === preparacion ===
-db.notas.drop();
-db.notas.insertMany([
-  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot;, nota: 90 },
-  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot;, nota: 58 },
-  { estudiante: &quot;Grace&quot;, curso: &quot;DB-101&quot;, nota: 72 },
-  { estudiante: &quot;Ada&quot;, curso: &quot;SE-201&quot;, nota: 66 },
-  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot;, nota: 78 },
+db.profesores.drop();
+db.cursos.drop();
+db.inscripciones.drop();
+
+db.profesores.insertMany([
+  { _id: 1, nombre: &quot;A. Lovelace&quot; },
+  { _id: 2, nombre: &quot;Grace Hopper&quot; },
+]);
+db.cursos.insertMany([
+  { _id: 10, codigo: &quot;DB-101&quot;, profesor_id: 1 },
+  { _id: 20, codigo: &quot;SE-201&quot;, profesor_id: 2 },
+]);
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso_id: 10 },
+  { estudiante: &quot;Linus&quot;, curso_id: 10 },
+  { estudiante: &quot;Grace&quot;, curso_id: 20 },
 ]);
 
+db.profesores.updateOne({ _id: 1 }, { $set: { nombre: &quot;Ada Lovelace&quot; } });
+
 // === consulta ===
-db.notas
+db.cursos
   .aggregate([
-    { $setWindowFields: {
-        partitionBy: &quot;$curso&quot;,
-        sortBy: { nota: -1 },
-        output: { puesto: { $documentNumber: {} } } } },
-    { $match: { puesto: 1 } },
-    { $project: { _id: 0, curso: 1, estudiante: 1, nota: 1 } },
+    { $lookup: { from: &quot;profesores&quot;, localField: &quot;profesor_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;p&quot; } },
+    { $unwind: &quot;$p&quot; },
+    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
+                 foreignField: &quot;curso_id&quot;, as: &quot;i&quot; } },
+    { $project: { _id: 0, curso: &quot;$codigo&quot;, profesor: &quot;$p.nombre&quot;,
+                  inscripciones: { $size: &quot;$i&quot; } } },
     { $sort: { curso: 1 } },
   ])
-  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.estudiante + &quot;|&quot; + d.nota));
+  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.profesor + &quot;|&quot; + d.inscripciones));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde la versión 5.0 tiene <code>$setWindowFields</code> con <code>$rank</code> y <code>$denseRank</code>: la misma idea de ventana, con particiones y orden, dentro de la tubería de agregación.</li>
-<li><strong>Por qué no:</strong> La etapa bloquea el flujo y ordena en memoria por partición; con particiones grandes hay que permitir el uso de disco explícitamente (<code>allowDiskUse</code>) o la consulta falla.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/setWindowFields/</a></li>
+<li><strong>Por qué sí:</strong> Admite el modelo normalizado con referencias entre colecciones, y es la forma correcta cuando el dato referenciado cambia y lo comparten muchos documentos, como el nombre de un profesor.</li>
+<li><strong>Por qué no:</strong> Va contra la corriente del modelo documental: al no haber claves foráneas, nada impide que un curso apunte a un profesor borrado, y la reunión hay que pedirla explícitamente con <code>$lookup</code> en cada consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -642,9 +653,15 @@ db.notas
 <tbody>
 <tr>
 <td>Apache Cassandra</td>
-<td>No hay funciones de ventana ni CTE. <code>GROUP BY</code> existe, pero solo dentro de una partición y con agregados básicos: «la fila del máximo por grupo» no se puede expresar.</td>
-<td>Modelar la tabla con la nota como columna de agrupamiento descendente y pedir <code>LIMIT 1</code> por partición: el ranking se resuelve por el orden físico, y solo para el criterio con el que se modeló.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+<td>Su guía de modelado recomienda lo contrario: duplicar el nombre del profesor en cada fila que lo necesite, porque no hay reuniones y una lectura debe resolverse en una sola partición.</td>
+<td>Aceptar la duplicación y asumir el costo de actualizarla: cambiar el nombre del profesor pasa a ser un trabajo por lotes sobre todas las filas que lo copiaron, no un <code>UPDATE</code>.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay reuniones ni referencias que el servidor entienda: normalizar significaría hacer dos o tres viajes por lectura y reunir en el cliente.</td>
+<td>Guardar el nombre del profesor en una clave propia y referenciarla desde la aplicación, aceptando que la coherencia entre claves la mantiene el código.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -695,29 +712,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
-  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
-<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
-  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
-<li><strong>ISO/IEC JTC 1/SC 32</strong> (2023). <a href="https://www.iso.org/standard/76583.html">ISO/IEC 9075: Information technology - Database languages - SQL</a>.<br />
-  Norma del lenguaje SQL. Ningún motor la implementa por completo.</li>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="017.html">← Anterior</a> · <a href="019.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="018">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="017.html"><span class="sentido">← Anterior · 017</span>Agregación, GROUP BY y HAVING sin duplicar filas</a>
-<a class="siguiente" href="019.html"><span class="sentido">Siguiente · 019 →</span>Nulos y lógica de tres valores</a>
+<a class="anterior" href="017.html"><span class="sentido">← Anterior · 017</span>Claves, identidad y el debate natural frente a sustituta</a>
+<a class="siguiente" href="019.html"><span class="sentido">Siguiente · 019 →</span>Desnormalización deliberada y patrones de acceso</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

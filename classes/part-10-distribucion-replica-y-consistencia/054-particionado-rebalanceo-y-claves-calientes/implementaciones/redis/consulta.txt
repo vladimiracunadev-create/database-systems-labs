@@ -1,0 +1,25 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/
+# nota: en Redis Cluster el espacio de claves se parte en 16384 RANURAS fijas y
+#       cada nodo posee un conjunto de ranuras. Mover datos es mover ranuras.
+#         CLUSTER KEYSLOT pedido:1     -> a que ranura va esta clave
+#       Y la trampa: una operacion sobre varias claves exige que todas caigan en
+#       la misma ranura, lo que obliga a etiquetas de hash como
+#       {cliente-A}:pedido:1 ... que concentran a proposito y reintroducen la
+#       clave caliente que se queria evitar.
+
+# === preparacion ===
+FLUSHDB
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto A 1
+HINCRBY reparto B 1
+HINCRBY reparto C 1
+
+# === consulta ===
+EVAL "local t=redis.call('HGETALL','reparto') local m={} for i=1,#t,2 do m[#m+1]={t[i],tonumber(t[i+1])} end table.sort(m,function(a,b) if a[2]~=b[2] then return a[2]>b[2] end return a[1]<b[1] end) local r={} for _,v in ipairs(m) do r[#r+1]=v[1]..'|'..v[2] end return r" 0

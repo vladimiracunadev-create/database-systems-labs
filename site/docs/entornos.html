@@ -55,11 +55,59 @@
 <h2 id="ruta-a--sin-contenedores">Ruta A — Sin contenedores</h2>
 <p>Python 3.11+ y SQLite integrado. Es la ruta inicial y la utilizada por validación continua.</p>
 <h2 id="ruta-b--contenedores-locales">Ruta B — Contenedores locales</h2>
-<p>Docker Desktop, Docker Engine o alternativa compatible con Compose. Levanta solo el perfil necesario y detén servicios al terminar:</p>
-<pre><code class="language-bash">docker compose --profile relational up -d
-docker compose --profile relational down --volumes
+<p>Docker Desktop, Docker Engine o alternativa compatible con Compose. Levanta solo
+el perfil necesario y detén los servicios al terminar:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Perfil</th>
+<th>Motores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>relational</code></td>
+<td>PostgreSQL, MySQL</td>
+</tr>
+<tr>
+<td><code>document</code></td>
+<td>MongoDB</td>
+</tr>
+<tr>
+<td><code>cache</code></td>
+<td>Redis</td>
+</tr>
+<tr>
+<td><code>graph</code></td>
+<td>Neo4j</td>
+</tr>
+<tr>
+<td><code>todo</code></td>
+<td>los cinco a la vez</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-bash">docker compose --profile todo up -d --wait
+python scripts/verificar_equivalencia.py --con-servicios --verbose
+docker compose --profile todo down --volumes
 </code></pre>
-<p><code>--volumes</code> elimina datos del laboratorio; nunca lo uses sobre un proyecto real.</p>
+<p><code>--wait</code> no devuelve el control hasta que los healthcheck dan por sanos a los
+cinco motores, así que el verificador no arranca antes de tiempo. Y <code>--volumes</code>
+elimina los datos del laboratorio: nunca lo uses sobre un proyecto real.</p>
+<p>Si la máquina ya tiene un PostgreSQL o un MySQL escuchando en el puerto de
+siempre, los puertos publicados son configurables:</p>
+<pre><code class="language-bash">PGPORT=5433 MYSQL_PORT=3307 docker compose --profile relational up -d --wait
+</code></pre>
+<p>El verificador <strong>no</strong> necesita esos puertos: habla con cada motor a través de
+<code>docker compose exec</code>, usando el cliente oficial que ya está dentro del
+contenedor. Los puertos están publicados solo para poder conectarse con un
+cliente gráfico.</p>
+<h3 id="qué-se-ejecuta-sin-contenedores">Qué se ejecuta sin contenedores</h3>
+<p>Los motores de núcleo —SQLite y DuckDB— no necesitan ningún servicio:</p>
+<pre><code class="language-bash">python scripts/verificar_equivalencia.py --verbose
+</code></pre>
+<p>Eso cubre las implementaciones de núcleo de las 74 clases. El resto se declara
+como no ejecutado, y el informe lo dice con esas palabras.</p>
 <h2 id="ruta-c--instalación-nativa">Ruta C — Instalación nativa</h2>
 <p>Útil para administración profunda. Documenta versión, puerto, ruta de datos y servicio. No mezcles una instalación real con las credenciales de demostración.</p>
 <h2 id="ruta-d--servicio-administrado">Ruta D — Servicio administrado</h2>
@@ -70,8 +118,8 @@ docker compose --profile relational down --volumes
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/docs/ENVIRONMENTS.md" rel="noopener"><code>docs/ENVIRONMENTS.md</code></a></p>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

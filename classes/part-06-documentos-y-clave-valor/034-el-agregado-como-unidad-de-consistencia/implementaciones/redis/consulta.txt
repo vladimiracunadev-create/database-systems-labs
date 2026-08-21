@@ -1,0 +1,18 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/programmability/eval-intro/
+# nota: el script Lua es la unidad atomica: se ejecuta entero, sin que ninguna
+#       otra orden se cuele en medio. Es lo que permite que la linea nueva y el
+#       total suban juntos. Lo que NO garantiza es durabilidad: atomico y
+#       durable son dos propiedades distintas.
+
+# === preparacion ===
+FLUSHDB
+HSET pedido:P-1 total 200
+HSET pedido:P-1:linea teclado 120
+HSET pedido:P-1:linea raton 80
+
+# Anadir la linea y subir el total, sin estado intermedio observable.
+EVAL "redis.call('HSET','pedido:P-1:linea','cable',100) redis.call('HINCRBY','pedido:P-1','total',100) return 1" 0
+
+# === consulta ===
+EVAL "local t=redis.call('HGET','pedido:P-1','total') local ls=redis.call('HVALS','pedido:P-1:linea') local s=0 for _,v in ipairs(ls) do s=s+tonumber(v) end return {'P-1|'..t..'|'..s}" 0

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Inyección SQL y el contrato de parametrización. Parte 10: Operación, seguridad y gobierno.">
+<meta name="description" content="Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes. Parte 09: Almacenamiento, índices y planes.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/051.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="051 — Inyección SQL y el contrato de parametrización · Database Systems Labs">
-<meta property="og:description" content="Inyección SQL y el contrato de parametrización. Parte 10: Operación, seguridad y gobierno.">
+<meta property="og:title" content="051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes · Database Systems Labs">
+<meta property="og:description" content="Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes. Parte 09: Almacenamiento, índices y planes.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/051.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "051 — Inyección SQL y el contrato de parametrización", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["consulta parametrizada", "identificador dinamico", "lista blanca", "defensa en profundidad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>051 — Inyección SQL y el contrato de parametrización · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["índice parcial", "índice de expresión", "GIN", "BRIN", "costo de mantenimiento"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,289 +49,620 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-10.html">Parte 10 · Operación, seguridad y gobierno</a>
+  <a href="parte-09.html">Parte 09 · Almacenamiento, índices y planes</a>
   <span aria-hidden="true">/</span><span>Clase 051</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="051--inyección-sql-y-el-contrato-de-parametrización">051 — Inyección SQL y el contrato de parametrización</h1>
+<h1 id="051--índices-especializados-hash-gin-gist-brin-parciales-y-cubrientes">051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-09-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-051%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 10 — Operación, seguridad y gobierno · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>consulta parametrizada</code> · <code>identificador dinamico</code> · <code>lista blanca</code> · <code>defensa en profundidad</code></p>
+<p>Parte 09 — Almacenamiento, índices y planes · Avanzado ·
+3 horas estimadas · motores <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>índice parcial</code> · <code>índice de expresión</code> · <code>GIN</code> · <code>BRIN</code> · <code>costo de mantenimiento</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 051&quot;]
+    C --&gt; K1[&quot;índice parcial&quot;]
+    C --&gt; K2[&quot;índice de expresión&quot;]
+    C --&gt; K3[&quot;GIN&quot;]
+    C --&gt; K4[&quot;BRIN&quot;]
+    C --&gt; K5[&quot;costo de mantenimiento&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Eliminar la inyección SQL por construcción, entendiendo por qué la parametrización funciona y qué casos no cubre — que son justamente donde siguen apareciendo las vulnerabilidades.</p>
+<p>Salir del B-Tree. Hay consultas —contención de arreglos, texto, rangos, geometría, tablas enormes correlacionadas— para las que existe una estructura mucho mejor, y saber cuál evita rediseños innecesarios.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar por qué una consulta parametrizada es inmune, a nivel de protocolo.</li>
-<li>Identificar las cuatro partes de una consulta que <strong>no</strong> admiten parámetros.</li>
-<li>Aplicar listas blancas y funciones de citado para esos casos.</li>
-<li>Reconocer inyección de segundo orden y en consultas dinámicas del servidor.</li>
-<li>Aplicar defensa en profundidad más allá de la parametrización.</li>
+<li>Elegir el tipo de índice según el operador de la consulta.</li>
+<li>Diseñar índices parciales y calcular su ahorro.</li>
+<li>Usar índices de expresión y saber cuándo son obligatorios.</li>
+<li>Explicar cuándo BRIN supera a B-Tree por dos órdenes de magnitud en tamaño.</li>
+<li>Medir el costo de mantenimiento de cada índice.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="por-qué-funciona-la-parametrización">Por qué funciona la parametrización</h3>
-<p>La inyección ocurre porque el motor recibe <strong>una sola cadena</strong> y decide qué es código y qué es dato al analizarla. Si el dato contiene sintaxis, se convierte en código.</p>
-<p>Con una consulta parametrizada, el cliente envía <strong>dos cosas separadas</strong> por el protocolo:</p>
-<pre><code class="language-text">1. La plantilla:  SELECT * FROM students WHERE email = $1
-   → el motor la analiza y planifica AHORA, sin ver ningún valor
-2. Los valores:   ['ana@ejemplo.cl'&quot;; DROP TABLE students;--']
-   → llegan después, cuando el árbol sintáctico YA está fijado
-</code></pre>
-<p>El valor <strong>nunca pasa por el analizador sintáctico</strong>. No es que se escape bien: es que no hay nada que escapar, porque no participa en el análisis. Es una garantía estructural, no una comprobación.</p>
-<p>OWASP lo sitúa como la defensa principal y la especificación PEP 249 la define para todo cliente Python conforme.</p>
-<pre><code class="language-python"># CORRECTO
-cur.execute(&quot;SELECT * FROM students WHERE email = %s&quot;, (email,))
-cur.execute(&quot;SELECT * FROM students WHERE email = ?&quot;, (email,))   # sqlite3
-
-# VULNERABLE — todas las formas, incluida la que parece moderna
-cur.execute(&quot;SELECT * FROM students WHERE email = '&quot; + email + &quot;'&quot;)
-cur.execute(&quot;SELECT * FROM students WHERE email = '%s'&quot; % email)
-cur.execute(f&quot;SELECT * FROM students WHERE email = '{email}'&quot;)
-</code></pre>
-<p>La tercera es hoy la más frecuente: la f-string parece limpia y es exactamente la misma concatenación.</p>
-<h3 id="lo-que-no-se-puede-parametrizar">Lo que no se puede parametrizar</h3>
-<p>Un parámetro ocupa el lugar de un <strong>valor</strong>. No puede ocupar el lugar de un identificador ni de sintaxis, porque el motor necesita ambos para analizar la consulta:</p>
+<h3 id="el-catálogo">El catálogo</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Elemento</th>
-<th>¿Parametrizable?</th>
-<th>Solución</th>
+<th>Tipo</th>
+<th>Operadores que acelera</th>
+<th>Tamaño</th>
+<th>Uso típico</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Valor en <code>WHERE</code>, <code>VALUES</code>, <code>SET</code></td>
-<td><strong>Sí</strong></td>
-<td>Parámetro</td>
+<td><strong>B-Tree</strong></td>
+<td><code>=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>BETWEEN</code>, <code>LIKE 'p%'</code>, <code>ORDER BY</code></td>
+<td>Medio</td>
+<td>Todo lo ordenable</td>
 </tr>
 <tr>
-<td>Nombre de tabla o columna</td>
-<td>No</td>
-<td><strong>Lista blanca</strong></td>
+<td><strong>Hash</strong></td>
+<td>Solo <code>=</code></td>
+<td>Menor que B-Tree</td>
+<td>Igualdad pura sobre claves anchas</td>
 </tr>
 <tr>
-<td>Dirección de <code>ORDER BY</code></td>
-<td>No</td>
-<td>Lista blanca (<code>ASC</code>/<code>DESC</code>)</td>
+<td><strong>GIN</strong></td>
+<td><code>@&gt;</code>, <code>?</code>, <code>@@</code>, <code>&amp;&amp;</code> (arreglos, <code>jsonb</code>, texto)</td>
+<td>Grande</td>
+<td>Contención y búsqueda de texto</td>
 </tr>
 <tr>
-<td>Nombre de esquema</td>
-<td>No</td>
-<td>Lista blanca</td>
+<td><strong>GiST</strong></td>
+<td><code>&amp;&amp;</code>, <code>&lt;@</code>, <code>&lt;-&gt;</code> (rangos, geometría, vecino más cercano)</td>
+<td>Medio</td>
+<td>Rangos, geografía, exclusión</td>
 </tr>
 <tr>
-<td>Número de elementos de <code>IN</code></td>
-<td>Parcial</td>
-<td>Generar tantos marcadores como elementos, o pasar un arreglo</td>
+<td><strong>SP-GiST</strong></td>
+<td>Estructuras no equilibradas</td>
+<td>Medio</td>
+<td>Redes, cuadtrees</td>
 </tr>
 <tr>
-<td><code>LIMIT</code> / <code>OFFSET</code></td>
-<td>Sí en la mayoría</td>
-<td>Parámetro, y validar que sea entero</td>
+<td><strong>BRIN</strong></td>
+<td><code>&lt;</code>, <code>&gt;</code>, <code>BETWEEN</code> con datos correlacionados</td>
+<td><strong>Diminuto</strong></td>
+<td>Tablas enormes ordenadas por inserción</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>La lista blanca es la única defensa correcta para identificadores.</strong> No una expresión regular, no un escape: una comparación contra un conjunto cerrado de valores permitidos, definido en el código.</p>
-<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;s.nombre&quot;, &quot;nota&quot;: &quot;e.nota&quot;, &quot;fecha&quot;: &quot;e.registrada_en&quot;}
-SENTIDOS  = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
-
-def listar(cur, orden: str, sentido: str, limite: int):
-    col = ORDENABLES.get(orden)
-    dir_ = SENTIDOS.get(sentido.lower())
-    if col is None or dir_ is None:
-        raise ValueError(&quot;orden no permitido&quot;)
-    # `col` y `dir_` salen del diccionario, NUNCA de la entrada del usuario:
-    # la entrada solo se usa como clave de búsqueda.
-    cur.execute(f&quot;SELECT s.nombre, e.nota FROM ... ORDER BY {col} {dir_} LIMIT %s&quot;,
-                (min(int(limite), 100),))
+<p>La pregunta que guía la elección no es «qué columna» sino <strong>«qué operador»</strong>. <code>WHERE etiquetas @&gt; ARRAY['sql']</code> no lo acelera ningún B-Tree, por bien que se elija la columna.</p>
+<h3 id="brin-el-índice-que-cabe-en-un-suspiro">BRIN: el índice que cabe en un suspiro</h3>
+<p>Un índice de rango de bloques guarda, por cada grupo de páginas (128 por defecto), el valor mínimo y máximo. No localiza filas: <strong>descarta bloques</strong>.</p>
+<pre><code class="language-text">Tabla de 100 GB con 13 millones de páginas
+B-Tree sobre una columna:   ~3 GB
+BRIN con pages_per_range=128: ~100 000 rangos × ~32 B ≈ 3 MB
 </code></pre>
-<p>La clave está en el comentario: lo que se interpola es el <strong>valor del diccionario</strong>, no la entrada. La entrada solo decide qué valor conocido se usa.</p>
-<h3 id="inyección-de-segundo-orden">Inyección de segundo orden</h3>
-<p>El dato entra parametrizado —y por tanto se guarda íntegro, con sus comillas— y se inyecta <strong>después</strong>, cuando otro proceso lo concatena:</p>
-<pre><code class="language-python"># Paso 1: guardado correctamente
-cur.execute(&quot;INSERT INTO students (nombre) VALUES (%s)&quot;, (&quot;Ana'; DROP TABLE x;--&quot;,))
-
-# Paso 2: un informe lo lee de la base y lo concatena. Aquí ocurre la inyección.
-nombre = cur.execute(&quot;SELECT nombre FROM students WHERE id=1&quot;).fetchone()[0]
-cur.execute(f&quot;SELECT * FROM logs WHERE usuario = '{nombre}'&quot;)   # VULNERABLE
+<p><strong>Mil veces más pequeño.</strong> Funciona solo si los datos están <strong>físicamente correlacionados</strong> con la columna: típicamente una marca de tiempo en una tabla donde se inserta en orden cronológico.</p>
+<pre><code class="language-sql">CREATE INDEX eventos_brin ON eventos USING brin (ocurrido_en);
+SELECT attname, correlation FROM pg_stats WHERE tablename = 'eventos';
+-- correlación cercana a 1 o -1 → BRIN es viable
 </code></pre>
-<p>La lección: <strong>todo dato es entrada, venga de donde venga</strong>. Que esté en la base no lo hace confiable.</p>
-<h3 id="sql-dinámico-en-el-servidor">SQL dinámico en el servidor</h3>
-<p>Dentro de una función PL/pgSQL, el problema reaparece:</p>
-<pre><code class="language-sql">-- VULNERABLE
-EXECUTE 'SELECT * FROM ' || tabla || ' WHERE id = ' || id;
-
--- CORRECTO: format con %I (identificador citado) y %L (literal citado)
-EXECUTE format('SELECT * FROM %I WHERE id = %L', tabla, id);
-
--- MEJOR: identificador por lista blanca, valor por parámetro real
-EXECUTE format('SELECT * FROM %I WHERE id = $1', tabla) USING id;
+<p>Con correlación 0,99, BRIN descarta casi todos los bloques. Con correlación 0,1 —por ejemplo tras muchas actualizaciones que reubican filas— es inútil.</p>
+<h3 id="índice-parcial">Índice parcial</h3>
+<p>Indexa solo las filas que cumplen un predicado.</p>
+<pre><code class="language-sql">CREATE INDEX enr_pendientes ON enrollments (course_id, registrada_en)
+WHERE estado = 'pendiente';
 </code></pre>
-<p><code>%I</code> cita como identificador y <code>%L</code> como literal. <code>USING</code> pasa un parámetro de verdad.</p>
+<p>Dos condiciones para que se use: la consulta debe incluir un predicado que <strong>implique</strong> el del índice, y el planificador debe poder demostrarlo. <code>WHERE estado = 'pendiente'</code> sirve; <code>WHERE estado &lt;&gt; 'activa'</code> no, aunque lógicamente lo incluya.</p>
+<p>Uso frecuente y elegante: excluir los nulos.</p>
+<pre><code class="language-sql">CREATE INDEX t_ref ON t (referencia) WHERE referencia IS NOT NULL;
+</code></pre>
+<h3 id="índice-de-expresión">Índice de expresión</h3>
+<pre><code class="language-sql">-- NO usa un índice sobre email:
+SELECT * FROM students WHERE lower(email) = 'ana@ejemplo.cl';
+
+CREATE INDEX students_email_lower ON students (lower(email));   -- ahora sí
+</code></pre>
+<p>Regla general: <strong>cualquier función aplicada a la columna en el <code>WHERE</code> inutiliza el índice ordinario</strong>. Incluye <code>date(created_at)</code>, <code>substr(codigo, 1, 3)</code> y las conversiones implícitas de tipo, que son las más difíciles de ver.</p>
+<h3 id="exclusión">Exclusión</h3>
+<p>Restricción declarativa que impide solapamientos, imposible con <code>UNIQUE</code>:</p>
+<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS btree_gist;
+ALTER TABLE reservas ADD CONSTRAINT sin_solape
+  EXCLUDE USING gist (sala_id WITH =, durante WITH &amp;&amp;);
+</code></pre>
+<p><code>durante</code> es un <code>tstzrange</code>. El motor rechaza cualquier reserva que solape en la misma sala. Es la solución declarativa a un problema que casi siempre se resuelve —mal— en la aplicación.</p>
 <pre><code class="language-mermaid">flowchart TD
-    E[&quot;Entrada&quot;] --&gt; T{&quot;¿Dónde va&lt;br/&gt;en la consulta?&quot;}
-    T -- &quot;Valor&quot; --&gt; P[&quot;Parámetro&lt;br/&gt;inmune por protocolo&quot;]
-    T -- &quot;Identificador&quot; --&gt; W{&quot;¿Conjunto cerrado&lt;br/&gt;de valores válidos?&quot;}
-    W -- &quot;Sí&quot; --&gt; L[&quot;Lista blanca&lt;br/&gt;(diccionario en código)&quot;]
-    W -- &quot;No&quot; --&gt; Q[&quot;Función de citado&lt;br/&gt;del motor (%I) · último recurso&quot;]
-    T -- &quot;Sintaxis (ASC/DESC)&quot; --&gt; L
-    P --&gt; D[&quot;Defensa en profundidad&quot;]
-    L --&gt; D
-    D --&gt; D1[&quot;Privilegio mínimo (clase 050)&quot;]
-    D --&gt; D2[&quot;Seguridad por fila&quot;]
-    D --&gt; D3[&quot;Tiempo límite de consulta&quot;]
-    D --&gt; D4[&quot;Registro y alerta de errores SQL&quot;]
+    O[&quot;¿Qué operador usa&lt;br/&gt;la consulta?&quot;] --&gt; E{&quot;=&quot;}
+    E -- &quot;columna corta&quot; --&gt; BT[&quot;B-Tree&quot;]
+    E -- &quot;columna larga, solo igualdad&quot; --&gt; H[&quot;Hash&quot;]
+    O --&gt; R{&quot;&lt; &gt; BETWEEN&quot;}
+    R -- &quot;tabla mediana&quot; --&gt; BT
+    R -- &quot;tabla enorme correlacionada&quot; --&gt; BR[&quot;BRIN&quot;]
+    O --&gt; C{&quot;@&gt; ? @@&lt;br/&gt;arreglos, jsonb, texto&quot;} --&gt; G[&quot;GIN&quot;]
+    O --&gt; S{&quot;&amp;&amp; &lt;@ &lt;-&gt;&lt;br/&gt;rangos, geometría&quot;} --&gt; GI[&quot;GiST&quot;]
+    BT --&gt; P{&quot;¿Solo interesa un&lt;br/&gt;subconjunto de filas?&quot;}
+    P -- &quot;Sí&quot; --&gt; PA[&quot;+ índice parcial&quot;]
+    O --&gt; F{&quot;¿Función sobre&lt;br/&gt;la columna?&quot;} --&gt; EX[&quot;Índice de expresión&lt;br/&gt;(obligatorio)&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Buscador de cursos con filtros opcionales y orden configurable: el caso donde más veces se abandona la parametrización «porque es dinámico».</p>
-<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;c.nombre&quot;, &quot;periodo&quot;: &quot;c.periodo&quot;,
-              &quot;inscritos&quot;: &quot;inscritos&quot;}
-SENTIDOS   = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
-
-def buscar_cursos(cur, *, texto=None, periodo=None, min_inscritos=None,
-                  orden=&quot;nombre&quot;, sentido=&quot;asc&quot;, limite=50):
-    condiciones, params = [], []
-
-    # Cada filtro añade su condición Y su parámetro: la consulta crece
-    # dinámicamente, los valores nunca se concatenan.
-    if texto:
-        condiciones.append(&quot;c.nombre ILIKE %s&quot;)
-        params.append(f&quot;%{texto}%&quot;)
-    if periodo:
-        condiciones.append(&quot;c.periodo = %s&quot;)
-        params.append(periodo)
-    if min_inscritos is not None:
-        condiciones.append(&quot;(SELECT count(*) FROM enrollments e &quot;
-                           &quot; WHERE e.course_id = c.id) &gt;= %s&quot;)
-        params.append(int(min_inscritos))
-
-    where = f&quot;WHERE {' AND '.join(condiciones)}&quot; if condiciones else &quot;&quot;
-
-    col = ORDENABLES.get(orden)
-    dir_ = SENTIDOS.get(str(sentido).lower())
-    if col is None or dir_ is None:
-        raise ValueError(&quot;parámetro de orden no permitido&quot;)
-
-    params.append(min(max(int(limite), 1), 200))
-
-    sql = f&quot;&quot;&quot;
-        SELECT c.id, c.nombre, c.periodo,
-               (SELECT count(*) FROM enrollments e WHERE e.course_id = c.id) AS inscritos
-        FROM courses c
-        {where}
-        ORDER BY {col} {dir_}, c.id
-        LIMIT %s
-    &quot;&quot;&quot;
-    cur.execute(sql, params)
-    return cur.fetchall()
+<p>Tabla <code>eventos</code>: 500 millones de filas, 180 GB, insertada en orden cronológico.</p>
+<pre><code class="language-sql">CREATE TABLE eventos (
+  id          BIGSERIAL PRIMARY KEY,
+  ocurrido_en TIMESTAMPTZ NOT NULL,
+  tipo        TEXT NOT NULL,
+  etiquetas   TEXT[] NOT NULL DEFAULT '{}',
+  carga       JSONB NOT NULL,
+  procesado   BOOLEAN NOT NULL DEFAULT false
+);
 </code></pre>
-<p><strong>Por qué es seguro:</strong></p>
-<ul>
-<li>Toda la sintaxis interpolada (<code>where</code>, <code>col</code>, <code>dir_</code>) procede de <strong>literales del código</strong> o de diccionarios cerrados.</li>
-<li>Todos los valores del usuario van como parámetros.</li>
-<li>El límite está acotado: evita que alguien pida un millón de filas.</li>
-<li><code>ORDER BY ... , c.id</code> da orden total (clase 015).</li>
-</ul>
-<p><strong>Comprobación con entradas hostiles:</strong></p>
-<pre><code class="language-python">buscar_cursos(cur, texto=&quot;'; DROP TABLE courses;--&quot;)
-# → busca literalmente ese texto. 0 resultados. Ninguna tabla borrada.
-
-buscar_cursos(cur, orden=&quot;nombre; DROP TABLE courses;--&quot;)
-# → ValueError: parámetro de orden no permitido
-
-buscar_cursos(cur, periodo=&quot;2026-1' OR '1'='1&quot;)
-# → busca ese período literal. 0 resultados.
+<p><strong>Consulta A — rango temporal:</strong></p>
+<pre><code class="language-sql">SELECT * FROM eventos WHERE ocurrido_en BETWEEN '2026-08-01' AND '2026-08-02';
 </code></pre>
-<p><strong>Defensa en profundidad</strong>, porque ningún control único es suficiente:</p>
-<pre><code class="language-sql">-- 1. El usuario de la aplicación no puede borrar tablas
-REVOKE ALL ON SCHEMA public FROM svc_api;
-GRANT  SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO svc_api;
-
--- 2. Tiempo límite: una inyección basada en tiempo se corta
-ALTER ROLE svc_api SET statement_timeout = '10s';
-
--- 3. Sin acceso a metadatos innecesarios
-REVOKE SELECT ON pg_authid FROM PUBLIC;
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Índice</th>
+<th style="text-align: right;">Tamaño</th>
+<th>Bloques leídos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B-Tree sobre <code>ocurrido_en</code></td>
+<td style="text-align: right;">~11 GB</td>
+<td>Precisos, pero el índice no cabe en memoria</td>
+</tr>
+<tr>
+<td>BRIN sobre <code>ocurrido_en</code></td>
+<td style="text-align: right;"><strong>~15 MB</strong></td>
+<td>Los del rango + algunos de más</td>
+</tr>
+</tbody>
+</table></div>
+<p>Con correlación 0,999, BRIN descarta el 99,7 % de los bloques leyendo un índice que cabe entero en caché. <strong>Mil veces menos espacio y prácticamente el mismo resultado.</strong></p>
+<p><strong>Consulta B — etiquetas:</strong></p>
+<pre><code class="language-sql">SELECT * FROM eventos WHERE etiquetas @&gt; ARRAY['error','pago'];
+CREATE INDEX eventos_etiquetas ON eventos USING gin (etiquetas);
 </code></pre>
-<p>Con estas tres medidas, una inyección que llegara a ejecutarse encontraría un usuario que no puede escribir en el catálogo, con consultas cortadas a los 10 segundos y sin poder enumerar credenciales.</p>
+<p>Ningún B-Tree sirve aquí: el operador de contención no es de orden.</p>
+<p><strong>Consulta C — pendientes de procesar:</strong></p>
+<pre><code class="language-sql">SELECT * FROM eventos WHERE procesado = false ORDER BY ocurrido_en LIMIT 100;
+</code></pre>
+<p><code>procesado</code> es booleana: un B-Tree sobre ella no se usaría. Pero solo el 0,01 % está pendiente:</p>
+<pre><code class="language-sql">CREATE INDEX eventos_pendientes ON eventos (ocurrido_en) WHERE procesado = false;
+</code></pre>
+<pre><code class="language-text">índice completo sobre (procesado, ocurrido_en): 500 000 000 entradas ≈ 15 GB
+índice parcial:                                      50 000 entradas ≈  1,5 MB
+</code></pre>
+<p>Cuatro órdenes de magnitud. Y además: cuando un evento se marca como procesado, <strong>sale</strong> del índice, que se mantiene pequeño para siempre. Es el patrón canónico de la cola de trabajo.</p>
+<p><strong>Consulta D — dentro del <code>jsonb</code>:</strong></p>
+<pre><code class="language-sql">SELECT * FROM eventos WHERE carga @&gt; '{&quot;cliente_id&quot;: 42}';
+CREATE INDEX eventos_carga ON eventos USING gin (carga jsonb_path_ops);
+</code></pre>
+<p><code>jsonb_path_ops</code> indexa solo el operador de contención: índice más pequeño y rápido que el GIN por defecto, a cambio de soportar menos operadores.</p>
+<p><strong>El costo total, que hay que sumar:</strong></p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Índice</th>
+<th style="text-align: right;">Tamaño</th>
+<th>Coste por inserción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clave primaria B-Tree</td>
+<td style="text-align: right;">11 GB</td>
+<td>Bajo (clave creciente)</td>
+</tr>
+<tr>
+<td>BRIN <code>ocurrido_en</code></td>
+<td style="text-align: right;">15 MB</td>
+<td>Casi nulo</td>
+</tr>
+<tr>
+<td>GIN <code>etiquetas</code></td>
+<td style="text-align: right;">8 GB</td>
+<td><strong>Alto</strong>: una entrada por elemento</td>
+</tr>
+<tr>
+<td>Parcial <code>pendientes</code></td>
+<td style="text-align: right;">1,5 MB</td>
+<td>Solo si <code>procesado = false</code></td>
+</tr>
+<tr>
+<td>GIN <code>carga</code></td>
+<td style="text-align: right;">22 GB</td>
+<td><strong>Muy alto</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Los índices GIN son los que más encarecen la escritura. PostgreSQL mitiga con <code>fastupdate</code>, que acumula en una lista pendiente y la fusiona después; el efecto secundario es que una consulta puede tener que recorrer esa lista.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Técnica</th>
-<th>Eficacia</th>
-<th>Nota</th>
+<th>Consulta</th>
+<th>Índice correcto</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Consulta parametrizada</td>
-<td><strong>Total</strong> para valores</td>
-<td>La defensa principal</td>
+<td><code>WHERE a = 1 AND b &gt; 2</code></td>
+<td>B-Tree <code>(a, b)</code></td>
 </tr>
 <tr>
-<td>Lista blanca de identificadores</td>
-<td><strong>Total</strong></td>
-<td>Única correcta para nombres</td>
+<td><code>WHERE etiquetas @&gt; ARRAY[...]</code></td>
+<td>GIN</td>
 </tr>
 <tr>
-<td>Función de citado del motor (<code>%I</code>)</td>
-<td>Alta</td>
-<td>Solo si la lista blanca es imposible</td>
+<td><code>WHERE rango &amp;&amp; '[...]'</code></td>
+<td>GiST</td>
 </tr>
 <tr>
-<td>Escape manual</td>
-<td><strong>Baja</strong></td>
-<td>Depende de codificación y motor; no usar</td>
+<td><code>WHERE ts BETWEEN ...</code> en tabla enorme ordenada</td>
+<td>BRIN</td>
 </tr>
 <tr>
-<td>Cortafuegos de aplicación</td>
+<td><code>WHERE lower(x) = ...</code></td>
+<td>Expresión</td>
+</tr>
+<tr>
+<td><code>WHERE estado = 'raro'</code></td>
 <td>Parcial</td>
-<td>Complemento, nunca sustituto</td>
 </tr>
 <tr>
-<td>ORM</td>
-<td>Alta por defecto</td>
-<td>Se pierde con SQL en crudo</td>
+<td><code>WHERE doc @&gt; '{...}'</code></td>
+<td>GIN <code>jsonb_path_ops</code></td>
+</tr>
+<tr>
+<td>Sin solapamiento</td>
+<td><code>EXCLUDE USING gist</code></td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>f-strings con entrada de usuario.</strong> La forma moderna del mismo error de siempre.</li>
-<li><strong>Escape manual.</strong> Existen bypass por codificación y por multibyte.</li>
-<li><strong>Confiar en datos de la base.</strong> Inyección de segundo orden.</li>
-<li><strong><code>ORDER BY</code> desde la petición sin lista blanca.</strong> El vector más frecuente hoy.</li>
-<li><strong>SQL en crudo dentro de un ORM sin parametrizar.</strong> Se pierde toda la protección.</li>
-<li><strong>Devolver el error SQL al cliente.</strong> Regala el esquema al atacante.</li>
-<li><strong>La aplicación con privilegios de administrador.</strong> Convierte una inyección en un desastre.</li>
+<li><strong>B-Tree por defecto para todo.</strong> No sirve para contención ni para solapamiento.</li>
+<li><strong>BRIN sin comprobar la correlación.</strong> Sin ella no descarta nada.</li>
+<li><strong>Función sobre la columna sin índice de expresión.</strong> El índice existente no se usa.</li>
+<li><strong>Índice parcial con un predicado que la consulta no implica.</strong> No se usará.</li>
+<li><strong>GIN sobre columnas de escritura intensa.</strong> Encarece mucho la inserción.</li>
+<li><strong>No revisar el uso.</strong> <code>idx_scan = 0</code> significa costo sin beneficio.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las inyecciones que llegan a producción hoy casi nunca están en el <code>WHERE</code>: están en el <code>ORDER BY</code>, en un nombre de tabla dinámico o en un informe que concatena datos leídos de la propia base. Buscar concatenación de cadenas cerca de la palabra <code>execute</code> en toda la base de código es una auditoría de una tarde con mucho retorno.</p>
+<p>Cambiar un B-Tree de 15 GB por un índice parcial de 1,5 MB no es una micro-optimización: cambia qué cabe en memoria, y con ello el comportamiento de todo el sistema. Es de las intervenciones con mejor relación entre esfuerzo y efecto.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Busca en tu proyecto toda construcción de SQL por concatenación o f-string.</li>
-<li>Convierte los valores a parámetros y los identificadores a lista blanca.</li>
-<li>Escribe pruebas con entradas hostiles que demuestren el comportamiento seguro.</li>
-<li>Aplica las tres medidas de defensa en profundidad y verifica cada una.</li>
+<li>Inventaría los índices de tu base con su tamaño y su número de barridos.</li>
+<li>Busca una consulta con función sobre la columna y crea el índice de expresión.</li>
+<li>Identifica una tabla con columna correlacionada y compara B-Tree con BRIN.</li>
+<li>Convierte un índice completo en parcial y mide el ahorro.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Explica a nivel de protocolo por qué un parámetro no puede inyectar.</li>
-<li>¿Por qué el nombre de una columna no se puede parametrizar?</li>
-<li>Describe un caso de inyección de segundo orden en tu propio sistema.</li>
-<li>Si una inyección llegara a ejecutarse, ¿qué podría hacer con tus privilegios actuales?</li>
+<li>¿Qué condición debe cumplir la tabla para que BRIN sea útil, y cómo se comprueba?</li>
+<li>Explica por qué <code>WHERE date(creado) = '2026-08-01'</code> no usa el índice sobre <code>creado</code>.</li>
+<li>Da una consulta de tu dominio que solo un GIN pueda acelerar.</li>
+<li>Calcula el ahorro de convertir en parcial uno de tus índices, con cifras reales.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Indexar solo lo que se consulta: los dos pedidos pendientes de seis</p>
+<p>El índice B-Tree completo no siempre es la respuesta. Cuando la consulta
+caliente mira <strong>una fracción pequeña</strong> de la tabla —los pedidos pendientes,
+las filas no borradas, los usuarios activos—, un índice parcial indexa solo
+esas filas: ocupa una fracción, se mantiene en una fracción de las
+escrituras y cabe entero en memoria.</p>
+<p>El caso tiene seis pedidos de los que dos están pendientes, y pide esos dos
+ordenados por fecha. El resultado es trivial; lo que se compara es qué
+índice puede construir cada motor para responderlo sin tocar los otros
+cuatro, y qué hacen los que no tienen índices parciales.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>pedido</th>
+<th>fecha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>P-2</code></td>
+<td><code>2026-08-02</code></td>
+</tr>
+<tr>
+<td><code>P-5</code></td>
+<td><code>2026-08-05</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 051</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/indexes-types.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/partialindex.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-partial/">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/indexes.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-concepts.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/zadd/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/indexes-types.html
+-- nota: el indice de abajo es PARCIAL y ademas CUBRIENTE: con INCLUDE (id), el
+--       plan pasa a «Index Only Scan» y no toca la tabla en ningun momento.
+--       El resto del catalogo, para tenerlo a la vista:
+--         GIN   arreglos, jsonb, busqueda de texto
+--         GiST  geometria, rangos, vecino mas cercano
+--         BRIN  tablas enormes ya ordenadas por la columna (fechas, series)
+--         HASH  solo igualdad, sin orden ni rangos
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    estado text NOT NULL,
+    fecha  text NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+CREATE INDEX pedidos_pendientes ON pedidos (fecha) INCLUDE (id)
+    WHERE estado = 'pendiente';
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene el catálogo más completo y cada tipo resuelve un problema distinto: <strong>parcial</strong> para subconjuntos, <code>INCLUDE</code> para cubrir la consulta sin ir a la tabla, <strong>GIN</strong> para arreglos y texto, <strong>GiST</strong> para geometría y rangos, <strong>BRIN</strong> para tablas enormes y ordenadas por naturaleza, y <strong>hash</strong> para igualdad pura.</li>
+<li><strong>Por qué no:</strong> Elegir mal es fácil y sale caro: BRIN sobre datos desordenados no descarta nada, hash no sirve para rangos ni para ordenar, y cada índice de más se paga en cada escritura. Y un índice parcial solo se usa si el planificador puede <strong>demostrar</strong> que la consulta implica su predicado.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/indexes-types.html">https://www.postgresql.org/docs/current/indexes-types.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/partialindex.html
+-- nota: el indice tiene DOS entradas, no seis. En una tabla de diez millones de
+--       pedidos con mil pendientes, la diferencia entre el indice completo y el
+--       parcial es de cuatro ordenes de magnitud, y el parcial cabe en memoria.
+--       Para comprobar que se usa: EXPLAIN QUERY PLAN delante de la consulta.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    estado TEXT NOT NULL,
+    fecha  TEXT NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+CREATE INDEX pedidos_pendientes ON pedidos (fecha) WHERE estado = 'pendiente';
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene índices parciales y por expresión, que es casi todo lo que hace falta: el índice de los pendientes ocupa dos entradas en vez de seis, y en una tabla real la diferencia es de órdenes de magnitud.</li>
+<li><strong>Por qué no:</strong> No hay GIN, ni GiST, ni BRIN, ni cubrientes explícitos: para buscar dentro de un JSON o por geometría hay que extraer a una columna e indexar esa, o recurrir a extensiones como R-Tree.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/partialindex.html">https://sqlite.org/partialindex.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+-- nota: MySQL NO tiene indices parciales. El rodeo estandar es una columna
+--       generada que vale NULL en las filas que no interesan —los NULL no
+--       ocupan entrada util en el arbol— e indexarla junto a la fecha. Funciona,
+--       y hay que explicarlo cada vez que alguien lee el esquema.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     VARCHAR(10) PRIMARY KEY,
+    estado VARCHAR(20) NOT NULL,
+    fecha  VARCHAR(10) NOT NULL,
+    fecha_pendiente VARCHAR(10)
+        AS (IF(estado = 'pendiente', fecha, NULL)) STORED,
+    KEY pedidos_pendientes (fecha_pendiente)
+) ENGINE=InnoDB;
+
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene índices por prefijo —útiles en columnas de texto largas—, multivaluados sobre JSON y espaciales con R-Tree, y su optimizador aplica «índice cubriente» cuando el índice contiene todas las columnas pedidas.</li>
+<li><strong>Por qué no:</strong> <strong>No tiene índices parciales</strong>. La única forma de acercarse es una columna generada que valga <code>NULL</code> para las filas que no interesan e indexarla, un rodeo que hay que explicar cada vez que alguien lo lee.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">https://dev.mysql.com/doc/refman/8.4/en/create-index.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-partial/
+// nota: el indice parcial solo se usa si la consulta INCLUYE su predicado. Si
+//       la consulta pidiera { estado: { $in: [&quot;pendiente&quot;, &quot;enviado&quot;] } }, el
+//       motor no puede demostrar que implica el filtro del indice y lo ignora
+//       en silencio: no hay aviso, solo una consulta mas lenta.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertMany([
+  { _id: &quot;P-1&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-01&quot; },
+  { _id: &quot;P-2&quot;, estado: &quot;pendiente&quot;, fecha: &quot;2026-08-02&quot; },
+  { _id: &quot;P-3&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-03&quot; },
+  { _id: &quot;P-4&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-04&quot; },
+  { _id: &quot;P-5&quot;, estado: &quot;pendiente&quot;, fecha: &quot;2026-08-05&quot; },
+  { _id: &quot;P-6&quot;, estado: &quot;entregado&quot;, fecha: &quot;2026-08-06&quot; },
+]);
+db.pedidos.createIndex(
+  { fecha: 1 },
+  { partialFilterExpression: { estado: &quot;pendiente&quot; } },
+);
+
+// === consulta ===
+db.pedidos
+  .find({ estado: &quot;pendiente&quot; }, { _id: 1, fecha: 1 })
+  .sort({ fecha: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.fecha));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>partialFilterExpression</code> es el índice parcial con otro nombre, y además tiene índices dispersos, TTL, geoespaciales, de texto y hasta con recolección diferida (<code>hidden</code>) para probar si un índice hace falta antes de borrarlo.</li>
+<li><strong>Por qué no:</strong> Un índice parcial solo se usa si la consulta <strong>incluye</strong> su predicado: si la consulta pide <code>estado: "pendiente"</code> y el índice se creó sobre <code>estado: {$eq: "pendiente"}</code>, la coincidencia tiene que ser exacta o el índice se ignora en silencio.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-partial/">https://www.mongodb.com/docs/manual/core/index-partial/</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/indexes.html
+-- nota: aqui no se crea ningun indice, y es a proposito. Cada grupo de filas
+--       guarda el minimo y el maximo de cada columna, asi que descartar bloques
+--       enteros es gratis: es la idea de BRIN aplicada por omision a todo.
+--       Con una condicion: los datos tienen que estar ORDENADOS por la columna
+--       que se filtra. Si no, no se descarta nada.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    estado VARCHAR NOT NULL,
+    fecha  VARCHAR NOT NULL
+);
+INSERT INTO pedidos (id, estado, fecha) VALUES
+    ('P-1', 'entregado', '2026-08-01'),
+    ('P-2', 'pendiente', '2026-08-02'),
+    ('P-3', 'entregado', '2026-08-03'),
+    ('P-4', 'entregado', '2026-08-04'),
+    ('P-5', 'pendiente', '2026-08-05'),
+    ('P-6', 'entregado', '2026-08-06');
+
+-- === consulta ===
+SELECT id AS pedido, fecha
+FROM pedidos
+WHERE estado = 'pendiente'
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Está aquí para mostrar la alternativa a los índices: no los necesita porque cada grupo de filas guarda los valores mínimo y máximo de cada columna, así que descartar bloques enteros es gratis. Es la misma idea que BRIN, aplicada por omisión a todo.</li>
+<li><strong>Por qué no:</strong> Esa técnica solo funciona si los datos están <strong>ordenados</strong> por la columna que se filtra: sobre datos desordenados no descarta nada, exactamente igual que un BRIN mal usado.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/indexes.html">https://duckdb.org/docs/stable/sql/indexes.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>Su índice secundario es local a cada nodo, así que una consulta por él pregunta a todo el anillo. Y sobre una columna de baja cardinalidad como <code>estado</code>, cada nodo devolvería muchísimas filas: es el antipatrón documentado.</td>
+<td>Una tabla <code>pedidos_pendientes</code> con <code>estado</code> como clave de partición y la fecha como agrupamiento, alimentada por la aplicación y vaciada al entregar: el índice parcial construido a mano.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-concepts.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No hay índices que crear sobre datos ya escritos: la estructura de acceso se decide al escribir y no hay forma de añadir otra después sin recorrer todo el espacio de claves.</td>
+<td>Un conjunto ordenado <code>pedidos:pendientes</code> con la fecha como puntuación, del que se saca el pedido al entregarlo. Es literalmente un índice parcial mantenido a mano, con la ventaja de que se lee en microsegundos y el inconveniente de que hay que acordarse de mantenerlo.</td>
+<td><a href="https://redis.io/docs/latest/commands/zadd/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/01-sql-foundations/run_lab.py
+python labs/04-indexing/run_indexing_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -375,29 +706,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>OWASP</strong> (2026). <a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html">SQL Injection Prevention Cheat Sheet</a>.<br />
-  Consultas parametrizadas como defensa principal, con sus excepciones.</li>
-<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
-  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
-<li><strong>Marc-Andre Lemburg</strong> (1999). <a href="https://peps.python.org/pep-0249/">PEP 249 - Python Database API Specification v2.0</a>.<br />
-  Contrato de parametrización que evita la concatenación de entradas.</li>
-<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
-  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/indexes.html">PostgreSQL: Indexes</a>.<br />
+  B-tree, hash, GiST, SP-GiST, GIN y BRIN con sus casos de uso.</li>
+<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
+  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
+<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
+  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 10</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 09</a> · <a href="050.html">← Anterior</a> · <a href="052.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="051">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="050.html"><span class="sentido">← Anterior · 050</span>Control de acceso: privilegio mínimo, roles y seguridad por fila</a>
-<a class="siguiente" href="052.html"><span class="sentido">Siguiente · 052 →</span>Observabilidad, objetivos de servicio y capacidad</a>
+<a class="anterior" href="050.html"><span class="sentido">← Anterior · 050</span>LSM-Tree, compactación y amplificación de escritura</a>
+<a class="siguiente" href="052.html"><span class="sentido">Siguiente · 052 →</span>Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

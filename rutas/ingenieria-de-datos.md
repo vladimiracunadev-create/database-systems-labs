@@ -8,6 +8,12 @@
 > captura de cambios, modelado analítico y streaming · **Cargos habituales:** ingeniero de
 > datos, ingeniero de plataforma de datos, ingeniero de streaming.
 
+<!-- insignias-ruta:inicio -->
+
+![🎚️ nivel](https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-intermedio-1f6feb?style=flat-square) ![🗂️ partes](https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20partes-10-6e7781?style=flat-square) ![⏱️ horas](https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20horas-151-24292f?style=flat-square)
+
+<!-- insignias-ruta:fin -->
+
 ## 🧭 Qué es y por qué importa
 
 La ingeniería de datos existe porque el dato nace en un sitio y se necesita en otro. Nace en
@@ -84,31 +90,54 @@ difícil del trabajo real—.
 
 ## 📚 Tu ruta en el programa
 
-9 partes, 131 horas estimadas.
+<!-- recorrido:inicio -->
 
-1. 📚 [**Parte 00 — Fundamentos**](../classes/part-00-fundamentos-datos-sistemas-y-metodo/README.md)
+```mermaid
+flowchart LR
+    P00["🪜 00"]
+    P01["🧱 01"]
+    P02["📐 02"]
+    P03["🔗 03"]
+    P04["🔎 04"]
+    P07["🕸️ 07"]
+    P10["🌐 10"]
+    P12["📊 12"]
+    P13["🧠 13"]
+    P14["🏛️ 14"]
+    P00 --> P01 --> P02 --> P03 --> P04 --> P07 --> P10 --> P12 --> P13 --> P14
+    classDef ini fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class P00 ini
+    class P14 fin
+```
+
+<!-- recorrido:fin -->
+
+9 partes, 151 horas estimadas.
+
+1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 01 — Modelado conceptual**](../classes/part-01-modelado-conceptual-y-requisitos/README.md)
+2. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). El significado antes que el formato.
-3. 📚 [**Parte 02 — Modelo relacional y álgebra**](../classes/part-02-modelo-relacional-y-algebra/README.md)
+3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h).
-4. 📚 [**Parte 03 — SQL en profundidad**](../classes/part-03-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Tu herramienta diaria; no la aprendas a medias.
-5. 📚 [**Parte 06 — Grafos, columnas, tiempo y búsqueda**](../classes/part-06-grafos-columnas-tiempo-y-busqueda/README.md)
+5. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
    (5 clases · 15 h). Especialmente
-   [030 — Series temporales](../classes/part-06-grafos-columnas-tiempo-y-busqueda/030-series-temporales-cardinalidad-y-retencion/README.md)
-   y [032 — Analítica columnar y vectorización](../classes/part-06-grafos-columnas-tiempo-y-busqueda/032-analitica-columnar-y-vectorizacion/README.md).
-6. 📚 [**Parte 09 — Distribución, réplica y consistencia**](../classes/part-09-distribucion-replica-y-consistencia/README.md)
+   [030 — Series temporales](../classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/README.md)
+   y [032 — Analítica columnar y vectorización](../classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md).
+6. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
    (5 clases · 17 h). Sin esto, «eventualmente consistente» es una excusa y no un modelo.
-7. 📚 [**Parte 11 — Analítica, integración y streaming**](../classes/part-11-analitica-integracion-y-streaming/README.md)
+7. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
    (4 clases · 13 h). El corazón del rol:
-   [054 — OLTP frente a OLAP](../classes/part-11-analitica-integracion-y-streaming/054-oltp-frente-a-olap/README.md),
-   [055 — Modelado dimensional](../classes/part-11-analitica-integracion-y-streaming/055-modelado-dimensional/README.md),
-   [056 — ETL, ELT y captura de cambios](../classes/part-11-analitica-integracion-y-streaming/056-integracion-etl-elt-y-captura-de-cambios/README.md)
-   y [057 — Streaming, tiempo de evento y ventanas](../classes/part-11-analitica-integracion-y-streaming/057-streaming-tiempo-de-evento-y-ventanas/README.md).
-8. 📚 [**Parte 12 — Vectores, recuperación y RAG**](../classes/part-12-vectores-recuperacion-y-rag/README.md)
+   [054 — OLTP frente a OLAP](../classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md),
+   [055 — Modelado dimensional](../classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md),
+   [056 — ETL, ELT y captura de cambios](../classes/part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md)
+   y [057 — Streaming, tiempo de evento y ventanas](../classes/part-12-analitica-integracion-y-streaming/067-streaming-tiempo-de-evento-y-ventanas/README.md).
+8. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
    (4 clases · 13 h). Cada vez más tuberías terminan alimentando una búsqueda semántica.
-9. 📚 [**Parte 13 — Arquitectura y proyecto final**](../classes/part-13-arquitectura-y-proyecto-final/README.md)
+9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:
@@ -177,11 +206,11 @@ inventamos rangos locales.
 ## 🚀 Siguientes pasos
 
 1. Asegura las Partes 00 → 03: sin SQL y modelado sólidos, el resto se construye sobre arena.
-2. Haz la Parte 11 completa y modela un dominio propio en estrella, declarando el grano.
+2. Haz la Parte 12 completa y modela un dominio propio en estrella, declarando el grano.
 3. Ejecuta [`05-nosql-workloads`](../labs/05-nosql-workloads/README.md) y aplica la lección de
    la clave caliente a tu partición real.
 4. Toma una tubería tuya y hazla idempotente; demuestra con conteos que reprocesar no duplica.
-5. Estudia la Parte 09 antes de prometer consistencia entre sistemas.
+5. Estudia la Parte 10 antes de prometer consistencia entre sistemas.
 6. Cierra con el [proyecto final](../projects/capstone.md), midiendo lo que afirmas.
 
 ## 📖 De dónde sale esto

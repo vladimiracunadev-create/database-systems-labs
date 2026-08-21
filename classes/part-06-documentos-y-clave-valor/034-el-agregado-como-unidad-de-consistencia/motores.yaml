@@ -1,0 +1,117 @@
+---
+caso:
+  titulo: Un pedido y sus líneas que cambian juntos o no cambian
+  contrato: |
+    Un **agregado**, en el sentido de Evans y de Vernon, es el grupo de datos
+    que se trata como una unidad: tiene una raíz —el pedido—, un límite —sus
+    líneas— y un invariante que debe cumplirse siempre. Aquí el invariante es
+    que el total guardado sea igual a la suma de las líneas.
+
+    El caso crea el pedido con dos líneas, añade una tercera y sube el total. La
+    consulta devuelve el total guardado y el calculado. Que coincidan es todo el
+    ejercicio: lo interesante no es el número, sino **qué mecanismo garantiza
+    que nunca se separen** en cada motor, y qué pasa cuando el agregado no cabe
+    en la unidad atómica que ese motor ofrece.
+  columnas: [pedido, total_guardado, total_calculado]
+  esperado:
+    - [P-1, "300", "300"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      El agregado se reparte en dos tablas y la transacción lo mantiene entero:
+      `BEGIN`/`COMMIT` es la frontera. En un motor relacional el límite del
+      agregado lo decide el diseñador, no el almacén.
+    porque_no: >-
+      Precisamente por eso el límite es invisible: nada en el esquema dice que
+      `pedidos` y `lineas` son una unidad, y basta un `UPDATE` suelto sin
+      transacción para romper el invariante sin que nada proteste.
+    doc: https://sqlite.org/lang_transaction.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Tiene transacciones ACID sobre el archivo, así que el mismo guion sirve
+      para comprobar el invariante sobre un volcado analítico.
+    porque_no: >-
+      Un solo proceso escritor: el agregado está a salvo de una escritura a
+      medias, pero no de dos aplicaciones que quieran escribirlo a la vez,
+      porque esa situación sencillamente no está contemplada.
+    doc: https://duckdb.org/docs/stable/sql/statements/transactions.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      La transacción abarca cuantas tablas haga falta, con aislamiento
+      configurable y con restricciones diferibles: el límite del agregado puede
+      ser tan grande como el problema pida, y el invariante se puede comprobar
+      al confirmar en vez de en cada sentencia.
+    porque_no: >-
+      Esa libertad invita a agregados enormes: una transacción que toca diez
+      tablas retiene bloqueos y versiones durante todo su recorrido, y en
+      concurrencia alta convierte el invariante en una cola.
+    doc: https://www.postgresql.org/docs/current/tutorial-transactions.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Aquí el agregado es literal: pedido y líneas son **un documento**, y la
+      escritura de un documento es atómica por definición. El límite del
+      agregado deja de ser una convención y pasa a ser una propiedad del
+      almacén, sin transacción que declarar.
+    porque_no: >-
+      Ese límite es también una jaula: el documento no puede pasar de 16 MB, un
+      pedido con cien mil líneas no cabe, y todo lo que cruce la frontera del
+      documento vuelve a necesitar transacciones de varios documentos, que aquí
+      cuestan más que en un motor relacional.
+    doc: https://www.mongodb.com/docs/manual/core/write-operations-atomicity/
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Un script Lua se ejecuta entero y sin interrupciones: es la unidad atómica
+      de Redis y permite actualizar varias claves del mismo agregado sin que
+      nadie vea un estado intermedio.
+    porque_no: >-
+      La atomicidad no es durabilidad: si el servidor cae antes de volcar,
+      el agregado consistente que se acaba de escribir puede no existir al
+      arrancar. Y en un clúster, las claves del agregado tienen que compartir
+      ranura (`hash tag`) o el script ni siquiera se puede ejecutar.
+    doc: https://redis.io/docs/latest/develop/programmability/eval-intro/
+
+  - id: dynamodb
+    aplica: no
+    porque_no: >-
+      Un elemento es la unidad atómica, y está limitado a 400 KB. Un agregado
+      que no quepa ahí necesita `TransactWriteItems`, que admite como mucho 100
+      elementos, cuesta el doble de capacidad de escritura y no admite dos
+      operaciones sobre el mismo elemento.
+    alternativa: >-
+      Diseñar el agregado para que quepa en un elemento, o repartirlo en la
+      misma clave de partición y aceptar que la coherencia entre sus elementos
+      la comprueba un proceso posterior.
+    doc: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      `BATCH` no es una transacción: no hay aislamiento entre particiones y no
+      se puede deshacer. Solo dentro de **una** partición la escritura por lotes
+      es atómica y aislada; en cuanto el agregado toca dos particiones, se puede
+      observar a medias.
+    alternativa: >-
+      Modelar el agregado entero dentro de una sola partición —el pedido como
+      clave, las líneas como filas de agrupamiento— y usar `BATCH` únicamente
+      dentro de ella.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html

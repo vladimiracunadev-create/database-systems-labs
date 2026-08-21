@@ -4,7 +4,7 @@
 > Este laboratorio cuenta exactamente qué se rompe y qué cuesta arreglarlo.
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ · **Marca de éxito:** `REPLICATION_LAB_OK`
-· **Parte:** [09 — Distribución, réplica y consistencia](../../classes/part-09-distribucion-replica-y-consistencia/README.md)
+· **Parte:** [09 — Distribución, réplica y consistencia](../../classes/part-10-distribucion-replica-y-consistencia/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -88,8 +88,8 @@ la réplica y registra cuántas veces no ves tu propia escritura. Compara la for
 
 ## 🎓 Dónde encaja
 
-- **Clases:** [043 — Réplica](../../classes/part-09-distribucion-replica-y-consistencia/043-replica-lider-unico-multilider-y-sin-lider/README.md)
-  y [046 — Modelos de consistencia y garantías de sesión](../../classes/part-09-distribucion-replica-y-consistencia/046-modelos-de-consistencia-y-garantias-de-sesion/README.md).
+- **Clases:** [043 — Réplica](../../classes/part-10-distribucion-replica-y-consistencia/053-replica-lider-unico-multilider-y-sin-lider/README.md)
+  y [046 — Modelos de consistencia y garantías de sesión](../../classes/part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md).
 - **Rutas:** [DBA / SRE de datos](../../rutas/fiabilidad-y-operacion.md),
   [Arquitecto de datos](../../rutas/arquitectura.md), [Ingeniero de datos](../../rutas/ingenieria-de-datos.md).
 - **Certificaciones:** el dominio de alta disponibilidad y recuperación del

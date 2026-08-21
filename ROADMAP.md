@@ -4,7 +4,20 @@ Los hitos no fijan versiones de productos. Cada incorporación verifica soporte 
 documentación oficial en la fecha de implementación, y añade sus fuentes al
 registro antes de escribir una sola línea de clase.
 
-## 2.0 — Programa con fuentes verificables *(actual)*
+## 3.0 — El mismo problema en cada motor *(actual)*
+
+- 15 partes, 74 clases, 230 horas, con la parte 00 como rampa de entrada.
+- **408 implementaciones** repartidas en las 74 clases: cada una declara un caso
+  con su salida esperada y lo resuelve —o explica por qué no— en varios motores.
+- **267 de ellas se ejecutan** contra el motor real en integración continua:
+  SQLite y DuckDB sin servicios, y PostgreSQL, MySQL, MongoDB, Redis y Neo4j
+  contra el contenedor, con el cliente oficial de cada uno.
+- Todo motor declara su **por qué no** y su página de documentación oficial, y el
+  validador comprueba que ese enlace cuelga del dominio que registra el catálogo.
+- Registro de 120 fuentes con ISBN, DOI o URL oficial, y verificador que
+  comprueba también los 347 enlaces de documentación de motores.
+
+## 2.0 — Programa con fuentes verificables
 
 - 14 partes, 64 clases, 210 horas.
 - Registro de 109 fuentes con ISBN, DOI o URL oficial.

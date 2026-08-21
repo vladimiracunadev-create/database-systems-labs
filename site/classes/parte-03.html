@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Escribir SQL cuya semántica se pueda defender: definición del esquema, reuniones, agregación, ventanas y el comportamiento real de los nulos.">
+<meta name="description" content="La teoría que SQL implementa a medias: relaciones como conjuntos, operadores del álgebra, cálculo relacional e integridad declarada.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-03.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="Parte 03 — SQL en profundidad · Database Systems Labs">
-<meta property="og:description" content="Escribir SQL cuya semántica se pueda defender: definición del esquema, reuniones, agregación, ventanas y el comportamiento real de los nulos.">
+<meta property="og:title" content="Parte 03 — Modelo relacional y álgebra · Database Systems Labs">
+<meta property="og:description" content="La teoría que SQL implementa a medias: relaciones como conjuntos, operadores del álgebra, cálculo relacional e integridad declarada.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-03.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<title>Parte 03 — SQL en profundidad · Database Systems Labs</title>
+<title>Parte 03 — Modelo relacional y álgebra · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -50,39 +50,38 @@
   <span>Parte 03</span>
 </nav>
 <main class="content" id="principal">
-<h1>Parte 03 — SQL en profundidad</h1>
-<p class="lead">Escribir SQL cuya semántica se pueda defender: definición del esquema, reuniones, agregación, ventanas y el comportamiento real de los nulos.</p>
-<p><strong>6 clases · 20 horas</strong></p>
+<h1>Parte 03 — Modelo relacional y álgebra</h1>
+<p class="lead">La teoría que SQL implementa a medias: relaciones como conjuntos, operadores del álgebra, cálculo relacional e integridad declarada.</p>
+<p><strong>4 clases · 13 horas</strong></p>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
-<tr><td><a href="014.html">014</a></td><td><a href="014.html">DDL: el esquema como contrato ejecutable</a></td><td class="nivel-fundamentos">Fundamentos</td><td>3</td><td>4</td></tr>
-<tr><td><a href="015.html">015</a></td><td><a href="015.html">SELECT: filtrado, proyección y orden con semántica precisa</a></td><td class="nivel-fundamentos">Fundamentos</td><td>3</td><td>3</td></tr>
-<tr><td><a href="016.html">016</a></td><td><a href="016.html">Reuniones: interna, externa, semi y anti</a></td><td class="nivel-intermedio">Intermedio</td><td>4</td><td>3</td></tr>
-<tr><td><a href="017.html">017</a></td><td><a href="017.html">Agregación, GROUP BY y HAVING sin duplicar filas</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
-<tr><td><a href="018.html">018</a></td><td><a href="018.html">CTE, subconsultas y funciones de ventana</a></td><td class="nivel-intermedio">Intermedio</td><td>4</td><td>4</td></tr>
-<tr><td><a href="019.html">019</a></td><td><a href="019.html">Nulos y lógica de tres valores</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="020.html">020</a></td><td><a href="020.html">La relación como conjunto: tuplas, dominios y acceso por valor</a></td><td class="nivel-fundamentos">Fundamentos</td><td>3</td><td>3</td></tr>
+<tr><td><a href="021.html">021</a></td><td><a href="021.html">Álgebra relacional: selección, proyección, producto y reunión</a></td><td class="nivel-fundamentos">Fundamentos</td><td>4</td><td>3</td></tr>
+<tr><td><a href="022.html">022</a></td><td><a href="022.html">Cálculo relacional y su equivalencia con el álgebra</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="023.html">023</a></td><td><a href="023.html">Integridad: restricciones, claves foraneas y acciones referenciales</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>4</td></tr>
 </tbody></table></div>
 <h2>Otras partes</h2>
 <ul>
-<li><a href="parte-00.html">Parte 00 — Fundamentos, sistemas y método</a></li>
-<li><a href="parte-01.html">Parte 01 — Modelado conceptual y requisitos</a></li>
-<li><a href="parte-02.html">Parte 02 — Modelo relacional y álgebra</a></li>
-<li><a href="parte-04.html">Parte 04 — Motores relacionales y dialectos</a></li>
-<li><a href="parte-05.html">Parte 05 — Documentos y clave-valor</a></li>
-<li><a href="parte-06.html">Parte 06 — Grafos, columnas, tiempo y búsqueda</a></li>
-<li><a href="parte-07.html">Parte 07 — Transacciones, concurrencia y recuperación</a></li>
-<li><a href="parte-08.html">Parte 08 — Almacenamiento, índices y planes</a></li>
-<li><a href="parte-09.html">Parte 09 — Distribución, réplica y consistencia</a></li>
-<li><a href="parte-10.html">Parte 10 — Operación, seguridad y gobierno</a></li>
-<li><a href="parte-11.html">Parte 11 — Analítica, integración y streaming</a></li>
-<li><a href="parte-12.html">Parte 12 — Vectores, recuperación y RAG</a></li>
-<li><a href="parte-13.html">Parte 13 — Arquitectura y proyecto final</a></li>
+<li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>
+<li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li>
+<li><a href="parte-02.html">Parte 02 — Modelado conceptual y requisitos</a></li>
+<li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li>
+<li><a href="parte-05.html">Parte 05 — Motores relacionales y dialectos</a></li>
+<li><a href="parte-06.html">Parte 06 — Documentos y clave-valor</a></li>
+<li><a href="parte-07.html">Parte 07 — Grafos, columnas, tiempo y búsqueda</a></li>
+<li><a href="parte-08.html">Parte 08 — Transacciones, concurrencia y recuperación</a></li>
+<li><a href="parte-09.html">Parte 09 — Almacenamiento, índices y planes</a></li>
+<li><a href="parte-10.html">Parte 10 — Distribución, réplica y consistencia</a></li>
+<li><a href="parte-11.html">Parte 11 — Operación, seguridad y gobierno</a></li>
+<li><a href="parte-12.html">Parte 12 — Analítica, integración y streaming</a></li>
+<li><a href="parte-13.html">Parte 13 — Vectores, recuperación y RAG</a></li>
+<li><a href="parte-14.html">Parte 14 — Arquitectura y proyecto final</a></li>
 </ul>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

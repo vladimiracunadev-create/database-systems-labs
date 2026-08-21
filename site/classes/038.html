@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Páginas, filas y buffer: por qué la entrada y salida manda. Parte 08: Almacenamiento, índices y planes.">
+<meta name="description" content="Grafos de propiedades y los recorridos que SQL hace mal. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/038.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="038 — Páginas, filas y buffer: por qué la entrada y salida manda · Database Systems Labs">
-<meta property="og:description" content="Páginas, filas y buffer: por qué la entrada y salida manda. Parte 08: Almacenamiento, índices y planes.">
+<meta property="og:title" content="038 — Grafos de propiedades y los recorridos que SQL hace mal · Database Systems Labs">
+<meta property="og:description" content="Grafos de propiedades y los recorridos que SQL hace mal. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/038.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "038 — Páginas, filas y buffer: por qué la entrada y salida manda", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["pagina", "factor de bloque", "buffer pool", "localidad", "lectura secuencial"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>038 — Páginas, filas y buffer: por qué la entrada y salida manda · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "038 — Grafos de propiedades y los recorridos que SQL hace mal", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["nodo", "arista", "recorrido de profundidad variable", "reunión sin índice"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>038 — Grafos de propiedades y los recorridos que SQL hace mal · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,249 +49,555 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-08.html">Parte 08 · Almacenamiento, índices y planes</a>
+  <a href="parte-07.html">Parte 07 · Grafos, columnas, tiempo y búsqueda</a>
   <span aria-hidden="true">/</span><span>Clase 038</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="038--páginas-filas-y-buffer-por-qué-la-entrada-y-salida-manda">038 — Páginas, filas y buffer: por qué la entrada y salida manda</h1>
+<h1 id="038--grafos-de-propiedades-y-los-recorridos-que-sql-hace-mal">038 — Grafos de propiedades y los recorridos que SQL hace mal</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-07-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-038%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 08 — Almacenamiento, índices y planes · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>pagina</code> · <code>factor de bloque</code> · <code>buffer pool</code> · <code>localidad</code> · <code>lectura secuencial</code></p>
+<p>Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
+3 horas estimadas · motores <code>neo4j</code>, <code>postgresql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>nodo</code> · <code>arista</code> · <code>recorrido de profundidad variable</code> · <code>reunión sin índice</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 038&quot;]
+    C --&gt; K1[&quot;nodo&quot;]
+    C --&gt; K2[&quot;arista&quot;]
+    C --&gt; K3[&quot;recorrido de profundidad variable&quot;]
+    C --&gt; K4[&quot;reunión sin índice&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Bajar al nivel donde se paga el costo real: páginas, filas y memoria. Casi todas las decisiones de rendimiento se explican como «cuántas páginas hay que tocar».</p>
+<p>Reconocer las consultas para las que el modelo relacional paga un precio estructural —los recorridos de profundidad variable— y saber qué ofrece a cambio un motor de grafos.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Calcular cuántas páginas ocupa una tabla y por qué importa.</li>
-<li>Explicar el factor de bloque y su efecto sobre los barridos.</li>
-<li>Describir el buffer y su política de reemplazo.</li>
-<li>Interpretar la tasa de aciertos y saber cuándo engaña.</li>
-<li>Estimar el costo de una consulta en páginas antes de ejecutarla.</li>
+<li>Modelar un dominio como grafo de propiedades.</li>
+<li>Explicar por qué una reunión relacional cuesta más conforme aumenta la profundidad.</li>
+<li>Traducir entre Cypher y SQL recursivo.</li>
+<li>Medir la diferencia con un caso concreto y su traza de cardinalidad.</li>
+<li>Decidir cuándo el grafo <strong>no</strong> compensa.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-página">La página</h3>
-<p>La unidad de E/S no es la fila: es la <strong>página</strong> (8 KB en PostgreSQL, 16 KB en InnoDB por defecto, configurable en SQLite). Leer un byte cuesta lo mismo que leer la página entera.</p>
-<pre><code class="language-text">Página de 8 192 bytes
-  cabecera                      24 B
-  punteros a filas         4 B × N
-  espacio libre
-  filas (desde el final)
-  cabecera de fila             ~23 B en PostgreSQL
-</code></pre>
-<p><strong>Factor de bloque</strong> = filas por página:</p>
-<pre><code class="language-text">fila de 100 B (más 23 B de cabecera) = 123 B
-factor ≈ (8192 - 24) / (123 + 4) ≈ 64 filas por página
-</code></pre>
-<p>Con 1 000 000 de filas: <strong>15 625 páginas ≈ 122 MB</strong>. Ese número —no el de filas— determina el costo de un barrido.</p>
-<h3 id="el-ancho-de-la-fila-importa-más-de-lo-que-parece">El ancho de la fila importa más de lo que parece</h3>
-<p>Añadir una columna <code>TEXT</code> de 200 bytes a la tabla anterior:</p>
-<pre><code class="language-text">fila de 323 B → factor ≈ 25 filas por página
-1 000 000 de filas → 40 000 páginas ≈ 313 MB
-</code></pre>
-<p>El barrido pasa a costar <strong>2,6 veces más</strong>, incluso para consultas que no leen esa columna. Es el argumento físico a favor de sacar los campos grandes y poco consultados a una tabla aparte, y también la razón por la que el formato columnar gana en analítica (clase 032).</p>
-<p>PostgreSQL mitiga esto con TOAST: los valores grandes se comprimen y se mueven a una tabla auxiliar, dejando un puntero en la fila. Solo se leen si la consulta los pide.</p>
-<h3 id="el-buffer">El buffer</h3>
-<p>Caché de páginas en memoria compartida. La política habitual es una variante de LRU con protección contra barridos: un barrido secuencial de una tabla enorme no debe desalojar todo lo demás. PostgreSQL usa un anillo de buffers para barridos grandes por esa razón exacta.</p>
-<pre><code class="language-sql">SELECT relname,
-       heap_blks_read  AS leidas_disco,
-       heap_blks_hit   AS leidas_cache,
-       round(100.0 * heap_blks_hit /
-             NULLIF(heap_blks_hit + heap_blks_read, 0), 2) AS pct_aciertos
-FROM pg_statio_user_tables ORDER BY heap_blks_read DESC LIMIT 10;
-</code></pre>
-<p><strong>Dónde engaña la tasa de aciertos.</strong> Un 99 % suena excelente, pero:</p>
+<h3 id="el-modelo-de-grafo-de-propiedades">El modelo de grafo de propiedades</h3>
+<p>Cuatro elementos:</p>
 <ul>
-<li>El sistema operativo tiene su propia caché: un «fallo» de PostgreSQL puede resolverse en RAM sin tocar el disco.</li>
-<li>Es un acumulado desde el arranque; un problema de la última hora queda diluido.</li>
-<li>Con un 99 % sobre 100 millones de accesos, el 1 % son un millón de lecturas físicas.</li>
+<li><strong>Nodo:</strong> entidad, con una o más etiquetas (<code>:Estudiante</code>).</li>
+<li><strong>Arista:</strong> relación <strong>dirigida y con tipo</strong> (<code>-[:INSCRITO_EN]-&gt;</code>), que es un objeto de primera clase.</li>
+<li><strong>Propiedades:</strong> pares clave-valor, tanto en nodos como en aristas.</li>
+<li><strong>Recorrido:</strong> navegación siguiendo aristas.</li>
 </ul>
-<p>Es una métrica de contexto, no un objetivo.</p>
-<h3 id="la-jerarquía">La jerarquía</h3>
+<p>La diferencia estructural con el relacional: en un grafo, la arista <strong>es</strong> el dato. En el relacional, la relación se reconstruye en cada consulta buscando en un índice.</p>
+<h3 id="por-qué-la-profundidad-importa">Por qué la profundidad importa</h3>
+<p>Robinson, Webber y Eifrem lo llaman <em>adyacencia sin índice</em>: cada nodo guarda punteros directos a sus vecinos. Encontrar los vecinos de un nodo es seguir punteros, con costo proporcional al número de vecinos y <strong>no</strong> al tamaño del grafo.</p>
+<p>En el modelo relacional, cada nivel de profundidad es una reunión más. Con un índice B-Tree, cada reunión cuesta <code>O(log N)</code> por fila de entrada, y el número de filas de entrada se multiplica por el factor de ramificación en cada nivel.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Nivel</th>
-<th>Latencia típica</th>
-<th>Relativo</th>
+<th>Profundidad</th>
+<th>Relacional (con índice)</th>
+<th>Grafo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Caché L1</td>
-<td>~1 ns</td>
 <td>1</td>
+<td>1 búsqueda de índice</td>
+<td>seguir punteros</td>
 </tr>
 <tr>
-<td>RAM</td>
-<td>~100 ns</td>
-<td>100</td>
+<td>2</td>
+<td>R búsquedas</td>
+<td>seguir punteros</td>
 </tr>
 <tr>
-<td>SSD NVMe</td>
-<td>~100 µs</td>
-<td>100 000</td>
+<td>3</td>
+<td>R² búsquedas</td>
+<td>seguir punteros</td>
 </tr>
 <tr>
-<td>Disco mecánico (aleatorio)</td>
-<td>~10 ms</td>
-<td>10 000 000</td>
-</tr>
-<tr>
-<td>Red (mismo centro)</td>
-<td>~500 µs</td>
-<td>500 000</td>
+<td>k</td>
+<td>R^(k−1) búsquedas</td>
+<td>proporcional a los nodos visitados</td>
 </tr>
 </tbody>
 </table></div>
-<p>El salto de RAM a SSD es de tres órdenes de magnitud. Toda la ingeniería de un motor consiste en cruzarlo lo menos posible.</p>
-<pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta&quot;] --&gt; E[&quot;Ejecutor&quot;]
-    E --&gt; B{&quot;¿La página está&lt;br/&gt;en el buffer?&quot;}
-    B -- &quot;Sí (acierto)&quot; --&gt; H[&quot;~100 ns&quot;]
-    B -- &quot;No (fallo)&quot; --&gt; V{&quot;¿Hay buffer libre?&quot;}
-    V -- &quot;Sí&quot; --&gt; L[&quot;Leer del disco&lt;br/&gt;~100 µs&quot;]
-    V -- &quot;No&quot; --&gt; D[&quot;Desalojar una víctima&quot;]
-    D --&gt; S{&quot;¿Está sucia?&quot;}
-    S -- &quot;Sí&quot; --&gt; W[&quot;Escribirla primero&lt;br/&gt;(tras su registro WAL)&quot;]
-    S -- &quot;No&quot; --&gt; L
-    W --&gt; L
-    L --&gt; H
+<p>Con factor de ramificación R = 50 y profundidad 4: 125 000 búsquedas de índice contra el recorrido de la vecindad efectivamente alcanzada. La ventaja no está en el álgebra —ambos calculan lo mismo— sino en el acceso físico.</p>
+<h3 id="cypher">Cypher</h3>
+<pre><code class="language-cypher">MATCH (s:Estudiante {id: 11})-[:INSCRITO_EN]-&gt;(c:Curso)&lt;-[:INSCRITO_EN]-(otro:Estudiante)
+WHERE otro.id &lt;&gt; 11
+RETURN otro.nombre, count(c) AS cursos_en_comun
+ORDER BY cursos_en_comun DESC LIMIT 10
+</code></pre>
+<p>El patrón se <strong>dibuja</strong>. La misma consulta en SQL exige dos reuniones explícitas de <code>enrollments</code> consigo misma. Con profundidad variable, la diferencia se hace cualitativa:</p>
+<pre><code class="language-cypher">MATCH (a:Curso {id: 'bd'})-[:REQUIERE*1..5]-&gt;(pre:Curso)
+RETURN DISTINCT pre.id
+</code></pre>
+<p><code>*1..5</code> es profundidad variable. En SQL exige una CTE recursiva completa (clase 018), con su cota y su riesgo de ciclo.</p>
+<pre><code class="language-mermaid">flowchart LR
+    E1((&quot;Ana&quot;)) --&gt;|INSCRITO_EN| C1((&quot;BD&quot;))
+    E2((&quot;Luis&quot;)) --&gt;|INSCRITO_EN| C1
+    E2 --&gt;|INSCRITO_EN| C2((&quot;Redes&quot;))
+    E3((&quot;Sara&quot;)) --&gt;|INSCRITO_EN| C2
+    C1 --&gt;|REQUIERE| C3((&quot;Algoritmos&quot;))
+    C3 --&gt;|REQUIERE| C4((&quot;Programación I&quot;))
+    P1((&quot;Prof. Díaz&quot;)) --&gt;|DICTA| C1
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Tabla <code>enrollments</code>: 5 000 000 de filas, fila de 80 bytes útiles.</p>
-<pre><code class="language-text">fila con cabecera ≈ 103 B
-factor de bloque  ≈ (8192-24)/(103+4) ≈ 76 filas/página
-páginas           = 5 000 000 / 76 ≈ 65 790
-tamaño            ≈ 65 790 · 8 KB ≈ 514 MB
+<p>Pregunta: <em>«todos los prerrequisitos de un curso, a cualquier profundidad, con su nivel»</em>.</p>
+<p><strong>SQL recursivo:</strong></p>
+<pre><code class="language-sql">WITH RECURSIVE prereq(curso_id, nivel) AS (
+    SELECT requiere_id, 1 FROM prerequisitos WHERE curso_id = 'bd'
+  UNION
+    SELECT p.requiere_id, pr.nivel + 1
+    FROM prereq pr JOIN prerequisitos p ON p.curso_id = pr.curso_id
+    WHERE pr.nivel &lt; 10
+)
+SELECT curso_id, MIN(nivel) AS nivel FROM prereq GROUP BY curso_id;
 </code></pre>
-<p><strong>Consulta A — barrido secuencial:</strong></p>
-<pre><code class="language-sql">SELECT AVG(nota) FROM enrollments;
+<p><strong>Cypher:</strong></p>
+<pre><code class="language-cypher">MATCH path = (c:Curso {id:'bd'})-[:REQUIERE*1..10]-&gt;(pre:Curso)
+RETURN pre.id, min(length(path)) AS nivel
 </code></pre>
-<p>Toca las 65 790 páginas. En SSD con lectura secuencial a 1 GB/s: ~0,5 s. Si estuvieran en el buffer, ~0,05 s.</p>
-<p><strong>Consulta B — una fila por índice:</strong></p>
-<pre><code class="language-sql">SELECT * FROM enrollments WHERE student_id = 11 AND course_id = 42;
+<p>Ambas son correctas. La diferencia está en el trabajo físico. <strong>Traza con factor de ramificación 3 y profundidad 5:</strong></p>
+<pre><code class="language-text">nivel 1:     3 prerrequisitos    -&gt;    3 búsquedas de índice
+nivel 2:     9                   -&gt;    9
+nivel 3:    27                   -&gt;   27
+nivel 4:    81                   -&gt;   81
+nivel 5:   243                   -&gt;  243
+                                    ------
+total relacional:                     363 búsquedas de índice sobre `prerequisitos`
+total grafo:                          363 saltos de puntero
 </code></pre>
-<pre><code class="language-text">altura del B-Tree ≈ 3 niveles
-páginas de índice leídas: 3
-página de datos:          1
-total:                    4 páginas
-</code></pre>
-<p><strong>65 790 frente a 4.</strong> Cuatro órdenes de magnitud, y la diferencia entera está en cuántas páginas se tocan.</p>
-<p><strong>Consulta C — el caso intermedio, que es donde se decide:</strong></p>
-<pre><code class="language-sql">SELECT * FROM enrollments WHERE course_id = 42;   -- devuelve 40 000 filas
-</code></pre>
-<p>Dos caminos:</p>
-<pre><code class="language-text">Barrido secuencial: 65 790 páginas, lectura SECUENCIAL
-Índice:             ~3 páginas de índice + hasta 40 000 lecturas ALEATORIAS de datos
-</code></pre>
-<p>Aquí la naturaleza del acceso manda. Una lectura secuencial de 65 790 páginas es más rápida que 40 000 aleatorias, porque el disco y el prelector trabajan a favor. <strong>Por eso el optimizador elige el barrido cuando la consulta devuelve una fracción grande de la tabla</strong> (clase 042): el umbral suele rondar el 5–20 % según el motor y la relación entre <code>random_page_cost</code> y <code>seq_page_cost</code>.</p>
-<p><strong>La corrección: correlación física.</strong> Si las filas del mismo curso estuvieran contiguas en disco, las 40 000 lecturas dejarían de ser aleatorias.</p>
-<pre><code class="language-sql">CLUSTER enrollments USING enrollments_course_idx;   -- PostgreSQL: reorganiza una vez
-</code></pre>
-<p>En InnoDB esto es automático: la tabla <strong>es</strong> el índice de clave primaria (índice agrupado), así que las filas con claves primarias contiguas están físicamente juntas. Es una diferencia arquitectónica con consecuencias directas:</p>
+<p>Con este tamaño, <strong>el relacional gana o empata</strong>: 363 búsquedas de índice sobre una tabla que cabe en memoria son microsegundos, y el motor relacional está mucho más optimizado. La ventaja del grafo aparece cuando la tabla de aristas no cabe en memoria y cada búsqueda de índice se convierte en una lectura de disco.</p>
+<p>Este matiz es el punto honesto de la clase: <strong>el grafo no es mágicamente más rápido</strong>. Gana cuando (a) la profundidad es alta y variable, (b) el grafo es grande y disperso, y (c) las consultas son de vecindad y no agregaciones globales.</p>
+<p><strong>Dónde el grafo pierde claramente:</strong></p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th></th>
-<th>PostgreSQL</th>
-<th>InnoDB</th>
+<th>Consulta</th>
+<th>Relacional</th>
+<th>Grafo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Organización</td>
-<td>Montón + índices separados</td>
-<td>Tabla agrupada por clave primaria</td>
+<td>«Promedio de notas por período»</td>
+<td>Agregación con índice</td>
+<td>Recorrido completo, sin ventaja</td>
 </tr>
 <tr>
-<td>Índice secundario apunta a</td>
-<td>Ubicación física de la fila</td>
-<td><strong>La clave primaria</strong></td>
+<td>«Los 100 cursos con más inscritos»</td>
+<td><code>GROUP BY</code> + índice</td>
+<td>Recorrido completo</td>
 </tr>
 <tr>
-<td>Consecuencia</td>
-<td>Actualizar una fila puede exigir tocar todos los índices</td>
-<td>Un índice secundario cuesta una búsqueda extra en el primario</td>
+<td>«Insertar 10 000 inscripciones»</td>
+<td><code>COPY</code> masivo</td>
+<td>Creación de nodos y aristas, más lenta</td>
 </tr>
 <tr>
-<td>Clave primaria ancha</td>
-<td>Coste moderado</td>
-<td>Se copia en <strong>cada</strong> índice secundario</td>
+<td>«Camino más corto entre dos personas»</td>
+<td>CTE recursiva costosa</td>
+<td><strong>Ventaja clara</strong></td>
+</tr>
+<tr>
+<td>«Detección de comunidades»</td>
+<td>Prácticamente inviable</td>
+<td><strong>Ventaja clara</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>La última fila explica por qué en InnoDB una clave primaria ancha (un UUID en texto, una clave compuesta larga) infla todos los índices de la tabla.</p>
+<p><strong>Alternativa intermedia.</strong> Antes de añadir un motor nuevo al sistema (clase 062), conviene comprobar si el relacional basta con el índice adecuado:</p>
+<pre><code class="language-sql">CREATE INDEX prereq_curso ON prerequisitos(curso_id, requiere_id);
+</code></pre>
+<p>Un índice cubriente sobre la tabla de aristas hace que la CTE recursiva no toque la tabla base. En muchos dominios de tamaño medio, eso cierra la brecha entera y ahorra un sistema que operar.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Acceso</th>
-<th>Páginas tocadas</th>
-<th>Naturaleza</th>
-<th>Cuándo gana</th>
+<th>Dimensión</th>
+<th>Relacional</th>
+<th>Grafo de propiedades</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Barrido secuencial</td>
-<td>Todas</td>
-<td>Secuencial</td>
-<td>Se devuelve una fracción grande</td>
+<td>Relación como dato</td>
+<td>Fila en tabla puente</td>
+<td>Objeto de primera clase con propiedades</td>
 </tr>
 <tr>
-<td>Búsqueda por índice</td>
-<td>log N + 1</td>
-<td>Aleatoria</td>
-<td>Muy selectiva</td>
+<td>Profundidad fija</td>
+<td>Excelente</td>
+<td>Bien</td>
 </tr>
 <tr>
-<td>Barrido de índice</td>
-<td>Páginas del índice</td>
-<td>Casi secuencial</td>
-<td>Consulta cubierta</td>
+<td>Profundidad variable</td>
+<td>CTE recursiva, con cota</td>
+<td>Natural</td>
 </tr>
 <tr>
-<td>Barrido de mapa de bits</td>
-<td>Índice + datos ordenados</td>
-<td>Semialeatoria</td>
-<td>Selectividad intermedia</td>
+<td>Agregación global</td>
+<td>Excelente</td>
+<td>Pobre</td>
+</tr>
+<tr>
+<td>Carga masiva</td>
+<td>Excelente</td>
+<td>Lenta</td>
+</tr>
+<tr>
+<td>Restricciones declarativas</td>
+<td>Ricas</td>
+<td>Limitadas (unicidad, existencia)</td>
+</tr>
+<tr>
+<td>Madurez operativa</td>
+<td>Muy alta</td>
+<td>Menor</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Razonar en filas y no en páginas.</strong> El costo lo fija la página.</li>
-<li><strong>Columnas anchas en tablas muy consultadas.</strong> Encarecen todos los barridos.</li>
-<li><strong>Perseguir el 99,9 % de aciertos.</strong> Se compra RAM sin mirar el número absoluto de lecturas.</li>
-<li><strong>Suponer que el índice siempre gana.</strong> Con baja selectividad, pierde.</li>
-<li><strong>Clave primaria ancha en InnoDB.</strong> Se copia en todos los índices secundarios.</li>
-<li><strong>Medir con el caché caliente y presentarlo como mejora.</strong></li>
+<li><strong>Adoptar un grafo porque el dominio «tiene relaciones».</strong> Todos los dominios las tienen; lo que importa es la profundidad variable.</li>
+<li><strong>Modelar propiedades como nodos.</strong> Un nodo por cada valor de atributo hincha el grafo sin aportar recorridos.</li>
+<li><strong>Aristas sin dirección pensada.</strong> La dirección es semántica: <code>REQUIERE</code> no es lo mismo en un sentido que en otro.</li>
+<li><strong>Recorridos sin cota.</strong> Un <code>*</code> sin límite superior en un grafo cíclico no termina.</li>
+<li><strong>Usar el grafo como almacén principal de datos tabulares.</strong> Los informes agregados serán lentos.</li>
+<li><strong>No medir el relacional con el índice adecuado antes de migrar.</strong></li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Cuando una base «se pone lenta al crecer», casi siempre significa que el conjunto de trabajo dejó de caber en el buffer. El indicador que lo anticipa es el tamaño de las tablas e índices calientes frente a la memoria, no el uso de CPU.</p>
+<p>Añadir un motor de grafos añade un sistema que replicar, respaldar, asegurar y mantener sincronizado con el origen. Ese costo permanente debe compararse con la ganancia medida, no con la esperada (clase 062).</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Calcula el factor de bloque y el número de páginas de tu tabla más grande.</li>
-<li>Estima el costo en páginas de tus tres consultas más frecuentes y contrástalo con <code>EXPLAIN (BUFFERS)</code>.</li>
-<li>Mueve una columna ancha a una tabla aparte y mide el cambio en un barrido.</li>
-<li>Compara el tamaño de un índice secundario con clave primaria estrecha y con una ancha.</li>
+<li>Identifica en tu dominio una consulta de profundidad variable.</li>
+<li>Impleméntala con CTE recursiva y mide con el índice adecuado.</li>
+<li>Impleméntala en Cypher sobre los mismos datos y mide.</li>
+<li>Documenta a partir de qué profundidad y qué volumen el grafo compensa, con tus cifras.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Calcula las páginas de una tabla de 20 M de filas de 250 bytes.</li>
-<li>¿Por qué 40 000 lecturas aleatorias pueden ser más lentas que 65 000 secuenciales?</li>
-<li>Explica la diferencia entre montón e índice agrupado y una consecuencia práctica de cada una.</li>
-<li>Da un caso donde una tasa de aciertos del 99 % siga siendo un problema.</li>
+<li>Explica la adyacencia sin índice y por qué el tamaño total del grafo deja de importar.</li>
+<li>Calcula las búsquedas de índice de un recorrido de profundidad 6 con ramificación 10.</li>
+<li>Da una consulta de tu dominio donde el grafo sería claramente peor.</li>
+<li>¿Qué garantías de integridad pierdes al mover datos de un relacional a un grafo?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Todos los prerrequisitos de un curso, por lejos que estén en la cadena</p>
+<p>AR-301 exige SE-201, que exige DB-101, que exige MA-100. La pregunta —«¿qué
+tengo que haber aprobado antes de AR-301?»— tiene una propiedad que la hace
+distinta de todas las anteriores: <strong>no se sabe de antemano cuántas reuniones
+hacen falta</strong>. Hoy la cadena tiene tres eslabones; mañana, siete.</p>
+<p>Todo motor relacional serio la resuelve con <code>WITH RECURSIVE</code>, y funciona. Lo
+que esta clase compara es el precio: en SQL hay que escribir el caso base, el
+paso recursivo y la protección contra ciclos cada vez; en un grafo, el
+recorrido de profundidad variable es un símbolo del lenguaje.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>curso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DB-101</code></td>
+</tr>
+<tr>
+<td><code>MA-100</code></td>
+</tr>
+<tr>
+<td><code>SE-201</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 038</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Neo4j</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/queries-with.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_with.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/with.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/
+// nota: aqui esta la clase entera en dos caracteres. `*` significa «uno o mas
+//       saltos», y el motor no resuelve cada salto por indice: cada nodo guarda
+//       punteros a sus vecinos, asi que el costo depende del vecindario
+//       recorrido y no del tamano del grafo.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (ar:Curso {codigo: 'AR-301'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (ma:Curso {codigo: 'MA-100'}),
+       (ar)-[:REQUIERE]-&gt;(se),
+       (se)-[:REQUIERE]-&gt;(db),
+       (db)-[:REQUIERE]-&gt;(ma);
+
+// === consulta ===
+MATCH (:Curso {codigo: 'AR-301'})-[:REQUIERE*]-&gt;(previo:Curso)
+RETURN DISTINCT previo.codigo AS curso
+ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El recorrido de profundidad variable se escribe con dos caracteres: <code>-[:REQUIERE*]-&gt;</code>. Y el costo no depende del tamaño del grafo sino del vecindario recorrido, porque cada nodo guarda punteros a sus vecinos en vez de resolverse por índice en cada salto.</li>
+<li><strong>Por qué no:</strong> Ese mismo modelo penaliza lo tabular: contar todos los nodos de una etiqueta o agregar sobre todos ellos es más caro que en una tabla, y mantener un grafo entero para una jerarquía de tres niveles es añadir un sistema para no escribir seis líneas de SQL.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/">https://neo4j.com/docs/cypher-manual/current/patterns/variable-length-patterns/</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/queries-with.html
+-- nota: para grafos con ciclos, PostgreSQL tiene la clausula CYCLE, que lleva
+--       la deteccion al propio lenguaje en vez de dejarla al UNION:
+--         WITH RECURSIVE cadena(curso) AS (...) CYCLE curso SET hay_ciclo USING ruta
+
+-- === preparacion ===
+DROP TABLE IF EXISTS prerrequisitos;
+
+CREATE TABLE prerrequisitos (
+    curso    text NOT NULL,
+    requiere text NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>WITH RECURSIVE</code> es del estándar y resuelve el caso sin salir del motor donde ya están los datos: para jerarquías de pocos niveles —organigramas, categorías, listas de materiales— es casi siempre la respuesta correcta.</li>
+<li><strong>Por qué no:</strong> Cada nivel de profundidad es una reunión más, y el planificador estima muy mal el número de filas de una recursión: a partir de cierta profundidad, el plan deja de tener sentido y el tiempo se dispara sin aviso.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-with.html">https://www.postgresql.org/docs/current/queries-with.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_with.html
+-- nota: UNION —no UNION ALL— es lo que protege de los ciclos: descarta las
+--       filas ya vistas. Con UNION ALL y un grafo ciclico, esta consulta no
+--       termina nunca.
+
+-- === preparacion ===
+CREATE TABLE prerrequisitos (
+    curso    TEXT NOT NULL,
+    requiere TEXT NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Implementa <code>WITH RECURSIVE</code> completo, así que el recorrido en anchura se puede estudiar sin instalar nada. <code>UNION</code> en vez de <code>UNION ALL</code> es lo que corta los ciclos: descarta las filas ya vistas.</li>
+<li><strong>Por qué no:</strong> Solo tiene bucle anidado como algoritmo de reunión, así que cada nivel vuelve a buscar por índice fila a fila: la recursión funciona y no escala.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_with.html">https://sqlite.org/lang_with.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/with.html
+-- nota: la misma consulta funciona sobre un grafo exportado a Parquet sin
+--       cargarlo, que es la via analitica cuando la pregunta es «cuantos
+--       caminos hay» y no «dame este camino».
+
+-- === preparacion ===
+CREATE TABLE prerrequisitos (
+    curso    VARCHAR NOT NULL,
+    requiere VARCHAR NOT NULL,
+    PRIMARY KEY (curso, requiere)
+);
+INSERT INTO prerrequisitos (curso, requiere) VALUES
+    ('AR-301', 'SE-201'),
+    ('SE-201', 'DB-101'),
+    ('DB-101', 'MA-100');
+
+-- === consulta ===
+-- La consulta recursiva del estandar: un caso base y un paso que se aplica
+-- hasta que no aporta filas nuevas. Funciona, y hay que escribirla entera cada
+-- vez, incluida la proteccion contra ciclos si el grafo puede tenerlos.
+WITH RECURSIVE cadena(curso) AS (
+    SELECT requiere FROM prerrequisitos WHERE curso = 'AR-301'
+    UNION
+    SELECT p.requiere
+    FROM prerrequisitos p
+    JOIN cadena c ON p.curso = c.curso
+)
+SELECT curso FROM cadena ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Admite la misma sintaxis recursiva y la resuelve de forma vectorizada, lo que la hace viable sobre grafos grandes exportados a Parquet: es la vía analítica para responder «cuántos caminos hay» sin montar un grafo.</li>
+<li><strong>Por qué no:</strong> No hay recorrido guiado ni algoritmos de grafo: para camino más corto, centralidad o comunidades hay que escribirlo todo a mano, si es que se puede.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/with.html">https://duckdb.org/docs/stable/sql/query_syntax/with.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/
+// nota: $graphLookup hace el recorrido transitivo dentro del motor. Tiene un
+//       limite de 100 MB por operacion y no aprovecha indices en colecciones
+//       fragmentadas: sirve para jerarquias modestas, no para un grafo grande.
+
+// === preparacion ===
+db.prerrequisitos.drop();
+db.prerrequisitos.insertMany([
+  { curso: &quot;AR-301&quot;, requiere: &quot;SE-201&quot; },
+  { curso: &quot;SE-201&quot;, requiere: &quot;DB-101&quot; },
+  { curso: &quot;DB-101&quot;, requiere: &quot;MA-100&quot; },
+]);
+
+// === consulta ===
+db.prerrequisitos
+  .aggregate([
+    { $match: { curso: &quot;AR-301&quot; } },
+    { $graphLookup: {
+        from: &quot;prerrequisitos&quot;,
+        startWith: &quot;$requiere&quot;,
+        connectFromField: &quot;requiere&quot;,
+        connectToField: &quot;curso&quot;,
+        as: &quot;cadena&quot; } },
+    { $project: { cursos: { $concatArrays: [[&quot;$requiere&quot;], &quot;$cadena.requiere&quot;] } } },
+    { $unwind: &quot;$cursos&quot; },
+    { $group: { _id: &quot;$cursos&quot; } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>$graphLookup</code> hace el recorrido transitivo dentro del motor, con profundidad máxima configurable: no hace falta traerse el grafo al cliente ni escribir la recursión.</li>
+<li><strong>Por qué no:</strong> Está limitado a 100 MB de memoria por operación y no puede usar índice para la búsqueda recursiva en colecciones fragmentadas: es una herramienta para jerarquías modestas, no para un grafo de verdad.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>No hay reuniones, no hay recursión y no hay forma de recorrer una relación sin conocer de antemano cuántos saltos harán falta. Cada salto sería una consulta desde el cliente, con su latencia de red.</td>
+<td>Guardar el cierre transitivo ya calculado —una fila por cada par (curso, prerrequisito lejano)— y recalcularlo cuando cambie el plan de estudios: se paga en escritura y en espacio lo que no se puede pagar en lectura.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>Recorrer exigiría un viaje por salto o un script Lua que implemente la búsqueda en anchura a mano: el almacén no entiende la relación, solo entiende claves.</td>
+<td>Guardar en un conjunto los prerrequisitos transitivos de cada curso (<code>curso:AR-301:requiere-todo</code>) y reconstruirlo al cambiar el grafo.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/04-indexing/run_indexing_lab.py
+# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -335,27 +641,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
-  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
-<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
-  Descripción completa de los componentes internos de un SGBD relacional.</li>
-<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
-  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
+<li><strong>Ian Robinson, Jim Webber, Emil Eifrem</strong> (2015). <a href="https://neo4j.com/graph-databases-book/">Graph Databases</a>. 2.a ed. O'Reilly. ISBN 978-1-4919-3089-2.<br />
+  Descarga gratuita. Modelado de grafos de propiedades y recorridos.</li>
+<li><strong>Neo4j, Inc.</strong> (2026). <a href="https://neo4j.com/docs/">Neo4j Documentation</a>.<br />
+  Cypher y modelo de grafo de propiedades.</li>
+<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
+  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="037.html">← Anterior</a> · <a href="039.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="038">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="037.html"><span class="sentido">← Anterior · 037</span>Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a>
-<a class="siguiente" href="039.html"><span class="sentido">Siguiente · 039 →</span>B-Tree: estructura, orden de columnas y selectividad</a>
+<a class="anterior" href="037.html"><span class="sentido">← Anterior · 037</span>Clave-valor, caché y expiración: qué se pierde exactamente</a>
+<a class="siguiente" href="039.html"><span class="sentido">Siguiente · 039 →</span>Columnas anchas: modelar desde la consulta</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

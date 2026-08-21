@@ -1,0 +1,39 @@
+# motor: kafka
+# doc: https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html
+# nota: implementacion declarada. Es aqui donde el problema es DIFICIL, porque
+#       hay que decidir sin tener todavia todos los datos.
+#
+#       Tres conceptos y ningun sinonimo:
+#         TIEMPO DE EVENTO   la marca que trae el registro (timestamp del
+#                            productor o extraida del propio mensaje)
+#         MARCA DE AGUA      la afirmacion «ya no espero nada anterior a T»
+#         PERIODO DE GRACIA  cuanto se sigue admitiendo despues de esa marca
+#
+#       El evento tardio del caso —ocurrido a las 10:50, llegado a las 11:10—
+#       entra en la ventana de las 10 SI el periodo de gracia es mayor que 20
+#       minutos. Si es menor, se DESCARTA EN SILENCIO. Ese numero no se elige a
+#       ojo: sale del percentil 99 del retraso real, medido sobre el historico.
+
+# === preparacion ===
+# Topico con la marca de tiempo del propio mensaje como tiempo de evento:
+#   kafka-topics --create --topic eventos --partitions 3
+#   kafka-configs --alter --entity-type topics --entity-name eventos \
+#     --add-config message.timestamp.type=CreateTime
+
+# === consulta ===
+# Kafka Streams (Java). La ventana es por tiempo de evento y la gracia es
+# explicita: 30 minutos, mas que el retraso del evento tardio.
+#
+#   builder.stream("eventos")
+#          .groupByKey()
+#          .windowedBy(TimeWindows.ofSizeAndGrace(
+#                Duration.ofHours(1), Duration.ofMinutes(30)))
+#          .count()
+#          .toStream()
+#          .to("eventos-por-hora");
+#
+# Y para no perder los que lleguen aun mas tarde, se recogen aparte en vez de
+# descartarlos:
+#   .stream("eventos")
+#   .filter((k, v) -> esTardio(v))
+#   .to("eventos-tardios");

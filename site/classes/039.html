@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="B-Tree: estructura, orden de columnas y selectividad. Parte 08: Almacenamiento, índices y planes.">
+<meta name="description" content="Columnas anchas: modelar desde la consulta. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/039.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="039 — B-Tree: estructura, orden de columnas y selectividad · Database Systems Labs">
-<meta property="og:description" content="B-Tree: estructura, orden de columnas y selectividad. Parte 08: Almacenamiento, índices y planes.">
+<meta property="og:title" content="039 — Columnas anchas: modelar desde la consulta · Database Systems Labs">
+<meta property="og:description" content="Columnas anchas: modelar desde la consulta. Parte 07: Grafos, columnas, tiempo y búsqueda.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/039.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "039 — B-Tree: estructura, orden de columnas y selectividad", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["B-Tree", "prefijo más a la izquierda", "selectividad", "índice cubriente"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>039 — B-Tree: estructura, orden de columnas y selectividad · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "039 — Columnas anchas: modelar desde la consulta", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["clave de partición", "clave de agrupamiento", "desnormalización por consulta"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>039 — Columnas anchas: modelar desde la consulta · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,308 +49,680 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-08.html">Parte 08 · Almacenamiento, índices y planes</a>
+  <a href="parte-07.html">Parte 07 · Grafos, columnas, tiempo y búsqueda</a>
   <span aria-hidden="true">/</span><span>Clase 039</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="039--b-tree-estructura-orden-de-columnas-y-selectividad">039 — B-Tree: estructura, orden de columnas y selectividad</h1>
+<h1 id="039--columnas-anchas-modelar-desde-la-consulta">039 — Columnas anchas: modelar desde la consulta</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-07-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Avanzado-8250df?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-039%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 08 — Almacenamiento, índices y planes · Intermedio ·
-4 horas estimadas · motores <code>postgresql</code>, <code>mysql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>B-Tree</code> · <code>prefijo más a la izquierda</code> · <code>selectividad</code> · <code>índice cubriente</code></p>
+<p>Parte 07 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
+3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>clave de partición</code> · <code>clave de agrupamiento</code> · <code>desnormalización por consulta</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 039&quot;]
+    C --&gt; K1[&quot;clave de partición&quot;]
+    C --&gt; K2[&quot;clave de agrupamiento&quot;]
+    C --&gt; K3[&quot;desnormalización por consulta&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Dominar el índice B-Tree: cómo se recorre, por qué el orden de las columnas decide qué consultas sirve y cuándo el motor decide no usarlo.</p>
+<p>Modelar en un motor de columnas anchas, donde la regla se invierte: no se normaliza y luego se consulta, sino que se enumeran las consultas y se diseña una tabla por cada una.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Calcular la altura de un B-Tree y el número de páginas de una búsqueda.</li>
-<li>Aplicar la regla del prefijo más a la izquierda.</li>
-<li>Explicar por qué una condición de rango «detiene» el uso de las columnas siguientes.</li>
-<li>Estimar selectividad y predecir si el índice se usará.</li>
-<li>Diseñar índices cubrientes y medir su beneficio y su costo.</li>
+<li>Distinguir clave de partición de clave de agrupamiento y su efecto físico.</li>
+<li>Diseñar tablas a partir de las consultas, aceptando la duplicación.</li>
+<li>Reconocer las particiones calientes y las particiones sin límite.</li>
+<li>Explicar por qué CQL prohíbe deliberadamente operaciones que SQL permite.</li>
+<li>Elegir el nivel de consistencia y calcular cuándo hay lectura consistente.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-estructura">La estructura</h3>
-<p>Bayer y McCreight (1972) definieron el B-Tree; los motores usan la variante B⁺: todos los datos en las hojas, hojas enlazadas entre sí para recorridos por rango.</p>
-<pre><code class="language-text">                    [ 200 | 500 ]                    raíz
-                   /      |      \
-          [50|120]   [300|400]   [700|900]           internos
-          /  |  \      /  |  \     /  |  \
-        hojas ordenadas, enlazadas: → → → →
+<h3 id="la-clave-primaria-tiene-dos-partes">La clave primaria tiene dos partes</h3>
+<pre><code class="language-sql">PRIMARY KEY ( (course_id, periodo), registrada_en, student_id )
+--             ^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+--             clave de partición    claves de agrupamiento
 </code></pre>
-<p><strong>Altura:</strong></p>
-<pre><code class="language-text">entradas por página ≈ 8 192 / (tamaño de clave + puntero)
-con clave de 8 B + puntero 6 B: ≈ 585 entradas
-N = 10 000 000  →  altura = ⌈log₅₈₅ 10⁷⌉ = 3
-</code></pre>
-<p><strong>Tres páginas</strong> para localizar cualquier fila entre diez millones. Y en la práctica los niveles superiores están siempre en memoria, así que la búsqueda cuesta una o dos lecturas físicas.</p>
-<p>Los B-Tree son <strong>muy planos</strong>: multiplicar los datos por 585 añade un solo nivel.</p>
-<h3 id="el-prefijo-más-a-la-izquierda">El prefijo más a la izquierda</h3>
-<p>Un índice sobre <code>(a, b, c)</code> ordena por <code>a</code>, luego por <code>b</code>, luego por <code>c</code>. Sirve para:</p>
+<ul>
+<li><strong>Clave de partición:</strong> decide <strong>en qué nodo</strong> viven los datos, por hash. Todas las filas con la misma clave de partición están juntas en el mismo nodo.</li>
+<li><strong>Claves de agrupamiento:</strong> deciden <strong>el orden dentro</strong> de la partición. Los datos se guardan físicamente ordenados por ellas.</li>
+</ul>
+<p>Consecuencias que rigen todo lo demás:</p>
+<ol>
+<li>Toda consulta eficiente <strong>debe</strong> especificar la clave de partición completa. Sin ella, hay que preguntar a todos los nodos.</li>
+<li>Solo se puede filtrar por rango en las claves de agrupamiento y <strong>en orden</strong>, sin saltarse ninguna.</li>
+<li><code>ORDER BY</code> solo funciona sobre las claves de agrupamiento y en el sentido declarado.</li>
+</ol>
+<h3 id="lo-que-cql-prohíbe-y-por-qué">Lo que CQL prohíbe, y por qué</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Consulta</th>
-<th>¿Usa el índice?</th>
-<th>Hasta dónde</th>
+<th>Operación SQL</th>
+<th>En CQL</th>
+<th>Motivo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>WHERE a = 1</code></td>
-<td>Sí</td>
-<td><code>a</code></td>
+<td><code>JOIN</code></td>
+<td>No existe</td>
+<td>Exigiría coordinación entre nodos</td>
 </tr>
 <tr>
-<td><code>WHERE a = 1 AND b = 2</code></td>
-<td>Sí</td>
-<td><code>a</code>, <code>b</code></td>
+<td><code>GROUP BY</code> arbitrario</td>
+<td>Muy limitado</td>
+<td>Ídem</td>
 </tr>
 <tr>
-<td><code>WHERE a = 1 AND b = 2 AND c = 3</code></td>
-<td>Sí</td>
-<td>todo</td>
+<td>Filtrar por columna no clave</td>
+<td>Requiere <code>ALLOW FILTERING</code></td>
+<td>Sería un barrido del clúster</td>
 </tr>
 <tr>
-<td><code>WHERE b = 2</code></td>
-<td><strong>No</strong> (o barrido de índice)</td>
-<td>—</td>
+<td>Subconsultas</td>
+<td>No existen</td>
+<td>Ídem</td>
 </tr>
 <tr>
-<td><code>WHERE a = 1 AND c = 3</code></td>
-<td>Parcial</td>
-<td>solo <code>a</code>; filtra <code>c</code> después</td>
-</tr>
-<tr>
-<td><code>ORDER BY a, b</code></td>
-<td>Sí, sin ordenar</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>ORDER BY b</code></td>
+<td><code>OR</code> en el <code>WHERE</code></td>
 <td>No</td>
-<td>—</td>
+<td>Rompería la localización por partición</td>
 </tr>
 </tbody>
 </table></div>
-<p>La analogía exacta es la guía telefónica ordenada por apellido y luego por nombre: buscar por nombre sin apellido no aprovecha el orden.</p>
-<h3 id="el-rango-detiene-el-índice">El rango detiene el índice</h3>
-<p>Regla que Winand desarrolla como concepto central:</p>
-<pre><code class="language-sql">-- índice (course_id, registrada_en, nota)
-WHERE course_id = 42 AND registrada_en &gt; '2026-01-01' AND nota = 6.0
-</code></pre>
-<p>El motor puede usar <code>course_id</code> (igualdad) y <code>registrada_en</code> (rango), pero <strong>no</strong> <code>nota</code>: dentro del rango de fechas, las notas no están ordenadas globalmente. <code>nota</code> se aplica como filtro sobre las filas leídas.</p>
-<p>De ahí la regla de diseño: <strong>igualdades primero, luego la columna de orden, y el rango al final</strong>. Es exactamente la regla ESR de MongoDB de la clase 026, con otro nombre.</p>
-<h3 id="selectividad">Selectividad</h3>
-<pre><code class="language-text">selectividad = filas que cumplen / filas totales
-</code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Selectividad</th>
-<th>Uso probable del índice</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>&lt; 1 %</td>
-<td>Casi seguro</td>
-</tr>
-<tr>
-<td>1 – 5 %</td>
-<td>Probable</td>
-</tr>
-<tr>
-<td>5 – 20 %</td>
-<td>Depende del ancho de fila y la correlación</td>
-</tr>
-<tr>
-<td>&gt; 20 %</td>
-<td>Barrido secuencial</td>
-</tr>
-</tbody>
-</table></div>
-<p>Un índice sobre una columna booleana con reparto 50/50 casi nunca se usa: leer la mitad de la tabla por accesos aleatorios es peor que leerla entera en secuencial (clase 038).</p>
-<p><strong>Excepción importante:</strong> el índice <strong>parcial</strong> sobre el valor raro sí sirve.</p>
-<pre><code class="language-sql">CREATE INDEX enrollments_pendientes ON enrollments (course_id)
-WHERE estado = 'pendiente';    -- solo el 2 % de las filas
-</code></pre>
-<h3 id="índice-cubriente">Índice cubriente</h3>
-<p>Si el índice contiene todas las columnas que la consulta necesita, el motor no toca la tabla:</p>
-<pre><code class="language-sql">CREATE INDEX enr_cubriente ON enrollments (course_id, registrada_en) INCLUDE (nota);
-</code></pre>
-<p><code>INCLUDE</code> (PostgreSQL 11+, SQL Server) añade columnas <strong>solo a las hojas</strong>: no participan en el orden ni engordan los nodos internos. Es más barato que añadirlas a la clave.</p>
+<p><code>ALLOW FILTERING</code> no es una opción avanzada: es una advertencia. Su presencia en código de producción indica casi siempre que el modelo no corresponde a la consulta.</p>
+<p>Las prohibiciones son <strong>de diseño</strong>. Un motor que permitiera reuniones distribuidas ofrecería consultas cuyo costo crece con el tamaño del clúster, y eso es exactamente lo que Cassandra evita para garantizar latencia predecible.</p>
+<h3 id="modelado-dirigido-por-la-consulta">Modelado dirigido por la consulta</h3>
 <pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta&quot;] --&gt; S{&quot;Selectividad&lt;br/&gt;del filtro&quot;}
-    S -- &quot;&gt; 20 %&quot; --&gt; SEQ[&quot;Barrido secuencial&quot;]
-    S -- &quot;&lt; 5 %&quot; --&gt; I{&quot;¿El índice cubre&lt;br/&gt;todas las columnas?&quot;}
-    I -- &quot;Sí&quot; --&gt; C[&quot;Barrido de índice solo&lt;br/&gt;0 accesos a la tabla&quot;]
-    I -- &quot;No&quot; --&gt; B{&quot;¿Muchas filas&lt;br/&gt;coincidentes?&quot;}
-    B -- &quot;Sí&quot; --&gt; BM[&quot;Barrido de mapa de bits:&lt;br/&gt;ordena antes de leer datos&quot;]
-    B -- &quot;No&quot; --&gt; IX[&quot;Búsqueda por índice&quot;]
-    S -- &quot;5-20 %&quot; --&gt; COR{&quot;¿Las filas están&lt;br/&gt;físicamente correlacionadas?&quot;}
-    COR -- &quot;Sí&quot; --&gt; IX
-    COR -- &quot;No&quot; --&gt; SEQ
+    Q[&quot;Enumerar TODAS las consultas&quot;] --&gt; P[&quot;Por cada una: ¿qué se conoce&lt;br/&gt;en el momento de preguntar?&quot;]
+    P --&gt; K[&quot;Eso es la clave de partición&quot;]
+    K --&gt; O[&quot;¿En qué orden se quiere el resultado?&quot;]
+    O --&gt; C[&quot;Eso son las claves de agrupamiento&quot;]
+    C --&gt; T[&quot;Una tabla por consulta&quot;]
+    T --&gt; W[&quot;Escribir en todas ellas&lt;br/&gt;en cada operación&quot;]
+    W --&gt; V{&quot;¿Alguna partición&lt;br/&gt;crece sin límite?&quot;}
+    V -- &quot;Sí&quot; --&gt; B[&quot;Añadir un cubo temporal&lt;br/&gt;a la clave de partición&quot;]
+    V -- &quot;No&quot; --&gt; OK[&quot;Modelo válido&quot;]
 </code></pre>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Consulta frecuente sobre 5 000 000 de inscripciones:</p>
-<pre><code class="language-sql">SELECT student_id, nota
-FROM enrollments
-WHERE course_id = 42 AND estado = 'activa' AND registrada_en &gt;= '2026-01-01'
-ORDER BY registrada_en DESC
-LIMIT 20;
+<h3 id="particiones-los-dos-fallos">Particiones: los dos fallos</h3>
+<p><strong>Partición caliente:</strong> una clave concreta recibe una fracción desproporcionada del tráfico. Si <code>course_id</code> es la clave y un curso tiene el 40 % de las inscripciones, un nodo hace el 40 % del trabajo mientras los demás están ociosos.</p>
+<p><strong>Partición sin límite:</strong> una partición que crece indefinidamente. Cassandra recomienda mantenerlas por debajo de ~100 MB y ~100 000 filas. Una partición por <code>sensor_id</code> que recibe una medición por segundo supera esa cota en poco más de un día.</p>
+<p>La solución para ambos es la misma: <strong>añadir un cubo a la clave de partición</strong>.</p>
+<pre><code class="language-sql">PRIMARY KEY ( (sensor_id, dia), medido_en )
 </code></pre>
-<p><strong>Datos del dominio:</strong> 300 cursos (16 667 filas por curso), 85 % activas, la mitad posteriores a esa fecha.</p>
-<p><strong>Índice 1 — ingenuo, una columna:</strong></p>
-<pre><code class="language-sql">CREATE INDEX i1 ON enrollments (course_id);
+<p>Ahora cada partición cubre un día. El costo: una consulta de siete días debe preguntar por siete particiones, lo que el cliente resuelve con siete consultas en paralelo. Elegir el tamaño del cubo es un cálculo, no una intuición:</p>
+<pre><code class="language-text">mediciones por día = 86 400
+tamaño de fila     ≈ 100 bytes
+partición diaria   ≈ 8,6 MB          ← correcto
+partición mensual  ≈ 260 MB          ← demasiado grande
 </code></pre>
-<pre><code class="language-text">Búsqueda por índice: 16 667 entradas
-Acceso a la tabla:   16 667 lecturas (posiblemente aleatorias)
-Filtro:              estado y fecha, descarta ~58 %
-Orden:               7 000 filas ordenadas en memoria
-LIMIT 20
-</code></pre>
-<p><strong>Índice 2 — orden equivocado:</strong></p>
-<pre><code class="language-sql">CREATE INDEX i2 ON enrollments (registrada_en, course_id, estado);
-</code></pre>
-<p>Peor: el rango va primero, así que el índice se recorre desde la fecha hasta el final —millones de entradas— filtrando <code>course_id</code> sobre cada una.</p>
-<p><strong>Índice 3 — igualdades, orden, rango:</strong></p>
-<pre><code class="language-sql">CREATE INDEX i3 ON enrollments (course_id, estado, registrada_en DESC);
-</code></pre>
-<pre><code class="language-text">Descenso del árbol:        3 páginas
-Recorrido de hojas:        20 entradas (ya en el orden pedido, descendente)
-Acceso a la tabla:         20 filas
-Orden:                     NINGUNO (el índice lo entrega)
-</code></pre>
-<p><strong>16 667 → 20.</strong> Y desaparece el ordenamiento, que era el otro coste.</p>
-<p><strong>Índice 4 — cubriente:</strong></p>
-<pre><code class="language-sql">CREATE INDEX i4 ON enrollments (course_id, estado, registrada_en DESC)
-       INCLUDE (student_id, nota);
-</code></pre>
-<pre><code class="language-text">Accesos a la tabla: 0
-</code></pre>
-<p><strong>Comparación medida:</strong></p>
+<h3 id="consistencia-ajustable">Consistencia ajustable</h3>
+<p>Cada operación elige cuántas réplicas deben responder:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Índice</th>
-<th style="text-align: right;">Entradas leídas</th>
-<th style="text-align: right;">Filas de tabla</th>
-<th>¿Ordena?</th>
-<th style="text-align: right;">Tamaño</th>
+<th>Nivel</th>
+<th>Significado</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Sin índice</td>
-<td style="text-align: right;">—</td>
-<td style="text-align: right;">5 000 000</td>
-<td>Sí</td>
-<td style="text-align: right;">0</td>
+<td><code>ONE</code></td>
+<td>Una réplica</td>
 </tr>
 <tr>
-<td>i1</td>
-<td style="text-align: right;">16 667</td>
-<td style="text-align: right;">16 667</td>
-<td>Sí</td>
-<td style="text-align: right;">107 MB</td>
+<td><code>QUORUM</code></td>
+<td>⌊RF/2⌋ + 1</td>
 </tr>
 <tr>
-<td>i2</td>
-<td style="text-align: right;">~2 500 000</td>
-<td style="text-align: right;">2 500 000</td>
-<td>No</td>
-<td style="text-align: right;">214 MB</td>
+<td><code>LOCAL_QUORUM</code></td>
+<td>Quórum dentro del centro de datos local</td>
 </tr>
 <tr>
-<td>i3</td>
-<td style="text-align: right;">20</td>
-<td style="text-align: right;">20</td>
-<td>No</td>
-<td style="text-align: right;">161 MB</td>
-</tr>
-<tr>
-<td>i4</td>
-<td style="text-align: right;">20</td>
-<td style="text-align: right;"><strong>0</strong></td>
-<td>No</td>
-<td style="text-align: right;">268 MB</td>
+<td><code>ALL</code></td>
+<td>Todas</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>El costo del índice, que también hay que declarar.</strong> i4 pesa 268 MB y se mantiene en <strong>cada</strong> inserción, actualización y borrado de la tabla. Con 400 inscripciones diarias, es despreciable. Con 40 000 por segundo, no lo es: cada escritura toca el índice y compite por sus páginas.</p>
-<p>Regla: <strong>un índice es una apuesta de que se leerá más de lo que se escribirá</strong>. Los índices que no se usan solo cuestan.</p>
-<pre><code class="language-sql">SELECT indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
-FROM pg_stat_user_indexes WHERE idx_scan = 0 ORDER BY pg_relation_size(indexrelid) DESC;
+<p><strong>Regla de lectura consistente:</strong> <code>R + W &gt; RF</code>. Con factor de replicación 3:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>W</th>
+<th>R</th>
+<th>¿Lectura consistente?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ONE</code> (1)</td>
+<td><code>ONE</code> (1)</td>
+<td>No: 1+1 = 2 ≤ 3</td>
+</tr>
+<tr>
+<td><code>QUORUM</code> (2)</td>
+<td><code>QUORUM</code> (2)</td>
+<td><strong>Sí</strong>: 2+2 = 4 &gt; 3</td>
+</tr>
+<tr>
+<td><code>ALL</code> (3)</td>
+<td><code>ONE</code> (1)</td>
+<td>Sí, pero sin tolerancia a fallos en escritura</td>
+</tr>
+<tr>
+<td><code>ONE</code> (1)</td>
+<td><code>ALL</code> (3)</td>
+<td>Sí, pero sin tolerancia a fallos en lectura</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>QUORUM</code>/<code>QUORUM</code> es el punto de equilibrio habitual: tolera la caída de una réplica en ambos sentidos. Es el mismo cálculo de quórums de Dynamo, que se retoma en la clase 043.</p>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Consultas del dominio:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Consulta</th>
+<th>Se conoce</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td>Inscripciones de un curso, las más recientes primero</td>
+<td><code>course_id</code>, <code>periodo</code></td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>Cursos de un estudiante</td>
+<td><code>student_id</code></td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>Una inscripción concreta</td>
+<td>ambos</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tres tablas, una por consulta:</strong></p>
+<pre><code class="language-sql">CREATE TABLE inscripciones_por_curso (
+  course_id     text, periodo text,
+  registrada_en timestamp, student_id int,
+  student_nombre text, nota decimal, estado text,
+  PRIMARY KEY ((course_id, periodo), registrada_en, student_id)
+) WITH CLUSTERING ORDER BY (registrada_en DESC, student_id ASC);
+
+CREATE TABLE cursos_por_estudiante (
+  student_id int, periodo text,
+  course_id text, course_nombre text, nota decimal, estado text,
+  PRIMARY KEY ((student_id), periodo, course_id)
+) WITH CLUSTERING ORDER BY (periodo DESC, course_id ASC);
+
+CREATE TABLE inscripcion (
+  student_id int, course_id text,
+  periodo text, nota decimal, estado text, registrada_en timestamp,
+  PRIMARY KEY ((student_id, course_id))
+);
 </code></pre>
+<p>Los mismos datos, tres veces. <strong>Eso es correcto en este modelo</strong>: el almacenamiento es barato y la coordinación distribuida es cara.</p>
+<p><strong>Escritura: un lote lógico.</strong></p>
+<pre><code class="language-sql">BEGIN BATCH
+  INSERT INTO inscripciones_por_curso (course_id, periodo, registrada_en, student_id,
+                                       student_nombre, estado)
+         VALUES ('bd','2026-1', toTimestamp(now()), 11, 'Ana Pérez', 'activa');
+  INSERT INTO cursos_por_estudiante (student_id, periodo, course_id, course_nombre, estado)
+         VALUES (11, '2026-1', 'bd', 'Bases de datos', 'activa');
+  INSERT INTO inscripcion (student_id, course_id, periodo, estado, registrada_en)
+         VALUES (11, 'bd', '2026-1', 'activa', toTimestamp(now()));
+APPLY BATCH;
+</code></pre>
+<p>Advertencia importante: un <code>BATCH</code> que abarca varias particiones <strong>no</strong> es una transacción. Garantiza que todas las sentencias se aplicarán <em>eventualmente</em>, mediante un registro de lote, y tiene un costo de coordinación notable. Los lotes son adecuados para mantener sincronizadas vistas duplicadas de una misma escritura lógica, no para lógica transaccional.</p>
+<p><strong>Comprobación de la partición sin límite.</strong> <code>inscripciones_por_curso</code> tiene una partición por <code>(course_id, periodo)</code>. Un curso masivo con 50 000 inscritos y filas de ~150 bytes da 7,5 MB: dentro de lo aceptable. Si el dominio admitiera cursos de un millón, habría que cubetear por mes de inscripción.</p>
+<p><strong>Q2 con <code>ALLOW FILTERING</code></strong>, el antipatrón:</p>
+<pre><code class="language-sql">SELECT * FROM inscripciones_por_curso WHERE student_id = 11 ALLOW FILTERING;
+</code></pre>
+<p>Funciona y pregunta a <strong>todos</strong> los nodos, leyendo todas las particiones. Con 300 cursos, la consulta lee 300 particiones para devolver 8 filas. Por eso existe <code>cursos_por_estudiante</code>.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Objetivo</th>
-<th>Diseño</th>
+<th>Dimensión</th>
+<th>Relacional</th>
+<th>Columnas anchas</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Igualdad en varias columnas</td>
-<td>Índice compuesto, las más selectivas antes</td>
+<td>Punto de partida</td>
+<td>El esquema normalizado</td>
+<td>Las consultas</td>
 </tr>
 <tr>
-<td>Igualdad + orden</td>
-<td>Igualdades, luego la columna del <code>ORDER BY</code></td>
+<td>Duplicación</td>
+<td>Se evita</td>
+<td>Se busca</td>
 </tr>
 <tr>
-<td>Rango</td>
-<td>Al final del índice</td>
+<td>Reuniones</td>
+<td>En el motor</td>
+<td>En la escritura</td>
 </tr>
 <tr>
-<td>Evitar acceso a la tabla</td>
-<td><code>INCLUDE</code> con las columnas proyectadas</td>
+<td>Consultas no previstas</td>
+<td>Se escriben y funcionan</td>
+<td>Exigen tabla nueva y relleno</td>
 </tr>
 <tr>
-<td>Valor poco frecuente</td>
-<td>Índice parcial</td>
+<td>Coste de escritura</td>
+<td>Uno</td>
+<td>Uno por vista</td>
 </tr>
 <tr>
-<td>Búsqueda por función</td>
-<td>Índice de expresión</td>
+<td>Escalado horizontal de escritura</td>
+<td>Limitado</td>
+<td>Lineal</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Un índice por columna.</strong> El motor rara vez combina dos con eficacia; un compuesto sirve a más consultas.</li>
-<li><strong>Rango antes que igualdad.</strong> Desperdicia el resto del índice.</li>
-<li><strong>Indexar columnas de baja cardinalidad.</strong> Salvo como índice parcial.</li>
-<li><strong>Función sobre la columna en el <code>WHERE</code>.</strong> <code>WHERE lower(email) = ...</code> no usa el índice sobre <code>email</code>; hace falta un índice de expresión.</li>
-<li><strong>Índices que nadie usa.</strong> Cuestan espacio y escrituras.</li>
-<li><strong>Ignorar el orden del <code>ORDER BY</code> en el índice.</strong> Un índice ascendente sirve para <code>DESC</code> en muchos motores, pero no siempre en índices compuestos con sentidos mixtos.</li>
+<li><strong><code>ALLOW FILTERING</code> en producción.</strong> Señal de modelo ausente.</li>
+<li><strong>Particiones sin cota.</strong> Degradan la latencia progresivamente hasta el fallo.</li>
+<li><strong>Confundir <code>BATCH</code> con transacción.</strong> No hay atomicidad entre particiones.</li>
+<li><strong>Clave de partición de baja cardinalidad.</strong> Concentra los datos en pocos nodos.</li>
+<li><strong>Leer con <code>ONE</code> tras escribir con <code>ONE</code> y esperar consistencia.</strong> <code>R + W ≤ RF</code>.</li>
+<li><strong>Índices secundarios de Cassandra por costumbre.</strong> Consultan todos los nodos; en general se prefiere una tabla nueva.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los índices se acumulan: cada incidencia añade uno y nadie retira los anteriores. Una revisión trimestral de índices no usados suele recuperar decenas de gigabytes y acelerar la escritura sin tocar una línea de código.</p>
+<p>Una consulta no prevista en un modelo de columnas anchas no es un <code>SELECT</code> nuevo: es una tabla nueva más el relleno histórico de todos los datos existentes. Enumerar bien las consultas al principio no es burocracia, es la única forma barata de hacerlo.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Elige tu consulta más frecuente y diseña el índice con la regla igualdad-orden-rango.</li>
-<li>Mide entradas leídas, filas de tabla y presencia de ordenamiento antes y después.</li>
-<li>Conviértelo en cubriente y compara tamaño frente a beneficio.</li>
-<li>Enumera los índices sin uso de tu base y calcula el espacio recuperable.</li>
+<li>Enumera las consultas de tu dominio con lo que se conoce en el momento de preguntar.</li>
+<li>Diseña una tabla por consulta con sus claves de partición y agrupamiento.</li>
+<li>Calcula el tamaño máximo de la partición más grande y decide el cubo si hace falta.</li>
+<li>Elige <code>R</code> y <code>W</code> para dos operaciones distintas y justifica con <code>R + W &gt; RF</code>.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Calcula la altura de un B-Tree con 500 millones de filas y clave de 16 bytes.</li>
-<li>¿Por qué un índice sobre <code>(a, b)</code> no sirve para <code>WHERE b = 2</code>?</li>
-<li>Explica por qué un rango impide aprovechar las columnas posteriores.</li>
-<li>Da una consulta tuya donde el índice cubriente compense y otra donde no.</li>
+<li>¿Por qué CQL prohíbe las reuniones en lugar de permitirlas y avisar de su costo?</li>
+<li>Calcula el tamaño de partición de una serie tuya y elige el cubo temporal.</li>
+<li>Con RF = 5, ¿qué combinaciones de <code>R</code> y <code>W</code> dan lectura consistente?</li>
+<li>Da una consulta nueva sobre tu modelo y describe el trabajo completo de añadirla.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Las dos últimas lecturas de un sensor, de la más reciente a la más antigua</p>
+<p>En el modelo de columnas anchas no se modela el dominio: se modela <strong>la
+consulta</strong>. La clave primaria de Cassandra tiene dos partes con papeles muy
+distintos: la de partición decide en qué nodo vive la fila, y la de
+agrupamiento decide en qué orden están las filas <strong>dentro</strong> de esa partición,
+en el disco.</p>
+<p>El caso lo pone a prueba con la consulta más común de la telemetría: las dos
+últimas lecturas de <code>sensor-1</code>. Con la tabla modelada así, la respuesta son
+dos celdas contiguas de una sola partición, en un solo nodo, sin ordenar
+nada. Cambiar la pregunta —«las lecturas de todos los sensores a las 10:01»—
+obliga a otra tabla, y esa es exactamente la lección.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>momento</th>
+<th>valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2026-08-19T10:02:00Z</code></td>
+<td><code>23</code></td>
+</tr>
+<tr>
+<td><code>2026-08-19T10:01:00Z</code></td>
+<td><code>22</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 039</code>: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>ScyllaDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/scylladb/consulta.cql">código</a></td>
+<td><a href="https://opensource.docs.scylladb.com/stable/cql/ddl.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/timeseries/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html
+-- nota: implementacion declarada. Las dos partes de la clave primaria hacen
+--       cosas distintas y conviene no confundirlas:
+--         (dispositivo)  clave de PARTICION -&gt; en que nodo vive la fila
+--         momento        clave de AGRUPAMIENTO -&gt; en que orden estan las filas
+--                        DENTRO de esa particion, en el disco
+--       Por eso LIMIT 2 lee dos celdas contiguas de un solo nodo.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS telemetria
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS telemetria.lecturas_por_dispositivo;
+
+CREATE TABLE telemetria.lecturas_por_dispositivo (
+    dispositivo text,
+    momento     timestamp,
+    valor       int,
+    PRIMARY KEY (dispositivo, momento)
+) WITH CLUSTERING ORDER BY (momento DESC);
+
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:00:00Z', 21);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:01:00Z', 22);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:02:00Z', 23);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-2', '2026-08-19T10:00:00Z', 30);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Sin ORDER BY: el orden ya esta en el disco. Y sin ALLOW FILTERING: la
+-- consulta toca UNA particion.
+--
+-- La pregunta inversa —«todas las lecturas de las 10:01, de cualquier sensor»—
+-- NO se puede responder con esta tabla, y esa es la leccion. Haria falta
+-- lecturas_por_minuto, escrita por la aplicacion en la misma operacion.
+--
+-- Y ojo con la particion infinita: un sensor que emite para siempre hace crecer
+-- su particion sin limite. En produccion la clave seria ((dispositivo, dia)).
+SELECT momento, valor
+FROM telemetria.lecturas_por_dispositivo
+WHERE dispositivo = 'sensor-1'
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La consulta se resuelve por el orden físico: <code>LIMIT 2</code> lee dos celdas contiguas de una partición, en un nodo, sin ordenación ni reunión. Y añadir nodos aumenta la capacidad de escritura de forma lineal, porque el dispositivo reparte las particiones por todo el anillo.</li>
+<li><strong>Por qué no:</strong> Solo responde la pregunta con la que se modeló. Cualquier otra exige otra tabla, escrita por la aplicación en la misma operación y sin transacción que garantice que ambas quedaron de acuerdo. Y una partición que crezca sin límite —un sensor que emite para siempre— acaba siendo un problema por sí sola: hay que meter el mes o el día en la clave de partición.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html">https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html</a></li>
+</ul>
+<h4 id="scylladb--implementacionesscylladbconsultacql">ScyllaDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/scylladb/consulta.cql"><code>implementaciones/scylladb/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: scylladb
+-- doc: https://opensource.docs.scylladb.com/stable/cql/ddl.html
+-- nota: implementacion declarada, y deliberadamente IDENTICA a la de Cassandra:
+--       ese es el argumento. ScyllaDB habla el mismo CQL y usa el mismo modelo
+--       de datos, asi que el diseno migra sin tocar una linea. Lo que cambia
+--       esta debajo: implementacion en C++ con un hilo fijado por nucleo y sin
+--       recolector de basura, lo que elimina las pausas que en Cassandra hay
+--       que ajustar a mano.
+--       Lo que NO es identico: indices secundarios, vistas materializadas y
+--       herramientas de operacion. La compatibilidad es alta, no total.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS telemetria
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS telemetria.lecturas_por_dispositivo;
+
+CREATE TABLE telemetria.lecturas_por_dispositivo (
+    dispositivo text,
+    momento     timestamp,
+    valor       int,
+    PRIMARY KEY (dispositivo, momento)
+) WITH CLUSTERING ORDER BY (momento DESC);
+
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:01:00Z', 22);
+INSERT INTO telemetria.lecturas_por_dispositivo (dispositivo, momento, valor)
+  VALUES ('sensor-1', '2026-08-19T10:02:00Z', 23);
+
+-- === consulta ===
+SELECT momento, valor
+FROM telemetria.lecturas_por_dispositivo
+WHERE dispositivo = 'sensor-1'
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Habla el mismo CQL y usa el mismo modelo de datos, así que el diseño migra sin cambios; su implementación en C++ con un hilo por núcleo y sin recolector de basura elimina las pausas que en Cassandra hay que ajustar.</li>
+<li><strong>Por qué no:</strong> La compatibilidad no es total —hay diferencias en índices secundarios, vistas materializadas y herramientas— y el ecosistema alrededor es más pequeño: se gana rendimiento y se pierde comunidad.</li>
+<li>📄 Documentación oficial: <a href="https://opensource.docs.scylladb.com/stable/cql/ddl.html">https://opensource.docs.scylladb.com/stable/cql/ddl.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: la clave primaria (dispositivo, momento) ordena las filas en el arbol B
+--       exactamente como la clave de agrupamiento de Cassandra ordena las celdas
+--       dentro de la particion. La idea es la misma; lo que falta aqui es el
+--       reparto entre nodos.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    dispositivo TEXT NOT NULL,
+    momento     TEXT NOT NULL,
+    valor       INTEGER NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con la clave primaria <code>(dispositivo, momento)</code>, SQLite guarda las filas ordenadas por esa clave en el árbol B: la misma idea de «el orden está en el disco» se puede comprobar aquí sin clúster.</li>
+<li><strong>Por qué no:</strong> Un solo archivo y un solo escritor: la parte del modelo que justifica Cassandra —repartir la escritura entre muchos nodos— no se puede estudiar aquí en absoluto.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+-- nota: la pregunta que hay que hacerle a DuckDB no es esta, sino esta otra:
+--         SELECT dispositivo, COUNT(*) FROM lecturas
+--         GROUP BY dispositivo ORDER BY 2 DESC LIMIT 10;
+--       es decir, que particion va a crecer sin limite. Mejor saberlo antes.
+
+-- === preparacion ===
+CREATE TABLE lecturas (
+    dispositivo VARCHAR NOT NULL,
+    momento     VARCHAR NOT NULL,
+    valor       INTEGER NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es la herramienta para la otra mitad del trabajo: comprobar si el diseño de particiones aguanta. Contar filas por partición sobre un volcado dice cuál va a crecer sin límite antes de que lo haga en producción.</li>
+<li><strong>Por qué no:</strong> No hay particionado ni distribución: es donde se analiza la decisión, no donde se ejecuta.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/orderby.html">https://duckdb.org/docs/stable/sql/query_syntax/orderby.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+-- nota: el indice (dispositivo, momento DESC) da el mismo atajo que la clave de
+--       agrupamiento de Cassandra: EXPLAIN muestra «Index Scan» sin nodo Sort.
+--       La diferencia no esta en la lectura, esta en que la escritura sigue
+--       pasando por un unico nodo primario.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS lecturas;
+
+CREATE TABLE lecturas (
+    dispositivo text NOT NULL,
+    momento     text NOT NULL,
+    valor       integer NOT NULL,
+    PRIMARY KEY (dispositivo, momento)
+);
+INSERT INTO lecturas (dispositivo, momento, valor) VALUES
+    ('sensor-1', '2026-08-19T10:00:00Z', 21),
+    ('sensor-1', '2026-08-19T10:01:00Z', 22),
+    ('sensor-1', '2026-08-19T10:02:00Z', 23),
+    ('sensor-2', '2026-08-19T10:00:00Z', 30),
+    ('sensor-2', '2026-08-19T10:01:00Z', 31);
+
+CREATE INDEX lecturas_recientes ON lecturas (dispositivo, momento DESC);
+
+-- === consulta ===
+-- Las dos ultimas lecturas de sensor-1, de la mas reciente a la mas antigua.
+SELECT momento, valor
+FROM lecturas
+WHERE dispositivo = 'sensor-1'
+ORDER BY momento DESC
+LIMIT 2;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un índice sobre <code>(dispositivo, momento DESC)</code> da el mismo atajo —leer dos entradas contiguas y parar— y además permite responder cualquier otra pregunta, aunque más despacio. Con particionado declarativo por rango de fecha se cubre buena parte de la carga de telemetría sin salir del motor.</li>
+<li><strong>Por qué no:</strong> La escritura sigue pasando por un único nodo primario: cuando el volumen de ingesta supera lo que una máquina puede escribir, no hay índice que salve, y ahí es donde el modelo distribuido deja de ser una alternativa y pasa a ser la única.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">https://www.postgresql.org/docs/current/ddl-partitioning.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/timeseries-collections/
+// nota: una coleccion de series temporales agrupa internamente las medidas por
+//       metaField y ventana de tiempo. El metaField hace el papel de la clave
+//       de particion de Cassandra, y elegirlo mal produce el mismo problema:
+//       un fragmento que recibe toda la escritura.
+
+// === preparacion ===
+db.lecturas.drop();
+db.createCollection(&quot;lecturas&quot;, {
+  timeseries: { timeField: &quot;momento&quot;, metaField: &quot;dispositivo&quot;, granularity: &quot;minutes&quot; },
+});
+db.lecturas.insertMany([
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:00:00Z&quot;), valor: 21 },
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:01:00Z&quot;), valor: 22 },
+  { dispositivo: &quot;sensor-1&quot;, momento: new Date(&quot;2026-08-19T10:02:00Z&quot;), valor: 23 },
+  { dispositivo: &quot;sensor-2&quot;, momento: new Date(&quot;2026-08-19T10:00:00Z&quot;), valor: 30 },
+  { dispositivo: &quot;sensor-2&quot;, momento: new Date(&quot;2026-08-19T10:01:00Z&quot;), valor: 31 },
+]);
+
+// === consulta ===
+db.lecturas
+  .find({ dispositivo: &quot;sensor-1&quot; })
+  .sort({ momento: -1 })
+  .limit(2)
+  .forEach((d) =&gt; print(d.momento.toISOString().replace(&quot;.000Z&quot;, &quot;Z&quot;) + &quot;|&quot; + d.valor));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las colecciones de series temporales agrupan las medidas por dispositivo y ventana de tiempo, lo que reduce mucho el espacio, y la clave de fragmentación cumple el papel de la clave de partición.</li>
+<li><strong>Por qué no:</strong> Elegir mal la clave de fragmentación produce el mismo problema que en Cassandra —un fragmento caliente que recibe toda la escritura— y cambiarla en caliente, aunque hoy se pueda, es una operación cara.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">https://www.mongodb.com/docs/manual/core/timeseries-collections/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>Un conjunto ordenado por marca de tiempo responde esta consulta muy bien, pero todo vive en memoria: la telemetría es precisamente el caso donde el volumen histórico no cabe y no se puede permitir perder.</td>
+<td>Redis como ventana caliente de las últimas horas, con la serie completa en el almacén que sí puede guardarla; dos sistemas con dos papeles, declarado cuál es cuál.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/timeseries/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/04-indexing/run_indexing_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -394,27 +766,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>R. Bayer, E. McCreight</strong> (1972). <a href="https://link.springer.com/article/10.1007/BF00288683">Organization and Maintenance of Large Ordered Indices</a>. Acta Informatica 1(3). DOI <a href="https://doi.org/10.1007/BF00288683">10.1007/BF00288683</a>.<br />
-  Artículo original del B-Tree.</li>
-<li><strong>Goetz Graefe</strong> (2011). <a href="https://www.nowpublishers.com/article/Details/DBS-028">Modern B-Tree Techniques</a>. Foundations and Trends in Databases 3(4). DOI <a href="https://doi.org/10.1561/1900000028">10.1561/1900000028</a>.<br />
-  Estado del arte del B-Tree: división, compresión y concurrencia.</li>
-<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
-  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
+<li><strong>Fay Chang, Jeffrey Dean, Sanjay Ghemawat</strong> (2006). <a href="https://research.google/pubs/bigtable-a-distributed-storage-system-for-structured-data/">Bigtable: A Distributed Storage System for Structured Data</a>. USENIX OSDI.<br />
+  Origen del modelo de familias de columnas que adoptaron HBase y Cassandra.</li>
+<li><strong>Jeff Carpenter, Eben Hewitt</strong> (2020). <a href="https://www.oreilly.com/library/view/cassandra-the-definitive/9781098115159/">Cassandra: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-0981-1516-3.<br />
+  Modelado dirigido por consultas en un motor de columnas anchas.</li>
+<li><strong>Apache Software Foundation</strong> (2026). <a href="https://cassandra.apache.org/doc/latest/">Apache Cassandra Documentation</a>.<br />
+  CQL, claves de partición y niveles de consistencia ajustables.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 08</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="038.html">← Anterior</a> · <a href="040.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="039">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="038.html"><span class="sentido">← Anterior · 038</span>Páginas, filas y buffer: por qué la entrada y salida manda</a>
-<a class="siguiente" href="040.html"><span class="sentido">Siguiente · 040 →</span>LSM-Tree, compactación y amplificación de escritura</a>
+<a class="anterior" href="038.html"><span class="sentido">← Anterior · 038</span>Grafos de propiedades y los recorridos que SQL hace mal</a>
+<a class="siguiente" href="040.html"><span class="sentido">Siguiente · 040 →</span>Series temporales: cardinalidad, retención y agregados continuos</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

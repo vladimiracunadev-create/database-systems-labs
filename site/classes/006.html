@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Entidad-relación, cardinalidad y participación. Parte 01: Modelado conceptual y requisitos.">
+<meta name="description" content="Tipos de datos: por qué un número no es un texto. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/006.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="006 — Entidad-relación, cardinalidad y participación · Database Systems Labs">
-<meta property="og:description" content="Entidad-relación, cardinalidad y participación. Parte 01: Modelado conceptual y requisitos.">
+<meta property="og:title" content="006 — Tipos de datos: por qué un número no es un texto · Database Systems Labs">
+<meta property="og:description" content="Tipos de datos: por qué un número no es un texto. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/006.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "006 — Entidad-relación, cardinalidad y participación", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["entidad débil", "cardinalidad", "participación total", "atributo de relación"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>006 — Entidad-relación, cardinalidad y participación · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "006 — Tipos de datos: por qué un número no es un texto", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["tipo", "decimal exacto", "coma flotante", "fecha ISO-8601", "afinidad de tipos"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>006 — Tipos de datos: por qué un número no es un texto · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,304 +49,281 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-01.html">Parte 01 · Modelado conceptual y requisitos</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 006</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="006--entidad-relación-cardinalidad-y-participación">006 — Entidad-relación, cardinalidad y participación</h1>
+<h1 id="006--tipos-de-datos-por-qué-un-número-no-es-un-texto">006 — Tipos de datos: por qué un número no es un texto</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-006%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 01 — Modelado conceptual y requisitos · Fundamentos ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mysql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>entidad débil</code> · <code>cardinalidad</code> · <code>participación total</code> · <code>atributo de relación</code></p>
+<p><strong>Conceptos centrales:</strong> <code>tipo</code> · <code>decimal exacto</code> · <code>coma flotante</code> · <code>fecha ISO-8601</code> · <code>afinidad de tipos</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 006&quot;]
+    C --&gt; K1[&quot;tipo&quot;]
+    C --&gt; K2[&quot;decimal exacto&quot;]
+    C --&gt; K3[&quot;coma flotante&quot;]
+    C --&gt; K4[&quot;fecha ISO-8601&quot;]
+    C --&gt; K5[&quot;afinidad de tipos&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Representar el dominio con el modelo entidad-relación de Chen y, sobre todo, leer un diagrama con precisión: qué dice exactamente una cardinalidad y qué obliga una participación total.</p>
+<p>Entender por qué el tipo de un campo no es una formalidad. Elegirlo mal no
+provoca un error inmediato: provoca ordenaciones absurdas, sumas equivocadas y
+comparaciones que fallan justo cuando importan.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Distinguir entidad, relación, atributo y entidad débil.</li>
-<li>Leer y escribir cardinalidades sin ambigüedad (mínimo y máximo, en ambos sentidos).</li>
-<li>Traducir participación total en una restricción concreta del esquema.</li>
-<li>Convertir cualquier relación N:M en tablas, sabiendo qué se gana y qué se pierde.</li>
-<li>Detectar las relaciones ternarias falsas.</li>
+<li>Elegir el tipo adecuado para un dato y justificarlo.</li>
+<li>Explicar qué pasa al ordenar números guardados como texto.</li>
+<li>Distinguir cuándo usar decimal exacto y cuándo coma flotante.</li>
+<li>Guardar fechas y horas de forma que se puedan comparar y ordenar.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-vocabulario-de-chen">El vocabulario de Chen</h3>
-<p>Chen (1976) propuso el modelo entidad-relación para unificar las vistas de red, jerárquica y relacional. Sus piezas:</p>
+<h3 id="para-qué-sirve-un-tipo">Para qué sirve un tipo</h3>
+<p>Un tipo hace tres cosas a la vez:</p>
 <ul>
-<li><strong>Entidad:</strong> cosa distinguible del dominio (un estudiante, un curso).</li>
-<li><strong>Conjunto de entidades:</strong> todas las del mismo tipo. Es lo que suele acabar siendo una tabla.</li>
-<li><strong>Relación:</strong> asociación entre entidades (un estudiante <em>inscribe</em> un curso).</li>
-<li><strong>Atributo:</strong> propiedad de una entidad o de una relación. La nota es atributo de la <strong>relación</strong> inscripción, no del estudiante ni del curso, y esto se olvida constantemente.</li>
-<li><strong>Entidad débil:</strong> no tiene identidad propia; se identifica por la entidad fuerte de la que depende (una línea de factura respecto de la factura).</li>
+<li><strong>Restringe</strong> los valores posibles: en una columna entera no cabe <code>hola</code>.</li>
+<li><strong>Define las operaciones</strong>: se pueden restar dos fechas, no dos correos.</li>
+<li><strong>Decide el orden</strong>: los números se ordenan por valor y el texto, carácter a
+  carácter.</li>
 </ul>
-<h3 id="cardinalidad-cuatro-números-no-dos">Cardinalidad: cuatro números, no dos</h3>
-<p>Una cardinalidad completa declara <strong>cuatro</strong> valores: mínimo y máximo en cada sentido. La notación abreviada «1:N» solo declara dos y por eso genera discusiones.</p>
-<p>Para «estudiante inscribe curso»:</p>
+<p>Esa tercera es la que más sorprende, y la que produce el fallo más visible.</p>
+<h3 id="el-número-guardado-como-texto">El número guardado como texto</h3>
+<p>Si <code>nota</code> es texto, este es el orden que devuelve el motor:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Sentido</th>
-<th style="text-align: right;">Mínimo</th>
-<th style="text-align: right;">Máximo</th>
-<th>Lectura</th>
+<th>Como texto</th>
+<th>Como número</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>estudiante → curso</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">N</td>
-<td>Un estudiante puede no tener cursos, o tener muchos</td>
+<td><code>100</code></td>
+<td><code>58</code></td>
 </tr>
 <tr>
-<td>curso → estudiante</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">N</td>
-<td>Un curso puede no tener inscritos, o tener muchos</td>
+<td><code>58</code></td>
+<td><code>72</code></td>
+</tr>
+<tr>
+<td><code>72</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>90</code></td>
+<td><code>100</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>Cambiar el mínimo de 0 a 1 en el segundo sentido significa «no existen cursos sin inscritos», y eso <strong>no</strong> se puede expresar con una clave foránea: exige una restricción diferida o una comprobación en la aplicación. Esa es la diferencia práctica entre participación parcial y total.</p>
+<p><code>100</code> va primero porque el texto se compara carácter a carácter y <code>'1'</code> es menor
+que <code>'5'</code>. Nadie escribe un informe pensando en eso; simplemente el informe sale
+mal ordenado y alguien decide que «la base de datos está rara».</p>
+<p>Lo mismo ocurre al comparar: <code>'9' &gt; '100'</code> es cierto en texto y falso en números.</p>
+<h3 id="los-tipos-que-hacen-falta-al-principio">Los tipos que hacen falta al principio</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Concepto</th>
-<th>Notación</th>
-<th>Cómo se implementa</th>
+<th>Familia</th>
+<th>Para qué</th>
+<th>Nombres habituales</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Participación parcial (mín. 0)</td>
-<td>línea simple</td>
-<td>Clave foránea que admite nulo, o simple ausencia de filas</td>
+<td>Entero</td>
+<td>Cantidades sin decimales, identificadores</td>
+<td><code>INTEGER</code>, <code>INT</code>, <code>BIGINT</code></td>
 </tr>
 <tr>
-<td>Participación total (mín. 1)</td>
-<td>línea doble</td>
-<td><code>NOT NULL</code> en el lado N, o restricción diferida si el lado 1 la exige</td>
+<td>Decimal exacto</td>
+<td>Dinero, notas, cualquier cosa que se sume</td>
+<td><code>DECIMAL(p,s)</code>, <code>NUMERIC(p,s)</code></td>
 </tr>
 <tr>
-<td>Máximo 1</td>
-<td>flecha / <code>1</code></td>
-<td>Clave única</td>
+<td>Coma flotante</td>
+<td>Medidas físicas, promedios aproximados</td>
+<td><code>REAL</code>, <code>DOUBLE PRECISION</code></td>
 </tr>
 <tr>
-<td>Máximo N</td>
-<td><code>N</code></td>
-<td>Sin restricción de unicidad</td>
+<td>Texto</td>
+<td>Nombres, correos, descripciones</td>
+<td><code>TEXT</code>, <code>VARCHAR(n)</code></td>
+</tr>
+<tr>
+<td>Fecha y hora</td>
+<td>Cuándo ocurrió algo</td>
+<td><code>DATE</code>, <code>TIMESTAMP</code>, <code>TIMESTAMPTZ</code></td>
+</tr>
+<tr>
+<td>Booleano</td>
+<td>Sí o no</td>
+<td><code>BOOLEAN</code></td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="la-regla-de-traducción">La regla de traducción</h3>
-<pre><code class="language-mermaid">erDiagram
-    STUDENT ||--o{ ENROLLMENT : &quot;inscribe&quot;
-    COURSE  ||--o{ ENROLLMENT : &quot;recibe&quot;
-    TEACHER ||--o{ TEACHING   : &quot;dicta&quot;
-    COURSE  ||--o{ TEACHING   : &quot;es dictado por&quot;
-    STUDENT {
-        int  id PK
-        text nombre
-    }
-    COURSE {
-        int  id PK
-        text nombre
-        text periodo
-    }
-    ENROLLMENT {
-        int     student_id PK,FK
-        int     course_id  PK,FK
-        numeric nota
-        text    registrada_en
-    }
-    TEACHING {
-        int teacher_id PK,FK
-        int course_id  PK,FK
-    }
+<h3 id="dinero-nunca-en-coma-flotante">Dinero nunca en coma flotante</h3>
+<p><code>0.1 + 0.2</code> no da <code>0.3</code> en coma flotante: da <code>0.30000000000000004</code>. No es un
+fallo del motor, es cómo funciona el formato binario de la norma IEEE 754, y
+ocurre en todos los lenguajes y todos los motores.</p>
+<p>Para dinero —y para cualquier cifra que se sume y después se compare con otra
+suma— hay que usar decimal exacto: <code>DECIMAL(12,2)</code> guarda doce dígitos con dos
+decimales y suma sin error. La coma flotante está bien para una temperatura o un
+promedio; está mal para una factura.</p>
+<h3 id="fechas-texto-iso-o-tipo-de-fecha-nunca-otra-cosa">Fechas: texto ISO o tipo de fecha, nunca otra cosa</h3>
+<p>Guardar <code>19/08/2026</code> como texto significa que ordenar por fecha ordena por día,
+y que <code>31/12/2025</code> va después de <code>01/01/2026</code>. Hay dos opciones aceptables:</p>
+<ul>
+<li>Un <strong>tipo de fecha</strong> de verdad (<code>DATE</code>, <code>TIMESTAMP</code>), que es lo correcto cuando
+  el motor lo tiene.</li>
+<li>Texto en formato <strong>ISO-8601</strong> (<code>2026-08-19</code>, <code>2026-08-19T10:15:00Z</code>), que se
+  ordena bien alfabéticamente por diseño del propio formato. Es lo que hace
+  SQLite, que no tiene tipo de fecha.</li>
+</ul>
+<p>Y con la hora, una regla más: <strong>guardar en UTC y convertir al mostrar</strong>. Guardar
+la hora local hace imposible saber, seis meses después, si aquellas dos de la
+madrugada eran antes o después del cambio de horario.</p>
+<h3 id="un-aviso-sobre-sqlite">Un aviso sobre SQLite</h3>
+<p>SQLite tiene <strong>tipado por afinidad</strong>: acepta un texto en una columna declarada
+<code>INTEGER</code> si no puede convertirlo. Desde la versión 3.37 existen las tablas
+<code>STRICT</code>, que sí comprueban el tipo, pero no son las de por omisión. Conviene
+saberlo, porque significa que en SQLite el tipo protege menos de lo que parece.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;¿Qué guardo?&quot;] --&gt; B{&quot;¿Se suma o&lt;br/&gt;se compara&lt;br/&gt;numéricamente?&quot;}
+    B -- &quot;No&quot; --&gt; T[&quot;Texto&quot;]
+    B -- &quot;Sí&quot; --&gt; C{&quot;¿Es dinero o&lt;br/&gt;tiene que cuadrar&lt;br/&gt;al céntimo?&quot;}
+    C -- &quot;Sí&quot; --&gt; D[&quot;DECIMAL exacto&quot;]
+    C -- &quot;No&quot; --&gt; E{&quot;¿Tiene decimales?&quot;}
+    E -- &quot;No&quot; --&gt; F[&quot;Entero&quot;]
+    E -- &quot;Sí&quot; --&gt; G[&quot;Coma flotante&quot;]
 </code></pre>
-<p>Reglas, en orden:</p>
-<ol>
-<li><strong>1:N</strong> → clave foránea en el lado N. No hace falta tabla nueva.</li>
-<li><strong>N:M</strong> → tabla puente cuya clave primaria es la pareja de claves foráneas. Los atributos de la relación viven ahí.</li>
-<li><strong>1:1</strong> → clave foránea con restricción <code>UNIQUE</code> en el lado con participación total.</li>
-<li><strong>Entidad débil</strong> → clave primaria compuesta por la clave de la entidad fuerte más un discriminador, con <code>ON DELETE CASCADE</code>.</li>
-</ol>
-<h3 id="relaciones-ternarias-casi-siempre-son-falsas">Relaciones ternarias: casi siempre son falsas</h3>
-<p>Una relación ternaria genuina es aquella cuya semántica <strong>no</strong> se recupera con tres binarias. El ejemplo clásico: «el proveedor P suministra la pieza Z para el proyecto Y». Saber que P suministra Z, que P trabaja en Y y que Z se usa en Y <strong>no</strong> implica el hecho ternario.</p>
-<p>En la mayoría de los modelos de gestión, sin embargo, lo que parece ternario es una entidad que aún no se ha nombrado. «Profesor dicta curso en aula» no es ternario: es la entidad <code>sesión</code>, con su horario y su capacidad. Antes de dibujar un rombo con tres patas, busca el sustantivo que falta.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Requisito: <em>«Un curso lo puede dictar más de un profesor, y un profesor dicta varios cursos. Todo curso debe tener al menos un profesor asignado.»</em></p>
-<p><strong>Cardinalidades completas:</strong></p>
+<p>Una tienda guarda sus importes como texto, «porque así se ve el símbolo».</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Sentido</th>
-<th style="text-align: right;">Mín</th>
-<th style="text-align: right;">Máx</th>
+<th>producto</th>
+<th>precio</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>curso → profesor</td>
-<td style="text-align: right;"><strong>1</strong></td>
-<td style="text-align: right;">N</td>
+<td>teclado</td>
+<td><code>$120,00</code></td>
 </tr>
 <tr>
-<td>profesor → curso</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">N</td>
+<td>ratón</td>
+<td><code>$80,00</code></td>
+</tr>
+<tr>
+<td>cable</td>
+<td><code>$100,00</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El mínimo 1 del primer sentido es participación total del lado <code>course</code>. Traducción:</p>
-<pre><code class="language-sql">CREATE TABLE teaching (
-  course_id  INTEGER NOT NULL REFERENCES courses(id)  ON DELETE CASCADE,
-  teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
-  PRIMARY KEY (course_id, teacher_id)
+<p><strong>Tres cosas dejan de funcionar a la vez.</strong></p>
+<p>Ordenar por precio da: <code>$100,00</code>, <code>$120,00</code>, <code>$80,00</code>. El ratón, que es el más
+barato, sale último.</p>
+<p>Sumar es imposible sin limpiar el texto en cada consulta: quitar el símbolo,
+cambiar la coma por punto, convertir. Y cada consulta tiene que acordarse.</p>
+<p>Filtrar «los que cuestan más de 90» exige la misma limpieza, y si un solo
+registro trae <code>$1.200,00</code> con separador de miles, la conversión falla o —peor—
+devuelve <code>1.200</code> y el producto más caro aparece como el más barato.</p>
+<p><strong>La versión correcta.</strong></p>
+<pre><code class="language-sql">CREATE TABLE productos (
+    producto TEXT NOT NULL,
+    precio   DECIMAL(10,2) NOT NULL CHECK (precio &gt;= 0)
 );
+INSERT INTO productos VALUES ('teclado', 120.00), ('raton', 80.00), ('cable', 100.00);
+
+SELECT producto, precio FROM productos ORDER BY precio;
 </code></pre>
-<p>Esto garantiza N:M y evita duplicados. <strong>No</strong> garantiza «todo curso tiene al menos un profesor»: se puede insertar un curso y no insertar nunca su fila en <code>teaching</code>.</p>
-<p>Las tres formas honestas de cerrar ese hueco, con su costo:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Mecanismo</th>
-<th>Garantía</th>
-<th>Costo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Restricción diferida al final de la transacción</td>
-<td>Total, en el motor</td>
-<td>Solo en motores que la soportan (PostgreSQL sí; SQLite y MySQL, no de esta forma)</td>
-</tr>
-<tr>
-<td>Comprobación en la aplicación al crear el curso</td>
-<td>Depende del cliente</td>
-<td>Cualquier otro cliente la salta</td>
-</tr>
-<tr>
-<td>Invariante auditada periódicamente</td>
-<td>Detecta, no impide</td>
-<td>Barata y honesta; deja ventana de inconsistencia</td>
-</tr>
-</tbody>
-</table></div>
-<p>Consulta de la invariante, útil en cualquier motor:</p>
-<pre><code class="language-sql">SELECT c.id, c.nombre
-FROM courses c
-LEFT JOIN teaching t ON t.course_id = c.id
-WHERE t.course_id IS NULL;
-</code></pre>
-<p>Cero filas significa que la participación total se cumple ahora mismo. Es exactamente el tipo de comprobación que el laboratorio ejecuta como invariante.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Construcción</th>
-<th style="text-align: right;">Tablas resultantes</th>
-<th>¿Puede el motor garantizar el mínimo 1?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1:N con participación parcial</td>
-<td style="text-align: right;">2</td>
-<td>Sí (<code>NULL</code> permitido)</td>
-</tr>
-<tr>
-<td>1:N con participación total en N</td>
-<td style="text-align: right;">2</td>
-<td>Sí (<code>NOT NULL</code>)</td>
-</tr>
-<tr>
-<td>1:N con participación total en 1</td>
-<td style="text-align: right;">2</td>
-<td>Solo con restricción diferida</td>
-</tr>
-<tr>
-<td>N:M</td>
-<td style="text-align: right;">3</td>
-<td>No, sin restricción diferida</td>
-</tr>
-<tr>
-<td>1:1</td>
-<td style="text-align: right;">2</td>
-<td>Sí, con <code>UNIQUE</code> + <code>NOT NULL</code> en un lado</td>
-</tr>
-<tr>
-<td>Entidad débil</td>
-<td style="text-align: right;">2</td>
-<td>Sí (clave compuesta + cascada)</td>
-</tr>
-</tbody>
-</table></div>
+<p>El símbolo de moneda no se guarda: <strong>se aplica al mostrar</strong>. Es una decisión de
+presentación, y en el dato solo estorba. Si hacen falta varias monedas, la
+moneda es otro campo, no parte del número.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Poner los atributos de la relación en una de las entidades.</strong> La nota en <code>students</code> obliga a un estudiante a tener una sola nota en toda su vida académica.</li>
-<li><strong>Leer «1:N» sin preguntar por los mínimos.</strong> La mitad de la información de la cardinalidad está en el mínimo, y es la mitad que genera reglas de negocio.</li>
-<li><strong>Creer que la clave foránea garantiza la participación total.</strong> Garantiza que si hay referencia, existe; no que haya referencia.</li>
-<li><strong>Inventar relaciones ternarias.</strong> Busca primero el sustantivo que falta.</li>
-<li><strong>Usar <code>ON DELETE CASCADE</code> por comodidad.</strong> En una tabla puente es razonable; sobre datos históricos borra evidencia que quizá deba conservarse.</li>
+<li><strong>Números como texto.</strong> Ordena mal, compara mal y no suma.</li>
+<li><strong>Dinero en coma flotante.</strong> Cuadra durante meses y un día falta un céntimo.</li>
+<li><strong>Fechas como texto en formato local.</strong> <code>19/08/2026</code> no se puede ordenar.</li>
+<li><strong>Guardar el formato junto al dato.</strong> <code>$1.234,50</code>, <code>45 %</code>, <code>1,5 kg</code>: el número
+   y su unidad son dos cosas.</li>
+<li><strong><code>VARCHAR(255)</code> por costumbre.</strong> Ese número viene de una limitación antigua
+   de MySQL; el límite debería salir del dominio, no de la tradición.</li>
+<li><strong>Guardar la hora local sin zona.</strong> Irrecuperable cuando cambia el horario.</li>
+<li><strong>Confiar en el tipo declarado en SQLite sin <code>STRICT</code>.</strong></li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Las cardinalidades mal declaradas se manifiestan meses después como filas huérfanas, informes que no cuadran y consultas que devuelven duplicados. Una cardinalidad es una promesa: si el motor no puede hacerla cumplir, hay que decir explícitamente quién la vigila.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>La misma decisión aparece fuera del modelo relacional: en MongoDB hay que
+elegir entre <code>NumberInt</code>, <code>NumberLong</code>, <code>NumberDecimal</code> y el doble por omisión —y
+el por omisión es coma flotante, con el problema del céntimo—. En Redis todo es
+texto y la conversión la hace el cliente. El tipo nunca desaparece: cambia de
+sitio.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
-<p>Sobre el dominio del repositorio:</p>
 <ol>
-<li>Dibuja el diagrama con las cuatro cardinalidades completas de cada relación.</li>
-<li>Identifica una participación total que el esquema actual <strong>no</strong> garantiza.</li>
-<li>Escribe la consulta de invariante que la audita y ejecútala.</li>
-<li>Propón el mecanismo que la haría cumplir y declara su costo.</li>
+<li>Revisa una tabla real y anota el tipo de cada campo y el tipo que debería
+   tener.</li>
+<li>Encuentra al menos un campo numérico guardado como texto, o uno con formato
+   incrustado.</li>
+<li>Ejecuta <code>SELECT ... ORDER BY</code> sobre ese campo y guarda el resultado: es la
+   prueba.</li>
+<li>Escribe la sentencia que lo corregiría y el riesgo que tendría ejecutarla en
+   producción.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Explica con un ejemplo del dominio por qué la nota es atributo de la relación y no de la entidad.</li>
-<li>Da una relación ternaria genuina de tu experiencia y demuestra que no se descompone en tres binarias.</li>
-<li>¿Qué diferencia práctica hay entre <code>ON DELETE CASCADE</code> y <code>ON DELETE RESTRICT</code> en la tabla <code>teaching</code>?</li>
-<li>Un modelo declara participación total en ambos lados de una relación 1:1. ¿Cómo se inserta la primera fila?</li>
+<li>¿Por qué <code>100</code> va antes que <code>58</code> al ordenar texto?</li>
+<li>¿Cuándo usarías <code>DECIMAL</code> y cuándo coma flotante? Da un ejemplo de cada uno.</li>
+<li>¿Qué dos formas aceptables hay de guardar una fecha, y por qué el formato
+   <code>19/08/2026</code> no es una de ellas?</li>
+<li>¿Qué significa que SQLite tenga tipado por afinidad y qué consecuencia
+   práctica tiene?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Una relación de muchos a muchos y las dos cardinalidades que hay que poder contar</p>
-<p>Estudiantes y cursos se relacionan de muchos a muchos: un estudiante toma
-varios cursos y un curso tiene varios estudiantes. Ada toma dos cursos,
-Linus uno, Grace ninguno; DB-101 tiene dos estudiantes, SE-201 uno y AR-301
-ninguno.</p>
-<p>La consulta devuelve, para cada curso ordenado por código, cuántos
-estudiantes tiene. Que AR-301 aparezca con 0 es la mitad del ejercicio: la
-<strong>participación parcial</strong> —un curso puede existir sin estudiantes— solo se
-ve si el modelo conserva a los que no participan.</p>
+<p><strong>Caso:</strong> Ordenar tres precios y que el más barato salga primero</p>
+<p>Tres productos con sus precios, ordenados de menor a mayor. Parece que no
+hay nada que aprender, y lo hay: <strong>si esos precios estuvieran guardados como
+texto</strong>, el orden sería 100, 120, 80. El texto se compara carácter a
+carácter y <code>'1'</code> es menor que <code>'8'</code>, así que el producto más barato saldría
+el último.</p>
+<p>Nadie escribe un informe pensando en eso. Simplemente el informe sale mal
+ordenado y alguien concluye que la base de datos está rara. El caso guarda
+el precio como número —y sin el símbolo de moneda, que es presentación y no
+dato— para que el orden sea el que cualquiera espera.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>curso</th>
-<th>estudiantes</th>
+<th>producto</th>
+<th>precio</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>AR-301</code></td>
-<td><code>0</code></td>
+<td><code>raton</code></td>
+<td><code>80</code></td>
 </tr>
 <tr>
-<td><code>DB-101</code></td>
-<td><code>2</code></td>
+<td><code>cable</code></td>
+<td><code>100</code></td>
 </tr>
 <tr>
-<td><code>SE-201</code></td>
-<td><code>1</code></td>
+<td><code>teclado</code></td>
+<td><code>120</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 006</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -366,251 +343,205 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/foreignkeys.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/datatype3.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/data_types/numeric">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/datatype.html">doc oficial</a></td>
 </tr>
 <tr>
-<td>Neo4j</td>
+<td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/neo4j/consulta.cypher">código</a></td>
-<td><a href="https://neo4j.com/docs/cypher-manual/current/patterns/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/bson-type-comparison-order/">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
+<td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/foreignkeys.html
--- nota: SQLite solo comprueba las claves foraneas si PRAGMA foreign_keys esta
---       activo; el verificador lo activa, y en una aplicacion real hay que
---       hacerlo en cada conexion.
+-- doc: https://sqlite.org/datatype3.html
+-- nota: para ver el problema, basta crear la misma tabla con `precio TEXT` y
+--       repetir la consulta: el orden pasa a ser 100, 120, 80.
+--       Y el aviso propio de SQLite: sin STRICT, una columna declarada INTEGER
+--       acepta un texto si no puede convertirlo, y entonces el orden mezcla
+--       criterios.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    id     INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL
+-- El precio como NUMERO, no como texto. Sin simbolo de moneda: el simbolo se
+-- pone al mostrar, y dentro del dato solo estorba.
+CREATE TABLE productos (
+    producto TEXT PRIMARY KEY,
+    precio   INTEGER NOT NULL CHECK (precio &gt;= 0)
 );
-CREATE TABLE cursos (
-    id     INTEGER PRIMARY KEY,
-    codigo TEXT NOT NULL
-);
--- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
--- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
--- curso y todos los recuentos quedarian inflados.
-CREATE TABLE inscripciones (
-    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
-    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante_id, curso_id)
-);
-
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+INSERT INTO productos (producto, precio) VALUES
+    ('teclado', 120),
+    ('raton',    80),
+    ('cable',   100);
 
 -- === consulta ===
--- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
--- solo se ve si el modelo no descarta a quien no participa.
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante_id) AS estudiantes
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Guardados como texto, el orden seria: 100, 120, 80 —porque '1' &lt; '8'— y el
+-- producto mas barato saldria el ultimo. Como numeros, el orden es el que
+-- cualquiera espera.
+SELECT producto, precio FROM productos ORDER BY precio;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La tabla intermedia con clave primaria compuesta es la traducción directa del diagrama entidad-relación: una fila por par, ni más ni menos, y la cardinalidad máxima queda impuesta por la clave.</li>
-<li><strong>Por qué no:</strong> El diagrama distingue participación total de parcial; la tabla no. Que un curso deba tener al menos un estudiante no se puede declarar y hay que comprobarlo aparte.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/foreignkeys.html">https://sqlite.org/foreignkeys.html</a></li>
+<li><strong>Por qué sí:</strong> Permite comprobar el efecto en un minuto: crear la misma tabla con el precio como texto y ver el orden cambiar.</li>
+<li><strong>Por qué no:</strong> Es el peor motor para confiarse: su tipado por <strong>afinidad</strong> acepta un texto en una columna declarada numérica si no puede convertirlo, así que una columna «entera» puede acabar con valores de texto y ordenar de forma inconsistente. Las tablas <code>STRICT</code> lo arreglan y no son las de por omisión.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/datatype3.html">https://sqlite.org/datatype3.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/statements/create_table.html
--- nota: la misma consulta sirve para auditar datos existentes: si algun curso
---       aparece con mas estudiantes que inscripciones unicas, la clave
---       compuesta no estaba y hay duplicados.
+-- doc: https://duckdb.org/docs/stable/sql/data_types/numeric
+-- nota: aqui el tipo se comprueba siempre: INSERT INTO productos VALUES
+--       ('x', 'alto') falla. Y para dinero con centimos, el tipo correcto es
+--       DECIMAL(10,2), no un numero de coma flotante: 0.1 + 0.2 no da 0.3.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    id     INTEGER PRIMARY KEY,
-    nombre VARCHAR NOT NULL
+-- El precio como NUMERO, no como texto. Sin simbolo de moneda: el simbolo se
+-- pone al mostrar, y dentro del dato solo estorba.
+CREATE TABLE productos (
+    producto VARCHAR PRIMARY KEY,
+    precio   INTEGER NOT NULL CHECK (precio &gt;= 0)
 );
-CREATE TABLE cursos (
-    id     INTEGER PRIMARY KEY,
-    codigo VARCHAR NOT NULL
-);
--- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
--- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
--- curso y todos los recuentos quedarian inflados.
-CREATE TABLE inscripciones (
-    estudiante_id INTEGER NOT NULL,
-    curso_id      INTEGER NOT NULL,
-    PRIMARY KEY (estudiante_id, curso_id)
-);
-
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+INSERT INTO productos (producto, precio) VALUES
+    ('teclado', 120),
+    ('raton',    80),
+    ('cable',   100);
 
 -- === consulta ===
--- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
--- solo se ve si el modelo no descarta a quien no participa.
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante_id) AS estudiantes
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Guardados como texto, el orden seria: 100, 120, 80 —porque '1' &lt; '8'— y el
+-- producto mas barato saldria el ultimo. Como numeros, el orden es el que
+-- cualquiera espera.
+SELECT producto, precio FROM productos ORDER BY precio;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Sirve para lo que esta clase realmente entrena: contar cardinalidades sobre datos ya existentes para descubrir cuál era el modelo de verdad, en vez del que estaba en el documento.</li>
-<li><strong>Por qué no:</strong> Sus claves foráneas no impiden borrar la fila referenciada con la misma firmeza que un motor transaccional: es un almacén para analizar, no para sostener la integridad de un sistema en producción.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">https://duckdb.org/docs/stable/sql/statements/create_table.html</a></li>
+<li><strong>Por qué sí:</strong> El tipado es estricto: insertar <code>'alto'</code> en una columna entera falla. Y tiene <code>DECIMAL</code> exacto, que es el tipo correcto para dinero cuando hay céntimos de por medio.</li>
+<li><strong>Por qué no:</strong> Al leer ficheros CSV infiere los tipos por muestreo: si las primeras mil filas parecen números y la fila cien mil trae un guion, la carga falla o convierte la columna entera a texto sin avisar.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/data_types/numeric">https://duckdb.org/docs/stable/sql/data_types/numeric</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
--- nota: para una participacion TOTAL («todo curso tiene al menos un
---       estudiante») la clave foranea no basta: se declara DEFERRABLE
---       INITIALLY DEFERRED y se comprueba al cerrar la transaccion.
-
-DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
+-- doc: https://www.postgresql.org/docs/current/datatype.html
+-- nota: es el mas severo de la lista, y eso evita errores: se niega a comparar
+--       un texto con un numero en vez de convertir por su cuenta. Para dinero,
+--       `numeric` es de precision arbitraria y suma sin error.
 
 -- === preparacion ===
-CREATE TABLE estudiantes (
-    id     integer PRIMARY KEY,
-    nombre text NOT NULL
-);
-CREATE TABLE cursos (
-    id     integer PRIMARY KEY,
-    codigo text NOT NULL
-);
--- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
--- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
--- curso y todos los recuentos quedarian inflados.
-CREATE TABLE inscripciones (
-    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
-    curso_id      integer NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante_id, curso_id)
-);
+DROP TABLE IF EXISTS productos;
 
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
+-- El precio como NUMERO, no como texto. Sin simbolo de moneda: el simbolo se
+-- pone al mostrar, y dentro del dato solo estorba.
+CREATE TABLE productos (
+    producto text PRIMARY KEY,
+    precio   integer NOT NULL CHECK (precio &gt;= 0)
+);
+INSERT INTO productos (producto, precio) VALUES
+    ('teclado', 120),
+    ('raton',    80),
+    ('cable',   100);
 
 -- === consulta ===
--- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
--- solo se ve si el modelo no descarta a quien no participa.
-SELECT c.codigo AS curso,
-       COUNT(i.estudiante_id) AS estudiantes
-FROM cursos c
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo
-ORDER BY c.codigo;
+-- Guardados como texto, el orden seria: 100, 120, 80 —porque '1' &lt; '8'— y el
+-- producto mas barato saldria el ultimo. Como numeros, el orden es el que
+-- cualquiera espera.
+SELECT producto, precio FROM productos ORDER BY precio;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Impone las dos claves foráneas y la clave compuesta, y permite además diferir la comprobación al final de la transacción (<code>DEFERRABLE INITIALLY DEFERRED</code>), que es como se modela una participación total sin bloquearse al insertar la primera fila.</li>
-<li><strong>Por qué no:</strong> Cada clave foránea añade una comprobación por inserción y un bloqueo sobre la fila referenciada: en tablas de relación muy escritas, ese costo es real y hay que medirlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Tiene el sistema de tipos más estricto y más rico de esta lista: <code>numeric</code> de precisión arbitraria para dinero, tipos de fecha con zona horaria, y se niega a comparar un texto con un número en vez de convertir por su cuenta.</li>
+<li><strong>Por qué no:</strong> Esa severidad obliga a convertir explícitamente más a menudo, y quien viene de MySQL lo vive como fricción hasta que descubre qué errores le está evitando.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/datatype.html">https://www.postgresql.org/docs/current/datatype.html</a></li>
 </ul>
-<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-cypher">// motor: neo4j
-// doc: https://neo4j.com/docs/cypher-manual/current/patterns/
-// nota: no hay tabla intermedia. La relacion de muchos a muchos es la arista
-//       misma, y el diagrama entidad-relacion se parece tanto al modelo fisico
-//       que el paso de uno a otro deja de ser una traduccion.
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html
+-- nota: con el modo estricto —el valor por omision desde 5.7— un valor fuera de
+--       rango se RECHAZA. Sin el, se recortaba en silencio: hay tablas antiguas
+--       llenas de ceros que en realidad significan «no se pudo convertir».
 
-// === preparacion ===
-MATCH (n) DETACH DELETE n;
-CREATE (a:Estudiante {nombre: 'Ada'}),
-       (l:Estudiante {nombre: 'Linus'}),
-       (:Estudiante {nombre: 'Grace'}),
-       (db:Curso {codigo: 'DB-101'}),
-       (se:Curso {codigo: 'SE-201'}),
-       (:Curso {codigo: 'AR-301'}),
-       (a)-[:INSCRITO_EN]-&gt;(db),
-       (a)-[:INSCRITO_EN]-&gt;(se),
-       (l)-[:INSCRITO_EN]-&gt;(db);
+-- === preparacion ===
+DROP TABLE IF EXISTS productos;
 
-// === consulta ===
-MATCH (c:Curso)
-OPTIONAL MATCH (e:Estudiante)-[:INSCRITO_EN]-&gt;(c)
-RETURN c.codigo AS curso, count(e) AS estudiantes
-ORDER BY curso;
+-- El precio como NUMERO, no como texto. Sin simbolo de moneda: el simbolo se
+-- pone al mostrar, y dentro del dato solo estorba.
+CREATE TABLE productos (
+    producto VARCHAR(50) PRIMARY KEY,
+    precio   INT NOT NULL CHECK (precio &gt;= 0)
+);
+INSERT INTO productos (producto, precio) VALUES
+    ('teclado', 120),
+    ('raton',    80),
+    ('cable',   100);
+
+-- === consulta ===
+-- Guardados como texto, el orden seria: 100, 120, 80 —porque '1' &lt; '8'— y el
+-- producto mas barato saldria el ultimo. Como numeros, el orden es el que
+-- cualquiera espera.
+SELECT producto, precio FROM productos ORDER BY precio;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La relación de muchos a muchos no necesita tabla intermedia: es una arista. El diagrama entidad-relación y el modelo físico se parecen tanto que el paso de uno a otro deja de ser una traducción.</li>
-<li><strong>Por qué no:</strong> Contar por etiqueta obliga a recorrer todos los nodos de esa etiqueta, que es exactamente lo que una tabla con índice hace mejor: el grafo gana en recorridos, no en recuentos globales.</li>
-<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/patterns/">https://neo4j.com/docs/cypher-manual/current/patterns/</a></li>
+<li><strong>Por qué sí:</strong> Con el modo estricto activo —que es el valor por omisión desde 5.7— rechaza los valores fuera de rango en vez de recortarlos en silencio.</li>
+<li><strong>Por qué no:</strong> Sin ese modo, y hay instalaciones que lo desactivan, insertar <code>'alto'</code> en una columna entera guardaba <code>0</code> y emitía un aviso. Hay tablas heredadas llenas de ceros que en realidad significan «no se pudo convertir».</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html">https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/006-entidad-relacion-cardinalidad-y-participacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/data-modeling/
-// nota: aqui la relacion vive como un arreglo de referencias dentro del curso.
-//       Es el modelo natural cuando la pregunta frecuente es «quienes estan en
-//       este curso»; la pregunta inversa exige un indice multiclave.
+// doc: https://www.mongodb.com/docs/manual/reference/bson-type-comparison-order/
+// nota: BSON distingue int, long, double y decimal, y ordena por valor
+//       numerico. La trampa es otra: el tipo lo decide CADA documento. Si un
+//       precio se guarda como &quot;80&quot; y otro como 80, el orden mezcla dos
+//       criterios segun una precedencia de tipos que casi nadie conoce.
+//       Y en mongosh, 80 es un DOUBLE salvo que se escriba NumberInt(80).
 
 // === preparacion ===
-db.cursos.drop();
-db.estudiantes.drop();
-
-db.estudiantes.insertMany([
-  { _id: 1, nombre: &quot;Ada&quot; },
-  { _id: 2, nombre: &quot;Linus&quot; },
-  { _id: 3, nombre: &quot;Grace&quot; },
-]);
-db.cursos.insertMany([
-  { _id: 10, codigo: &quot;DB-101&quot;, inscritos: [1, 2] },
-  { _id: 20, codigo: &quot;SE-201&quot;, inscritos: [1] },
-  // Participacion parcial: el curso existe con el arreglo vacio.
-  { _id: 30, codigo: &quot;AR-301&quot;, inscritos: [] },
+db.productos.drop();
+db.productos.insertMany([
+  { _id: &quot;teclado&quot;, precio: NumberInt(120) },
+  { _id: &quot;raton&quot;, precio: NumberInt(80) },
+  { _id: &quot;cable&quot;, precio: NumberInt(100) },
 ]);
 
 // === consulta ===
-db.cursos
-  .aggregate([
-    { $project: { _id: 0, curso: &quot;$codigo&quot;, estudiantes: { $size: &quot;$inscritos&quot; } } },
-    { $sort: { curso: 1 } },
-  ])
-  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.estudiantes));
+db.productos
+  .find()
+  .sort({ precio: 1 })
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.precio));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Permite modelar la relación como un arreglo de referencias dentro del curso, que es el modelo natural cuando la pregunta frecuente es «quiénes están en este curso».</li>
-<li><strong>Por qué no:</strong> El arreglo tiene el límite de 16 MB del documento y hace cara la pregunta inversa —«en qué cursos está este estudiante»— salvo que se añada un índice multiclave y se acepte mantener las dos direcciones.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/">https://www.mongodb.com/docs/manual/data-modeling/</a></li>
+<li><strong>Por qué sí:</strong> BSON distingue tipos numéricos —<code>int</code>, <code>long</code>, <code>double</code>, <code>decimal</code>— y el ordenamiento respeta el valor numérico, no el texto.</li>
+<li><strong>Por qué no:</strong> El tipo lo decide <strong>cada documento</strong>: la misma clave puede ser número en uno y texto en otro, y entonces el orden mezcla dos criterios según una precedencia de tipos que casi nadie conoce. Y los números de <code>mongosh</code> son dobles salvo que se escriba <code>NumberInt</code> o <code>NumberDecimal</code>.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/bson-type-comparison-order/">https://www.mongodb.com/docs/manual/reference/bson-type-comparison-order/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -625,10 +556,10 @@ db.cursos
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
-<td>Una relación de muchos a muchos consultable en las dos direcciones no cabe en una sola tabla: haría falta una tabla por dirección de consulta y escribir en las dos, sin transacción que las mantenga de acuerdo.</td>
-<td><code>estudiantes_por_curso</code> y <code>cursos_por_estudiante</code> como dos tablas independientes, escritas ambas en cada inscripción, asumiendo la posibilidad de que una quede desincronizada tras un fallo.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc</a></td>
+<td>Redis</td>
+<td>No hay tipos de dato en el sentido de esta clase: todo valor es una cadena de bytes. <code>INCR</code> funciona porque interpreta la cadena como número en el momento, no porque la columna sea numérica.</td>
+<td>Un conjunto ordenado, donde la puntuación <strong>sí</strong> es un número de coma flotante de doble precisión: es la única estructura de Redis con orden numérico, y por eso es la que se usa para marcadores y rangos.</td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -679,27 +610,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Peter Pin-Shan Chen</strong> (1976). <a href="https://dl.acm.org/doi/10.1145/320434.320440">The Entity-Relationship Model - Toward a Unified View of Data</a>. ACM TODS 1(1). DOI <a href="https://doi.org/10.1145/320434.320440">10.1145/320434.320440</a>.<br />
-  Origen del diagrama entidad-relación.</li>
-<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
-  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Bill Karwin</strong> (2010). <a href="https://pragprog.com/titles/bksqla/sql-antipatterns/">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a>. Pragmatic Bookshelf. ISBN 978-1-934356-55-5.<br />
+  Catálogo de errores de modelado con su corrección y cuando el antipatron es aceptable.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="005.html">← Anterior</a> · <a href="007.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="006">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="005.html"><span class="sentido">← Anterior · 005</span>De requisitos ambiguos a entidades defendibles</a>
-<a class="siguiente" href="007.html"><span class="sentido">Siguiente · 007 →</span>Claves, identidad y el debate natural frente a sustituta</a>
+<a class="anterior" href="005.html"><span class="sentido">← Anterior · 005</span>Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva</a>
+<a class="siguiente" href="007.html"><span class="sentido">Siguiente · 007 →</span>La clave primaria: cómo se distingue una fila de otra</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

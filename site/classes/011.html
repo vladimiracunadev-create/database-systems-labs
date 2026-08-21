@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Álgebra relacional: selección, proyección, producto y reunión. Parte 02: Modelo relacional y álgebra.">
+<meta name="description" content="Qué resuelve un sistema de bases de datos y qué no. Parte 01: Fundamentos, sistemas y método.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/011.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="011 — Álgebra relacional: selección, proyección, producto y reunión · Database Systems Labs">
-<meta property="og:description" content="Álgebra relacional: selección, proyección, producto y reunión. Parte 02: Modelo relacional y álgebra.">
+<meta property="og:title" content="011 — Qué resuelve un sistema de bases de datos y qué no · Database Systems Labs">
+<meta property="og:description" content="Qué resuelve un sistema de bases de datos y qué no. Parte 01: Fundamentos, sistemas y método.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/011.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "011 — Álgebra relacional: selección, proyección, producto y reunión", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT4H", "teaches": ["selección", "proyección", "producto cartesiano", "reunión natural", "división"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>011 — Álgebra relacional: selección, proyección, producto y reunión · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "011 — Qué resuelve un sistema de bases de datos y qué no", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["persistencia", "concurrencia", "integridad", "recuperación", "independencia de datos"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>011 — Qué resuelve un sistema de bases de datos y qué no · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,274 +49,227 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-02.html">Parte 02 · Modelo relacional y álgebra</a>
+  <a href="parte-01.html">Parte 01 · Fundamentos, sistemas y método</a>
   <span aria-hidden="true">/</span><span>Clase 011</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="011--álgebra-relacional-selección-proyección-producto-y-reunión">011 — Álgebra relacional: selección, proyección, producto y reunión</h1>
+<h1 id="011--qué-resuelve-un-sistema-de-bases-de-datos-y-qué-no">011 — Qué resuelve un sistema de bases de datos y qué no</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-01-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-011%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 02 — Modelo relacional y álgebra · Fundamentos ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>selección</code> · <code>proyección</code> · <code>producto cartesiano</code> · <code>reunión natural</code> · <code>división</code></p>
-<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<p>Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
+3 horas estimadas · motores <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>persistencia</code> · <code>concurrencia</code> · <code>integridad</code> · <code>recuperación</code> · <code>independencia de datos</code></p>
+<p><strong>En este caso se comparan 9 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 011&quot;]
+    C --&gt; K1[&quot;persistencia&quot;]
+    C --&gt; K2[&quot;concurrencia&quot;]
+    C --&gt; K3[&quot;integridad&quot;]
+    C --&gt; K4[&quot;recuperación&quot;]
+    C --&gt; K5[&quot;independencia de datos&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Dominar los operadores del álgebra relacional para poder razonar sobre una consulta <strong>antes</strong> de ejecutarla: cuántas filas puede producir, qué la hace cara y por qué el optimizador puede reordenarla sin cambiar el resultado.</p>
+<p>Establecer qué problemas concretos resuelve un sistema gestor de bases de datos (SGBD) y, sobre todo, cuáles <strong>no</strong> resuelve. Sin esa demarcación, cualquier archivo con datos se llama «base de datos» y cualquier fallo de diseño se atribuye al motor.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Escribir y leer expresiones con σ, π, ×, ⋈, ∪, −, ρ y ÷.</li>
-<li>Estimar a mano la cardinalidad de cada operador.</li>
-<li>Aplicar las equivalencias que usa el optimizador y explicar por qué son válidas.</li>
-<li>Traducir entre álgebra y SQL en ambos sentidos.</li>
-<li>Resolver una consulta de división relacional, que SQL no ofrece directamente.</li>
+<li>Enumerar los seis problemas del almacenamiento en archivos planos que motivaron la aparición de los SGBD.</li>
+<li>Reproducir una anomalía de actualización perdida y explicar por qué el sistema de archivos no la impide.</li>
+<li>Distinguir lo que el motor <strong>garantiza</strong> de lo que solo <strong>permite declarar</strong>.</li>
+<li>Justificar cuándo <em>no</em> usar un SGBD, con un criterio distinto de «es lo que se usa siempre».</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-operadores">Los operadores</h3>
+<h3 id="el-problema-que-existía-antes">El problema que existía antes</h3>
+<p>Silberschatz, Korth y Sudarshan abren <em>Database System Concepts</em> con la lista de defectos del enfoque «un archivo por aplicación». No es historia: cada uno reaparece cuando alguien decide guardar el estado en JSON y arreglarlo después.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Operador</th>
-<th>Símbolo</th>
-<th>Qué hace</th>
-<th>Cardinalidad del resultado</th>
+<th>Defecto</th>
+<th>Qué ocurre en la práctica</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Selección</td>
-<td>σ<sub>cond</sub>(R)</td>
-<td>Filtra tuplas</td>
-<td>≤ |R|</td>
+<td>Redundancia e inconsistencia</td>
+<td>El mismo dato vive en dos archivos y divergen</td>
 </tr>
 <tr>
-<td>Proyección</td>
-<td>π<sub>attrs</sub>(R)</td>
-<td>Se queda con atributos; elimina duplicados</td>
-<td>≤ |R|</td>
+<td>Dificultad de acceso</td>
+<td>Cada consulta nueva exige escribir un programa nuevo</td>
 </tr>
 <tr>
-<td>Producto cartesiano</td>
-<td>R × S</td>
-<td>Cada tupla con cada tupla</td>
-<td>|R| · |S|</td>
+<td>Aislamiento de datos</td>
+<td>Formatos distintos impiden combinar información</td>
 </tr>
 <tr>
-<td>Reunión natural</td>
-<td>R ⋈ S</td>
-<td>Producto filtrado por igualdad en atributos comunes</td>
-<td>0 … |R|·|S|</td>
+<td>Problemas de integridad</td>
+<td>La regla «el saldo no puede ser negativo» vive en el código, no en el dato</td>
 </tr>
 <tr>
-<td>Unión</td>
-<td>R ∪ S</td>
-<td>Tuplas de ambas (mismo esquema)</td>
-<td>≤ |R| + |S|</td>
+<td>Problemas de atomicidad</td>
+<td>Una caída a mitad de una transferencia deja el dinero en ninguna parte</td>
 </tr>
 <tr>
-<td>Diferencia</td>
-<td>R − S</td>
-<td>Las de R que no están en S</td>
-<td>≤ |R|</td>
+<td>Anomalías de concurrencia</td>
+<td>Dos procesos escriben a la vez y uno de los cambios desaparece</td>
 </tr>
 <tr>
-<td>Renombrado</td>
-<td>ρ<sub>x</sub>(R)</td>
-<td>Cambia nombres</td>
-<td>|R|</td>
-</tr>
-<tr>
-<td>División</td>
-<td>R ÷ S</td>
-<td>Tuplas de R asociadas a <strong>todas</strong> las de S</td>
-<td>≤ |R|</td>
+<td>Problemas de seguridad</td>
+<td>No hay forma de dar acceso parcial: o se ve el archivo entero o nada</td>
 </tr>
 </tbody>
 </table></div>
-<p>Selección, proyección, producto, unión y diferencia forman el conjunto <strong>completo</strong>: los demás se derivan. La reunión es <code>π(σ(R × S))</code>; la intersección es <code>R − (R − S)</code>.</p>
-<h3 id="la-cardinalidad-decide-el-costo">La cardinalidad decide el costo</h3>
-<p>El número que hay que vigilar es el producto cartesiano. Con <code>students</code> (2 000) y <code>courses</code> (300), <code>students × courses</code> produce <strong>600 000</strong> tuplas. La reunión natural sobre <code>enrollments</code> produce, como mucho, tantas como inscripciones haya. Esta diferencia es el motivo de la primera regla de optimización.</p>
-<h3 id="equivalencias-que-aplica-el-optimizador">Equivalencias que aplica el optimizador</h3>
-<pre><code class="language-text">E1  σ_c1(σ_c2(R))            ≡  σ_c1 ∧ c2(R)          conmutar y fusionar filtros
-E2  σ_c(R × S)               ≡  R ⋈_c S               empujar el filtro dentro
-E3  σ_c(R ⋈ S)               ≡  σ_c(R) ⋈ S            si c solo usa atributos de R
-E4  π_a(σ_c(R))              ≡  π_a(σ_c(π_a ∪ attrs(c)(R)))   proyección temprana
-E5  (R ⋈ S) ⋈ T              ≡  R ⋈ (S ⋈ T)           asociatividad
-E6  R ⋈ S                    ≡  S ⋈ R                 conmutatividad
-</code></pre>
-<p>Las dos primeras son el corazón de la optimización: <strong>filtrar antes de combinar</strong>. E5 y E6 dan al planificador libertad para elegir el orden de reunión, que es el problema combinatorio que resuelve el optimizador por costos (clase 042).</p>
+<h3 id="lo-que-un-sgbd-aporta">Lo que un SGBD aporta</h3>
+<p>Un gestor no es «un lugar donde guardar tablas». Es un programa que ofrece cuatro servicios que un sistema de archivos no ofrece:</p>
+<ul>
+<li><strong>Persistencia con recuperación.</strong> Tras un corte de energía, el sistema vuelve a un estado consistente conocido, no a «lo que hubiera alcanzado a escribirse».</li>
+<li><strong>Concurrencia controlada.</strong> Muchos clientes leen y escriben simultáneamente y el resultado es equivalente a alguna ejecución ordenada (según el nivel de aislamiento elegido; parte 07).</li>
+<li><strong>Integridad declarada.</strong> Las restricciones se expresan una vez, en el esquema, y el motor las hace cumplir para todo cliente, incluido el que se conecta por consola a las tres de la mañana.</li>
+<li><strong>Independencia de datos.</strong> La forma física de almacenamiento puede cambiar sin reescribir las consultas. Es la aportación central del artículo de Codd (1970) y el tema de la clase 003.</li>
+</ul>
+<p>Hellerstein, Stonebraker y Hamilton describen cómo se implementan esos servicios: gestor de procesos, procesador de consultas, gestor de transacciones y gestor de almacenamiento compartido. Ningún componente es opcional si se quieren las cuatro garantías.</p>
+<h3 id="lo-que-un-sgbd-no-hace">Lo que un SGBD <strong>no</strong> hace</h3>
+<p>Aquí se pierde más tiempo del que se cree:</p>
+<ul>
+<li><strong>No hace que los datos sean verdaderos.</strong> Hace cumplir las restricciones que alguien declaró. Si nadie declaró que <code>edad &gt; 0</code>, el motor guardará <code>-4</code> sin protestar.</li>
+<li><strong>No modela el dominio por ti.</strong> William Kent dedica <em>Data and Reality</em> a mostrar que ningún esquema captura el mundo: siempre se elige un recorte. El motor ejecuta ese recorte, no lo mejora.</li>
+<li><strong>No compensa un modelo equivocado con más hardware.</strong> Una consulta que multiplica filas por una reunión mal planteada devuelve resultados erróneos igual de rápido.</li>
+<li><strong>No es gratis.</strong> Añade un proceso que operar, respaldar, actualizar y asegurar.</li>
+</ul>
+<h3 id="cuándo-no-usar-un-sgbd">Cuándo no usar un SGBD</h3>
+<p>Criterios defendibles para quedarse con archivos: los datos son de un solo escritor, caben en memoria, no hay reglas de integridad entre elementos, y perderlos es aceptable (caché, artefactos de compilación, registros efímeros). En cuanto aparezcan dos escritores o una invariante entre dos registros, el argumento se cae.</p>
 <pre><code class="language-mermaid">flowchart TD
-    subgraph L[&quot;Plan ingenuo&quot;]
-        A1[&quot;students × courses&lt;br/&gt;600 000 tuplas&quot;] --&gt; A2[&quot;× enrollments&quot;]
-        A2 --&gt; A3[&quot;σ periodo='2026-1'&quot;]
-        A3 --&gt; A4[&quot;π nombre&quot;]
-    end
-    subgraph R[&quot;Plan optimizado (E2, E3)&quot;]
-        B1[&quot;σ periodo='2026-1' (courses)&lt;br/&gt;40 tuplas&quot;] --&gt; B2[&quot;⋈ enrollments&lt;br/&gt;por course_id&quot;]
-        B2 --&gt; B3[&quot;⋈ students&lt;br/&gt;por student_id&quot;]
-        B3 --&gt; B4[&quot;π nombre&quot;]
-    end
-    L -- &quot;mismas filas,&lt;br/&gt;coste incomparable&quot; --&gt; R
+    A[&quot;Necesito guardar datos&quot;] --&gt; B{&quot;¿Más de un escritor&lt;br/&gt;concurrente?&quot;}
+    B -- &quot;No&quot; --&gt; C{&quot;¿Hay invariantes&lt;br/&gt;entre registros?&quot;}
+    B -- &quot;Sí&quot; --&gt; G[&quot;SGBD: hace falta control&lt;br/&gt;de concurrencia&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Perderlos es&lt;br/&gt;aceptable?&quot;}
+    C -- &quot;Sí&quot; --&gt; G
+    D -- &quot;Sí&quot; --&gt; E[&quot;Archivos: suficiente&quot;]
+    D -- &quot;No&quot; --&gt; F{&quot;¿Consultas variadas&lt;br/&gt;o no previstas?&quot;}
+    F -- &quot;No&quot; --&gt; H[&quot;Archivo + copia verificada&quot;]
+    F -- &quot;Sí&quot; --&gt; G
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Pregunta: <em>«nombres de los estudiantes inscritos en algún curso del período 2026-1»</em>.</p>
-<p><strong>Álgebra, forma ingenua:</strong></p>
-<pre><code class="language-text">π_nombre( σ_periodo='2026-1' (students × enrollments × courses) )
+<p>Dos cajeros aplican un cargo sobre la misma cuenta, que tiene <strong>1 000</strong> de saldo. Con archivos, cada proceso lee, calcula y escribe:</p>
+<pre><code class="language-text">t0  Cajero A lee saldo         -&gt; 1000
+t1  Cajero B lee saldo         -&gt; 1000
+t2  Cajero A calcula 1000 - 300 -&gt; 700
+t3  Cajero B calcula 1000 - 500 -&gt; 500
+t4  Cajero A escribe            -&gt; 700
+t5  Cajero B escribe            -&gt; 500
 </code></pre>
-<p><strong>Traza de cardinalidad</strong> con 2 000 estudiantes, 240 000 inscripciones y 300 cursos:</p>
-<pre><code class="language-text">students × enrollments            = 2 000 · 240 000 = 480 000 000
-(...) × courses                   = 480 000 000 · 300 = 1,44 · 10^11
-</code></pre>
-<p>Materializar eso es imposible. Ningún motor lo hace: por eso existe el optimizador.</p>
-<p><strong>Álgebra, forma optimizada</strong> (aplicando E2 y E3):</p>
-<pre><code class="language-text">π_nombre( students ⋈_id=student_id ( enrollments ⋈_course_id=id ( σ_periodo='2026-1'(courses) ) ) )
-</code></pre>
-<pre><code class="language-text">σ periodo (courses)               = 40 cursos
-⋈ enrollments                     ≈ 240 000 · (40/300) = 32 000
-⋈ students                        = 32 000
-π nombre (elimina duplicados)     ≈ 6 000 estudiantes distintos
-</code></pre>
-<p>De 1,44 · 10¹¹ a 32 000. <strong>Las dos expresiones devuelven exactamente el mismo conjunto</strong>; esa equivalencia demostrada es lo que autoriza al motor a reescribir.</p>
-<p><strong>SQL correspondiente:</strong></p>
-<pre><code class="language-sql">SELECT DISTINCT s.nombre
-FROM students s
-JOIN enrollments e ON e.student_id = s.id
-JOIN courses     c ON c.id = e.course_id
-WHERE c.periodo = '2026-1';
-</code></pre>
-<p>El <code>DISTINCT</code> es la proyección relacional; sin él, SQL devuelve un nombre por inscripción (32 000 filas en vez de 6 000). Es la desviación de la clase 010 hecha visible.</p>
-<p><strong>División relacional.</strong> Pregunta: <em>«estudiantes inscritos en TODOS los cursos obligatorios»</em>. SQL no tiene operador; la formulación canónica es doble negación —«no existe curso obligatorio que este estudiante no haya cursado»—:</p>
-<pre><code class="language-sql">SELECT s.id, s.nombre
-FROM students s
-WHERE NOT EXISTS (
-  SELECT 1 FROM courses c
-  WHERE c.obligatorio = 1
-    AND NOT EXISTS (
-      SELECT 1 FROM enrollments e
-      WHERE e.student_id = s.id AND e.course_id = c.id
-    )
-);
-</code></pre>
-<p>Alternativa por conteo, más legible y con el mismo resultado si <code>(student_id, course_id)</code> es único:</p>
-<pre><code class="language-sql">SELECT e.student_id
-FROM enrollments e
-JOIN courses c ON c.id = e.course_id AND c.obligatorio = 1
-GROUP BY e.student_id
-HAVING COUNT(DISTINCT e.course_id) = (SELECT COUNT(*) FROM courses WHERE obligatorio = 1);
-</code></pre>
+<p>Saldo final: <strong>500</strong>. Saldo correcto: 1000 − 300 − 500 = <strong>200</strong>. Se perdieron 300 sin que ningún programa fallara ni ningún archivo se corrompiera: los dos cajeros hicieron exactamente lo que su código decía. Es la <em>actualización perdida</em>, la anomalía que Gray formalizaría como violación de aislamiento.</p>
+<p>El mismo escenario dentro de un SGBD, con una transacción por cajero y un nivel de aislamiento que detecte el conflicto, tiene tres desenlaces posibles: uno espera al otro y ambos terminan (200), o uno se aborta y se reintenta (200), o el motor informa de un fallo serializable y el cliente decide. Lo que <strong>no</strong> puede ocurrir es que un cambio confirmado se pierda en silencio.</p>
+<p>Comprobación numérica del argumento: con archivos, la ventana de riesgo es el intervalo <code>t0</code>–<code>t5</code>. Si cada operación dura 5 ms y llegan 40 cargos por segundo sobre la misma cuenta, la probabilidad de solapamiento no es marginal: es el caso habitual.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Álgebra</th>
-<th>SQL</th>
-<th>Nota</th>
+<th>Dimensión</th>
+<th>Archivos planos</th>
+<th>SGBD</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>σ</td>
-<td><code>WHERE</code></td>
-<td>Antes de agrupar</td>
+<td>Unidad de escritura</td>
+<td>El archivo o un bloque</td>
+<td>La transacción</td>
 </tr>
 <tr>
-<td>π</td>
-<td><code>SELECT DISTINCT</code></td>
-<td>Sin <code>DISTINCT</code> no es proyección relacional</td>
+<td>Recuperación tras caída</td>
+<td>Lo que alcanzó a escribirse</td>
+<td>Último estado confirmado</td>
 </tr>
 <tr>
-<td>×</td>
-<td><code>CROSS JOIN</code></td>
-<td>Rara vez intencional</td>
+<td>Reglas de integridad</td>
+<td>En cada programa cliente</td>
+<td>Una vez, en el esquema</td>
 </tr>
 <tr>
-<td>⋈</td>
-<td><code>JOIN ... ON</code> / <code>NATURAL JOIN</code></td>
-<td><code>NATURAL</code> es frágil ante columnas nuevas</td>
+<td>Consultas no previstas</td>
+<td>Programa nuevo</td>
+<td>Consulta nueva</td>
 </tr>
 <tr>
-<td>∪</td>
-<td><code>UNION</code></td>
-<td><code>UNION ALL</code> no es la unión de conjuntos</td>
+<td>Concurrencia</td>
+<td>Responsabilidad del programador</td>
+<td>Del gestor, según nivel declarado</td>
 </tr>
 <tr>
-<td>−</td>
-<td><code>EXCEPT</code></td>
-<td><code>MINUS</code> en Oracle</td>
+<td>Control de acceso</td>
+<td>Permisos del sistema de archivos</td>
+<td>Por objeto, rol y fila</td>
 </tr>
 <tr>
-<td>÷</td>
-<td>—</td>
-<td>Doble <code>NOT EXISTS</code> o conteo</td>
-</tr>
-<tr>
-<td>ρ</td>
-<td><code>AS</code></td>
-<td>Necesario en autorreuniones</td>
+<td>Costo de operación</td>
+<td>Casi nulo</td>
+<td>Proceso que mantener</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Olvidar la condición de reunión.</strong> Un <code>JOIN</code> sin <code>ON</code> es un producto cartesiano: no da error, da un resultado enorme y erróneo.</li>
-<li><strong>Creer que <code>JOIN</code> multiplica filas por error.</strong> Multiplica porque la cardinalidad del lado derecho lo permite; el modelo lo predice.</li>
-<li><strong>Traducir π como <code>SELECT</code> sin <code>DISTINCT</code>.</strong> Cambia el resultado, no solo el rendimiento.</li>
-<li><strong>Suponer que el orden de los <code>JOIN</code> en el texto es el orden de ejecución.</strong> Por E5 y E6 el motor elige; en SQL solo lo fijan construcciones explícitas.</li>
-<li><strong>Resolver una división con <code>IN</code>.</strong> <code>IN</code> responde «alguno», no «todos».</li>
+<li><strong>«La base de datos garantiza que los datos sean correctos.»</strong> Garantiza las restricciones declaradas. Un esquema sin <code>CHECK</code>, sin <code>NOT NULL</code> y sin claves foráneas no garantiza nada; solo almacena.</li>
+<li><strong>«SQL es la base de datos.»</strong> SQL es un lenguaje. El gestor es el programa que lo ejecuta, y hay gestores sin SQL con las mismas garantías transaccionales.</li>
+<li><strong>«Si va lento, el motor es malo.»</strong> Antes de esa conclusión hay que mirar el modelo, los índices y el plan de ejecución (parte 08). El motor casi nunca es el primer sospechoso.</li>
+<li><strong>«Con NoSQL me ahorro el modelado.»</strong> Se cambia dónde ocurre el modelado, no si ocurre: pasa del esquema a los patrones de acceso (parte 05).</li>
+<li><strong>«Un archivo JSON es una base de datos.»</strong> Lo es en sentido coloquial y no lo es en sentido técnico: no ofrece atomicidad, aislamiento ni control de acceso.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Estimar cardinalidades a mano es la habilidad que distingue leer un plan de mirarlo. Cuando <code>EXPLAIN</code> dice «filas estimadas: 12» y la realidad son 3 millones, se sabe dónde mirar precisamente porque se sabe cómo debería haberse propagado la cardinalidad.</p>
+<p>En un sistema real, la decisión «SGBD sí o no» arrastra consecuencias que no aparecen en el prototipo: quién aplica los parches de seguridad, dónde se guardan las copias, cómo se prueba la restauración, qué pasa cuando el disco se llena y quién recibe la alerta. Elegir un gestor es adoptar un servicio que operar, no solo una biblioteca que importar.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Toma un sistema que hayas escrito y que guarde estado en archivos. Documenta, con evidencia:</p>
 <ol>
-<li>Escribe en álgebra una consulta real de tu trabajo, en su forma ingenua.</li>
-<li>Aplica E1–E4 paso a paso y anota la cardinalidad estimada en cada nivel.</li>
-<li>Ejecuta ambas versiones en SQL y compara el plan y el tiempo.</li>
-<li>Formula una pregunta de tu dominio que exija división relacional y resuélvela de las dos formas.</li>
+<li>Una invariante entre dos registros que hoy nadie hace cumplir.</li>
+<li>Una secuencia concreta de dos procesos que la rompa (con marcas de tiempo, como en el ejemplo).</li>
+<li>Qué restricción del esquema la impediría en un SGBD.</li>
+<li>El costo de operación que asumirías al migrar.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Demuestra con un contraejemplo que E3 no vale si la condición usa atributos de ambas relaciones.</li>
-<li>¿Por qué la intersección no es un operador primitivo?</li>
-<li>Da una consulta donde omitir <code>DISTINCT</code> produzca un total inflado en un informe, con números.</li>
-<li>Explica por qué la formulación de división con <code>HAVING COUNT</code> exige unicidad de <code>(student_id, course_id)</code>.</li>
+<li>Explica, con una traza temporal propia, una anomalía de concurrencia distinta de la actualización perdida y por qué el sistema de archivos no la evita.</li>
+<li>Un compañero afirma: «migramos a PostgreSQL, así que los datos ya son consistentes». ¿Qué le falta declarar para que esa frase sea cierta?</li>
+<li>Da un caso real de tu trabajo donde usar un SGBD sería una mala decisión, y justifica con los criterios del diagrama.</li>
+<li>¿Qué componente descrito por Hellerstein et al. desaparece si renuncias a la durabilidad, y qué garantía pierdes con él?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Selección, reunión y proyección compuestas en una sola expresión</p>
-<p>El álgebra relacional es cerrada: cada operador toma relaciones y devuelve
-una relación, así que se pueden encadenar. El caso encadena tres —selección
-por curso y nota, reunión con los estudiantes, proyección de dos columnas— y
-devuelve quién aprobó DB-101 con 60 o más, con su nota, ordenado por nombre.</p>
-<p>Lo que hay que ver no es el resultado, sino que <strong>el orden en que el motor
-aplique los operadores no puede cambiarlo</strong>. Que la selección se pueda
-empujar antes de la reunión es una equivalencia algebraica, y de ahí sale la
-optimización de consultas: reescribir la expresión por otra equivalente y
-más barata.</p>
+<p><strong>Caso:</strong> Que el sistema impida por sí solo dos estudiantes con el mismo correo</p>
+<p>Se intentan registrar tres estudiantes, y el tercero repite el correo del
+primero. El programa <strong>no</strong> comprueba nada: la comprobación tiene que
+hacerla el sistema de datos. Al terminar, la consulta devuelve los correos
+registrados, ordenados alfabéticamente, uno por línea.</p>
+<p>Es la pregunta más elemental que se le puede hacer a un almacén de datos:
+¿puede garantizar una regla, o solo guardar lo que le den? Un archivo de
+texto y una hoja de cálculo aceptan el duplicado sin protestar; por eso no
+son bases de datos.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>nombre</th>
-<th>nota</th>
+<th>correo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Ada</code></td>
-<td><code>90</code></td>
+<td><code>ada@example.org</code></td>
 </tr>
 <tr>
-<td><code>Grace</code></td>
-<td><code>72</code></td>
+<td><code>linus@example.org</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 011</code>: 5 de
-las 5 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 011</code>: 6 de
+las 7 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -334,247 +287,283 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/optoverview.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/guides/meta/explain.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/using-explain.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-unique/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt">código</a></td>
+<td><a href="https://redis.io/docs/latest/develop/data-types/sets/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Neo4j</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher">código</a></td>
-<td><a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">doc oficial</a></td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/constraints/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/optoverview.html
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: INSERT OR IGNORE deja que el motor rechace el duplicado sin abortar el
+--       guion. Sin OR IGNORE, la tercera insercion lanza un error: esa es
+--       exactamente la garantia que se esta demostrando.
 
 -- === preparacion ===
 CREATE TABLE estudiantes (
     id     INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL
-);
-CREATE TABLE notas (
-    estudiante_id INTEGER NOT NULL,
-    curso         TEXT NOT NULL,
-    nota          INTEGER NOT NULL,
-    PRIMARY KEY (estudiante_id, curso)
+    correo TEXT NOT NULL UNIQUE
 );
 
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO notas (estudiante_id, curso, nota) VALUES
-    (1, 'DB-101', 90),
-    (2, 'DB-101', 58),
-    (3, 'DB-101', 72),
-    (1, 'SE-201', 66),
-    (3, 'SE-201', 78);
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+-- El programa no comprueba nada: lo intenta igual. El motor lo rechaza.
+INSERT OR IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
 
 -- === consulta ===
--- Tres operadores del algebra, en este orden:
---   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
---   |X|    (reunion)    JOIN estudiantes ON ...
---   pi     (proyeccion) SELECT nombre, nota
--- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
--- que autoriza el algebra y lo que hace el optimizador.
-SELECT e.nombre, n.nota
-FROM notas n
-JOIN estudiantes e ON e.id = n.estudiante_id
-WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
-ORDER BY e.nombre;
+SELECT correo FROM estudiantes ORDER BY correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> SQL es la implementación práctica del álgebra y aquí se lee sin ruido: una cláusula por operador.</li>
-<li><strong>Por qué no:</strong> Su optimizador aplica pocas reescrituras, así que no sirve para ver el efecto de las equivalencias algebraicas: el plan se parece demasiado a lo que se escribió.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/optoverview.html">https://sqlite.org/optoverview.html</a></li>
+<li><strong>Por qué sí:</strong> <code>UNIQUE</code> es parte de la definición de la tabla, así que la regla vive con los datos y no en el programa que los escribe. SQLite lo comprueba aunque quien inserte sea otro proceso, otro lenguaje o la consola.</li>
+<li><strong>Por qué no:</strong> Al ser un archivo local sin servidor, la regla protege el archivo, no un sistema: dos máquinas con dos copias del archivo pueden tener cada una su «Ada» sin que nadie lo note.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/guides/meta/explain.html
--- nota: anteponer EXPLAIN a esta consulta muestra el arbol de operadores con
---       el filtro ya empujado a la hoja: la equivalencia algebraica aplicada.
+-- doc: https://duckdb.org/docs/stable/sql/constraints.html
+-- nota: DuckDB no tiene INSERT OR IGNORE; la forma equivalente es
+--       ON CONFLICT DO NOTHING, que es tambien la del estandar reciente.
 
 -- === preparacion ===
 CREATE TABLE estudiantes (
     id     INTEGER PRIMARY KEY,
-    nombre VARCHAR NOT NULL
-);
-CREATE TABLE notas (
-    estudiante_id INTEGER NOT NULL,
-    curso         VARCHAR NOT NULL,
-    nota          INTEGER NOT NULL,
-    PRIMARY KEY (estudiante_id, curso)
+    correo VARCHAR NOT NULL UNIQUE
 );
 
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO notas (estudiante_id, curso, nota) VALUES
-    (1, 'DB-101', 90),
-    (2, 'DB-101', 58),
-    (3, 'DB-101', 72),
-    (1, 'SE-201', 66),
-    (3, 'SE-201', 78);
+INSERT INTO estudiantes VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes VALUES (3, 'ada@example.org') ON CONFLICT DO NOTHING;
 
 -- === consulta ===
--- Tres operadores del algebra, en este orden:
---   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
---   |X|    (reunion)    JOIN estudiantes ON ...
---   pi     (proyeccion) SELECT nombre, nota
--- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
--- que autoriza el algebra y lo que hace el optimizador.
-SELECT e.nombre, n.nota
-FROM notas n
-JOIN estudiantes e ON e.id = n.estudiante_id
-WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
-ORDER BY e.nombre;
+SELECT correo FROM estudiantes ORDER BY correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Su <code>EXPLAIN</code> muestra el árbol de operadores casi como se dibuja en el álgebra, con los filtros ya empujados hacia las hojas: es la mejor forma de ver la reescritura sin instalar nada.</li>
-<li><strong>Por qué no:</strong> Ese mismo optimizador reordena tanto que el plan deja de parecerse a la consulta escrita, lo que confunde a quien está aprendiendo a leerlos.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/guides/meta/explain.html">https://duckdb.org/docs/stable/guides/meta/explain.html</a></li>
+<li><strong>Por qué sí:</strong> Acepta la misma restricción con la misma sintaxis, lo que permite comprobar que la regla no es de SQLite sino del modelo relacional.</li>
+<li><strong>Por qué no:</strong> DuckDB está pensado para analizar datos que ya existen, no para ser la autoridad que los admite: comprobar unicidad en cada inserción es precisamente el trabajo que su diseño columnar no optimiza.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/constraints.html">https://duckdb.org/docs/stable/sql/constraints.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/using-explain.html
--- nota: EXPLAIN (ANALYZE) sobre esta consulta nombra los operadores y permite
---       comprobar que la seleccion se aplico antes de la reunion.
-
-DROP TABLE IF EXISTS notas, estudiantes;
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: la restriccion se implementa con un indice unico. Consultar
+--       pg_indexes despues de crear la tabla lo hace visible.
 
 -- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
 CREATE TABLE estudiantes (
     id     integer PRIMARY KEY,
-    nombre text NOT NULL
-);
-CREATE TABLE notas (
-    estudiante_id integer NOT NULL,
-    curso         text NOT NULL,
-    nota          integer NOT NULL,
-    PRIMARY KEY (estudiante_id, curso)
+    correo text NOT NULL UNIQUE
 );
 
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO notas (estudiante_id, curso, nota) VALUES
-    (1, 'DB-101', 90),
-    (2, 'DB-101', 58),
-    (3, 'DB-101', 72),
-    (1, 'SE-201', 66),
-    (3, 'SE-201', 78);
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (3, 'ada@example.org')
+    ON CONFLICT (correo) DO NOTHING;
 
 -- === consulta ===
--- Tres operadores del algebra, en este orden:
---   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
---   |X|    (reunion)    JOIN estudiantes ON ...
---   pi     (proyeccion) SELECT nombre, nota
--- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
--- que autoriza el algebra y lo que hace el optimizador.
-SELECT e.nombre, n.nota
-FROM notas n
-JOIN estudiantes e ON e.id = n.estudiante_id
-WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
-ORDER BY e.nombre;
+SELECT correo FROM estudiantes ORDER BY correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es donde la teoría se vuelve visible: <code>EXPLAIN</code> nombra los operadores (<code>Seq Scan</code>, <code>Hash Join</code>, <code>Filter</code>) y permite comprobar que la selección se aplicó antes de la reunión aunque estuviera escrita después.</li>
-<li><strong>Por qué no:</strong> El optimizador decide con estadísticas; si están viejas, elige una expresión equivalente pero mucho más cara, y la culpa parecerá de la consulta.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/using-explain.html">https://www.postgresql.org/docs/current/using-explain.html</a></li>
+<li><strong>Por qué sí:</strong> La restricción se apoya en un índice único y la comprueba el servidor dentro de la transacción: da igual cuántas aplicaciones escriban a la vez o en qué lenguaje estén, la segunda que intente el duplicado recibe un error.</li>
+<li><strong>Por qué no:</strong> Esa garantía cuesta una escritura de índice por fila y un servidor que administrar, actualizar y respaldar. Para un archivo de configuración de diez líneas es maquinaria de sobra.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/
-// nota: la tuberia ES la expresion algebraica escrita en orden. El $match va
-//       PRIMERO a proposito: es el empuje del filtro hecho a mano.
+// doc: https://www.mongodb.com/docs/manual/core/index-unique/
+// nota: con ordered:false, insertMany intenta TODOS los documentos y solo
+//       falla el que viola el indice; el try/catch recoge ese error concreto.
 
 // === preparacion ===
 db.estudiantes.drop();
-db.notas.drop();
+db.estudiantes.createIndex({ correo: 1 }, { unique: true });
 
-db.estudiantes.insertMany([
-  { _id: 1, nombre: &quot;Ada&quot; },
-  { _id: 2, nombre: &quot;Linus&quot; },
-  { _id: 3, nombre: &quot;Grace&quot; },
-]);
-db.notas.insertMany([
-  { estudiante_id: 1, curso: &quot;DB-101&quot;, nota: 90 },
-  { estudiante_id: 2, curso: &quot;DB-101&quot;, nota: 58 },
-  { estudiante_id: 3, curso: &quot;DB-101&quot;, nota: 72 },
-  { estudiante_id: 1, curso: &quot;SE-201&quot;, nota: 66 },
-  { estudiante_id: 3, curso: &quot;SE-201&quot;, nota: 78 },
-]);
+try {
+  db.estudiantes.insertMany(
+    [
+      { _id: 1, correo: &quot;ada@example.org&quot; },
+      { _id: 2, correo: &quot;linus@example.org&quot; },
+      { _id: 3, correo: &quot;ada@example.org&quot; },
+    ],
+    { ordered: false },
+  );
+} catch (e) {
+  // Error 11000 = clave duplicada. Es el resultado esperado, no un fallo.
+  if (!String(e).includes(&quot;11000&quot;)) throw e;
+}
 
 // === consulta ===
-db.notas
-  .aggregate([
-    { $match: { curso: &quot;DB-101&quot;, nota: { $gte: 60 } } },
-    { $lookup: { from: &quot;estudiantes&quot;, localField: &quot;estudiante_id&quot;,
-                 foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
-    { $unwind: &quot;$e&quot; },
-    { $project: { _id: 0, nombre: &quot;$e.nombre&quot;, nota: 1 } },
-    { $sort: { nombre: 1 } },
-  ])
-  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.nota));
+db.estudiantes
+  .find({}, { _id: 0, correo: 1 })
+  .sort({ correo: 1 })
+  .forEach((d) =&gt; print(d.correo));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Una tubería de agregación <strong>es</strong> una expresión algebraica escrita en orden: <code>$match</code> es la selección, <code>$lookup</code> la reunión, <code>$project</code> la proyección. Y el propio motor reordena etapas cuando puede, igual que un optimizador relacional.</li>
-<li><strong>Por qué no:</strong> Al escribirse el orden a mano, un <code>$match</code> puesto después de un <code>$lookup</code> puede procesar millones de documentos de más: aquí el usuario carga con parte del trabajo del optimizador.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/</a></li>
+<li><strong>Por qué sí:</strong> Un índice único da la misma garantía sin esquema previo: se puede empezar a guardar documentos y añadir la regla después, cuando el dominio ya se entiende.</li>
+<li><strong>Por qué no:</strong> La restricción solo existe si alguien crea el índice —no hay nada en el documento que la exija— y en una colección fragmentada la unicidad solo se puede garantizar sobre la clave de fragmentación.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-unique/">https://www.mongodb.com/docs/manual/core/index-unique/</a></li>
 </ul>
-<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelo-relacional-y-algebra/011-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-text"># motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: un conjunto no admite repetidos por definicion. SADD devuelve 1 si
+#       anadio el elemento y 0 si ya estaba: la tercera orden devuelve 0.
+
+# === preparacion ===
+FLUSHDB
+SADD correos ada@example.org
+SADD correos linus@example.org
+SADD correos ada@example.org
+
+# === consulta ===
+SORT correos ALPHA
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Un conjunto es, por definición, una colección sin repeticiones: <code>SADD</code> devuelve 0 cuando el elemento ya estaba y no hay nada que comprobar. Con un solo hilo atendiendo las órdenes, dos clientes simultáneos no pueden colarse a la vez.</li>
+<li><strong>Por qué no:</strong> Garantiza que no hay dos correos iguales, y nada más: no hay tipos, ni relación con el resto del estudiante, ni durabilidad garantizada salvo que se configure. La regla se cumple; el modelo de datos no existe.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+-- nota: la columna se declara con intercalacion binaria para que la unicidad
+--       distinga mayusculas de minusculas; con la intercalacion por omision,
+--       'Ada@example.org' contaria como duplicado.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
+    id     INT PRIMARY KEY,
+    correo VARCHAR(200) COLLATE utf8mb4_bin NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+INSERT INTO estudiantes (id, correo) VALUES (1, 'ada@example.org');
+INSERT INTO estudiantes (id, correo) VALUES (2, 'linus@example.org');
+INSERT IGNORE INTO estudiantes (id, correo) VALUES (3, 'ada@example.org');
+
+-- === consulta ===
+SELECT correo FROM estudiantes ORDER BY correo;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Mismo mecanismo que PostgreSQL y el motor relacional más común en alojamientos compartidos: <code>UNIQUE</code> sobre una columna es la forma normal de declarar una identidad de negocio.</li>
+<li><strong>Por qué no:</strong> La comparación de cadenas depende de la intercalación: con la predeterminada <code>utf8mb4_0900_ai_ci</code>, <code>Ada@example.org</code> y <code>ada@example.org</code> son el mismo valor, lo que a veces se quiere y a veces sorprende.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html">https://dev.mysql.com/doc/refman/8.4/en/create-index.html</a></li>
+</ul>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
 <pre><code class="language-cypher">// motor: neo4j
-// doc: https://neo4j.com/docs/cypher-manual/current/clauses/where/
-// nota: el mismo algebra con otra forma: el patron es la reunion, el WHERE la
-//       seleccion y el RETURN la proyeccion.
+// doc: https://neo4j.com/docs/cypher-manual/current/constraints/
+// nota: implementacion declarada. La restriccion de unicidad se declara sobre
+//       una propiedad de nodo; MERGE busca antes de crear, asi que el tercer
+//       estudiante no llega a duplicarse.
 
 // === preparacion ===
-MATCH (n) DETACH DELETE n;
-CREATE (a:Estudiante {nombre: 'Ada'}),
-       (l:Estudiante {nombre: 'Linus'}),
-       (g:Estudiante {nombre: 'Grace'}),
-       (db:Curso {codigo: 'DB-101'}),
-       (se:Curso {codigo: 'SE-201'}),
-       (a)-[:CURSO {nota: 90}]-&gt;(db),
-       (l)-[:CURSO {nota: 58}]-&gt;(db),
-       (g)-[:CURSO {nota: 72}]-&gt;(db),
-       (a)-[:CURSO {nota: 66}]-&gt;(se),
-       (g)-[:CURSO {nota: 78}]-&gt;(se);
+MATCH (n:Estudiante) DETACH DELETE n;
+CREATE CONSTRAINT correo_unico IF NOT EXISTS
+  FOR (e:Estudiante) REQUIRE e.correo IS UNIQUE;
+MERGE (:Estudiante {correo: 'ada@example.org'});
+MERGE (:Estudiante {correo: 'linus@example.org'});
+MERGE (:Estudiante {correo: 'ada@example.org'});
 
 // === consulta ===
-MATCH (e:Estudiante)-[r:CURSO]-&gt;(c:Curso)
-WHERE c.codigo = 'DB-101' AND r.nota &gt;= 60
-RETURN e.nombre AS nombre, r.nota AS nota
-ORDER BY nombre;
+MATCH (e:Estudiante) RETURN e.correo AS correo ORDER BY correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Cypher tiene los mismos operadores con otra forma: el patrón es la reunión, el <code>WHERE</code> la selección y el <code>RETURN</code> la proyección. Ver el mismo álgebra en dos lenguajes es lo que demuestra que el álgebra no es de SQL.</li>
-<li><strong>Por qué no:</strong> El producto cartesiano —que en álgebra es un operador más— aquí es un error de diseño: si el patrón no conecta dos partes, Neo4j avisa de un producto cartesiano porque casi nunca es lo que se quería.</li>
-<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">https://neo4j.com/docs/cypher-manual/current/clauses/where/</a></li>
+<li><strong>Por qué sí:</strong> Las restricciones de unicidad existen sobre propiedades de nodo y se comprueban en el servidor, igual que en un motor relacional.</li>
+<li><strong>Por qué no:</strong> Elegir un grafo por una regla de unicidad es elegir un sistema entero por su detalle menos característico; el grafo se justifica por los recorridos, no por las restricciones.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/constraints/">https://neo4j.com/docs/cypher-manual/current/constraints/</a></li>
 </ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>Un <code>INSERT</code> en Cassandra es en realidad un «escribe esto», no un «añade si no existe»: si la clave ya está, sobrescribe en silencio. Comprobar primero exige una transacción ligera (<code>IF NOT EXISTS</code>), que necesita acuerdo entre réplicas y cuesta varias veces más que una escritura normal.</td>
+<td>Hacer del correo la clave de partición y usar <code>INSERT ... IF NOT EXISTS</code> solo en el registro, aceptando su costo, o dejar que la unicidad la garantice el servicio de identidad que está delante.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc</a></td>
+</tr>
+<tr>
+<td>Amazon DynamoDB</td>
+<td>No existen restricciones de unicidad sobre atributos que no sean la clave primaria; <code>PutItem</code> sobrescribe el elemento salvo que se le añada una condición explícita.</td>
+<td>Usar el correo como clave de partición y escribir con <code>ConditionExpression: attribute_not_exists(pk)</code>, que falla si el elemento ya existe. La regla pasa a estar en cada llamada, no en el esquema.</td>
+<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
@@ -622,27 +611,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
-  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
-<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
-  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
 <li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
   Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
+<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
+  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>William Kent</strong> (2012). <a href="https://technicspub.com/data-and-reality/">Data and Reality</a>. 3.a ed. Technics Publications. ISBN 978-1-935504-21-4.<br />
+  Por qué ningún modelo captura el mundo: fuente del criterio de alcance del programa.</li>
+<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
+  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="010.html">← Anterior</a> · <a href="012.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="011">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="010.html"><span class="sentido">← Anterior · 010</span>La relación como conjunto: tuplas, dominios y acceso por valor</a>
-<a class="siguiente" href="012.html"><span class="sentido">Siguiente · 012 →</span>Cálculo relacional y su equivalencia con el álgebra</a>
+<a class="anterior" href="010.html"><span class="sentido">← Anterior · 010</span>El mapa de los motores: seis familias y un criterio</a>
+<a class="siguiente" href="012.html"><span class="sentido">Siguiente · 012 →</span>Arquitectura interna de un gestor, del cliente al disco</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

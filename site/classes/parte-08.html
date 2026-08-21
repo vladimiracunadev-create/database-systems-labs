@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Por qué una consulta tarda: páginas, estructuras de índice, estadísticas y la lectura honesta de un plan de ejecución.">
+<meta name="description" content="Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-08.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="Parte 08 — Almacenamiento, índices y planes · Database Systems Labs">
-<meta property="og:description" content="Por qué una consulta tarda: páginas, estructuras de índice, estadísticas y la lectura honesta de un plan de ejecución.">
+<meta property="og:title" content="Parte 08 — Transacciones, concurrencia y recuperación · Database Systems Labs">
+<meta property="og:description" content="Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/parte-08.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<title>Parte 08 — Almacenamiento, índices y planes · Database Systems Labs</title>
+<title>Parte 08 — Transacciones, concurrencia y recuperación · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -50,38 +50,39 @@
   <span>Parte 08</span>
 </nav>
 <main class="content" id="principal">
-<h1>Parte 08 — Almacenamiento, índices y planes</h1>
-<p class="lead">Por qué una consulta tarda: páginas, estructuras de índice, estadísticas y la lectura honesta de un plan de ejecución.</p>
-<p><strong>5 clases · 17 horas</strong></p>
+<h1>Parte 08 — Transacciones, concurrencia y recuperación</h1>
+<p class="lead">Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.</p>
+<p><strong>5 clases · 18 horas</strong></p>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
-<tr><td><a href="038.html">038</a></td><td><a href="038.html">Páginas, filas y buffer: por qué la entrada y salida manda</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
-<tr><td><a href="039.html">039</a></td><td><a href="039.html">B-Tree: estructura, orden de columnas y selectividad</a></td><td class="nivel-intermedio">Intermedio</td><td>4</td><td>3</td></tr>
-<tr><td><a href="040.html">040</a></td><td><a href="040.html">LSM-Tree, compactación y amplificación de escritura</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
-<tr><td><a href="041.html">041</a></td><td><a href="041.html">Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
-<tr><td><a href="042.html">042</a></td><td><a href="042.html">Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
+<tr><td><a href="043.html">043</a></td><td><a href="043.html">ACID: qué garantiza cada letra y quién la implementa</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
+<tr><td><a href="044.html">044</a></td><td><a href="044.html">Anomalías de aislamiento y la crítica a los niveles ANSI</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>5</td></tr>
+<tr><td><a href="045.html">045</a></td><td><a href="045.html">Bloqueo en dos fases, MVCC e instantáneas</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
+<tr><td><a href="046.html">046</a></td><td><a href="046.html">Registro anticipado y recuperación: WAL y ARIES</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
+<tr><td><a href="047.html">047</a></td><td><a href="047.html">Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
 <h2>Otras partes</h2>
 <ul>
-<li><a href="parte-00.html">Parte 00 — Fundamentos, sistemas y método</a></li>
-<li><a href="parte-01.html">Parte 01 — Modelado conceptual y requisitos</a></li>
-<li><a href="parte-02.html">Parte 02 — Modelo relacional y álgebra</a></li>
-<li><a href="parte-03.html">Parte 03 — SQL en profundidad</a></li>
-<li><a href="parte-04.html">Parte 04 — Motores relacionales y dialectos</a></li>
-<li><a href="parte-05.html">Parte 05 — Documentos y clave-valor</a></li>
-<li><a href="parte-06.html">Parte 06 — Grafos, columnas, tiempo y búsqueda</a></li>
-<li><a href="parte-07.html">Parte 07 — Transacciones, concurrencia y recuperación</a></li>
-<li><a href="parte-09.html">Parte 09 — Distribución, réplica y consistencia</a></li>
-<li><a href="parte-10.html">Parte 10 — Operación, seguridad y gobierno</a></li>
-<li><a href="parte-11.html">Parte 11 — Analítica, integración y streaming</a></li>
-<li><a href="parte-12.html">Parte 12 — Vectores, recuperación y RAG</a></li>
-<li><a href="parte-13.html">Parte 13 — Arquitectura y proyecto final</a></li>
+<li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>
+<li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li>
+<li><a href="parte-02.html">Parte 02 — Modelado conceptual y requisitos</a></li>
+<li><a href="parte-03.html">Parte 03 — Modelo relacional y álgebra</a></li>
+<li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li>
+<li><a href="parte-05.html">Parte 05 — Motores relacionales y dialectos</a></li>
+<li><a href="parte-06.html">Parte 06 — Documentos y clave-valor</a></li>
+<li><a href="parte-07.html">Parte 07 — Grafos, columnas, tiempo y búsqueda</a></li>
+<li><a href="parte-09.html">Parte 09 — Almacenamiento, índices y planes</a></li>
+<li><a href="parte-10.html">Parte 10 — Distribución, réplica y consistencia</a></li>
+<li><a href="parte-11.html">Parte 11 — Operación, seguridad y gobierno</a></li>
+<li><a href="parte-12.html">Parte 12 — Analítica, integración y streaming</a></li>
+<li><a href="parte-13.html">Parte 13 — Vectores, recuperación y RAG</a></li>
+<li><a href="parte-14.html">Parte 14 — Arquitectura y proyecto final</a></li>
 </ul>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

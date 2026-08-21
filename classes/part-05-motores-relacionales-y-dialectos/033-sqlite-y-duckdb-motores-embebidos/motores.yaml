@@ -1,0 +1,100 @@
+---
+caso:
+  titulo: El mismo agregado, sin servidor, en el proceso de la propia aplicación
+  contrato: |
+    Un motor embebido no es un motor pequeño: es un motor **sin servidor**, que
+    vive dentro del proceso de la aplicación. No hay red, no hay conexión, no
+    hay usuario que autenticar. Y la base de datos es un archivo que se puede
+    copiar, adjuntar en un correo o versionar.
+
+    El caso es deliberadamente simple —filas y suma de notas por curso— porque
+    lo que se compara no es la consulta sino **dónde se ejecuta**. SQLite y
+    DuckDB dan la misma respuesta y son la misma clase de sistema; lo que los
+    separa es para qué está optimizado cada uno: uno guarda filas y sirve
+    transacciones, el otro guarda columnas y sirve análisis.
+  columnas: [curso, filas, suma]
+  esperado:
+    - [DB-101, "3", "220"]
+    - [SE-201, "1", "66"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Es el motor embebido transaccional: guarda filas completas, cumple ACID
+      sobre un archivo y está en cada teléfono, cada navegador y cada avión. Si
+      la aplicación escribe registros de uno en uno y los vuelve a leer de uno
+      en uno, es exactamente la herramienta.
+    porque_no: >-
+      Al guardar filas, un agregado sobre una columna tiene que leer todas las
+      demás columnas de todas las filas. Con un millón de registros y veinte
+      columnas, sumar una sola cuesta leerlo casi todo.
+    doc: https://sqlite.org/whentouse.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es el motor embebido analítico: guarda columnas, las comprime y las
+      procesa en lotes vectorizados. El mismo agregado sobre millones de filas
+      lee solo la columna que necesita, y además puede consultar directamente un
+      CSV o un Parquet sin cargarlo.
+    porque_no: >-
+      Un solo proceso escritor y sin control de concurrencia entre aplicaciones:
+      no es el sitio donde vive la verdad del negocio, sino donde se analiza una
+      copia de ella.
+    doc: https://duckdb.org/why_duckdb
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Está aquí como contraste: la misma respuesta, con un servidor detrás que
+      aporta lo que ningún embebido tiene —usuarios, permisos, conexiones
+      remotas, réplica y escrituras concurrentes de muchas aplicaciones.
+    porque_no: >-
+      Todo eso hay que instalarlo, configurarlo, actualizarlo y respaldarlo.
+      Para una aplicación de escritorio, una herramienta de línea de órdenes o
+      una prueba automatizada, es infraestructura que no resuelve nada.
+    doc: https://www.postgresql.org/docs/current/tutorial-arch.html
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      También tiene un modo embebido, `clickhouse-local`, que ejecuta consultas
+      sobre archivos sin servidor. Sirve para comprobar que «embebido» y
+      «columnar» son dos ejes independientes: hay cuatro combinaciones y las
+      cuatro existen.
+    porque_no: >-
+      Ese modo es una herramienta de línea de órdenes, no una biblioteca que se
+      enlaza en la aplicación: no se puede empotrar en un programa como se hace
+      con SQLite o DuckDB.
+    doc: https://clickhouse.com/docs/en/operations/utilities/clickhouse-local
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      Aunque corra en la misma máquina, sigue siendo un servidor con su
+      protocolo y su puerto: hay serialización y viaje de red aunque sea por
+      bucle local. No es un motor embebido, es un servidor cercano.
+    alternativa: >-
+      Para una caché dentro del proceso, una estructura en memoria del propio
+      lenguaje; Redis empieza a valer cuando esa caché tiene que compartirse
+      entre varios procesos o máquinas.
+    doc: https://redis.io/docs/latest/develop/reference/protocol-spec/
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      No hay versión embebida disponible: la biblioteca `mongodb-embedded` se
+      retiró, así que MongoDB implica siempre un proceso servidor aparte.
+    alternativa: >-
+      Para almacenamiento documental dentro del proceso, SQLite con sus
+      funciones JSON cubre buena parte del caso sin añadir un servicio.
+    doc: https://www.mongodb.com/docs/manual/administration/install-community/

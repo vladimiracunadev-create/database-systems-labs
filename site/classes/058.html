@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Embeddings y métricas de distancia: qué significa parecido. Parte 12: Vectores, recuperación y RAG.">
+<meta name="description" content="Respaldo y restauración: solo cuenta lo que se ha restaurado. Parte 11: Operación, seguridad y gobierno.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/058.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="058 — Embeddings y métricas de distancia: qué significa parecido · Database Systems Labs">
-<meta property="og:description" content="Embeddings y métricas de distancia: qué significa parecido. Parte 12: Vectores, recuperación y RAG.">
+<meta property="og:title" content="058 — Respaldo y restauración: solo cuenta lo que se ha restaurado · Database Systems Labs">
+<meta property="og:description" content="Respaldo y restauración: solo cuenta lo que se ha restaurado. Parte 11: Operación, seguridad y gobierno.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/058.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "058 — Embeddings y métricas de distancia: qué significa parecido", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["espacio vectorial", "coseno", "producto interno", "normalización", "dimensión"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>058 — Embeddings y métricas de distancia: qué significa parecido · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "058 — Respaldo y restauración: solo cuenta lo que se ha restaurado", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["RPO", "RTO", "recuperación a un punto en el tiempo", "prueba de restauración"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>058 — Respaldo y restauración: solo cuenta lo que se ha restaurado · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,228 +49,666 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-12.html">Parte 12 · Vectores, recuperación y RAG</a>
+  <a href="parte-11.html">Parte 11 · Operación, seguridad y gobierno</a>
   <span aria-hidden="true">/</span><span>Clase 058</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="058--embeddings-y-métricas-de-distancia-qué-significa-parecido">058 — Embeddings y métricas de distancia: qué significa parecido</h1>
+<h1 id="058--respaldo-y-restauración-solo-cuenta-lo-que-se-ha-restaurado">058 — Respaldo y restauración: solo cuenta lo que se ha restaurado</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-11-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-058%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="057.html">← Anterior</a> · <a href="059.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="057.html">← Anterior</a> · <a href="059.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 12 — Vectores, recuperación y RAG · Intermedio ·
-3 horas estimadas · motores <code>qdrant</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>espacio vectorial</code> · <code>coseno</code> · <code>producto interno</code> · <code>normalización</code> · <code>dimensión</code></p>
+<p>Parte 11 — Operación, seguridad y gobierno · Intermedio ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mongodb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md"><code>labs/08-recovery</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>RPO</code> · <code>RTO</code> · <code>recuperación a un punto en el tiempo</code> · <code>prueba de restauración</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 058&quot;]
+    C --&gt; K1[&quot;RPO&quot;]
+    C --&gt; K2[&quot;RTO&quot;]
+    C --&gt; K3[&quot;recuperación a un punto en el tiempo&quot;]
+    C --&gt; K4[&quot;prueba de restauración&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender qué se guarda en una base vectorial y qué significa exactamente «parecido». Sin esa precisión, la búsqueda semántica se convierte en una caja negra que a veces acierta.</p>
+<p>Convertir la copia de seguridad en una garantía verificada. Una copia que nunca se ha restaurado no es una copia: es una carpeta que ocupa espacio.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar qué es un embedding y de qué depende su espacio.</li>
-<li>Calcular coseno, producto interno y distancia euclídea, y saber cuándo coinciden.</li>
-<li>Justificar la normalización de vectores.</li>
-<li>Dimensionar el almacenamiento de una colección vectorial.</li>
-<li>Reconocer que dos modelos distintos producen espacios incomparables.</li>
+<li>Definir RPO y RTO y derivarlos de una exigencia de negocio.</li>
+<li>Distinguir copia lógica, física y recuperación a un punto en el tiempo.</li>
+<li>Diseñar un plan que cubra los cinco modos de pérdida.</li>
+<li>Ejecutar y cronometrar una restauración completa.</li>
+<li>Explicar por qué una réplica no es una copia de seguridad.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="qué-es-un-embedding">Qué es un embedding</h3>
-<p>Un vector de números reales que representa un objeto —texto, imagen, audio— de modo que <strong>la proximidad geométrica aproxime la similitud semántica</strong>, según lo aprendido por un modelo concreto.</p>
-<p>Tres consecuencias que se olvidan:</p>
-<ol>
-<li><strong>El espacio pertenece al modelo.</strong> Los vectores de dos modelos distintos no son comparables, aunque tengan la misma dimensión. Cambiar de modelo obliga a <strong>recalcular toda la colección</strong>.</li>
-<li><strong>«Similar» significa lo que el modelo aprendió.</strong> Si se entrenó con paráfrasis, «similar» es paráfrasis. Si con preguntas y respuestas, la pregunta se acerca a su respuesta, no a otras preguntas.</li>
-<li><strong>No hay explicación.</strong> Ninguna dimensión significa nada por sí sola.</li>
-</ol>
-<h3 id="las-tres-métricas">Las tres métricas</h3>
-<p>Para vectores <code>a</code> y <code>b</code> de dimensión <code>d</code>:</p>
-<pre><code class="language-text">Producto interno:   a·b = Σ aᵢbᵢ
-Norma euclídea:     ‖a‖ = √(Σ aᵢ²)
-Coseno:             cos(a,b) = (a·b) / (‖a‖·‖b‖)        ∈ [-1, 1]
-Distancia euclídea: ‖a-b‖ = √(Σ (aᵢ-bᵢ)²)
-</code></pre>
+<h3 id="rpo-y-rto">RPO y RTO</h3>
+<ul>
+<li><strong>RPO (objetivo de punto de recuperación):</strong> cuántos datos se acepta perder, en tiempo. Determina la frecuencia de copia y el modo de replicación.</li>
+<li><strong>RTO (objetivo de tiempo de recuperación):</strong> cuánto se acepta estar caído. Determina el tipo de copia y el procedimiento.</li>
+</ul>
+<p>Ambos salen de una conversación con el negocio, no de una preferencia técnica. La pregunta útil es concreta: <em>«si perdiéramos los datos de las últimas cuatro horas, ¿qué habría que rehacer y cuánto costaría?»</em>.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Métrica</th>
-<th>Sensible a la magnitud</th>
-<th>Uso típico</th>
+<th>RPO</th>
+<th>Mecanismo necesario</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Coseno</td>
-<td>No: solo dirección</td>
-<td>Texto, el caso habitual</td>
+<td>24 h</td>
+<td>Copia diaria</td>
 </tr>
 <tr>
-<td>Producto interno</td>
-<td><strong>Sí</strong></td>
-<td>Recomendación, donde la magnitud codifica popularidad</td>
+<td>1 h</td>
+<td>Copia diaria + archivado de WAL cada hora</td>
 </tr>
 <tr>
-<td>Euclídea</td>
-<td>Sí</td>
-<td>Imágenes, espacios métricos</td>
+<td>5 min</td>
+<td>Archivado continuo de WAL</td>
+</tr>
+<tr>
+<td>~0</td>
+<td>Réplica síncrona <strong>más</strong> copias</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>La relación que hay que conocer.</strong> Si los vectores están normalizados (<code>‖a‖ = ‖b‖ = 1</code>):</p>
-<pre><code class="language-text">a·b = cos(a,b)
-‖a-b‖² = 2 - 2·cos(a,b)
-</code></pre>
-<p>Con vectores normalizados, <strong>las tres métricas ordenan igual</strong>. Por eso la práctica estándar es normalizar al indexar: el producto interno —la operación más barata, sin divisiones ni raíces— produce exactamente el ranking del coseno.</p>
-<h3 id="dimensionamiento">Dimensionamiento</h3>
-<pre><code class="language-text">almacenamiento = n_vectores × dimensión × bytes_por_componente
-
-1 000 000 × 1 536 × 4 B (float32) = 6,1 GB
-1 000 000 ×   768 × 4 B           = 3,1 GB
-1 000 000 × 1 536 × 1 B (int8)    = 1,5 GB      ← cuantización
-</code></pre>
-<p>A eso hay que sumar el índice (clase 059): HNSW añade típicamente entre un 30 % y un 100 % del tamaño de los vectores.</p>
-<p><strong>Una búsqueda exhaustiva</strong> sobre un millón de vectores de 1 536 dimensiones exige 1 536 millones de multiplicaciones y sumas por consulta. Con SIMD son decenas de milisegundos. Con 100 millones de vectores, segundos. De ahí la necesidad del índice aproximado.</p>
-<pre><code class="language-mermaid">flowchart LR
-    T[&quot;Texto&quot;] --&gt; M[&quot;Modelo de embeddings&quot;]
-    M --&gt; V[&quot;Vector d-dimensional&quot;]
-    V --&gt; N[&quot;Normalizar ‖v‖=1&quot;]
-    N --&gt; S[(&quot;Almacenar&lt;br/&gt;+ metadatos&quot;)]
-    Q[&quot;Consulta&quot;] --&gt; M2[&quot;EL MISMO modelo&quot;]
-    M2 --&gt; QV[&quot;Vector de consulta&quot;]
-    QV --&gt; N2[&quot;Normalizar&quot;]
-    N2 --&gt; B[&quot;Buscar k más cercanos&lt;br/&gt;por producto interno&quot;]
-    S --&gt; B
-    B --&gt; R[&quot;Resultados ordenados&quot;]
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>RTO</th>
+<th>Mecanismo necesario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24 h</td>
+<td>Restaurar copia lógica</td>
+</tr>
+<tr>
+<td>1 h</td>
+<td>Copia física + WAL</td>
+</tr>
+<tr>
+<td>5 min</td>
+<td>Réplica en caliente con conmutación</td>
+</tr>
+<tr>
+<td>~0</td>
+<td>Multimaestro o activo-activo</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-cinco-modos-de-pérdida">Los cinco modos de pérdida</h3>
+<p>Un plan solo está completo si cubre los cinco:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Modo</th>
+<th>Cubre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fallo de hardware</td>
+<td>Réplica, RAID</td>
+</tr>
+<tr>
+<td>Corrupción de datos</td>
+<td>Copia + WAL desde antes de la corrupción</td>
+</tr>
+<tr>
+<td><strong>Error humano</strong> (<code>DROP TABLE</code>)</td>
+<td>Recuperación a un punto en el tiempo</td>
+</tr>
+<tr>
+<td><strong>Ataque</strong> (cifrado o borrado)</td>
+<td>Copia inmutable, fuera de línea o con retención bloqueada</td>
+</tr>
+<tr>
+<td>Desastre regional</td>
+<td>Copia en otra región</td>
+</tr>
+</tbody>
+</table></div>
+<p>Los dos marcados son los que la réplica <strong>no</strong> cubre, y son los más frecuentes. Un <code>DELETE</code> erróneo se replica en milisegundos a todas las réplicas. Un atacante con credenciales de administrador borra el primario y las réplicas.</p>
+<p><strong>Una réplica no es una copia de seguridad.</strong> Protege contra fallo de hardware y nada más.</p>
+<h3 id="tipos-de-copia">Tipos de copia</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Qué es</th>
+<th>Restauración</th>
+<th>Verificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Lógica</strong> (<code>pg_dump</code>)</td>
+<td>SQL o formato propio</td>
+<td>Lenta; reconstruye índices</td>
+<td>Fácil: se puede leer</td>
+</tr>
+<tr>
+<td><strong>Física</strong> (<code>pg_basebackup</code>)</td>
+<td>Archivos del clúster</td>
+<td>Rápida</td>
+<td>Requiere el mismo motor y versión mayor</td>
+</tr>
+<tr>
+<td><strong>PITR</strong></td>
+<td>Copia física + WAL archivado</td>
+<td>A cualquier instante</td>
+<td>La más completa</td>
+</tr>
+<tr>
+<td><strong>Instantánea de volumen</strong></td>
+<td>Copia del almacenamiento</td>
+<td>Muy rápida</td>
+<td>Debe ser atómica entre volúmenes</td>
+</tr>
+</tbody>
+</table></div>
+<p>La copia lógica tiene una ventaja subestimada: es legible y portable entre versiones mayores. La física es mucho más rápida de restaurar pero está atada al motor.</p>
+<h3 id="la-regla-3-2-1">La regla 3-2-1</h3>
+<p>Tres copias, en dos medios distintos, una fuera del sitio. En la práctica actual: primario + copia local + copia en almacenamiento de objetos de otra región, esta última con <strong>retención bloqueada</strong> para que ni siquiera un administrador comprometido pueda borrarla.</p>
+<pre><code class="language-mermaid">flowchart TD
+    P[(&quot;Primario&quot;)] --&gt; R[(&quot;Réplica&lt;br/&gt;fallo de hardware&quot;)]
+    P --&gt; B[&quot;Copia base&lt;br/&gt;diaria&quot;]
+    P --&gt; W[&quot;Archivado continuo&lt;br/&gt;de WAL&quot;]
+    B --&gt; L[&quot;Almacenamiento local&lt;br/&gt;RTO bajo&quot;]
+    B --&gt; O[&quot;Objetos, otra región&lt;br/&gt;desastre regional&quot;]
+    O --&gt; I[&quot;Retención bloqueada&lt;br/&gt;ataque&quot;]
+    W --&gt; PITR[&quot;PITR&lt;br/&gt;error humano&quot;]
+    L --&gt; T[&quot;PRUEBA MENSUAL&lt;br/&gt;restaurar y verificar&quot;]
+    O --&gt; T
+    T --&gt; M[&quot;Registrar RTO real&lt;br/&gt;y filas verificadas&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Cuatro documentos del dominio, representados en 4 dimensiones para poder calcular a mano:</p>
-<pre><code class="language-text">d1 &quot;índices B-Tree&quot;          v1 = [0,90, 0,10, 0,30, 0,20]
-d2 &quot;índices en bases de datos&quot; v2 = [0,85, 0,15, 0,35, 0,25]
-d3 &quot;transacciones ACID&quot;      v3 = [0,20, 0,90, 0,10, 0,30]
-d4 &quot;recetas de cocina&quot;       v4 = [0,05, 0,05, 0,10, 0,95]
+<p>Requisito de negocio: <em>«no podemos perder más de 15 minutos de inscripciones y debemos volver en menos de 2 horas»</em>. → RPO = 15 min, RTO = 2 h.</p>
+<p><strong>Configuración:</strong></p>
+<pre><code class="language-bash"># postgresql.conf
+archive_mode = on
+archive_command = 'test ! -f /archivo/%f &amp;&amp; cp %p /archivo/%f'
+archive_timeout = 300          # fuerza cierre de segmento cada 5 min → RPO ≤ 5 min
 
-consulta &quot;cómo funcionan los índices&quot;  q = [0,88, 0,12, 0,32, 0,18]
+# copia base diaria
+pg_basebackup -D /copias/base-$(date +%F) -Ft -z -X stream -c fast
 </code></pre>
-<p><strong>Normas:</strong></p>
-<pre><code class="language-text">‖v1‖ = √(0,81+0,01+0,09+0,04) = √0,95 = 0,9747
-‖v2‖ = √(0,7225+0,0225+0,1225+0,0625) = √0,93 = 0,9644
-‖v3‖ = √(0,04+0,81+0,01+0,09) = √0,95 = 0,9747
-‖v4‖ = √(0,0025+0,0025+0,01+0,9025) = √0,9175 = 0,9579
-‖q‖  = √(0,7744+0,0144+0,1024+0,0324) = √0,9236 = 0,9611
-</code></pre>
-<p><strong>Productos internos con q:</strong></p>
-<pre><code class="language-text">q·v1 = 0,88·0,90 + 0,12·0,10 + 0,32·0,30 + 0,18·0,20 = 0,792+0,012+0,096+0,036 = 0,936
-q·v2 = 0,88·0,85 + 0,12·0,15 + 0,32·0,35 + 0,18·0,25 = 0,748+0,018+0,112+0,045 = 0,923
-q·v3 = 0,88·0,20 + 0,12·0,90 + 0,32·0,10 + 0,18·0,30 = 0,176+0,108+0,032+0,054 = 0,370
-q·v4 = 0,88·0,05 + 0,12·0,05 + 0,32·0,10 + 0,18·0,95 = 0,044+0,006+0,032+0,171 = 0,253
-</code></pre>
-<p><strong>Cosenos:</strong></p>
-<pre><code class="language-text">cos(q,v1) = 0,936 / (0,9611·0,9747) = 0,999
-cos(q,v2) = 0,923 / (0,9611·0,9644) = 0,996
-cos(q,v3) = 0,370 / (0,9611·0,9747) = 0,395
-cos(q,v4) = 0,253 / (0,9611·0,9579) = 0,275
-</code></pre>
-<p>Orden: <strong>d1 &gt; d2 ≫ d3 &gt; d4</strong>. Coherente con la intención.</p>
-<p><strong>Ahora la diferencia entre métricas.</strong> Los productos internos sin normalizar dan el mismo orden aquí porque las normas son parecidas. Multipliquemos <code>v2</code> por 3 —simulando un documento «más intenso» en el mismo tema—:</p>
-<pre><code class="language-text">v2' = [2,55, 0,45, 1,05, 0,75],  ‖v2'‖ = 2,893
-q·v2' = 2,769                    ← el mayor de todos
-cos(q,v2') = 2,769/(0,9611·2,893) = 0,996   ← idéntico al de v2
-</code></pre>
-<p>El producto interno lo pone <strong>primero</strong>; el coseno lo deja donde estaba. Para texto, el coseno es lo correcto: la longitud del vector no debe determinar la relevancia. <strong>Esta es la razón concreta de normalizar</strong>, y no una convención arbitraria.</p>
-<p><strong>En la práctica, con pgvector:</strong></p>
-<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS vector;
+<p><strong>Escenario: a las 14:37 alguien ejecuta <code>DELETE FROM enrollments;</code> sin <code>WHERE</code>.</strong></p>
+<p>Lo que <strong>no</strong> sirve:</p>
+<ul>
+<li>La réplica: recibió el <code>DELETE</code> en 12 ms.</li>
+<li>La copia de las 03:00 sin WAL: perdería 11 horas y media de trabajo.</li>
+</ul>
+<p>Lo que sirve:</p>
+<pre><code class="language-bash"># 1. Detener el servicio y preservar el estado actual (por si acaso)
+systemctl stop postgresql
+mv /var/lib/postgresql/16/main /var/lib/postgresql/16/main.roto
 
-CREATE TABLE fragmentos (
-  id        BIGSERIAL PRIMARY KEY,
-  curso_id  INTEGER NOT NULL REFERENCES courses(id),
-  texto     TEXT    NOT NULL,
-  modelo    TEXT    NOT NULL,      -- imprescindible: el espacio es del modelo
-  embedding vector(768) NOT NULL,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+# 2. Restaurar la copia base más reciente
+tar xzf /copias/base-2026-08-19/base.tar.gz -C /var/lib/postgresql/16/main
 
--- &lt;=&gt; coseno   &lt;#&gt; producto interno negativo   &lt;-&gt; euclídea
-SELECT id, texto, 1 - (embedding &lt;=&gt; :q) AS similitud
-FROM fragmentos
-WHERE modelo = 'e5-base-v2'
-ORDER BY embedding &lt;=&gt; :q
-LIMIT 10;
+# 3. Reproducir el WAL hasta JUSTO ANTES del error
+cat &gt; /var/lib/postgresql/16/main/postgresql.auto.conf &lt;&lt;'EOF'
+restore_command = 'cp /archivo/%f %p'
+recovery_target_time = '2026-08-19 14:36:30'
+recovery_target_action = 'pause'
+EOF
+touch /var/lib/postgresql/16/main/recovery.signal
+
+# 4. Arrancar; PostgreSQL reproduce y se detiene en el objetivo
+systemctl start postgresql
 </code></pre>
-<p>La columna <code>modelo</code> y su filtro no son burocracia: <strong>mezclar vectores de dos modelos en la misma consulta produce resultados sin sentido</strong>, y no da ningún error. Es el fallo silencioso más frecuente al migrar de modelo.</p>
-<p><strong>Fragmentación.</strong> Un documento largo no se convierte en un vector: se parte.</p>
-<pre><code class="language-text">Fragmentos grandes (2 000 caracteres):  menos vectores, más contexto,
-                                        pero la señal se diluye
-Fragmentos pequeños (300 caracteres):   más precisos, pierden contexto,
-                                        más vectores que almacenar
-Práctica habitual: 500-1 000 caracteres con 10-20 % de solape
+<p><strong>Verificación antes de promover</strong> —este paso es el que casi nadie hace y el que evita restaurar sobre un estado equivocado—:</p>
+<pre><code class="language-sql">SELECT count(*) FROM enrollments;                       -- ¿coincide con lo esperado?
+SELECT max(registrada_en) FROM enrollments;             -- ¿llega hasta 14:36?
+SELECT * FROM enrollments ORDER BY registrada_en DESC LIMIT 5;
 </code></pre>
-<p>El solape evita que una frase clave quede partida justo en la frontera. El tamaño óptimo depende del corpus y <strong>se determina midiendo</strong> (clase 061), no eligiendo.</p>
+<p>Solo si cuadra:</p>
+<pre><code class="language-sql">SELECT pg_wal_replay_resume();   -- o promover
+</code></pre>
+<p><strong>Cronometraje real de una prueba</strong> sobre 500 GB:</p>
+<pre><code class="language-text">Descarga de la copia desde otra región    38 min
+Descompresión y colocación                12 min
+Reproducción de 11 h de WAL               24 min
+Verificación de integridad y conteos       8 min
+                                        --------
+RTO real medido                           82 min      ✔ por debajo de las 2 h
+RPO real medido                       ≤ 5 min         ✔ por debajo de 15 min
+</code></pre>
+<p><strong>Sin esta medición, el RTO es una suposición.</strong> Y las suposiciones se descubren falsas el día del incidente, que es el peor día.</p>
+<p><strong>La prueba mensual, automatizada:</strong></p>
+<pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+INICIO=$(date +%s)
+
+restaurar_en_entorno_aislado /copias/base-mas-reciente
+esperar_a_que_acepte_conexiones
+
+# Comprobar contenido, no solo que el proceso arranque: una base
+# restaurada vacía arranca perfectamente.
+FILAS=$(psql -tAc &quot;SELECT count(*) FROM enrollments&quot;)
+test &quot;$FILAS&quot; -gt 1000000 || { echo &quot;::error::restauración vacía: $FILAS filas&quot;; exit 1; }
+psql -tAc &quot;SELECT count(*) FROM (
+             SELECT e.student_id FROM enrollments e
+             LEFT JOIN courses c ON c.id = e.course_id
+             WHERE c.id IS NULL) t&quot; | grep -qx 0 || { echo &quot;::error::integridad&quot;; exit 1; }
+
+echo &quot;RTO medido: $(( ($(date +%s) - INICIO) / 60 )) min · filas: $FILAS&quot;
+</code></pre>
+<p>El punto crítico está en el comentario: <strong>una base restaurada vacía arranca sin errores</strong>. Comprobar que el servicio responde no demuestra nada; hay que contar el contenido.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Decisión</th>
-<th>Opciones</th>
-<th>Criterio</th>
+<th>Amenaza</th>
+<th>Réplica</th>
+<th>Copia diaria</th>
+<th>PITR</th>
+<th>Copia inmutable externa</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Métrica</td>
-<td>Coseno / producto interno / euclídea</td>
-<td>Coseno para texto; normalizar y usar producto interno</td>
+<td>Fallo de disco</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>Dimensión</td>
-<td>384 / 768 / 1 536</td>
-<td>Más dimensión, mejor calidad y más costo</td>
+<td>Corrupción lógica</td>
+<td><strong>No</strong></td>
+<td>Parcial</td>
+<td><strong>Sí</strong></td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>Precisión</td>
-<td>float32 / float16 / int8</td>
-<td>Cuantizar cuando la memoria manda</td>
+<td><code>DROP TABLE</code></td>
+<td><strong>No</strong></td>
+<td>Parcial</td>
+<td><strong>Sí</strong></td>
+<td>Sí</td>
 </tr>
 <tr>
-<td>Fragmento</td>
-<td>300 / 500 / 1 000 caracteres</td>
-<td>Medir con el conjunto de evaluación</td>
+<td>Cifrado por atacante</td>
+<td><strong>No</strong></td>
+<td><strong>No</strong></td>
+<td><strong>No</strong></td>
+<td><strong>Sí</strong></td>
 </tr>
 <tr>
-<td>Modelo</td>
-<td>Multilingüe / específico</td>
-<td>El idioma del corpus decide</td>
+<td>Desastre regional</td>
+<td>Si es remota</td>
+<td>Si es remota</td>
+<td>Si es remota</td>
+<td><strong>Sí</strong></td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Mezclar vectores de modelos distintos.</strong> Resultados sin sentido y sin error.</li>
-<li><strong>No guardar qué modelo generó cada vector.</strong> Imposible migrar después.</li>
-<li><strong>Usar producto interno sin normalizar en texto.</strong> Los documentos largos dominan.</li>
-<li><strong>Usar un modelo inglés con corpus en español.</strong> La calidad cae drásticamente.</li>
-<li><strong>Fragmentos demasiado grandes.</strong> La señal del pasaje relevante se diluye.</li>
-<li><strong>Suponer que más dimensiones es mejor.</strong> Cuesta memoria y latencia; hay que medirlo.</li>
-<li><strong>Creer que la similitud coseno es una probabilidad.</strong> No lo es, y su escala varía entre modelos.</li>
+<li><strong>No probar nunca la restauración.</strong> El fallo más grave y el más común.</li>
+<li><strong>Confundir réplica con copia.</strong> No cubre error humano ni ataque.</li>
+<li><strong>Copias en la misma cuenta y con los mismos permisos que el primario.</strong> Un atacante las borra también.</li>
+<li><strong>Verificar que el servicio arranca y no el contenido.</strong> Una base vacía arranca.</li>
+<li><strong>No cronometrar.</strong> El RTO declarado no coincide con el real.</li>
+<li><strong>Copias sin cifrar en almacenamiento de objetos.</strong> La fuga es tan grave como la pérdida.</li>
+<li><strong>Retener el WAL sin límite o sin vigilancia.</strong> Llena el disco del primario.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Cambiar de modelo de embeddings no es cambiar una llamada: es recalcular la colección entera, y hacerlo mientras el sistema sirve. La estrategia es la misma de la clase 049: una columna nueva, doble escritura, relleno por lotes, cambio de lecturas y retirada de la antigua.</p>
+<p>La métrica que resume la salud del plan es la fecha de la última restauración verificada. Si es de hace más de un mes, el plan es una hipótesis. Publicarla en el panel de operación cambia la conducta del equipo más que cualquier documento.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Calcula a mano coseno y producto interno de tres vectores tuyos.</li>
-<li>Demuestra con un ejemplo que sin normalizar el producto interno cambia el orden.</li>
-<li>Dimensiona el almacenamiento de tu colección con dos dimensiones y dos precisiones.</li>
-<li>Diseña la migración a un modelo nuevo sin interrumpir el servicio.</li>
+<li>Deriva RPO y RTO de una conversación real de negocio, con la pregunta concreta.</li>
+<li>Configura archivado continuo y realiza una recuperación a un punto en el tiempo.</li>
+<li>Cronometra la restauración completa y compara con el RTO declarado.</li>
+<li>Automatiza la prueba mensual con verificación de contenido, no solo de arranque.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué con vectores normalizados las tres métricas dan el mismo orden?</li>
-<li>Explica qué ocurre exactamente al consultar con vectores de dos modelos mezclados.</li>
-<li>Calcula el almacenamiento de 10 M de vectores de 1 536 dimensiones en float32 e int8.</li>
-<li>¿Qué compromiso hay al elegir el tamaño del fragmento, y cómo lo resolverías?</li>
+<li>¿Por qué una réplica no protege de un <code>DELETE</code> sin <code>WHERE</code>?</li>
+<li>Calcula el RPO real de tu configuración actual, en minutos.</li>
+<li>¿Qué comprobarías tras restaurar, antes de promover a producción?</li>
+<li>Diseña la protección de tus copias frente a un atacante con credenciales de administrador.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Un respaldo que nadie ha restaurado no es un respaldo, es un archivo</p>
+<p>La única propiedad que importa de una copia de seguridad no es que exista:
+es que se pueda <strong>restaurar y comprobar</strong>. Y comprobar no es mirar si el
+archivo pesa lo esperado: es contar lo restaurado y compararlo con el
+origen.</p>
+<p>El caso reduce esa disciplina a su forma mínima: seis notas, una copia, y la
+pareja de cifras que las compara —cuántas filas y cuánto suman—. En
+producción la copia la hace <code>pg_dump</code>, <code>mysqldump</code>, <code>mongodump</code> o una
+instantánea del volumen; lo que aquí se compara no es la herramienta, es el
+<strong>método de verificación</strong>, que es el mismo en todas partes y el que casi
+nadie ejecuta hasta el día del incidente.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>copia</th>
+<th>filas</th>
+<th>suma</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>origen</code></td>
+<td><code>6</code></td>
+<td><code>402</code></td>
+</tr>
+<tr>
+<td><code>restaurado</code></td>
+<td><code>6</code></td>
+<td><code>402</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 058</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/continuous-archiving.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/backup.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/export">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/database-tools/mongodump/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/backups.html">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/continuous-archiving.html
+-- nota: las dos familias, y hacen falta las dos:
+--         pg_dump -Fc base &gt; copia.dump        copia logica, portable
+--         pg_basebackup + archive_command      punto en el tiempo
+--       La segunda es la unica que salva de un DELETE sin WHERE a las once de
+--       la noche: permite restaurar al segundo anterior.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas_restauradas, notas;
+
+CREATE TABLE notas (
+    id         integer PRIMARY KEY,
+    estudiante text NOT NULL,
+    nota       integer NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene las dos familias y hacen falta las dos: <code>pg_dump</code> para una copia lógica portable entre versiones, y el archivado continuo del WAL con <code>pg_basebackup</code> para recuperación <strong>a un punto en el tiempo</strong>, que es lo único que salva de un <code>DELETE</code> sin <code>WHERE</code> a las once de la noche.</li>
+<li><strong>Por qué no:</strong> <code>pg_dump</code> sobre una base grande tarda horas y la restauración tarda más, porque hay que reconstruir todos los índices. Y el archivado continuo no sirve de nada si nadie ha probado la restauración: la copia se verifica restaurando, no listando archivos.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/continuous-archiving.html">https://www.postgresql.org/docs/current/continuous-archiving.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html
+-- nota: mysqldump SIN --single-transaction bloquea las tablas y puede producir
+--       una copia incoherente. Y la recuperacion a un punto en el tiempo exige
+--       que log_bin este activado y que los registros se conserven: comprobarlo
+--       forma parte del plan de respaldo, no del de rendimiento.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS notas_restauradas;
+DROP TABLE IF EXISTS notas;
+
+CREATE TABLE notas (
+    id         INT PRIMARY KEY,
+    estudiante VARCHAR(50) NOT NULL,
+    nota       INT NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>mysqldump</code> para la copia lógica y el registro binario para el punto en el tiempo; con el clon de InnoDB o XtraBackup, además, copia física en caliente sin bloquear.</li>
+<li><strong>Por qué no:</strong> <code>mysqldump</code> sin <code>--single-transaction</code> bloquea las tablas y produce copias incoherentes entre tablas de motores distintos; y la recuperación desde el registro binario exige que ese registro esté activado y conservado, cosa que <strong>no</strong> es el valor por omisión en todas las instalaciones.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html">https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/backup.html
+-- nota: en produccion la copia se hace SIN detener la base con
+--         VACUUM INTO 'copia-2026-08-19.sqlite';
+--       Lo que NO hay que hacer nunca es `cp base.sqlite copia.sqlite` mientras
+--       alguien escribe: produce un archivo que parece valido y no lo es.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT NOT NULL,
+    nota       INTEGER NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene la API de respaldo en línea y la orden <code>VACUUM INTO</code>, que produce una copia coherente <strong>mientras la base está en uso</strong>, sin detener nada. Para una aplicación de escritorio, eso es todo lo que hace falta.</li>
+<li><strong>Por qué no:</strong> Copiar el archivo con <code>cp</code> mientras alguien escribe produce una copia corrupta que <strong>parece válida</strong> hasta que se abre. Es el error de respaldo más frecuente que se comete con SQLite, y no da ningún aviso.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/backup.html">https://sqlite.org/backup.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/statements/export
+-- nota: aqui el respaldo es exportar a un formato ABIERTO:
+--         EXPORT DATABASE 'copia' (FORMAT PARQUET);
+--       La copia sobrevive a la desaparicion del motor que la creo, cosa que
+--       ningun volcado propietario garantiza. A cambio: no hay punto en el
+--       tiempo ni copia incremental.
+
+-- === preparacion ===
+CREATE TABLE notas (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR NOT NULL,
+    nota       INTEGER NOT NULL
+);
+INSERT INTO notas (id, estudiante, nota) VALUES
+    (1, 'Ada', 90), (2, 'Ada', 58), (3, 'Linus', 78),
+    (4, 'Linus', 66), (5, 'Grace', 55), (6, 'Grace', 55);
+
+-- La copia. En produccion seria pg_dump, mysqldump, mongodump o una
+-- instantanea del volumen; aqui es una tabla, para que lo que se compare sea
+-- el METODO de verificacion y no la herramienta.
+CREATE TABLE notas_restauradas AS SELECT * FROM notas;
+
+-- === consulta ===
+-- La unica prueba que cuenta. Un respaldo que nadie ha restaurado no es un
+-- respaldo: es un archivo. Y restaurarlo sin comparar tampoco prueba nada, asi
+-- que la comprobacion es siempre la misma pareja: cuantas filas y que suman.
+SELECT 'origen' AS copia, COUNT(*) AS filas, SUM(nota) AS suma FROM notas
+UNION ALL
+SELECT 'restaurado', COUNT(*), SUM(nota) FROM notas_restauradas
+ORDER BY copia;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Aquí el respaldo es exportar a Parquet, un formato abierto que otras herramientas leen: la copia sobrevive incluso a la desaparición del motor que la creó, que es una propiedad que ningún volcado propietario tiene.</li>
+<li><strong>Por qué no:</strong> No hay punto en el tiempo ni copia incremental: se exporta todo o nada, y lo que se pierde entre dos exportaciones se pierde del todo.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/export">https://duckdb.org/docs/stable/sql/statements/export</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/database-tools/mongodump/
+// nota: mongodump sobre un conjunto de replicas NO da una copia coherente entre
+//       colecciones salvo que se use --oplog, y sobre un cluster fragmentado
+//       hay que detener el balanceador. Son detalles que solo se descubren
+//       restaurando, y por eso hay que restaurar antes del incidente.
+
+// === preparacion ===
+db.notas.drop();
+db.notas_restauradas.drop();
+
+db.notas.insertMany([
+  { _id: 1, estudiante: &quot;Ada&quot;, nota: 90 },
+  { _id: 2, estudiante: &quot;Ada&quot;, nota: 58 },
+  { _id: 3, estudiante: &quot;Linus&quot;, nota: 78 },
+  { _id: 4, estudiante: &quot;Linus&quot;, nota: 66 },
+  { _id: 5, estudiante: &quot;Grace&quot;, nota: 55 },
+  { _id: 6, estudiante: &quot;Grace&quot;, nota: 55 },
+]);
+
+// La «restauracion»: aqui, una copia de la coleccion.
+db.notas.aggregate([{ $out: &quot;notas_restauradas&quot; }]).toArray();
+
+// === consulta ===
+for (const [nombre, coleccion] of [[&quot;origen&quot;, db.notas],
+                                   [&quot;restaurado&quot;, db.notas_restauradas]]) {
+  const r = coleccion
+    .aggregate([{ $group: { _id: null, filas: { $sum: 1 }, suma: { $sum: &quot;$nota&quot; } } }])
+    .toArray()[0];
+  print(nombre + &quot;|&quot; + r.filas + &quot;|&quot; + r.suma);
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>mongodump</code> y <code>mongorestore</code> para la copia lógica, y en un conjunto de réplicas se puede usar el registro de operaciones para recuperar a un punto en el tiempo.</li>
+<li><strong>Por qué no:</strong> <code>mongodump</code> sobre un conjunto de réplicas <strong>no</strong> da una copia coherente entre colecciones salvo que se use <code>--oplog</code>, y sobre un clúster fragmentado la coherencia entre fragmentos exige detener el balanceador. Son detalles que solo se descubren restaurando.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/database-tools/mongodump/">https://www.mongodb.com/docs/database-tools/mongodump/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>El archivo RDB es una instantánea de un momento, y el AOF un registro de órdenes: los dos se pueden copiar, pero Redis casi nunca es la fuente de la verdad, así que restaurarlo no restaura nada que importe.</td>
+<td>Tratar Redis como reconstruible: el plan de recuperación no es restaurarlo, es <strong>volver a llenarlo</strong> desde el sistema que sí guarda la verdad, y medir cuánto tarda ese llenado, porque ese tiempo es el de la caída.</td>
+<td><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>Las instantáneas son por nodo y consisten en enlaces duros a las SSTables: la copia del clúster es la unión de las de todos los nodos, y <strong>no</strong> están tomadas en el mismo instante. No hay una copia coherente del conjunto.</td>
+<td>Instantáneas por nodo más el archivado incremental, y aceptar que la restauración devuelve un estado <em>aproximadamente</em> coherente que hay que reparar después con <code>nodetool repair</code>.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/backups.html">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/06-vector-search/run_vector_lab.py
+python labs/08-recovery/run_recovery_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -314,27 +752,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Vladimir Karpukhin, Barlas Oguz, Sewon Min</strong> (2020). <a href="https://arxiv.org/abs/2004.04906">Dense Passage Retrieval for Open-Domain Question Answering</a>. EMNLP.<br />
-  Recuperación densa entrenada, y su comparación honesta contra BM25.</li>
-<li><strong>Jeff Johnson, Matthijs Douze, Herve Jegou</strong> (2019). <a href="https://arxiv.org/abs/1702.08734">Billion-scale Similarity Search with GPUs</a>. IEEE Transactions on Big Data.<br />
-  FAISS: cuantización de producto y compromiso memoria-exactitud.</li>
-<li><strong>Andrew Kane</strong> (2026). <a href="https://github.com/pgvector/pgvector">pgvector</a>.<br />
-  Búsqueda vectorial dentro de PostgreSQL: evita un sistema adicional cuando no hace falta.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/backup.html">PostgreSQL: Backup and Restore</a>.<br />
+  Volcado lógico, copia de archivos y recuperación a un punto en el tiempo.</li>
+<li><strong>Laine Campbell, Charity Majors</strong> (2017). <a href="https://www.oreilly.com/library/view/database-reliability-engineering/9781491925935/">Database Reliability Engineering</a>. O'Reilly. ISBN 978-1-4919-2594-2.<br />
+  Operación, respaldos, objetivos de servicio y gestion de cambios.</li>
+<li><strong>Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy</strong> (2016). <a href="https://sre.google/sre-book/table-of-contents/">Site Reliability Engineering: How Google Runs Production Systems</a>. O'Reilly. ISBN 978-1-4919-2912-4.<br />
+  Lectura libre. Objetivos de nivel de servicio y presupuesto de error.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="057.html">← Anterior</a> · <a href="059.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="057.html">← Anterior</a> · <a href="059.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="058">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="057.html"><span class="sentido">← Anterior · 057</span>Streaming: tiempo de evento, ventanas y semántica de entrega</a>
-<a class="siguiente" href="059.html"><span class="sentido">Siguiente · 059 →</span>Índices vectoriales aproximados: HNSW, IVF y el recall</a>
+<a class="anterior" href="057.html"><span class="sentido">← Anterior · 057</span>Consenso y transacciones distribuidas: Raft, 2PC y sagas</a>
+<a class="siguiente" href="059.html"><span class="sentido">Siguiente · 059 →</span>Migraciones evolutivas sin ventana de caída</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

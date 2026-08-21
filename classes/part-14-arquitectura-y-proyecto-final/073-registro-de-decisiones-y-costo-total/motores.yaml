@@ -1,0 +1,134 @@
+---
+caso:
+  titulo: Lo que cuesta un motor cuando ya nadie mira la comparativa
+  modo: conceptual
+  contrato: |
+    Las comparativas de motores hablan de rendimiento y de funcionalidades. El
+    costo total de una decisión de persistencia está en otro sitio, y se paga
+    durante años: **licencia**, **operación** —respaldos, actualizaciones, alta
+    disponibilidad, vigilancia—, **personal** que sepa diagnosticarlo a las tres
+    de la mañana, y **salida**, que es lo que costaría dejarlo.
+
+    Un registro de decisión de arquitectura sirve exactamente para dejar eso por
+    escrito: el contexto, las alternativas consideradas, la decisión, las
+    consecuencias aceptadas y **qué evidencia obligaría a revisarla**. Sin ese
+    último punto, un registro es una justificación; con él, es una decisión de
+    ingeniería.
+
+    Esta comparación no mide nada: enumera, motor por motor, dónde está el costo
+    que no aparece en la portada.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: postgresql
+    aplica: si
+    como: >-
+      Licencia permisiva y sin costo. El costo real es de **operación**: la alta
+      disponibilidad la aporta una herramienta externa que hay que elegir y
+      operar, el vacío hay que vigilarlo, y las actualizaciones de versión mayor
+      exigen planificación. A cambio, el conocimiento es abundante y transferible.
+    porque_si: >-
+      Coste de salida bajo: es SQL estándar en su mayor parte, hay decenas de
+      servicios administrados compatibles y el volcado es portable. La decisión
+      se puede revertir.
+    porque_no: >-
+      «Gratis» esconde el costo de personal: una instalación sin nadie que
+      entienda el vacío, los planes y la réplica acaba siendo más cara que un
+      servicio administrado que nadie tiene que atender de madrugada.
+    doc: https://www.postgresql.org/about/licence/
+
+  - id: oracle-database
+    aplica: si
+    como: >-
+      Licencia por núcleo, con opciones que se cobran aparte —particionado,
+      diagnóstico, alta disponibilidad avanzada— y auditorías de cumplimiento.
+      El costo es explícito, alto y predecible.
+    porque_si: >-
+      A cambio hay soporte contractual, herramientas de diagnóstico muy maduras
+      y un mercado de profesionales con décadas de experiencia. En sistemas donde
+      una hora de caída cuesta más que la licencia anual, la cuenta sale.
+    porque_no: >-
+      El costo de **salida** es el más alto de la lista: PL/SQL, paquetes,
+      disparadores y particularidades del dialecto atan la aplicación al motor.
+      Migrar de Oracle es un proyecto de años, y eso forma parte del precio
+      aunque no aparezca en la factura.
+    doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/dblic/
+
+  - id: sql-server
+    aplica: si
+    como: >-
+      Licencia por núcleo con ediciones escalonadas; la gratuita, Express, está
+      limitada a 10 GB por base y a un socket. Integración muy fuerte con el
+      resto del ecosistema de su fabricante.
+    porque_si: >-
+      Herramientas de administración y diagnóstico excelentes y un costo de
+      personal bajo en organizaciones que ya trabajan con ese ecosistema: la
+      curva de aprendizaje ya está pagada.
+    porque_no: >-
+      El límite de la edición gratuita se alcanza antes de lo que parece, y el
+      salto a la de pago es escalonado y caro. Y la decisión rara vez es técnica:
+      la toma el contrato marco de la organización.
+    doc: https://learn.microsoft.com/sql/sql-server/editions-and-components-of-sql-server-2022
+
+  - id: mongodb
+    aplica: si
+    como: >-
+      La edición Community usa la licencia SSPL, que **no** está reconocida como
+      libre por la OSI y afecta a quien quiera ofrecerlo como servicio. Para uso
+      interno no cambia nada; para un producto que se despliega en casa del
+      cliente, hay que leerla.
+    porque_si: >-
+      Costo de operación bajo para lo que ofrece: la alta disponibilidad viene
+      en el producto, sin herramientas externas, y su servicio administrado
+      quita casi toda la administración.
+    porque_no: >-
+      El costo de salida es alto de una forma poco visible: no es el motor, es
+      el **modelo de datos**. Los documentos incrustados y la ausencia de esquema
+      no se traducen a tablas sin rediseñar la aplicación.
+    doc: https://www.mongodb.com/legal/licensing/server-side-public-license
+
+  - id: redis
+    aplica: si
+    como: >-
+      Su licencia cambió en 2024 —a un esquema dual que no es libre según la
+      OSI— y de ahí salieron bifurcaciones mantenidas por fundaciones. Es el
+      ejemplo más reciente de un riesgo real: **la licencia de un motor puede
+      cambiar después de haberlo adoptado**.
+    porque_si: >-
+      Operación mínima y costo de salida bajo: se usa para datos desechables, y
+      cambiar de implementación compatible es de las migraciones más baratas que
+      existen.
+    porque_no: >-
+      El costo oculto es la memoria: es el almacenamiento más caro por gibibyte,
+      y un conjunto de datos que crece sin política de caducidad se traduce
+      directamente en factura.
+    doc: https://redis.io/legal/licenses/
+
+  - id: bigquery
+    aplica: si
+    como: >-
+      Sin licencia y sin operación: se paga por almacenamiento y por **bytes
+      leídos** en cada consulta, o por capacidad reservada. El costo se traslada
+      por completo del personal a la factura.
+    porque_si: >-
+      Para una carga analítica esporádica es imbatible en costo total: cero
+      administración, cero servidores y cero personal dedicado.
+    porque_no: >-
+      El costo es **variable y lo controla quien escribe las consultas**: un
+      `SELECT *` mal filtrado sobre una tabla grande cuesta dinero real, y se
+      repite cada vez que alguien recarga un panel. Hay que poner cuotas antes
+      de dar acceso, no después.
+    doc: https://cloud.google.com/bigquery/pricing
+
+  - id: sqlite
+    aplica: no
+    porque_no: >-
+      Es de dominio público y su costo de operación es cero porque no hay nada
+      que operar: no hay decisión de costo total que documentar. Incluirlo aquí
+      sería rellenar la matriz.
+    alternativa: >-
+      Su costo aparece en otro sitio y es real: el día en que el sistema necesita
+      dos escritores o acceso remoto, hay que migrar. Ese es el registro de
+      decisión que conviene escribir el primer día, no el último.
+    doc: https://sqlite.org/copyright.html

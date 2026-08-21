@@ -1,0 +1,16 @@
+# motor: redis
+# doc: https://redis.io/docs/latest/develop/data-types/sets/
+# nota: un conjunto no admite repetidos, asi que «un hecho, una vez» sale gratis.
+#       El precio esta a la vista: el par estudiante-curso hay que serializarlo
+#       en una cadena, y con eso desaparecen los campos. Pedir «los cursos de
+#       Ada» obligaria a partir el texto otra vez.
+
+# === preparacion ===
+FLUSHDB
+SADD inscripciones Ada|DB-101
+SADD inscripciones Ada|SE-201
+SADD inscripciones Linus|DB-101
+SADD inscripciones Ada|DB-101
+
+# === consulta ===
+SORT inscripciones ALPHA

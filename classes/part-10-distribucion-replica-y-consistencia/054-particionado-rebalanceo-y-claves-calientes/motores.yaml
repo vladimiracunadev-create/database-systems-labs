@@ -1,0 +1,140 @@
+---
+caso:
+  titulo: Ocho pedidos en una partición y uno en cada una de las otras dos
+  contrato: |
+    Repartir datos entre nodos parece un problema de aritmética y es un problema
+    de **elegir la clave**. El caso tiene diez pedidos de tres clientes, y uno
+    de ellos concentra ocho: la distribución normal de cualquier negocio real.
+
+    Si la clave de partición es el cliente, ese reparto **es** el reparto entre
+    nodos: una partición con ocho y dos con uno. Añadir nodos no arregla nada,
+    porque una clave no se puede partir; eso es una **clave caliente**. Si la
+    clave fuera el identificador del pedido, el reparto sería casi perfecto… a
+    cambio de que «todos los pedidos del cliente A» pase a ser una consulta a
+    todos los nodos.
+
+    No hay opción buena: hay una decisión, y esta consulta la hace visible antes
+    de tomarla.
+  columnas: [particion, pedidos]
+  esperado:
+    - [A, "8"]
+    - [B, "1"]
+    - [C, "1"]
+
+motores:
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      El reparto es explícito y está en la clave primaria: la clave de partición
+      se convierte en un token y el token decide el nodo. Añadir nodos
+      redistribuye tokens sin parar el servicio, con hashing consistente y nodos
+      virtuales.
+    porque_no: >-
+      Una partición desequilibrada es un problema estructural: la documentación
+      recomienda no pasar de 100 MB por partición, y una clave caliente lo supera
+      sin remedio. La corrección —añadir un componente a la clave de partición,
+      como el mes— obliga a reescribir los datos.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_logical.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      El fragmentado es transparente para la aplicación: el enrutador dirige la
+      consulta al fragmento correcto y el balanceador mueve trozos entre
+      fragmentos sin intervención. Y desde la versión 5.0 la clave de
+      fragmentación se puede **cambiar** en caliente, algo que casi ningún motor
+      permite.
+    porque_no: >-
+      Una clave monótona —una fecha, un contador— manda **todas** las escrituras
+      al mismo fragmento; el fragmentado por hash lo evita pero elimina las
+      consultas por rango. Es exactamente la misma disyuntiva del caso, con
+      otros nombres.
+    doc: https://www.mongodb.com/docs/manual/core/sharding-shard-key/
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      El particionado declarativo por lista, rango o hash reparte una tabla en
+      varias **dentro del mismo servidor**, lo que ya da la mayor parte del
+      beneficio: poda de particiones al consultar y borrado instantáneo por
+      `DROP`. Y esta misma consulta es la forma de comprobar el equilibrio antes
+      de decidir.
+    porque_no: >-
+      No reparte entre máquinas: para eso hacen falta extensiones (Citus) o otro
+      producto. Y el particionado tiene su propio precio —más planificación, más
+      archivos, y claves foráneas que no pueden apuntar a una tabla
+      particionada sin cuidado.
+    doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Sirve para lo importante: **medir el sesgo antes de repartir**. La consulta
+      del caso es la que hay que ejecutar sobre los datos reales antes de elegir
+      clave de partición, y no hace falta ningún clúster para ejecutarla.
+    porque_no: >-
+      No hay particionado que aplicar después: aquí se toma la decisión, no se
+      implementa.
+    doc: https://sqlite.org/lang_select.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      La misma medición sobre volúmenes grandes, y además puede escribir a
+      Parquet **particionado por columna** (`PARTITION_BY`), que es el reparto
+      físico del mundo analítico y sufre exactamente el mismo problema de
+      sesgo.
+    porque_no: >-
+      Ese particionado es de archivos en disco, no de nodos: no hay
+      redistribución ni rebalanceo, solo carpetas.
+    doc: https://duckdb.org/docs/stable/data/partitioning/partitioned_writes.html
+
+  - id: redis
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/redis/consulta.txt
+    porque_si: >-
+      Redis Cluster reparte el espacio de claves en 16 384 ranuras fijas y
+      asigna ranuras a nodos: mover datos es mover ranuras, sin volver a
+      calcular nada. `CLUSTER KEYSLOT` permite ver a qué ranura va cada clave
+      antes de escribirla.
+    porque_no: >-
+      Una operación que toque varias claves solo funciona si todas caen en la
+      misma ranura, lo que obliga a usar etiquetas de hash (`{cliente-A}:pedido:1`)
+      y a concentrar a propósito… reintroduciendo la clave caliente que se quería
+      evitar.
+    doc: https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/
+
+  - id: dynamodb
+    aplica: no
+    porque_no: >-
+      El reparto es interno y no se controla: solo se elige la clave de
+      partición. Una clave caliente se manifiesta como estrangulamiento
+      (`ThrottlingException`) sin que haya nada que ajustar en el servicio.
+    alternativa: >-
+      Repartir la clave a mano añadiéndole un sufijo aleatorio
+      (`CLIENTE#A#3`) y consultar todos los sufijos al leer: la solución
+      documentada por el propio proveedor, y una buena muestra de lo que cuesta
+      una clave caliente.
+    doc: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html
+
+  - id: sql-server
+    aplica: no
+    porque_no: >-
+      Tiene particionado de tablas dentro de una instancia, pero no un modelo de
+      reparto entre nodos comparable al del resto de la lista: el escalado
+      horizontal se resuelve por otras vías.
+    alternativa: >-
+      Particionado por rango dentro de la instancia para el mantenimiento, y
+      reparto entre bases por criterios de negocio en la capa de aplicación.
+    doc: https://learn.microsoft.com/sql/relational-databases/partitions/partitioned-tables-and-indexes

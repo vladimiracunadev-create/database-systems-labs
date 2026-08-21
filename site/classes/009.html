@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Desnormalización deliberada y patrones de acceso. Parte 01: Modelado conceptual y requisitos.">
+<meta name="description" content="Cuándo NO necesitas una base de datos. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/009.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="009 — Desnormalización deliberada y patrones de acceso · Database Systems Labs">
-<meta property="og:description" content="Desnormalización deliberada y patrones de acceso. Parte 01: Modelado conceptual y requisitos.">
+<meta property="og:title" content="009 — Cuándo NO necesitas una base de datos · Database Systems Labs">
+<meta property="og:description" content="Cuándo NO necesitas una base de datos. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/009.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "009 — Desnormalización deliberada y patrones de acceso", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["redundancia controlada", "costo de escritura", "agregado", "patrón de lectura"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>009 — Desnormalización deliberada y patrones de acceso · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "009 — Cuándo NO necesitas una base de datos", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["criterio de decisión", "motor embebido", "costo de operación", "alternativas"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>009 — Cuándo NO necesitas una base de datos · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,269 +49,207 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-01.html">Parte 01 · Modelado conceptual y requisitos</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 009</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="009--desnormalización-deliberada-y-patrones-de-acceso">009 — Desnormalización deliberada y patrones de acceso</h1>
+<h1 id="009--cuándo-no-necesitas-una-base-de-datos">009 — Cuándo NO necesitas una base de datos</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-009%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="008.html">← Anterior</a> · <a href="010.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="008.html">← Anterior</a> · <a href="010.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 01 — Modelado conceptual y requisitos · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>redundancia controlada</code> · <code>costo de escritura</code> · <code>agregado</code> · <code>patrón de lectura</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>redis</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>criterio de decisión</code> · <code>motor embebido</code> · <code>costo de operación</code> · <code>alternativas</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 4 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 009&quot;]
+    C --&gt; K1[&quot;criterio de decisión&quot;]
+    C --&gt; K2[&quot;motor embebido&quot;]
+    C --&gt; K3[&quot;costo de operación&quot;]
+    C --&gt; K4[&quot;alternativas&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Introducir redundancia a propósito, con evidencia de que hacía falta y con un mecanismo declarado que la mantenga coherente. Desnormalizar sin ambas cosas no es una optimización: es una anomalía planificada.</p>
+<p>Aprender a decir que no. Un programa de bases de datos que no enseñe cuándo
+<strong>no</strong> usarlas produce sistemas con un motor de más, y ese motor hay que
+instalarlo, respaldarlo, actualizarlo, vigilarlo y explicárselo al siguiente.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Medir el costo que la desnormalización pretende evitar, antes de aplicarla.</li>
-<li>Elegir entre las cuatro técnicas habituales según el patrón de acceso.</li>
-<li>Declarar quién mantiene la coherencia y con qué garantía.</li>
-<li>Escribir la invariante que detecta la divergencia.</li>
-<li>Reconocer cuándo el problema real es un índice ausente y no el modelo.</li>
+<li>Aplicar un criterio explícito para decidir si un caso necesita base de datos.</li>
+<li>Nombrar las alternativas razonables y cuándo cada una es la correcta.</li>
+<li>Estimar el costo real de añadir un motor a un sistema.</li>
+<li>Reconocer las tres señales que indican que un archivo se quedó corto.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-pregunta-previa">La pregunta previa</h3>
-<p>Antes de desnormalizar hay que responder tres cosas con números:</p>
+<h3 id="el-criterio-en-tres-preguntas">El criterio, en tres preguntas</h3>
+<p>La decisión cabe en tres preguntas, y basta que una se conteste que sí:</p>
 <ol>
-<li>¿Cuál es la consulta cara? (con su plan y su tiempo real)</li>
-<li>¿Con qué frecuencia se ejecuta frente a las escrituras que la alimentan?</li>
-<li>¿Un índice, una vista materializada o una reescritura la resuelven?</li>
+<li><strong>¿Escribe más de un proceso o persona a la vez?</strong> Si sí, hace falta control
+   de concurrencia, y eso no se improvisa.</li>
+<li><strong>¿Hay reglas que deban cumplirse siempre, incluso si el programa falla a la
+   mitad?</strong> Si sí, hace falta integridad y atomicidad.</li>
+<li><strong>¿Perder los datos es inaceptable?</strong> Si sí, hace falta durabilidad probada,
+   que es más que copiar un archivo.</li>
 </ol>
-<p>Sadalage y Fowler formulan el criterio: la unidad de diseño es el <strong>agregado</strong>, y el agregado se define por cómo se lee, no por cómo se escribe. Kleppmann añade la contrapartida: cada dato duplicado es un dato que puede divergir, y la probabilidad de divergencia no es cero, es «cuándo».</p>
-<p>La relación lecturas/escrituras es el número que decide. Con 10 000 lecturas por cada escritura, duplicar un dato sale barato. Con 2 lecturas por escritura, casi nunca compensa.</p>
-<h3 id="las-cuatro-técnicas">Las cuatro técnicas</h3>
+<p>Si las tres respuestas son no, un archivo basta, y es la respuesta correcta.</p>
+<h3 id="qué-usar-cuando-la-respuesta-es-no-hace-falta">Qué usar cuando la respuesta es «no hace falta»</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Técnica</th>
-<th>En qué consiste</th>
-<th>Cuándo</th>
-<th>Riesgo</th>
+<th>Caso</th>
+<th>Herramienta razonable</th>
+<th>Por qué</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Columna derivada</strong></td>
-<td>Guardar un cálculo (<code>total</code>, <code>promedio</code>, <code>n_inscritos</code>)</td>
-<td>El cálculo recorre muchas filas y se lee mucho</td>
-<td>Divergencia silenciosa</td>
+<td>Configuración de una aplicación</td>
+<td>Archivo TOML, YAML o JSON</td>
+<td>Lo edita una persona, se versiona con el código</td>
 </tr>
 <tr>
-<td><strong>Columna replicada</strong></td>
-<td>Copiar un atributo de la tabla padre (<code>course_nombre</code> en <code>enrollments</code>)</td>
-<td>Evitar una reunión en un camino crítico</td>
-<td>Actualizaciones en cascada</td>
+<td>Datos de un solo proceso, con consultas</td>
+<td><strong>SQLite</strong></td>
+<td>Es una base de datos sin serlo: sin servidor, un archivo</td>
 </tr>
 <tr>
-<td><strong>Agregado precalculado</strong></td>
-<td>Tabla o vista materializada de resumen</td>
-<td>Informes repetidos sobre ventanas fijas</td>
-<td>Frescura: ¿de cuándo son los datos?</td>
+<td>Análisis puntual de un CSV grande</td>
+<td><strong>DuckDB</strong></td>
+<td>Consulta el fichero sin cargarlo, sin instalar servicio</td>
 </tr>
 <tr>
-<td><strong>Agregado documental</strong></td>
-<td>Guardar el objeto completo como documento</td>
-<td>Se lee y escribe siempre entero</td>
-<td>Duplicación entre agregados</td>
+<td>Caché en memoria de un proceso</td>
+<td>Estructura del propio lenguaje</td>
+<td>Un diccionario no necesita red</td>
+</tr>
+<tr>
+<td>Intercambio entre sistemas</td>
+<td>CSV, Parquet, JSON</td>
+<td>Son formatos, no almacenes: ese es su trabajo</td>
+</tr>
+<tr>
+<td>Registro de eventos de una aplicación</td>
+<td>Archivos rotados</td>
+<td>Se escriben una vez y se leen con herramientas de texto</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="quién-mantiene-la-coherencia">Quién mantiene la coherencia</h3>
-<p>Esta es la pregunta que distingue el diseño del deseo. Cuatro respuestas posibles, ordenadas de más a menos garantía:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Mecanismo</th>
-<th>Garantía</th>
-<th>Costo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Restricción del motor (<code>GENERATED ALWAYS AS</code>)</td>
-<td>Total y automática</td>
-<td>Solo sirve para cálculos sobre la misma fila</td>
-</tr>
-<tr>
-<td>Disparador en la misma transacción</td>
-<td>Total mientras la transacción sea atómica</td>
-<td>Coste de escritura; lógica escondida en el motor</td>
-</tr>
-<tr>
-<td>Vista materializada con refresco</td>
-<td>Consistente en el instante del refresco</td>
-<td>Datos con retraso conocido</td>
-</tr>
-<tr>
-<td>Proceso asíncrono o código de aplicación</td>
-<td>Ninguna garantía dura</td>
-<td>El más barato y el que más diverge</td>
-</tr>
-</tbody>
-</table></div>
-<p>Si la respuesta es «lo actualiza la aplicación», la coherencia depende de que <strong>todos</strong> los caminos de escritura, presentes y futuros, la respeten. El script de migración de la próxima persona no lo hará.</p>
+<p>Merece la pena detenerse en SQLite. Su propia documentación —la página <em>When To
+Use</em> es de lectura obligada— lo plantea así: la competencia de SQLite no es
+PostgreSQL, es <code>fopen()</code>. Es el paso intermedio que casi nadie considera y que
+resuelve la mayoría de los casos donde una hoja de cálculo se quedó corta pero un
+servidor es demasiado.</p>
+<h3 id="lo-que-cuesta-un-motor-de-más">Lo que cuesta un motor de más</h3>
+<p>No es la licencia —muchos son gratuitos—. Es todo lo demás:</p>
+<ul>
+<li>Un servicio que <strong>instalar, configurar y actualizar</strong>, con sus versiones y sus
+  incompatibilidades.</li>
+<li>Un plan de <strong>respaldo y restauración probada</strong>, que si no se prueba no existe.</li>
+<li><strong>Vigilancia</strong>: alguien tiene que enterarse cuando se llene el disco.</li>
+<li><strong>Conocimiento</strong>: alguien tiene que saber diagnosticarlo a las tres de la
+  mañana.</li>
+<li><strong>Un punto de fallo más</strong> y una dependencia más en el despliegue.</li>
+</ul>
+<p>Ese costo se paga durante años y no aparece en ninguna comparativa de
+rendimiento.</p>
+<h3 id="las-tres-señales-de-que-el-archivo-se-quedó-corto">Las tres señales de que el archivo se quedó corto</h3>
+<p>Al revés también hay que saber decidir. Estas tres señales dicen que ha llegado
+el momento:</p>
+<ol>
+<li><strong>Aparece un segundo escritor.</strong> Otro proceso, otra persona, un trabajo
+   programado.</li>
+<li><strong>Aparece una regla entre registros.</strong> «El total del pedido tiene que ser la
+   suma de sus líneas», «no puede haber dos reservas para la misma butaca».</li>
+<li><strong>Aparece una pregunta que el formato no puede responder</strong> sin recorrerlo
+   entero cada vez.</li>
+</ol>
+<p>Cuando aparece una, conviene mirar SQLite antes de mirar un servidor.</p>
 <pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Consulta lenta&quot;] --&gt; M[&quot;Medir: plan + tiempo real&quot;]
-    M --&gt; I{&quot;¿La resuelve&lt;br/&gt;un índice?&quot;}
-    I -- &quot;Sí&quot; --&gt; IX[&quot;Índice. Fin.&quot;]
-    I -- &quot;No&quot; --&gt; R{&quot;lecturas/escrituras&lt;br/&gt;≥ 100?&quot;}
-    R -- &quot;No&quot; --&gt; RW[&quot;Reescribir la consulta&lt;br/&gt;o revisar el modelo&quot;]
-    R -- &quot;Sí&quot; --&gt; T[&quot;Elegir técnica&quot;]
-    T --&gt; G{&quot;¿Quién mantiene&lt;br/&gt;la coherencia?&quot;}
-    G -- &quot;El motor&quot; --&gt; OK[&quot;Desnormalización defendible&quot;]
-    G -- &quot;La aplicación&quot; --&gt; INV[&quot;Exige invariante auditada&lt;br/&gt;y aceptar divergencia&quot;]
+    A[&quot;Necesito guardar algo&quot;] --&gt; B{&quot;¿Más de un escritor?&quot;}
+    B -- &quot;Sí&quot; --&gt; S[&quot;Motor con servidor&quot;]
+    B -- &quot;No&quot; --&gt; C{&quot;¿Reglas entre&lt;br/&gt;registros?&quot;}
+    C -- &quot;Sí&quot; --&gt; Q[&quot;SQLite basta&lt;br/&gt;casi siempre&quot;]
+    C -- &quot;No&quot; --&gt; D{&quot;¿Consultas variadas&lt;br/&gt;o datos que no&lt;br/&gt;caben en memoria?&quot;}
+    D -- &quot;Sí&quot; --&gt; Q
+    D -- &quot;No&quot; --&gt; E[&quot;Un archivo&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Consulta que aparece en cada carga del panel de un curso:</p>
-<pre><code class="language-sql">SELECT c.id, c.nombre, COUNT(e.student_id) AS inscritos, AVG(e.nota) AS promedio
-FROM courses c
-LEFT JOIN enrollments e ON e.course_id = c.id
-GROUP BY c.id, c.nombre;
-</code></pre>
-<p><strong>Medición primero.</strong> Con 300 cursos y 240 000 inscripciones, el plan hace un barrido de <code>enrollments</code> y una agregación por hash: ~240 000 filas procesadas por ejecución. Si el panel se abre 5 000 veces al día y se inscribe gente 400 veces al día, la relación es <strong>12,5 lecturas por escritura</strong>. Ese número no justifica desnormalizar todavía: un índice sobre <code>enrollments(course_id, nota)</code> permite una agregación por índice y reduce el trabajo sin duplicar nada.</p>
-<p><strong>Cuando sí.</strong> Cambiemos la escala: 5 millones de inscripciones y el panel en la portada, 200 000 aperturas diarias frente a 400 inscripciones. Relación: <strong>500 a 1</strong>. Ahora sí.</p>
-<p><strong>Opción A — columna derivada mantenida por el motor:</strong></p>
-<pre><code class="language-sql">ALTER TABLE courses ADD COLUMN inscritos INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE courses ADD COLUMN suma_notas NUMERIC(10,1) NOT NULL DEFAULT 0;
-
-CREATE FUNCTION actualizar_agregado() RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE courses
-     SET inscritos  = inscritos  + CASE TG_OP WHEN 'INSERT' THEN 1 WHEN 'DELETE' THEN -1 ELSE 0 END,
-         suma_notas = suma_notas + COALESCE(NEW.nota, 0) - COALESCE(OLD.nota, 0)
-   WHERE id = COALESCE(NEW.course_id, OLD.course_id);
-  RETURN NULL;
-END; $$ LANGUAGE plpgsql;
-</code></pre>
-<p>El promedio se calcula como <code>suma_notas / NULLIF(inscritos, 0)</code>: se guardan los dos sumandos, no el promedio, porque un promedio no es incrementalmente actualizable sin el conteo.</p>
-<p><strong>Coste real de la decisión:</strong> cada inscripción pasa de una escritura a dos, y todas las inscripciones de un mismo curso se serializan sobre la fila del contador. Con 400 escrituras diarias es irrelevante; con 400 por segundo sobre el mismo curso, ese contador es un punto caliente y habría que repartirlo en varias filas y sumarlas al leer.</p>
-<p><strong>La invariante, obligatoria:</strong></p>
-<pre><code class="language-sql">SELECT c.id, c.inscritos AS declarado, COUNT(e.student_id) AS real
-FROM courses c
-LEFT JOIN enrollments e ON e.course_id = c.id
-GROUP BY c.id, c.inscritos
-HAVING c.inscritos &lt;&gt; COUNT(e.student_id);
-</code></pre>
-<p>Cero filas: coherente. Se ejecuta a diario y se alerta si devuelve algo. Sin esta consulta, la desnormalización es una apuesta.</p>
-<p><strong>Opción B — vista materializada:</strong></p>
-<pre><code class="language-sql">CREATE MATERIALIZED VIEW curso_resumen AS
-SELECT c.id, c.nombre, COUNT(e.student_id) AS inscritos, AVG(e.nota) AS promedio
-FROM courses c LEFT JOIN enrollments e ON e.course_id = c.id
-GROUP BY c.id, c.nombre;
-</code></pre>
-<p>No hay riesgo de divergencia lógica: se recalcula entera. El costo se paga en <strong>frescura</strong> (los datos son del último refresco) y en el propio refresco. Si el panel tolera 5 minutos de retraso, esta opción es netamente superior a la A: menos código, menos puntos calientes y ninguna invariante que auditar.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Opción</th>
-<th>Frescura</th>
-<th>Coste de escritura</th>
-<th>Riesgo de divergencia</th>
-<th>Complejidad</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Consulta directa + índice</td>
-<td>Inmediata</td>
-<td>Ninguno</td>
-<td>Ninguno</td>
-<td>Mínima</td>
-</tr>
-<tr>
-<td>Columna derivada con disparador</td>
-<td>Inmediata</td>
-<td>Alto, con contención</td>
-<td>Real, exige invariante</td>
-<td>Alta</td>
-</tr>
-<tr>
-<td>Vista materializada</td>
-<td>Retrasada</td>
-<td>Nulo en línea</td>
-<td>Ninguno</td>
-<td>Baja</td>
-</tr>
-<tr>
-<td>Agregado documental</td>
-<td>Inmediata en su agregado</td>
-<td>Medio</td>
-<td>Entre agregados</td>
-<td>Media</td>
-</tr>
-</tbody>
-</table></div>
+<p>Cuatro casos reales y la decisión defendible en cada uno.</p>
+<p><strong>1. Una herramienta de línea de órdenes que recuerda las últimas rutas usadas.</strong>
+Un escritor, sin reglas, y perder el historial es irrelevante. <strong>Archivo JSON.</strong>
+Añadir una base de datos aquí obliga al usuario a instalar algo para que el
+programa recuerde diez rutas.</p>
+<p><strong>2. Una aplicación de escritorio que gestiona una biblioteca personal.</strong> Un
+proceso, pero con reglas —un libro no puede estar prestado dos veces— y con
+consultas variadas. <strong>SQLite.</strong> Un archivo, sin servidor, con transacciones y
+SQL. Es el caso para el que fue diseñado.</p>
+<p><strong>3. Un panel que analiza un CSV mensual de dos gigabytes.</strong> Un lector, sin
+escrituras, sin reglas. <strong>DuckDB sobre el fichero.</strong> Cargarlo en PostgreSQL sería
+trabajo y espacio para responder preguntas que se hacen una vez al mes.</p>
+<p><strong>4. Una tienda con tres empleados que registran pedidos a la vez.</strong> Varios
+escritores, reglas que no se pueden romper —el stock no puede quedar negativo— y
+datos que no se pueden perder. <strong>Motor con servidor.</strong> Aquí las tres respuestas
+son sí, y no hay atajo.</p>
+<p>La diferencia entre los cuatro no es el tamaño de los datos: el caso 3 es el que
+más datos tiene y el que menos infraestructura necesita.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Desnormalizar sin medir.</strong> La mayoría de las consultas «lentas» lo son por un índice ausente, y el índice no duplica datos.</li>
-<li><strong>Guardar el promedio en vez de suma y conteo.</strong> El promedio no es incrementalmente actualizable.</li>
-<li><strong>No escribir la invariante.</strong> La divergencia se descubre cuando un usuario reclama, es decir, tarde.</li>
-<li><strong>Poner la coherencia en la aplicación y llamarla garantía.</strong> Solo cubre los caminos de escritura que ya existen.</li>
-<li><strong>Ignorar el punto caliente.</strong> Un contador por entidad serializa todas las escrituras de esa entidad.</li>
+<li><strong>Elegir por el tamaño de los datos.</strong> Dos gigabytes de solo lectura necesitan
+   menos que dos megabytes con tres escritores.</li>
+<li><strong>Elegir por prestigio.</strong> «Una aplicación seria usa PostgreSQL» no es un
+   criterio.</li>
+<li><strong>Saltarse SQLite.</strong> El paso intermedio que resuelve la mayoría de los casos.</li>
+<li><strong>Quedarse en el archivo después de la primera señal.</strong> El coste de migrar
+   crece con los datos y con el código que los usa.</li>
+<li><strong>Contar solo el costo de instalación.</strong> El costo real es de operación y dura
+   años.</li>
+<li><strong>Usar Redis como almacén principal «porque es rápido».</strong> Es una caché: su
+   modelo de durabilidad no promete lo que un almacén tiene que prometer.</li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Toda desnormalización envejece: llega el día en que un proceso masivo escribe saltándose el disparador, o el refresco falla en silencio. Por eso la invariante y su alerta son parte de la entrega, no un extra.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>El mismo razonamiento se aplica a cualquier pieza de infraestructura: una cola de
+mensajes, un caché distribuido, un buscador. La pregunta no es si aporta algo
+—casi todo aporta algo— sino si aporta <strong>algo que el sistema actual no puede
+dar</strong>, y si ese algo compensa el costo de operarlo durante años. Esa es la
+disciplina de la última parte de este programa.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Localiza una consulta cara real, mide su plan y su tiempo.</li>
-<li>Calcula su relación lecturas/escrituras con datos de tráfico reales.</li>
-<li>Aplica primero la opción sin duplicación (índice o reescritura) y vuelve a medir.</li>
-<li>Si sigue sin bastar, elige técnica, declara el mecanismo de coherencia y entrega la invariante que la audita.</li>
+<li>Elige tres cosas que guardes hoy: una en archivo, una en hoja de cálculo y una
+   en base de datos.</li>
+<li>Aplica las tres preguntas a cada una y anota la respuesta.</li>
+<li>Encuentra al menos un caso donde tu decisión actual no coincida con el
+   criterio, y escribe en dos frases si lo cambiarías o no y por qué.</li>
+<li>Para el caso que sí necesita base de datos, escribe cuál de las tres señales
+   apareció primero.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Qué relación lecturas/escrituras usarías como umbral en tu contexto y por qué?</li>
-<li>Explica por qué la vista materializada no puede divergir lógicamente y la columna derivada sí.</li>
-<li>Describe un punto caliente que crearía una columna derivada en tu dominio y cómo lo repartirías.</li>
-<li>Un proceso de carga masiva escribe con <code>COPY</code> y salta los disparadores. ¿Cómo lo detectas y cómo lo reparas?</li>
+<li>Enumera las tres preguntas del criterio y explica qué garantiza cada una.</li>
+<li>¿Por qué el tamaño de los datos es mal criterio? Da un ejemplo.</li>
+<li>¿En qué caso concreto elegirías SQLite antes que PostgreSQL, y por qué?</li>
+<li>Nombra tres costos de añadir un motor que no aparecen en su página de
+   descarga.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Un contador guardado que nunca puede mentir</p>
-<p>Desnormalizar es guardar un dato que ya se podía calcular, a cambio de no
-calcularlo en cada lectura. La pregunta que decide si es deliberado o
-accidental es siempre la misma: <strong>¿quién mantiene el dato duplicado al
-día?</strong> Si la respuesta es «el que se acuerde», la desnormalización es una
-avería futura.</p>
-<p>El caso guarda en cada curso un contador de inscripciones, mantenido
-automáticamente, e inscribe y da de baja a estudiantes. Al final, la
-consulta devuelve el contador guardado <strong>y</strong> el recuento calculado sobre la
-tabla de inscripciones. Los dos números tienen que ser iguales: esa igualdad
-es la prueba, y en producción es la comprobación que debe correr
-periódicamente.</p>
-<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>curso</th>
-<th>contador</th>
-<th>calculado</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>DB-101</code></td>
-<td><code>2</code></td>
-<td><code>2</code></td>
-</tr>
-<tr>
-<td><code>SE-201</code></td>
-<td><code>1</code></td>
-<td><code>1</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 009</code>: 5 de
-las 6 implementaciones se ejecutan de verdad y su
-resultado se compara con esa tabla; el resto se declara como material revisado,
-no ejecutado.</p>
+<p><strong>Caso:</strong> Qué usar cuando la respuesta correcta es «esto no necesita un servidor»</p>
+<p>La decisión cabe en tres preguntas, y basta que una se conteste que sí para
+necesitar una base de datos: ¿escribe más de un proceso a la vez?, ¿hay
+reglas que deban cumplirse siempre?, ¿perder los datos es inaceptable?</p>
+<p>Cuando las tres se contestan que no, la respuesta correcta es un archivo, y
+decirlo forma parte del oficio. Esta comparación no ejecuta nada: recorre las
+opciones reales —incluidas las que no son bases de datos— y dice para qué
+sirve cada una y qué pasa el día en que el caso crece.</p>
+<p>Esta comparación es <strong>conceptual</strong>: la decisión no se reduce a una consulta con
+resultado, así que aquí no hay sello de máquina. Lo que se compara es lo que
+cada motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
@@ -326,339 +264,75 @@ no ejecutado.</p>
 <tr>
 <td>SQLite</td>
 <td>sí</td>
-<td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_createtrigger.html">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://sqlite.org/whentouse.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://duckdb.org/why_duckdb">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/sql-createtrigger.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/triggers.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/update/inc/">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-arch.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/redis/consulta.txt">código</a></td>
-<td><a href="https://redis.io/docs/latest/commands/incr/">doc oficial</a></td>
+<td>conceptual</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/">doc oficial</a></td>
 </tr>
 <tr>
-<td>Apache Cassandra</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/cassandra/consulta.cql">código</a></td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>DuckDB</td>
+<td>MongoDB</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc oficial</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/administration/install-community/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/getting-started/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
-<pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_createtrigger.html
--- nota: el contador lo mantiene el motor, no el programa. Ningun camino de
---       escritura —ni la consola, ni otro servicio, ni una migracion— puede
---       olvidarse de actualizarlo.
-
--- === preparacion ===
-CREATE TABLE cursos (
-    id        INTEGER PRIMARY KEY,
-    codigo    TEXT NOT NULL,
-    inscritos INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE inscripciones (
-    estudiante TEXT NOT NULL,
-    curso_id   INTEGER NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante, curso_id)
-);
-
-CREATE TRIGGER inscripciones_mas AFTER INSERT ON inscripciones
-BEGIN
-    UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
-END;
-
-CREATE TRIGGER inscripciones_menos AFTER DELETE ON inscripciones
-BEGIN
-    UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
-END;
-
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
--- Una baja: si el disparador de borrado no existiera, el contador se quedaria
--- en 2 y nadie lo notaria hasta que alguien contara a mano.
-DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
-
--- === consulta ===
--- La comprobacion que en produccion debe correr periodicamente: el dato
--- guardado frente al dato calculado. El dia que dejen de coincidir, la
--- desnormalizacion dejo de ser deliberada.
-SELECT c.codigo AS curso,
-       c.inscritos AS contador,
-       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
-FROM cursos c
-ORDER BY c.codigo;
-</code></pre>
+<h4 id="sqlite">SQLite</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Tiene disparadores <code>AFTER INSERT</code> y <code>AFTER DELETE</code>, que es la forma de que el contador lo mantenga el motor y no el programa: ningún camino de escritura puede olvidarse de actualizarlo.</li>
-<li><strong>Por qué no:</strong> Un disparador se ejecuta en cada escritura y es invisible en el código de la aplicación: cuando el contador se desvía, nadie mira ahí primero.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtrigger.html">https://sqlite.org/lang_createtrigger.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> El paso intermedio que casi nadie considera: una base de datos completa, con SQL y transacciones, dentro de un archivo y sin servidor. Su propia documentación lo plantea así: <strong>la competencia de SQLite no es PostgreSQL, es <code>fopen()</code></strong>.</li>
+<li><strong>Por qué sí:</strong> Cubre la mayoría de los casos donde una hoja de cálculo se quedó corta y un servidor es demasiado: aplicaciones de escritorio, herramientas de línea de órdenes, aplicaciones móviles, pruebas automatizadas y el estado local de cualquier programa.</li>
+<li><strong>Por qué no:</strong> Un solo escritor a la vez y sin acceso remoto ni usuarios. En cuanto aparece un segundo proceso que escribe o alguien tiene que conectarse desde otra máquina, se acabó.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/whentouse.html">https://sqlite.org/whentouse.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/sql-createtrigger.html
--- nota: el disparador corre DENTRO de la transaccion de la inscripcion: si la
---       transaccion se deshace, el contador vuelve solo. Esa es la diferencia
---       con mantenerlo desde otro sistema.
-
--- === preparacion ===
-DROP TABLE IF EXISTS inscripciones, cursos;
-
-CREATE TABLE cursos (
-    id        integer PRIMARY KEY,
-    codigo    text NOT NULL,
-    inscritos integer NOT NULL DEFAULT 0
-);
-CREATE TABLE inscripciones (
-    estudiante text NOT NULL,
-    curso_id   integer NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante, curso_id)
-);
-
-CREATE OR REPLACE FUNCTION ajustar_contador() RETURNS trigger AS $$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
-    ELSE
-        UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER inscripciones_contador
-AFTER INSERT OR DELETE ON inscripciones
-FOR EACH ROW EXECUTE FUNCTION ajustar_contador();
-
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
-DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
-
--- === consulta ===
--- La comprobacion que en produccion debe correr periodicamente: el dato
--- guardado frente al dato calculado. El dia que dejen de coincidir, la
--- desnormalizacion dejo de ser deliberada.
-SELECT c.codigo AS curso,
-       c.inscritos AS contador,
-       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
-FROM cursos c
-ORDER BY c.codigo;
-</code></pre>
+<h4 id="duckdb">DuckDB</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Ofrece las dos vías y con la transacción como red: un disparador que mantiene el contador dentro de la misma transacción que la inscripción, o una vista materializada con <code>REFRESH ... CONCURRENTLY</code> cuando se acepta que el dato vaya con retraso.</li>
-<li><strong>Por qué no:</strong> El contador convierte cada inscripción en una escritura sobre la <strong>misma</strong> fila del curso: en un curso muy demandado, esa fila se vuelve el cuello de botella y las transacciones esperan unas por otras.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/sql-createtrigger.html">https://www.postgresql.org/docs/current/sql-createtrigger.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> El equivalente para analizar en vez de registrar: consulta directamente un CSV o un Parquet de gigabytes <strong>sin cargarlo</strong> en ningún sitio, sin servidor y sin esquema previo.</li>
+<li><strong>Por qué sí:</strong> Para el caso más frecuente de todos —«tengo un fichero grande y quiero preguntarle cosas»— evita montar una base de datos entera para algo que se hace una vez al mes.</li>
+<li><strong>Por qué no:</strong> No es un sistema de registro: un solo escritor, sin concurrencia y sin servicio. Analiza una copia; no guarda la verdad.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/why_duckdb">https://duckdb.org/why_duckdb</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/triggers.html
--- nota: los disparadores de InnoDB se ejecutan en la misma transaccion, asi
---       que contador e inscripcion se confirman o se deshacen juntos.
-
--- === preparacion ===
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS cursos;
-
-CREATE TABLE cursos (
-    id        INT PRIMARY KEY,
-    codigo    VARCHAR(20) NOT NULL,
-    inscritos INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB;
-CREATE TABLE inscripciones (
-    estudiante VARCHAR(50) NOT NULL,
-    curso_id   INT NOT NULL,
-    PRIMARY KEY (estudiante, curso_id),
-    FOREIGN KEY (curso_id) REFERENCES cursos(id)
-) ENGINE=InnoDB;
-
-CREATE TRIGGER inscripciones_mas AFTER INSERT ON inscripciones
-FOR EACH ROW UPDATE cursos SET inscritos = inscritos + 1 WHERE id = NEW.curso_id;
-
-CREATE TRIGGER inscripciones_menos AFTER DELETE ON inscripciones
-FOR EACH ROW UPDATE cursos SET inscritos = inscritos - 1 WHERE id = OLD.curso_id;
-
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20), ('Bob', 20);
-DELETE FROM inscripciones WHERE estudiante = 'Bob' AND curso_id = 20;
-
--- === consulta ===
--- La comprobacion que en produccion debe correr periodicamente: el dato
--- guardado frente al dato calculado. El dia que dejen de coincidir, la
--- desnormalizacion dejo de ser deliberada.
-SELECT c.codigo AS curso,
-       c.inscritos AS contador,
-       (SELECT COUNT(*) FROM inscripciones i WHERE i.curso_id = c.id) AS calculado
-FROM cursos c
-ORDER BY c.codigo;
-</code></pre>
+<h4 id="postgresql">PostgreSQL</h4>
 <ul>
-<li><strong>Por qué sí:</strong> Los disparadores de InnoDB se ejecutan dentro de la misma transacción, así que el contador y la inscripción se confirman o se deshacen juntos.</li>
-<li><strong>Por qué no:</strong> Los disparadores de MySQL no se pueden encadenar libremente y su depuración es incómoda; además siguen sin ejecutarse en operaciones masivas hechas con <code>LOAD DATA</code> en algunas configuraciones.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/triggers.html">https://dev.mysql.com/doc/refman/8.4/en/triggers.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> La respuesta cuando alguna de las tres preguntas se contesta que sí: servidor, usuarios, permisos, concurrencia real, integridad declarada y durabilidad probada.</li>
+<li><strong>Por qué sí:</strong> No hay atajo cuando hacen falta esas garantías. Y como motor generalista cubre además búsqueda de texto, JSON y vectores, así que a menudo es el único servicio que hay que operar.</li>
+<li><strong>Por qué no:</strong> Hay que instalarlo, configurarlo, actualizarlo, respaldarlo y vigilarlo, durante años. Ese costo no aparece en ninguna comparativa de rendimiento y es el que de verdad se paga.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-arch.html">https://www.postgresql.org/docs/current/tutorial-arch.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/inc/
-// nota: $inc es atomico sobre UN documento. La inscripcion y el contador viven
-//       en documentos distintos, asi que mantenerlos de acuerdo ante un fallo
-//       exige una transaccion de varios documentos; aqui se escribe la version
-//       simple y se declara el riesgo, que es la unica forma honesta.
-
-// === preparacion ===
-db.cursos.drop();
-db.inscripciones.drop();
-
-db.cursos.insertMany([
-  { _id: 10, codigo: &quot;DB-101&quot;, inscritos: 0 },
-  { _id: 20, codigo: &quot;SE-201&quot;, inscritos: 0 },
-]);
-
-function inscribir(estudiante, cursoId) {
-  db.inscripciones.insertOne({ estudiante: estudiante, curso_id: cursoId });
-  db.cursos.updateOne({ _id: cursoId }, { $inc: { inscritos: 1 } });
-}
-function darDeBaja(estudiante, cursoId) {
-  db.inscripciones.deleteOne({ estudiante: estudiante, curso_id: cursoId });
-  db.cursos.updateOne({ _id: cursoId }, { $inc: { inscritos: -1 } });
-}
-
-inscribir(&quot;Ada&quot;, 10);
-inscribir(&quot;Linus&quot;, 10);
-inscribir(&quot;Grace&quot;, 20);
-inscribir(&quot;Bob&quot;, 20);
-darDeBaja(&quot;Bob&quot;, 20);
-
-// === consulta ===
-db.cursos
-  .aggregate([
-    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
-                 foreignField: &quot;curso_id&quot;, as: &quot;i&quot; } },
-    { $project: { _id: 0, curso: &quot;$codigo&quot;, contador: &quot;$inscritos&quot;,
-                  calculado: { $size: &quot;$i&quot; } } },
-    { $sort: { curso: 1 } },
-  ])
-  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.contador + &quot;|&quot; + d.calculado));
-</code></pre>
+<h4 id="redis">Redis</h4>
 <ul>
-<li><strong>Por qué sí:</strong> <code>$inc</code> es una actualización atómica sobre un solo documento, y el patrón de contador incrustado en el documento padre es una recomendación explícita de su guía de modelado.</li>
-<li><strong>Por qué no:</strong> La atomicidad es por documento: la inscripción y el incremento del contador viven en documentos distintos, así que mantenerlos de acuerdo exige una transacción de varios documentos, con su costo, o aceptar la deriva.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/update/inc/">https://www.mongodb.com/docs/manual/reference/operator/update/inc/</a></li>
-</ul>
-<h4 id="redis--implementacionesredisconsultatxt">Redis · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/redis/consulta.txt"><code>implementaciones/redis/consulta.txt</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-text"># motor: redis
-# doc: https://redis.io/docs/latest/commands/incr/
-# nota: dos representaciones del mismo hecho: un contador INCR y un conjunto
-#       con los miembros. La consulta final es un script Lua porque, en Redis,
-#       la unica forma de leer varias claves de forma atomica y devolver un
-#       resultado compuesto es ejecutarlo en el servidor.
-
-# === preparacion ===
-FLUSHDB
-SADD curso:DB-101:miembros Ada
-INCR curso:DB-101:contador
-SADD curso:DB-101:miembros Linus
-INCR curso:DB-101:contador
-SADD curso:SE-201:miembros Grace
-INCR curso:SE-201:contador
-SADD curso:SE-201:miembros Bob
-INCR curso:SE-201:contador
-SREM curso:SE-201:miembros Bob
-DECR curso:SE-201:contador
-
-# === consulta ===
-EVAL &quot;local r={} for _,c in ipairs({'DB-101','SE-201'}) do r[#r+1]=c..'|'..redis.call('GET','curso:'..c..':contador')..'|'..redis.call('SCARD','curso:'..c..':miembros') end return r&quot; 0
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Es el caso para el que Redis parece hecho: <code>INCR</code> es atómico, cuesta microsegundos y no toca disco. Un contador de alta frecuencia delante del motor transaccional descarga precisamente la fila que se volvería cuello de botella.</li>
-<li><strong>Por qué no:</strong> El contador vive en otro sistema que la verdad: si Redis se reinicia sin persistencia, o si la inscripción se deshace y el <code>INCR</code> no, los dos números dejan de cuadrar y nadie se entera hasta la comprobación.</li>
-<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/commands/incr/">https://redis.io/docs/latest/commands/incr/</a></li>
-</ul>
-<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/009-desnormalizacion-deliberada/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: cassandra
--- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html
--- nota: implementacion declarada. Cassandra tiene un tipo de columna dedicado,
---       `counter`, porque en su modelo no se puede leer para escribir: el
---       contador se incrementa sin conocer su valor previo. El precio esta al
---       final del archivo y no es menor.
-
--- === preparacion ===
-CREATE KEYSPACE IF NOT EXISTS escuela
-  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
-
--- Una tabla de contadores no admite columnas normales: solo la clave y los
--- contadores. Por eso el codigo del curso ES la clave.
-CREATE TABLE IF NOT EXISTS escuela.contador_inscritos (
-    curso     text PRIMARY KEY,
-    inscritos counter
-);
-
--- Y la lista de miembros va en su propia tabla, sin transaccion que la
--- mantenga de acuerdo con el contador.
-CREATE TABLE IF NOT EXISTS escuela.inscripciones (
-    curso      text,
-    estudiante text,
-    PRIMARY KEY (curso, estudiante)
-);
-
-UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'DB-101';
-INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('DB-101', 'Ada');
-UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'DB-101';
-INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('DB-101', 'Linus');
-UPDATE escuela.contador_inscritos SET inscritos = inscritos + 1 WHERE curso = 'SE-201';
-INSERT INTO escuela.inscripciones (curso, estudiante) VALUES ('SE-201', 'Grace');
-
--- === consulta ===
--- No hay reunion: son dos preguntas separadas, y compararlas es trabajo del
--- cliente. Ademas, si el cliente reintenta un UPDATE de contador tras un tiempo
--- de espera agotado, el incremento puede aplicarse dos veces: los contadores de
--- Cassandra NO son idempotentes.
-SELECT curso, inscritos FROM escuela.contador_inscritos;
-SELECT curso, COUNT(*) FROM escuela.inscripciones GROUP BY curso;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Tiene un tipo de columna dedicado, <code>counter</code>, precisamente porque en su modelo no se puede leer para escribir: el contador se incrementa sin conocer su valor previo.</li>
-<li><strong>Por qué no:</strong> Las columnas contador no son idempotentes ante reintentos: si el cliente reintenta tras un tiempo de espera agotado, el incremento puede aplicarse dos veces, y una tabla con contadores no admite otras columnas normales.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html</a></li>
+<li><strong>Cómo se hace aquí:</strong> Para lo que es <strong>desechable por naturaleza</strong>: caché, sesiones, contadores, colas de trabajo. Datos que se pueden reconstruir y cuya pérdida no cuesta nada.</li>
+<li><strong>Por qué sí:</strong> Cuando el requisito es latencia y el dato es reconstruible, es la respuesta obvia y la más barata de operar.</li>
+<li><strong>Por qué no:</strong> Su modelo de durabilidad no promete lo que un almacén tiene que prometer: con la configuración por omisión puede perder hasta un segundo de escrituras, y la réplica es asíncrona. Usarlo como fuente de la verdad es el error de arquitectura más común que se comete con él.</li>
+<li>📄 Documentación oficial: <a href="https://redis.io/docs/latest/develop/">https://redis.io/docs/latest/develop/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -673,17 +347,23 @@ SELECT curso, COUNT(*) FROM escuela.inscripciones GROUP BY curso;
 </thead>
 <tbody>
 <tr>
-<td>DuckDB</td>
-<td>No tiene disparadores ni vistas materializadas con refresco: no hay mecanismo que mantenga el dato duplicado al día, que es exactamente lo que esta clase exige.</td>
-<td>Recalcular la tabla agregada completa en cada carga. En analítica esa es la respuesta normal: no se mantiene el contador, se reconstruye.</td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/create_view.html">doc</a></td>
+<td>MongoDB</td>
+<td>Exige un servidor igual que PostgreSQL, así que no es una alternativa al archivo: la decisión de esta clase es entre archivo y servidor, y una vez tomada la segunda, cuál servidor es otra pregunta.</td>
+<td>Si lo que atraía era guardar documentos sin declarar esquema, SQLite con sus funciones JSON cubre buena parte del caso sin añadir un servicio.</td>
+<td><a href="https://www.mongodb.com/docs/manual/administration/install-community/">doc</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>Está diseñado para un problema que casi ningún sistema tiene: un volumen de escritura que una sola máquina no puede absorber. Adoptarlo «por si crecemos» es pagar su modelo —sin reuniones, sin transacciones, con reparaciones periódicas— sin recibir nada a cambio.</td>
+<td>Un motor generalista con réplicas de lectura y particionado interno cubre un crecimiento de dos órdenes de magnitud sin cambiar la forma de razonar sobre los datos.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/getting-started/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-# labs/02-polyglot-modeling se entrega escrito: no hay guion que ejecutar
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -727,27 +407,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Pramod J. Sadalage, Martin Fowler</strong> (2012). <a href="https://martinfowler.com/books/nosql.html">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a>. Addison-Wesley. ISBN 978-0-321-82662-6.<br />
-  Origen del término agregado y de la persistencia políglota que estructura este programa.</li>
+<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/docs.html">SQLite Documentation</a>.<br />
+  Motor embebido usado por los laboratorios sin dependencias del programa.</li>
+<li><strong>DuckDB Foundation</strong> (2026). <a href="https://duckdb.org/docs/">DuckDB Documentation</a>.<br />
+  Motor analítico embebido: OLAP columnar sin servidor.</li>
 <li><strong>Martin Kleppmann</strong> (2017). <a href="https://dataintensive.net/">Designing Data-Intensive Applications</a>. O'Reilly. ISBN 978-1-4493-7332-0.<br />
   Referencia central del programa para replicación, partición, transacciones distribuidas y streaming.</li>
-<li><strong>Bill Karwin</strong> (2010). <a href="https://pragprog.com/titles/bksqla/sql-antipatterns/">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a>. Pragmatic Bookshelf. ISBN 978-1-934356-55-5.<br />
-  Catálogo de errores de modelado con su corrección y cuando el antipatron es aceptable.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="008.html">← Anterior</a> · <a href="010.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="008.html">← Anterior</a> · <a href="010.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="009">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="008.html"><span class="sentido">← Anterior · 008</span>Normalización de 1FN a BCFN con dependencias funcionales</a>
-<a class="siguiente" href="010.html"><span class="sentido">Siguiente · 010 →</span>La relación como conjunto: tuplas, dominios y acceso por valor</a>
+<a class="anterior" href="008.html"><span class="sentido">← Anterior · 008</span>Dos tablas y una relación: la clave foránea</a>
+<a class="siguiente" href="010.html"><span class="sentido">Siguiente · 010 →</span>El mapa de los motores: seis familias y un criterio</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

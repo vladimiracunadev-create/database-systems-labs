@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Reuniones: interna, externa, semi y anti. Parte 03: SQL en profundidad.">
+<meta name="description" content="Entidad-relación, cardinalidad y participación. Parte 02: Modelado conceptual y requisitos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/016.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="016 — Reuniones: interna, externa, semi y anti · Database Systems Labs">
-<meta property="og:description" content="Reuniones: interna, externa, semi y anti. Parte 03: SQL en profundidad.">
+<meta property="og:title" content="016 — Entidad-relación, cardinalidad y participación · Database Systems Labs">
+<meta property="og:description" content="Entidad-relación, cardinalidad y participación. Parte 02: Modelado conceptual y requisitos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/016.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "016 — Reuniones: interna, externa, semi y anti", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["reunión interna", "reunión externa", "semirreunion", "antirreunion", "multiplicación de filas"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>016 — Reuniones: interna, externa, semi y anti · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "016 — Entidad-relación, cardinalidad y participación", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["entidad débil", "cardinalidad", "participación total", "atributo de relación"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>016 — Entidad-relación, cardinalidad y participación · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,336 +49,316 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-03.html">Parte 03 · SQL en profundidad</a>
+  <a href="parte-02.html">Parte 02 · Modelado conceptual y requisitos</a>
   <span aria-hidden="true">/</span><span>Clase 016</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="016--reuniones-interna-externa-semi-y-anti">016 — Reuniones: interna, externa, semi y anti</h1>
+<h1 id="016--entidad-relación-cardinalidad-y-participación">016 — Entidad-relación, cardinalidad y participación</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-02-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-016%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="015.html">← Anterior</a> · <a href="017.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="015.html">← Anterior</a> · <a href="017.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 03 — SQL en profundidad · Intermedio ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<p>Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>reunión interna</code> · <code>reunión externa</code> · <code>semirreunion</code> · <code>antirreunion</code> · <code>multiplicación de filas</code></p>
-<p><strong>En este caso se comparan 12 motores</strong>: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>entidad débil</code> · <code>cardinalidad</code> · <code>participación total</code> · <code>atributo de relación</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 016&quot;]
+    C --&gt; K1[&quot;entidad débil&quot;]
+    C --&gt; K2[&quot;cardinalidad&quot;]
+    C --&gt; K3[&quot;participación total&quot;]
+    C --&gt; K4[&quot;atributo de relación&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Combinar tablas sin multiplicar filas por accidente. La reunión es la operación que más resultados incorrectos produce, y casi siempre en silencio: el informe sale, solo que con números inflados.</p>
+<p>Representar el dominio con el modelo entidad-relación de Chen y, sobre todo, leer un diagrama con precisión: qué dice exactamente una cardinalidad y qué obliga una participación total.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Predecir la cardinalidad de una reunión a partir de las cardinalidades de sus lados.</li>
-<li>Distinguir reunión interna, externa, semi y anti, y elegir la correcta.</li>
-<li>Explicar por qué mover una condición de <code>ON</code> a <code>WHERE</code> convierte una externa en interna.</li>
-<li>Detectar y corregir el doble conteo al agregar sobre varias reuniones.</li>
-<li>Reconocer los tres algoritmos físicos de reunión y cuándo elige cada uno el motor.</li>
+<li>Distinguir entidad, relación, atributo y entidad débil.</li>
+<li>Leer y escribir cardinalidades sin ambigüedad (mínimo y máximo, en ambos sentidos).</li>
+<li>Traducir participación total en una restricción concreta del esquema.</li>
+<li>Convertir cualquier relación N:M en tablas, sabiendo qué se gana y qué se pierde.</li>
+<li>Detectar las relaciones ternarias falsas.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="cardinalidad-la-regla-que-evita-el-90--de-los-errores">Cardinalidad: la regla que evita el 90 % de los errores</h3>
-<p>Al reunir <code>A</code> con <code>B</code> por una condición de igualdad, cada fila de <code>A</code> se empareja con <strong>todas</strong> las de <code>B</code> que coincidan.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Relación entre los lados</th>
-<th>Filas resultantes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Clave a clave (1:1)</td>
-<td>≤ min(|A|, |B|)</td>
-</tr>
-<tr>
-<td>Clave a clave foránea (1:N)</td>
-<td>≤ |B|</td>
-</tr>
-<tr>
-<td>N:M sin restricción</td>
-<td>Hasta |A| · |B|</td>
-</tr>
-<tr>
-<td>Sin condición (<code>CROSS JOIN</code>)</td>
-<td>|A| · |B|</td>
-</tr>
-</tbody>
-</table></div>
-<p>Regla práctica: <strong>una reunión solo conserva la cardinalidad de la tabla base si el otro lado está restringido a lo sumo a una fila coincidente</strong>. Si no lo está, la tabla base se multiplica.</p>
-<h3 id="los-cuatro-tipos-semánticos">Los cuatro tipos semánticos</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tipo</th>
-<th>Pregunta que responde</th>
-<th>SQL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Interna</strong></td>
-<td>«Los que coinciden, con datos de ambos»</td>
-<td><code>JOIN ... ON</code></td>
-</tr>
-<tr>
-<td><strong>Externa</strong></td>
-<td>«Todos los de un lado, con lo que haya del otro»</td>
-<td><code>LEFT/RIGHT/FULL JOIN</code></td>
-</tr>
-<tr>
-<td><strong>Semi</strong></td>
-<td>«¿Existe al menos una coincidencia?» — sin traer columnas</td>
-<td><code>WHERE EXISTS (...)</code></td>
-</tr>
-<tr>
-<td><strong>Anti</strong></td>
-<td>«¿No existe ninguna coincidencia?»</td>
-<td><code>WHERE NOT EXISTS (...)</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>La distinción crucial: <strong>semi y anti no multiplican filas</strong>. Si solo necesitas saber si hay coincidencia, una semirreunión da el resultado correcto sin <code>DISTINCT</code> y suele ser más rápida, porque el motor se detiene en la primera coincidencia.</p>
-<pre><code class="language-sql">-- MAL: multiplica si hay varias inscripciones
-SELECT DISTINCT s.* FROM students s JOIN enrollments e ON e.student_id = s.id;
-
--- BIEN: semirreunión, sin multiplicación ni DISTINCT
-SELECT s.* FROM students s
-WHERE EXISTS (SELECT 1 FROM enrollments e WHERE e.student_id = s.id);
-</code></pre>
-<h3 id="on-frente-a-where-en-reuniones-externas"><code>ON</code> frente a <code>WHERE</code> en reuniones externas</h3>
-<p>En una reunión externa, el lugar de la condición cambia el resultado:</p>
+<h3 id="el-vocabulario-de-chen">El vocabulario de Chen</h3>
+<p>Chen (1976) propuso el modelo entidad-relación para unificar las vistas de red, jerárquica y relacional. Sus piezas:</p>
 <ul>
-<li>Una condición en <code>ON</code> se aplica <strong>al emparejar</strong>: las filas no emparejadas del lado izquierdo sobreviven con nulos.</li>
-<li>Una condición en <code>WHERE</code> se aplica <strong>después</strong>: como los nulos no cumplen ninguna comparación, elimina las filas no emparejadas y la reunión se vuelve interna de hecho.</li>
+<li><strong>Entidad:</strong> cosa distinguible del dominio (un estudiante, un curso).</li>
+<li><strong>Conjunto de entidades:</strong> todas las del mismo tipo. Es lo que suele acabar siendo una tabla.</li>
+<li><strong>Relación:</strong> asociación entre entidades (un estudiante <em>inscribe</em> un curso).</li>
+<li><strong>Atributo:</strong> propiedad de una entidad o de una relación. La nota es atributo de la <strong>relación</strong> inscripción, no del estudiante ni del curso, y esto se olvida constantemente.</li>
+<li><strong>Entidad débil:</strong> no tiene identidad propia; se identifica por la entidad fuerte de la que depende (una línea de factura respecto de la factura).</li>
 </ul>
-<pre><code class="language-sql">-- Todos los estudiantes; los que no tienen nota alta salen con NULL
-SELECT s.nombre, e.nota
-FROM students s
-LEFT JOIN enrollments e ON e.student_id = s.id AND e.nota &gt; 6.0;
-
--- Solo los que tienen nota alta: el LEFT es decorativo
-SELECT s.nombre, e.nota
-FROM students s
-LEFT JOIN enrollments e ON e.student_id = s.id
-WHERE e.nota &gt; 6.0;
-</code></pre>
-<p>En reuniones <strong>internas</strong> da igual dónde vaya la condición: son equivalentes y el optimizador las trata igual (equivalencia E2 de la clase 011).</p>
-<h3 id="los-tres-algoritmos-físicos">Los tres algoritmos físicos</h3>
+<h3 id="cardinalidad-cuatro-números-no-dos">Cardinalidad: cuatro números, no dos</h3>
+<p>Una cardinalidad completa declara <strong>cuatro</strong> valores: mínimo y máximo en cada sentido. La notación abreviada «1:N» solo declara dos y por eso genera discusiones.</p>
+<p>Para «estudiante inscribe curso»:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Algoritmo</th>
-<th>Cómo funciona</th>
-<th>Cuándo lo elige el motor</th>
-<th>Coste aproximado</th>
+<th>Sentido</th>
+<th style="text-align: right;">Mínimo</th>
+<th style="text-align: right;">Máximo</th>
+<th>Lectura</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Bucle anidado</td>
-<td>Por cada fila del externo, buscar en el interno</td>
-<td>Externo pequeño e índice en el interno</td>
-<td>|A| · log|B|</td>
+<td>estudiante → curso</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
+<td>Un estudiante puede no tener cursos, o tener muchos</td>
 </tr>
 <tr>
-<td>Hash</td>
-<td>Construir tabla hash del menor, sondear con el mayor</td>
-<td>Sin índice útil, cabe en memoria</td>
-<td>|A| + |B|</td>
-</tr>
-<tr>
-<td>Fusión</td>
-<td>Ordenar ambos y recorrerlos a la vez</td>
-<td>Ya ordenados o hay índices</td>
-<td>|A|log|A| + |B|log|B|</td>
+<td>curso → estudiante</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
+<td>Un curso puede no tener inscritos, o tener muchos</td>
 </tr>
 </tbody>
 </table></div>
-<p>Ver un bucle anidado sobre dos tablas grandes en un plan es casi siempre la señal de un índice ausente o de una estimación de cardinalidad equivocada (clase 042).</p>
-<pre><code class="language-mermaid">flowchart TD
-    N[&quot;Necesito datos de otra tabla&quot;] --&gt; Q{&quot;¿Necesito sus&lt;br/&gt;columnas?&quot;}
-    Q -- &quot;No, solo saber si existe&quot; --&gt; S{&quot;¿Existe o no existe?&quot;}
-    S -- &quot;Existe&quot; --&gt; SE[&quot;EXISTS · semirreunión&quot;]
-    S -- &quot;No existe&quot; --&gt; AN[&quot;NOT EXISTS · antirreunión&quot;]
-    Q -- &quot;Sí&quot; --&gt; C{&quot;¿Debo conservar las filas&lt;br/&gt;sin coincidencia?&quot;}
-    C -- &quot;Sí&quot; --&gt; L[&quot;LEFT JOIN&lt;br/&gt;filtros en ON&quot;]
-    C -- &quot;No&quot; --&gt; I[&quot;INNER JOIN&quot;]
-    I --&gt; M{&quot;¿El otro lado puede&lt;br/&gt;coincidir varias veces?&quot;}
-    M -- &quot;Sí&quot; --&gt; W[&quot;¡Se multiplican las filas!&lt;br/&gt;Agregar o usar semi&quot;]
-    M -- &quot;No&quot; --&gt; OK[&quot;Cardinalidad conservada&quot;]
+<p>Cambiar el mínimo de 0 a 1 en el segundo sentido significa «no existen cursos sin inscritos», y eso <strong>no</strong> se puede expresar con una clave foránea: exige una restricción diferida o una comprobación en la aplicación. Esa es la diferencia práctica entre participación parcial y total.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Concepto</th>
+<th>Notación</th>
+<th>Cómo se implementa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Participación parcial (mín. 0)</td>
+<td>línea simple</td>
+<td>Clave foránea que admite nulo, o simple ausencia de filas</td>
+</tr>
+<tr>
+<td>Participación total (mín. 1)</td>
+<td>línea doble</td>
+<td><code>NOT NULL</code> en el lado N, o restricción diferida si el lado 1 la exige</td>
+</tr>
+<tr>
+<td>Máximo 1</td>
+<td>flecha / <code>1</code></td>
+<td>Clave única</td>
+</tr>
+<tr>
+<td>Máximo N</td>
+<td><code>N</code></td>
+<td>Sin restricción de unicidad</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="la-regla-de-traducción">La regla de traducción</h3>
+<pre><code class="language-mermaid">erDiagram
+    STUDENT ||--o{ ENROLLMENT : &quot;inscribe&quot;
+    COURSE  ||--o{ ENROLLMENT : &quot;recibe&quot;
+    TEACHER ||--o{ TEACHING   : &quot;dicta&quot;
+    COURSE  ||--o{ TEACHING   : &quot;es dictado por&quot;
+    STUDENT {
+        int  id PK
+        text nombre
+    }
+    COURSE {
+        int  id PK
+        text nombre
+        text periodo
+    }
+    ENROLLMENT {
+        int     student_id PK,FK
+        int     course_id  PK,FK
+        numeric nota
+        text    registrada_en
+    }
+    TEACHING {
+        int teacher_id PK,FK
+        int course_id  PK,FK
+    }
 </code></pre>
+<p>Reglas, en orden:</p>
+<ol>
+<li><strong>1:N</strong> → clave foránea en el lado N. No hace falta tabla nueva.</li>
+<li><strong>N:M</strong> → tabla puente cuya clave primaria es la pareja de claves foráneas. Los atributos de la relación viven ahí.</li>
+<li><strong>1:1</strong> → clave foránea con restricción <code>UNIQUE</code> en el lado con participación total.</li>
+<li><strong>Entidad débil</strong> → clave primaria compuesta por la clave de la entidad fuerte más un discriminador, con <code>ON DELETE CASCADE</code>.</li>
+</ol>
+<h3 id="relaciones-ternarias-casi-siempre-son-falsas">Relaciones ternarias: casi siempre son falsas</h3>
+<p>Una relación ternaria genuina es aquella cuya semántica <strong>no</strong> se recupera con tres binarias. El ejemplo clásico: «el proveedor P suministra la pieza Z para el proyecto Y». Saber que P suministra Z, que P trabaja en Y y que Z se usa en Y <strong>no</strong> implica el hecho ternario.</p>
+<p>En la mayoría de los modelos de gestión, sin embargo, lo que parece ternario es una entidad que aún no se ha nombrado. «Profesor dicta curso en aula» no es ternario: es la entidad <code>sesión</code>, con su horario y su capacidad. Antes de dibujar un rombo con tres patas, busca el sustantivo que falta.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Objetivo: <em>«por cada curso, número de inscritos y número de profesores»</em>.</p>
-<p>Intento directo:</p>
-<pre><code class="language-sql">SELECT c.id,
-       COUNT(DISTINCT e.student_id) AS inscritos,
-       COUNT(DISTINCT t.teacher_id) AS profesores
-FROM courses c
-LEFT JOIN enrollments e ON e.course_id = c.id
-LEFT JOIN teaching    t ON t.course_id = c.id
-GROUP BY c.id;
-</code></pre>
-<p><strong>Traza del problema.</strong> Para un curso con 40 inscritos y 3 profesores, la primera reunión produce 40 filas y la segunda multiplica cada una por 3: <strong>120 filas</strong> para ese curso. Sin <code>DISTINCT</code>, <code>COUNT(e.student_id)</code> daría 120 en lugar de 40, y <code>COUNT(t.teacher_id)</code> daría 120 en lugar de 3. Es el <strong>doble conteo</strong>, el error de reunión más caro porque el resultado es plausible.</p>
-<p>El <code>DISTINCT</code> corrige el número, pero no el trabajo: el motor sigue materializando 120 filas por curso. Con 300 cursos y esa proporción, 36 000 filas intermedias para producir 300.</p>
-<p><strong>Forma correcta: agregar antes de reunir.</strong></p>
-<pre><code class="language-sql">SELECT c.id,
-       COALESCE(i.inscritos, 0)  AS inscritos,
-       COALESCE(p.profesores, 0) AS profesores
-FROM courses c
-LEFT JOIN (SELECT course_id, COUNT(*) AS inscritos
-           FROM enrollments GROUP BY course_id) i ON i.course_id = c.id
-LEFT JOIN (SELECT course_id, COUNT(*) AS profesores
-           FROM teaching   GROUP BY course_id) p ON p.course_id = c.id;
-</code></pre>
-<p>Cada subconsulta devuelve <strong>una fila por curso</strong>, así que ninguna reunión multiplica. Además <code>COALESCE</code> convierte el nulo de los cursos sin inscritos en 0, que es lo que un informe espera.</p>
-<p><strong>Comprobación numérica:</strong></p>
+<p>Requisito: <em>«Un curso lo puede dictar más de un profesor, y un profesor dicta varios cursos. Todo curso debe tener al menos un profesor asignado.»</em></p>
+<p><strong>Cardinalidades completas:</strong></p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Enfoque</th>
-<th style="text-align: right;">Filas intermedias</th>
-<th>Resultado correcto</th>
+<th>Sentido</th>
+<th style="text-align: right;">Mín</th>
+<th style="text-align: right;">Máx</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Doble <code>LEFT JOIN</code> sin <code>DISTINCT</code></td>
-<td style="text-align: right;">36 000</td>
-<td>No (120 / 120)</td>
+<td>curso → profesor</td>
+<td style="text-align: right;"><strong>1</strong></td>
+<td style="text-align: right;">N</td>
 </tr>
 <tr>
-<td>Doble <code>LEFT JOIN</code> con <code>DISTINCT</code></td>
-<td style="text-align: right;">36 000</td>
-<td>Sí (40 / 3)</td>
-</tr>
-<tr>
-<td>Agregación previa</td>
-<td style="text-align: right;">600</td>
-<td>Sí (40 / 3)</td>
+<td>profesor → curso</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">N</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Antirreunión con la trampa de los nulos.</strong> «Estudiantes sin ninguna inscripción»:</p>
-<pre><code class="language-sql">-- correcto en cualquier caso
-SELECT s.* FROM students s
-WHERE NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.student_id = s.id);
-
--- también correcto, forma clásica
-SELECT s.* FROM students s
-LEFT JOIN enrollments e ON e.student_id = s.id
-WHERE e.student_id IS NULL;
-
--- ROTO si enrollments.student_id admite nulos
-SELECT * FROM students
-WHERE id NOT IN (SELECT student_id FROM enrollments);
+<p>El mínimo 1 del primer sentido es participación total del lado <code>course</code>. Traducción:</p>
+<pre><code class="language-sql">CREATE TABLE teaching (
+  course_id  INTEGER NOT NULL REFERENCES courses(id)  ON DELETE CASCADE,
+  teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
+  PRIMARY KEY (course_id, teacher_id)
+);
 </code></pre>
-<p>La tercera devuelve cero filas si existe un solo <code>student_id</code> nulo (clase 012).</p>
+<p>Esto garantiza N:M y evita duplicados. <strong>No</strong> garantiza «todo curso tiene al menos un profesor»: se puede insertar un curso y no insertar nunca su fila en <code>teaching</code>.</p>
+<p>Las tres formas honestas de cerrar ese hueco, con su costo:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Mecanismo</th>
+<th>Garantía</th>
+<th>Costo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restricción diferida al final de la transacción</td>
+<td>Total, en el motor</td>
+<td>Solo en motores que la soportan (PostgreSQL sí; SQLite y MySQL, no de esta forma)</td>
+</tr>
+<tr>
+<td>Comprobación en la aplicación al crear el curso</td>
+<td>Depende del cliente</td>
+<td>Cualquier otro cliente la salta</td>
+</tr>
+<tr>
+<td>Invariante auditada periódicamente</td>
+<td>Detecta, no impide</td>
+<td>Barata y honesta; deja ventana de inconsistencia</td>
+</tr>
+</tbody>
+</table></div>
+<p>Consulta de la invariante, útil en cualquier motor:</p>
+<pre><code class="language-sql">SELECT c.id, c.nombre
+FROM courses c
+LEFT JOIN teaching t ON t.course_id = c.id
+WHERE t.course_id IS NULL;
+</code></pre>
+<p>Cero filas significa que la participación total se cumple ahora mismo. Es exactamente el tipo de comprobación que el laboratorio ejecuta como invariante.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Necesidad</th>
 <th>Construcción</th>
-<th>Multiplica filas</th>
+<th style="text-align: right;">Tablas resultantes</th>
+<th>¿Puede el motor garantizar el mínimo 1?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Datos de ambos lados</td>
-<td><code>INNER JOIN</code></td>
-<td>Sí, si el otro lado repite</td>
+<td>1:N con participación parcial</td>
+<td style="text-align: right;">2</td>
+<td>Sí (<code>NULL</code> permitido)</td>
 </tr>
 <tr>
-<td>Conservar los sin pareja</td>
-<td><code>LEFT JOIN</code>, filtro en <code>ON</code></td>
-<td>Sí</td>
+<td>1:N con participación total en N</td>
+<td style="text-align: right;">2</td>
+<td>Sí (<code>NOT NULL</code>)</td>
 </tr>
 <tr>
-<td>Saber si existe</td>
-<td><code>EXISTS</code></td>
-<td>No</td>
+<td>1:N con participación total en 1</td>
+<td style="text-align: right;">2</td>
+<td>Solo con restricción diferida</td>
 </tr>
 <tr>
-<td>Saber si no existe</td>
-<td><code>NOT EXISTS</code></td>
-<td>No</td>
+<td>N:M</td>
+<td style="text-align: right;">3</td>
+<td>No, sin restricción diferida</td>
 </tr>
 <tr>
-<td>Contar de dos hijos a la vez</td>
-<td>Agregación previa por hijo</td>
-<td>No</td>
+<td>1:1</td>
+<td style="text-align: right;">2</td>
+<td>Sí, con <code>UNIQUE</code> + <code>NOT NULL</code> en un lado</td>
 </tr>
 <tr>
-<td>Traer una fila «la más reciente»</td>
-<td><code>LATERAL</code> / ventana con filtro</td>
-<td>No</td>
+<td>Entidad débil</td>
+<td style="text-align: right;">2</td>
+<td>Sí (clave compuesta + cascada)</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>DISTINCT</code> para tapar una reunión que multiplica.</strong> Arregla el número y esconde la causa; el costo sigue ahí.</li>
-<li><strong>Poner el filtro del lado derecho en <code>WHERE</code> con <code>LEFT JOIN</code>.</strong> Anula la externa sin avisar.</li>
-<li><strong>Reunir dos tablas hijas y agregar.</strong> Doble conteo asegurado.</li>
-<li><strong><code>NOT IN</code> con subconsulta que admite nulos.</strong> Resultado vacío.</li>
-<li><strong>Olvidar <code>COALESCE</code> tras una externa.</strong> Los nulos se propagan a las sumas y aparecen totales nulos.</li>
-<li><strong><code>NATURAL JOIN</code>.</strong> Reúne por <em>todas</em> las columnas de igual nombre; añadir una columna <code>created_at</code> a ambas tablas cambia el resultado.</li>
+<li><strong>Poner los atributos de la relación en una de las entidades.</strong> La nota en <code>students</code> obliga a un estudiante a tener una sola nota en toda su vida académica.</li>
+<li><strong>Leer «1:N» sin preguntar por los mínimos.</strong> La mitad de la información de la cardinalidad está en el mínimo, y es la mitad que genera reglas de negocio.</li>
+<li><strong>Creer que la clave foránea garantiza la participación total.</strong> Garantiza que si hay referencia, existe; no que haya referencia.</li>
+<li><strong>Inventar relaciones ternarias.</strong> Busca primero el sustantivo que falta.</li>
+<li><strong>Usar <code>ON DELETE CASCADE</code> por comodidad.</strong> En una tabla puente es razonable; sobre datos históricos borra evidencia que quizá deba conservarse.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Un informe con totales inflados es más peligroso que uno que falla: nadie lo revisa porque «funciona». Contrastar siempre un agregado con un conteo independiente es la práctica que los detecta.</p>
+<p>Las cardinalidades mal declaradas se manifiestan meses después como filas huérfanas, informes que no cuadran y consultas que devuelven duplicados. Una cardinalidad es una promesa: si el motor no puede hacerla cumplir, hay que decir explícitamente quién la vigila.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
+<p>Sobre el dominio del repositorio:</p>
 <ol>
-<li>Localiza en tu código una consulta con <code>DISTINCT</code> sobre una reunión y determina por qué está ahí.</li>
-<li>Reescríbela con agregación previa o semirreunión, y compara filas intermedias y tiempo.</li>
-<li>Construye el caso de doble conteo con datos tuyos y muestra los dos totales.</li>
-<li>Demuestra con una traza el cambio de resultado al mover una condición de <code>ON</code> a <code>WHERE</code>.</li>
+<li>Dibuja el diagrama con las cuatro cardinalidades completas de cada relación.</li>
+<li>Identifica una participación total que el esquema actual <strong>no</strong> garantiza.</li>
+<li>Escribe la consulta de invariante que la audita y ejecútala.</li>
+<li>Propón el mecanismo que la haría cumplir y declara su costo.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Con <code>A</code> de 1 000 filas y <code>B</code> de 50 000 con clave foránea a <code>A</code>, ¿cuántas filas produce <code>A JOIN B</code>? ¿Y <code>A LEFT JOIN B</code>?</li>
-<li>Explica por qué <code>EXISTS</code> no necesita <code>DISTINCT</code>.</li>
-<li>Da una consulta tuya donde el doble conteo pasaría desapercibido, e indica cómo lo detectarías.</li>
-<li>¿Por qué un bucle anidado sobre dos tablas grandes es una señal de alarma en un plan?</li>
+<li>Explica con un ejemplo del dominio por qué la nota es atributo de la relación y no de la entidad.</li>
+<li>Da una relación ternaria genuina de tu experiencia y demuestra que no se descompone en tres binarias.</li>
+<li>¿Qué diferencia práctica hay entre <code>ON DELETE CASCADE</code> y <code>ON DELETE RESTRICT</code> en la tabla <code>teaching</code>?</li>
+<li>Un modelo declara participación total en ambos lados de una relación 1:1. ¿Cómo se inserta la primera fila?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Cada estudiante con el curso en que está inscrito, sin perder a los que no tienen ninguno</p>
-<p>Con tres estudiantes (Ada, Linus, Grace), dos cursos (DB-101, SE-201) y tres
-inscripciones (Ada en ambos, Linus en DB-101, Grace en ninguno), devolver una
-fila por pareja estudiante-curso, ordenada por nombre y luego por código.
-Los estudiantes sin ninguna inscripción aparecen con el literal <code>sin-curso</code>:
-un centinela explícito en vez de un nulo, porque cada cliente de línea de
-órdenes imprime el nulo de una forma distinta y lo que aquí se compara entre
-motores es el resultado, no el formato.</p>
+<p><strong>Caso:</strong> Una relación de muchos a muchos y las dos cardinalidades que hay que poder contar</p>
+<p>Estudiantes y cursos se relacionan de muchos a muchos: un estudiante toma
+varios cursos y un curso tiene varios estudiantes. Ada toma dos cursos,
+Linus uno, Grace ninguno; DB-101 tiene dos estudiantes, SE-201 uno y AR-301
+ninguno.</p>
+<p>La consulta devuelve, para cada curso ordenado por código, cuántos
+estudiantes tiene. Que AR-301 aparezca con 0 es la mitad del ejercicio: la
+<strong>participación parcial</strong> —un curso puede existir sin estudiantes— solo se
+ve si el modelo conserva a los que no participan.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>nombre</th>
-<th>codigo</th>
+<th>curso</th>
+<th>estudiantes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Ada</code></td>
-<td><code>DB-101</code></td>
+<td><code>AR-301</code></td>
+<td><code>0</code></td>
 </tr>
 <tr>
-<td><code>Ada</code></td>
+<td><code>DB-101</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
 <td><code>SE-201</code></td>
-</tr>
-<tr>
-<td><code>Grace</code></td>
-<td><code>sin-curso</code></td>
-</tr>
-<tr>
-<td><code>Linus</code></td>
-<td><code>DB-101</code></td>
+<td><code>1</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 016</code>: 6 de
-las 9 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 016</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -396,94 +376,54 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/foreignkeys.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/current/sql/query_syntax/from.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/queries-table-expressions.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/join.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Microsoft SQL Server</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/sql-server/consulta.sql">código</a></td>
-<td><a href="https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql">doc oficial</a></td>
-</tr>
-<tr>
-<td>Oracle Database</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/oracle-database/consulta.sql">código</a></td>
-<td><a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Neo4j</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/neo4j/consulta.cypher">código</a></td>
-<td><a href="https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/patterns/">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/data-modeling/">doc oficial</a></td>
 </tr>
 <tr>
 <td>Apache Cassandra</td>
-<td>sí</td>
-<td>declarado</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/cassandra/consulta.cql">código</a></td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Amazon DynamoDB</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>OpenSearch</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://docs.opensearch.org/latest/field-types/supported-field-types/join/">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_select.html
--- nota: el LEFT JOIN es la forma portable; RIGHT y FULL solo existen desde 3.39.
+-- doc: https://sqlite.org/foreignkeys.html
+-- nota: SQLite solo comprueba las claves foraneas si PRAGMA foreign_keys esta
+--       activo; el verificador lo activa, y en una aplicacion real hay que
+--       hacerlo en cada conexion.
 
 -- === preparacion ===
 CREATE TABLE estudiantes (
@@ -492,8 +432,11 @@ CREATE TABLE estudiantes (
 );
 CREATE TABLE cursos (
     id     INTEGER PRIMARY KEY,
-    codigo TEXT NOT NULL UNIQUE
+    codigo TEXT NOT NULL
 );
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
 CREATE TABLE inscripciones (
     estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
     curso_id      INTEGER NOT NULL REFERENCES cursos(id),
@@ -501,28 +444,31 @@ CREATE TABLE inscripciones (
 );
 
 INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
 INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT e.nombre,
-       COALESCE(c.codigo, 'sin-curso') AS codigo
-FROM estudiantes e
-LEFT JOIN inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es el motor relacional que ya está instalado: viene con Python, no pide servidor y ejecuta el <code>LEFT JOIN</code> estándar. Para aprender la operación sin que la infraestructura estorbe, no hay nada más corto.</li>
-<li><strong>Por qué no:</strong> El planificador es deliberadamente simple: hasta la versión 3.39 no tenía <code>RIGHT JOIN</code> ni <code>FULL JOIN</code>, y solo dispone de bucle anidado —no hay reunión hash ni por fusión—, así que las lecciones de rendimiento de una reunión grande no se transfieren desde aquí.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+<li><strong>Por qué sí:</strong> La tabla intermedia con clave primaria compuesta es la traducción directa del diagrama entidad-relación: una fila por par, ni más ni menos, y la cardinalidad máxima queda impuesta por la clave.</li>
+<li><strong>Por qué no:</strong> El diagrama distingue participación total de parcial; la tabla no. Que un curso deba tener al menos un estudiante no se puede declarar y hay que comprobarlo aparte.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/foreignkeys.html">https://sqlite.org/foreignkeys.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/current/sql/query_syntax/from.html
--- nota: misma consulta estandar; lo que cambia es el motor que la ejecuta
---       (columnar y vectorizado), no el SQL.
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_table.html
+-- nota: la misma consulta sirve para auditar datos existentes: si algun curso
+--       aparece con mas estudiantes que inscripciones unicas, la clave
+--       compuesta no estaba y hay duplicados.
 
 -- === preparacion ===
 CREATE TABLE estudiantes (
@@ -533,46 +479,56 @@ CREATE TABLE cursos (
     id     INTEGER PRIMARY KEY,
     codigo VARCHAR NOT NULL
 );
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
 CREATE TABLE inscripciones (
     estudiante_id INTEGER NOT NULL,
-    curso_id      INTEGER NOT NULL
+    curso_id      INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO estudiantes VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones VALUES (1, 10), (1, 20), (2, 10);
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT e.nombre,
-       COALESCE(c.codigo, 'sin-curso') AS codigo
-FROM estudiantes e
-LEFT JOIN inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Misma sintaxis estándar, pero ejecutada por un motor columnar vectorizado: la misma reunión sobre millones de filas termina en un portátil. Es el motor donde comprobar que el resultado no cambia y el tiempo sí.</li>
-<li><strong>Por qué no:</strong> Está pensado para analítica de un proceso a la vez: no hay control de concurrencia entre escritores ni servicio al que se conecten cien aplicaciones, así que no sustituye al motor transaccional del que salen los datos.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/current/sql/query_syntax/from.html">https://duckdb.org/docs/current/sql/query_syntax/from.html</a></li>
+<li><strong>Por qué sí:</strong> Sirve para lo que esta clase realmente entrena: contar cardinalidades sobre datos ya existentes para descubrir cuál era el modelo de verdad, en vez del que estaba en el documento.</li>
+<li><strong>Por qué no:</strong> Sus claves foráneas no impiden borrar la fila referenciada con la misma firmeza que un motor transaccional: es un almacén para analizar, no para sostener la integridad de un sistema en producción.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_table.html">https://duckdb.org/docs/stable/sql/statements/create_table.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/queries-table-expressions.html
--- nota: EXPLAIN (ANALYZE, BUFFERS) sobre esta misma consulta dice cual de los
---       tres algoritmos de reunion eligio el planificador.
+-- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
+-- nota: para una participacion TOTAL («todo curso tiene al menos un
+--       estudiante») la clave foranea no basta: se declara DEFERRABLE
+--       INITIALLY DEFERRED y se comprueba al cerrar la transaccion.
 
--- === preparacion ===
 DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
 
+-- === preparacion ===
 CREATE TABLE estudiantes (
     id     integer PRIMARY KEY,
     nombre text NOT NULL
 );
 CREATE TABLE cursos (
     id     integer PRIMARY KEY,
-    codigo text NOT NULL UNIQUE
+    codigo text NOT NULL
 );
+-- La tabla intermedia ES la relacion. La clave compuesta impone «una fila por
+-- par»: sin ella, el mismo estudiante podria inscribirse dos veces al mismo
+-- curso y todos los recuentos quedarian inflados.
 CREATE TABLE inscripciones (
     estudiante_id integer NOT NULL REFERENCES estudiantes(id),
     curso_id      integer NOT NULL REFERENCES cursos(id),
@@ -580,168 +536,66 @@ CREATE TABLE inscripciones (
 );
 
 INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
+INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201'), (30, 'AR-301');
 INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT e.nombre,
-       COALESCE(c.codigo, 'sin-curso') AS codigo
-FROM estudiantes e
-LEFT JOIN inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
+-- El LEFT JOIN es lo que conserva AR-301 con cero: la participacion parcial
+-- solo se ve si el modelo no descarta a quien no participa.
+SELECT c.codigo AS curso,
+       COUNT(i.estudiante_id) AS estudiantes
+FROM cursos c
+LEFT JOIN inscripciones i ON i.curso_id = c.id
+GROUP BY c.id, c.codigo
+ORDER BY c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es la referencia práctica del SQL de reuniones: tiene los tres algoritmos físicos (bucle anidado, hash y fusión), <code>FULL OUTER JOIN</code>, <code>LATERAL</code> y un <code>EXPLAIN (ANALYZE, BUFFERS)</code> que dice cuál eligió y por qué. Lo que se aprende aquí se lee después en cualquier motor.</li>
-<li><strong>Por qué no:</strong> Cada conexión es un proceso del sistema operativo: sin un agrupador delante (PgBouncer), unas pocas centenas de conexiones ociosas cuestan más memoria que la propia consulta. La reunión no es el problema; el modelo de conexiones sí.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/queries-table-expressions.html">https://www.postgresql.org/docs/current/queries-table-expressions.html</a></li>
+<li><strong>Por qué sí:</strong> Impone las dos claves foráneas y la clave compuesta, y permite además diferir la comprobación al final de la transacción (<code>DEFERRABLE INITIALLY DEFERRED</code>), que es como se modela una participación total sin bloquearse al insertar la primera fila.</li>
+<li><strong>Por qué no:</strong> Cada clave foránea añade una comprobación por inserción y un bloqueo sobre la fila referenciada: en tablas de relación muy escritas, ese costo es real y hay que medirlo.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/join.html
--- nota: desde 8.0.18 MySQL tiene reunion hash; antes, un LEFT JOIN sin indice
---       degradaba a bucle anidado sobre la tabla completa.
-
--- === preparacion ===
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS cursos;
-DROP TABLE IF EXISTS estudiantes;
-
-CREATE TABLE estudiantes (
-    id     INT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL
-) ENGINE=InnoDB;
-CREATE TABLE cursos (
-    id     INT PRIMARY KEY,
-    codigo VARCHAR(20) NOT NULL UNIQUE
-) ENGINE=InnoDB;
-CREATE TABLE inscripciones (
-    estudiante_id INT NOT NULL,
-    curso_id      INT NOT NULL,
-    PRIMARY KEY (estudiante_id, curso_id),
-    FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
-    FOREIGN KEY (curso_id) REFERENCES cursos(id)
-) ENGINE=InnoDB;
-
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101'), (20, 'SE-201');
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
-
--- === consulta ===
-SELECT e.nombre,
-       COALESCE(c.codigo, 'sin-curso') AS codigo
-FROM estudiantes e
-LEFT JOIN inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Es el motor relacional más desplegado en aplicaciones web y resuelve la misma consulta con el mismo estándar; desde 8.0.18 tiene reunión hash, de modo que el <code>LEFT JOIN</code> sin índice ya no degrada a bucle anidado.</li>
-<li><strong>Por qué no:</strong> No tiene <code>FULL OUTER JOIN</code> —hay que emularlo con <code>UNION</code>— y su optimizador históricamente materializa subconsultas que PostgreSQL aplana, así que las consultas con reuniones anidadas hay que medirlas, no suponerlas.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/join.html">https://dev.mysql.com/doc/refman/8.4/en/join.html</a></li>
-</ul>
-<h4 id="microsoft-sql-server--implementacionessql-serverconsultasql">Microsoft SQL Server · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/sql-server/consulta.sql"><code>implementaciones/sql-server/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: sql-server
--- doc: https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql
--- nota: implementacion declarada. El repositorio no la ejecuta en CI porque no
---       distribuye la imagen con licencia; se revisa a mano contra la
---       documentacion citada.
-
--- === preparacion ===
-DROP TABLE IF EXISTS dbo.inscripciones;
-DROP TABLE IF EXISTS dbo.cursos;
-DROP TABLE IF EXISTS dbo.estudiantes;
-
-CREATE TABLE dbo.estudiantes (
-    id     INT PRIMARY KEY,
-    nombre NVARCHAR(50) NOT NULL
-);
-CREATE TABLE dbo.cursos (
-    id     INT PRIMARY KEY,
-    codigo NVARCHAR(20) NOT NULL UNIQUE
-);
-CREATE TABLE dbo.inscripciones (
-    estudiante_id INT NOT NULL REFERENCES dbo.estudiantes(id),
-    curso_id      INT NOT NULL REFERENCES dbo.cursos(id),
-    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
-);
-
-INSERT INTO dbo.estudiantes (id, nombre) VALUES (1, N'Ada'), (2, N'Linus'), (3, N'Grace');
-INSERT INTO dbo.cursos (id, codigo) VALUES (10, N'DB-101'), (20, N'SE-201');
-INSERT INTO dbo.inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
-
--- === consulta ===
-SELECT e.nombre,
-       COALESCE(c.codigo, N'sin-curso') AS codigo
-FROM dbo.estudiantes e
-LEFT JOIN dbo.inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN dbo.cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> El optimizador basado en costos y las sugerencias explícitas de reunión (<code>OPTION (HASH JOIN)</code>) lo hacen el mejor sitio para ver el efecto de cada algoritmo físico, y el plan gráfico de SSMS enseña la reunión mejor que cualquier diagrama.</li>
-<li><strong>Por qué no:</strong> Licencia por núcleo y una edición gratuita (Express) limitada a 10 GB por base y a un socket: la decisión de usarlo casi nunca la toma la consulta, la toma el contrato.</li>
-<li>📄 Documentación oficial: <a href="https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql">https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql</a></li>
-</ul>
-<h4 id="oracle-database--implementacionesoracle-databaseconsultasql">Oracle Database · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/oracle-database/consulta.sql"><code>implementaciones/oracle-database/consulta.sql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: oracle-database
--- doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html
--- nota: implementacion declarada. Se escribe con la sintaxis estandar de
---       reunion, no con el operador heredado (+), que Oracle sigue aceptando
---       pero que no se puede combinar con ANSI JOIN en la misma consulta.
-
--- === preparacion ===
-CREATE TABLE estudiantes (
-    id     NUMBER PRIMARY KEY,
-    nombre VARCHAR2(50) NOT NULL
-);
-CREATE TABLE cursos (
-    id     NUMBER PRIMARY KEY,
-    codigo VARCHAR2(20) NOT NULL UNIQUE
-);
-CREATE TABLE inscripciones (
-    estudiante_id NUMBER NOT NULL REFERENCES estudiantes(id),
-    curso_id      NUMBER NOT NULL REFERENCES cursos(id),
-    CONSTRAINT pk_inscripciones PRIMARY KEY (estudiante_id, curso_id)
-);
-
-INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada');
-INSERT INTO estudiantes (id, nombre) VALUES (2, 'Linus');
-INSERT INTO estudiantes (id, nombre) VALUES (3, 'Grace');
-INSERT INTO cursos (id, codigo) VALUES (10, 'DB-101');
-INSERT INTO cursos (id, codigo) VALUES (20, 'SE-201');
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10);
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 20);
-INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (2, 10);
-COMMIT;
-
--- === consulta ===
-SELECT e.nombre,
-       NVL(c.codigo, 'sin-curso') AS codigo
-FROM estudiantes e
-LEFT JOIN inscripciones i ON i.estudiante_id = e.id
-LEFT JOIN cursos c        ON c.id = i.curso_id
-ORDER BY e.nombre, codigo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Es donde viven los sistemas transaccionales grandes y antiguos, y su optimizador tiene el catálogo de transformaciones más amplio (<code>STAR TRANSFORMATION</code>, reescritura de vistas materializadas) sobre reuniones de muchas tablas.</li>
-<li><strong>Por qué no:</strong> Sintaxis heredada <code>(+)</code> conviviendo con la estándar, cadena vacía tratada como nulo —lo que rompe el centinela <code>COALESCE</code> de otros motores— y un costo de licencia que solo un sistema muy grande justifica.</li>
-<li>📄 Documentación oficial: <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html">https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html</a></li>
-</ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/
-// nota: $unwind con preserveNullAndEmptyArrays es lo que convierte el $lookup
-//       en una reunion EXTERNA; sin esa opcion, Grace desaparece del resultado.
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/patterns/
+// nota: no hay tabla intermedia. La relacion de muchos a muchos es la arista
+//       misma, y el diagrama entidad-relacion se parece tanto al modelo fisico
+//       que el paso de uno a otro deja de ser una traduccion.
 
 // === preparacion ===
-db.estudiantes.drop();
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (:Curso {codigo: 'AR-301'}),
+       (a)-[:INSCRITO_EN]-&gt;(db),
+       (a)-[:INSCRITO_EN]-&gt;(se),
+       (l)-[:INSCRITO_EN]-&gt;(db);
+
+// === consulta ===
+MATCH (c:Curso)
+OPTIONAL MATCH (e:Estudiante)-[:INSCRITO_EN]-&gt;(c)
+RETURN c.codigo AS curso, count(e) AS estudiantes
+ORDER BY curso;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> La relación de muchos a muchos no necesita tabla intermedia: es una arista. El diagrama entidad-relación y el modelo físico se parecen tanto que el paso de uno a otro deja de ser una traducción.</li>
+<li><strong>Por qué no:</strong> Contar por etiqueta obliga a recorrer todos los nodos de esa etiqueta, que es exactamente lo que una tabla con índice hace mejor: el grafo gana en recorridos, no en recuentos globales.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/patterns/">https://neo4j.com/docs/cypher-manual/current/patterns/</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/data-modeling/
+// nota: aqui la relacion vive como un arreglo de referencias dentro del curso.
+//       Es el modelo natural cuando la pregunta frecuente es «quienes estan en
+//       este curso»; la pregunta inversa exige un indice multiclave.
+
+// === preparacion ===
 db.cursos.drop();
-db.inscripciones.drop();
+db.estudiantes.drop();
 
 db.estudiantes.insertMany([
   { _id: 1, nombre: &quot;Ada&quot; },
@@ -749,104 +603,24 @@ db.estudiantes.insertMany([
   { _id: 3, nombre: &quot;Grace&quot; },
 ]);
 db.cursos.insertMany([
-  { _id: 10, codigo: &quot;DB-101&quot; },
-  { _id: 20, codigo: &quot;SE-201&quot; },
-]);
-db.inscripciones.insertMany([
-  { estudiante_id: 1, curso_id: 10 },
-  { estudiante_id: 1, curso_id: 20 },
-  { estudiante_id: 2, curso_id: 10 },
+  { _id: 10, codigo: &quot;DB-101&quot;, inscritos: [1, 2] },
+  { _id: 20, codigo: &quot;SE-201&quot;, inscritos: [1] },
+  // Participacion parcial: el curso existe con el arreglo vacio.
+  { _id: 30, codigo: &quot;AR-301&quot;, inscritos: [] },
 ]);
 
 // === consulta ===
-db.estudiantes
+db.cursos
   .aggregate([
-    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
-                 foreignField: &quot;estudiante_id&quot;, as: &quot;inscripcion&quot; } },
-    { $unwind: { path: &quot;$inscripcion&quot;, preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: &quot;cursos&quot;, localField: &quot;inscripcion.curso_id&quot;,
-                 foreignField: &quot;_id&quot;, as: &quot;curso&quot; } },
-    { $unwind: { path: &quot;$curso&quot;, preserveNullAndEmptyArrays: true } },
-    { $project: { _id: 0, nombre: 1,
-                  codigo: { $ifNull: [&quot;$curso.codigo&quot;, &quot;sin-curso&quot;] } } },
-    { $sort: { nombre: 1, codigo: 1 } },
+    { $project: { _id: 0, curso: &quot;$codigo&quot;, estudiantes: { $size: &quot;$inscritos&quot; } } },
+    { $sort: { curso: 1 } },
   ])
-  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.codigo));
+  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.estudiantes));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Desde la versión 3.2 <code>$lookup</code> hace la reunión izquierda dentro del motor, así que un modelo documental normalizado no obliga a reunir en la aplicación. Con <code>preserveNullAndEmptyArrays</code> el <code>$unwind</code> conserva a quien no tiene pareja: es literalmente un <code>LEFT JOIN</code>.</li>
-<li><strong>Por qué no:</strong> <code>$lookup</code> no usa índices del lado interno con la misma libertad que un motor relacional y no hay reunión hash ni por fusión entre colecciones: cuando el patrón de acceso pide reunir todo el rato, el modelo está mal y lo que tocaba era incrustar el curso en el documento del estudiante.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/</a></li>
-</ul>
-<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-cypher">// motor: neo4j
-// doc: https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/
-// nota: implementacion declarada. OPTIONAL MATCH es la reunion externa: si el
-//       patron no encuentra pareja, las variables del patron quedan en null y
-//       la fila del estudiante sobrevive.
-
-// === preparacion ===
-MATCH (n) DETACH DELETE n;
-CREATE (a:Estudiante {nombre: 'Ada'}),
-       (l:Estudiante {nombre: 'Linus'}),
-       (g:Estudiante {nombre: 'Grace'}),
-       (db:Curso {codigo: 'DB-101'}),
-       (se:Curso {codigo: 'SE-201'}),
-       (a)-[:INSCRITO_EN]-&gt;(db),
-       (a)-[:INSCRITO_EN]-&gt;(se),
-       (l)-[:INSCRITO_EN]-&gt;(db);
-
-// === consulta ===
-MATCH (e:Estudiante)
-OPTIONAL MATCH (e)-[:INSCRITO_EN]-&gt;(c:Curso)
-RETURN e.nombre AS nombre, coalesce(c.codigo, 'sin-curso') AS codigo
-ORDER BY nombre, codigo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> La reunión externa se llama <code>OPTIONAL MATCH</code> y no hay tabla intermedia que declarar: la inscripción es una arista. Cuando el recorrido tiene varios saltos —estudiante, curso, prerrequisito, profesor— el costo no crece con el tamaño del grafo, sino con el del vecindario recorrido.</li>
-<li><strong>Por qué no:</strong> Ese mismo modelo penaliza lo tabular: contar y agregar sobre todos los nodos de una etiqueta es más caro que en una tabla, y mantener un grafo solo para reunir dos entidades que ya son tablas añade un sistema entero sin resolver nada.</li>
-<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/">https://neo4j.com/docs/cypher-manual/current/clauses/optional-match/</a></li>
-</ul>
-<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/016-reuniones-inner-outer-semi-y-anti/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
-<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
-<pre><code class="language-sql">-- motor: cassandra
--- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
--- nota: implementacion declarada, y deliberadamente distinta. CQL no tiene
---       JOIN: la reunion se paga en la escritura y se guarda ya resuelta la
---       tabla que la consulta necesita. El precio esta en el comentario final.
-
--- === preparacion ===
-CREATE KEYSPACE IF NOT EXISTS escuela
-  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
-
-DROP TABLE IF EXISTS escuela.cursos_por_estudiante;
-
--- La tabla es la consulta: una particion por estudiante, los codigos ordenados
--- dentro de ella. No modela entidades, modela una pregunta.
-CREATE TABLE escuela.cursos_por_estudiante (
-    nombre text,
-    codigo text,
-    PRIMARY KEY (nombre, codigo)
-) WITH CLUSTERING ORDER BY (codigo ASC);
-
-INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'DB-101');
-INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Ada', 'SE-201');
-INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Linus', 'DB-101');
--- Grace no tiene inscripciones: el centinela tambien se escribe a mano, porque
--- aqui no hay reunion externa que lo genere.
-INSERT INTO escuela.cursos_por_estudiante (nombre, codigo) VALUES ('Grace', 'sin-curso');
-
--- === consulta ===
--- El ORDER BY solo ordena DENTRO de una particion. Al recorrer varias, el orden
--- lo fija el token de la clave, no el nombre: por eso este SELECT lleva el
--- ordenamiento final del lado del cliente en cualquier uso serio.
-SELECT nombre, codigo FROM escuela.cursos_por_estudiante;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> CQL no tiene <code>JOIN</code>, y aun así el caso se resuelve: se paga la reunión en la escritura y se guarda ya resuelta la tabla que la consulta necesita. Es la lección de modelado más importante de las columnas anchas —se modela desde la consulta, no desde las entidades— y da lecturas de una sola partición a latencia predecible.</li>
-<li><strong>Por qué no:</strong> Cada consulta nueva es una tabla nueva que hay que llenar y mantener coherente sin transacciones entre tablas; y el orden total del resultado no está garantizado al recorrer varias particiones, porque el orden entre particiones lo fija el token, no el <code>ORDER BY</code>.</li>
-<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+<li><strong>Por qué sí:</strong> Permite modelar la relación como un arreglo de referencias dentro del curso, que es el modelo natural cuando la pregunta frecuente es «quiénes están en este curso».</li>
+<li><strong>Por qué no:</strong> El arreglo tiene el límite de 16 MB del documento y hace cara la pregunta inversa —«en qué cursos está este estudiante»— salvo que se añada un índice multiclave y se acepte mantener las dos direcciones.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/">https://www.mongodb.com/docs/manual/data-modeling/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -861,22 +635,10 @@ SELECT nombre, codigo FROM escuela.cursos_por_estudiante;
 </thead>
 <tbody>
 <tr>
-<td>Redis</td>
-<td>Redis no tiene reuniones ni un lenguaje de consulta sobre relaciones: es un servidor de estructuras de datos donde el acceso es por clave. Reunir exigiría traer las claves de los estudiantes, luego las de sus inscripciones y luego las de los cursos —tres viajes por estudiante— y hacer la reunión en la aplicación, que es exactamente lo que un motor relacional evita.</td>
-<td>Guardar el resultado ya reunido como valor de una clave (<code>estudiante:1:cursos</code>) y recalcularlo cuando cambie el origen: Redis como caché de la reunión que hace otro motor, no como sustituto.</td>
-<td><a href="https://redis.io/docs/latest/develop/data-types/">doc</a></td>
-</tr>
-<tr>
-<td>Amazon DynamoDB</td>
-<td>El modelo de DynamoDB parte de que no hay reuniones en tiempo de consulta: solo se puede acceder por clave de partición y ordenación. Una reunión de tres entidades se traduce en varias <code>Query</code> o en un <code>Scan</code>, y el <code>Scan</code> lee y cobra la tabla entera.</td>
-<td>Diseño de tabla única: estudiante e inscripciones comparten clave de partición (<code>ESTUDIANTE#1</code>) y se distinguen por la de ordenación (<code>PERFIL</code>, <code>CURSO#DB-101</code>), de modo que una sola <code>Query</code> devuelve lo que aquí es una reunión.</td>
-<td><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-modeling-nosql-B.html">doc</a></td>
-</tr>
-<tr>
-<td>OpenSearch</td>
-<td>Es un índice invertido para buscar y puntuar documentos, no para relacionar entidades. El campo <code>join</code> existe, pero obliga a que padre e hijo vivan en el mismo fragmento y penaliza cada consulta; la propia documentación recomienda desnormalizar antes que usarlo.</td>
-<td>Indexar el documento ya desnormalizado (estudiante con la lista de sus cursos dentro) y reindexar cuando cambie, aceptando que el índice va por detrás del origen.</td>
-<td><a href="https://docs.opensearch.org/latest/field-types/supported-field-types/join/">doc</a></td>
+<td>Apache Cassandra</td>
+<td>Una relación de muchos a muchos consultable en las dos direcciones no cabe en una sola tabla: haría falta una tabla por dirección de consulta y escribir en las dos, sin transacción que las mantenga de acuerdo.</td>
+<td><code>estudiantes_por_curso</code> y <code>cursos_por_estudiante</code> como dos tablas independientes, escritas ambas en cada inscripción, asumiendo la posibilidad de que una quede desincronizada tras un fallo.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -927,27 +689,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
-  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
-<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
-  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
-<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
-  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Peter Pin-Shan Chen</strong> (1976). <a href="https://dl.acm.org/doi/10.1145/320434.320440">The Entity-Relationship Model - Toward a Unified View of Data</a>. ACM TODS 1(1). DOI <a href="https://doi.org/10.1145/320434.320440">10.1145/320434.320440</a>.<br />
+  Origen del diagrama entidad-relación.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="015.html">← Anterior</a> · <a href="017.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="015.html">← Anterior</a> · <a href="017.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="016">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="015.html"><span class="sentido">← Anterior · 015</span>SELECT: filtrado, proyección y orden con semántica precisa</a>
-<a class="siguiente" href="017.html"><span class="sentido">Siguiente · 017 →</span>Agregación, GROUP BY y HAVING sin duplicar filas</a>
+<a class="anterior" href="015.html"><span class="sentido">← Anterior · 015</span>De requisitos ambiguos a entidades defendibles</a>
+<a class="siguiente" href="017.html"><span class="sentido">Siguiente · 017 →</span>Claves, identidad y el debate natural frente a sustituta</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

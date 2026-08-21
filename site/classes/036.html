@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Registro anticipado y recuperación: WAL y ARIES. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta name="description" content="Consultas, índices y agregación sobre documentos. Parte 06: Documentos y clave-valor.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/036.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="036 — Registro anticipado y recuperación: WAL y ARIES · Database Systems Labs">
-<meta property="og:description" content="Registro anticipado y recuperación: WAL y ARIES. Parte 07: Transacciones, concurrencia y recuperación.">
+<meta property="og:title" content="036 — Consultas, índices y agregación sobre documentos · Database Systems Labs">
+<meta property="og:description" content="Consultas, índices y agregación sobre documentos. Parte 06: Documentos y clave-valor.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/036.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "036 — Registro anticipado y recuperación: WAL y ARIES", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT4H", "teaches": ["WAL", "punto de control", "rehacer", "deshacer", "LSN"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>036 — Registro anticipado y recuperación: WAL y ARIES · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "036 — Consultas, índices y agregación sobre documentos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["índice compuesto", "canalización de agregación", "índice multiclave", "cobertura"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>036 — Consultas, índices y agregación sobre documentos · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,237 +49,582 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-07.html">Parte 07 · Transacciones, concurrencia y recuperación</a>
+  <a href="parte-06.html">Parte 06 · Documentos y clave-valor</a>
   <span aria-hidden="true">/</span><span>Clase 036</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="036--registro-anticipado-y-recuperación-wal-y-aries">036 — Registro anticipado y recuperación: WAL y ARIES</h1>
+<h1 id="036--consultas-índices-y-agregación-sobre-documentos">036 — Consultas, índices y agregación sobre documentos</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-06-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-036%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="035.html">← Anterior</a> · <a href="037.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="035.html">← Anterior</a> · <a href="037.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 07 — Transacciones, concurrencia y recuperación · Avanzado ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>WAL</code> · <code>punto de control</code> · <code>rehacer</code> · <code>deshacer</code> · <code>LSN</code></p>
+<p>Parte 06 — Documentos y clave-valor · Intermedio ·
+3 horas estimadas · motores <code>mongodb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>índice compuesto</code> · <code>canalización de agregación</code> · <code>índice multiclave</code> · <code>cobertura</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 036&quot;]
+    C --&gt; K1[&quot;índice compuesto&quot;]
+    C --&gt; K2[&quot;canalización de agregación&quot;]
+    C --&gt; K3[&quot;índice multiclave&quot;]
+    C --&gt; K4[&quot;cobertura&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Entender cómo un motor sobrevive a una caída: el registro anticipado y el algoritmo de recuperación. Es el mecanismo que hace real la D de ACID, y explica muchas decisiones de configuración.</p>
+<p>Consultar documentos con la misma disciplina que se consulta SQL: sabiendo qué índice se usa, cuántos documentos se examinan y por qué una etapa de la canalización es cara.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Enunciar la regla del registro anticipado y por qué es necesaria.</li>
-<li>Describir las tres fases de ARIES y qué garantiza cada una.</li>
-<li>Explicar qué es un punto de control y qué acorta.</li>
-<li>Relacionar <code>fsync</code> con la durabilidad real ante cada tipo de fallo.</li>
-<li>Leer el modo WAL de SQLite como ejemplo completo y pequeño.</li>
+<li>Leer un plan de MongoDB y distinguir <code>COLLSCAN</code> de <code>IXSCAN</code>.</li>
+<li>Aplicar la regla ESR para ordenar las claves de un índice compuesto.</li>
+<li>Reconocer una consulta cubierta y qué la habilita.</li>
+<li>Ordenar las etapas de una canalización de agregación para reducir el trabajo.</li>
+<li>Prever el efecto de los índices multiclave y parciales.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-regla">La regla</h3>
-<p><strong>Antes de escribir una página modificada al disco, debe estar en disco el registro que describe esa modificación.</strong></p>
-<p>Sin esa regla no hay recuperación posible: si la página llegara antes que el registro, tras una caída habría un cambio en los datos del que no queda constancia de a qué transacción pertenece, y no se sabría si deshacerlo.</p>
-<p>Escribir el registro es barato (secuencial, al final del archivo); escribir las páginas es caro (aleatorio). Por eso el motor confirma la transacción cuando el registro está a salvo y aplaza las páginas.</p>
-<h3 id="aries-las-tres-fases">ARIES: las tres fases</h3>
-<p>Mohan et al. (1992) definen el algoritmo que implementan casi todos los motores. Cada registro lleva un <strong>LSN</strong> (número de secuencia), y cada página guarda el LSN del último cambio que la afectó.</p>
+<h3 id="leer-el-plan">Leer el plan</h3>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
+              .explain(&quot;executionStats&quot;)
+</code></pre>
+<p>Los tres números que importan:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Significa</th>
+<th>Objetivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nReturned</code></td>
+<td>Documentos devueltos</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>totalKeysExamined</code></td>
+<td>Entradas de índice leídas</td>
+<td>Cercano a <code>nReturned</code></td>
+</tr>
+<tr>
+<td><code>totalDocsExamined</code></td>
+<td>Documentos leídos</td>
+<td>Cercano a <code>nReturned</code>; <strong>0</strong> si la consulta está cubierta</td>
+</tr>
+</tbody>
+</table></div>
+<p>Diagnóstico rápido: si <code>totalDocsExamined</code> es mucho mayor que <code>nReturned</code>, falta índice o el que hay no sirve. Es el mismo razonamiento de selectividad de la clase 039, con otro vocabulario.</p>
+<h3 id="la-regla-esr">La regla ESR</h3>
+<p>Para un índice compuesto, el orden de las claves debe ser:</p>
+<ol>
+<li><strong>E</strong>quality — campos comparados por igualdad.</li>
+<li><strong>S</strong>ort — campos por los que se ordena.</li>
+<li><strong>R</strong>ange — campos comparados por rango.</li>
+</ol>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, nota: {$gte: 4.0}}).sort({registrada_en: -1})
+db.enrollments.createIndex({course_id: 1, registrada_en: -1, nota: 1})
+//                          E              S                  R
+</code></pre>
+<p>Poner el rango antes que el orden obliga al motor a ordenar en memoria el resultado del rango. Es la misma razón por la que en un B-Tree relacional el rango «rompe» el uso de las columnas siguientes (clase 039): una vez que se recorre un intervalo, las claves posteriores ya no están ordenadas globalmente.</p>
+<h3 id="consulta-cubierta">Consulta cubierta</h3>
+<p>Si todos los campos que la consulta necesita —filtro, orden y proyección— están en el índice, el motor no toca los documentos:</p>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;}, {_id: 0, student_id: 1, nota: 1})
+db.enrollments.createIndex({course_id: 1, student_id: 1, nota: 1})
+// totalDocsExamined: 0
+</code></pre>
+<p>Hay que excluir <code>_id</code> explícitamente si no está en el índice, porque se devuelve por omisión.</p>
+<h3 id="tipos-de-índice">Tipos de índice</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Para qué</th>
+<th>Cuidado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple / compuesto</td>
+<td>Lo habitual</td>
+<td>Orden ESR</td>
+</tr>
+<tr>
+<td><strong>Multiclave</strong></td>
+<td>Campo que es un arreglo</td>
+<td>Una entrada por elemento; solo un campo de arreglo por índice</td>
+</tr>
+<tr>
+<td><strong>Parcial</strong></td>
+<td>Subconjunto de documentos</td>
+<td>Solo se usa si la consulta implica el filtro del índice</td>
+</tr>
+<tr>
+<td><strong>TTL</strong></td>
+<td>Expiración automática</td>
+<td>Borra en segundo plano, con retraso</td>
+</tr>
+<tr>
+<td>Texto</td>
+<td>Búsqueda léxica básica</td>
+<td>Uno por colección; para búsqueda seria, parte 06</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="canalización-de-agregación">Canalización de agregación</h3>
+<p>El orden de las etapas determina cuánto trabajo se hace:</p>
+<pre><code class="language-javascript">// MAL: agrupa 5 millones y luego descarta
+db.enrollments.aggregate([
+  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}},
+  {$match: {_id: &quot;curso-bd&quot;}}
+])
+
+// BIEN: filtra primero, con índice
+db.enrollments.aggregate([
+  {$match: {course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;}},
+  {$group: {_id: &quot;$course_id&quot;, promedio: {$avg: &quot;$nota&quot;}}}
+])
+</code></pre>
+<p>Es la equivalencia E2 de la clase 011 —empujar el filtro— aplicada a mano. El optimizador de MongoDB reordena algunos casos, pero no todos: cualquier etapa que calcule campos nuevos (<code>$addFields</code>, <code>$project</code>) bloquea el movimiento de las etapas posteriores.</p>
+<p>Regla: <strong><code>$match</code> y <code>$limit</code> lo antes posible; <code>$lookup</code> y <code>$unwind</code> lo más tarde posible.</strong></p>
 <pre><code class="language-mermaid">flowchart LR
-    C[&quot;Caída&quot;] --&gt; A[&quot;1. ANÁLISIS&lt;br/&gt;desde el último punto de control:&lt;br/&gt;qué transacciones estaban activas&lt;br/&gt;y qué páginas sucias había&quot;]
-    A --&gt; R[&quot;2. REHACER&lt;br/&gt;reaplicar TODO lo registrado,&lt;br/&gt;incluso de transacciones no confirmadas&lt;br/&gt;→ estado exacto del momento de la caída&quot;]
-    R --&gt; U[&quot;3. DESHACER&lt;br/&gt;revertir las transacciones&lt;br/&gt;que no llegaron a confirmar&quot;]
-    U --&gt; OK[&quot;Base consistente&quot;]
+    M[&quot;$match&lt;br/&gt;usa índice&quot;] --&gt; S[&quot;$sort&lt;br/&gt;usa índice si sigue al match&quot;]
+    S --&gt; L[&quot;$limit&quot;]
+    L --&gt; P[&quot;$project&lt;br/&gt;reduce el tamaño&quot;]
+    P --&gt; G[&quot;$group&lt;br/&gt;en memoria&quot;]
+    G --&gt; LK[&quot;$lookup&lt;br/&gt;lo más tarde posible&quot;]
 </code></pre>
-<p>El punto que sorprende: la fase de rehacer <strong>reaplica también cambios de transacciones que no se confirmaron</strong>. Se llama <em>repeating history</em>. Reconstruye el estado exacto del instante de la caída y solo después deshace lo que corresponde. Es más simple y más robusto que intentar filtrar durante el rehacer.</p>
-<p>Los registros de compensación (CLR) registran el propio deshacer, de forma que si el sistema cae <strong>durante</strong> la recuperación, la siguiente no repite trabajo ya deshecho. Es lo que hace la recuperación idempotente.</p>
-<h3 id="puntos-de-control">Puntos de control</h3>
-<p>Sin ellos, la recuperación tendría que leer el registro desde el principio de los tiempos. Un punto de control anota el estado en un instante; la recuperación empieza ahí.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Parámetro</th>
-<th>Efecto de aumentarlo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Intervalo entre puntos de control</td>
-<td>Menos E/S en marcha, <strong>recuperación más larga</strong></td>
-</tr>
-<tr>
-<td>Tamaño máximo del registro</td>
-<td>Ídem</td>
-</tr>
-</tbody>
-</table></div>
-<p>Es un compromiso explícito entre rendimiento normal y tiempo de recuperación (RTO, clase 048). Un sistema con puntos de control cada hora puede tardar mucho en volver.</p>
-<h3 id="fsync-durabilidad-frente-a-qué"><code>fsync</code>: durabilidad frente a qué</h3>
-<p>Escribir en un archivo no lo pone en el disco: lo deja en la caché del sistema operativo. <code>fsync</code> fuerza el volcado.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Configuración</th>
-<th>Caída del proceso</th>
-<th>Caída de la máquina</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Sin <code>fsync</code> en el commit</td>
-<td>Sobrevive</td>
-<td><strong>Se pierden transacciones confirmadas</strong></td>
-</tr>
-<tr>
-<td>Con <code>fsync</code> en el commit</td>
-<td>Sobrevive</td>
-<td>Sobrevive</td>
-</tr>
-<tr>
-<td><code>fsync</code> + disco que miente sobre su caché</td>
-<td>Sobrevive</td>
-<td><strong>Puede perderse o corromperse</strong></td>
-</tr>
-</tbody>
-</table></div>
-<p>La tercera fila es real: discos de consumo con caché de escritura sin respaldo de energía confirman <code>fsync</code> antes de haber escrito. Es la razón por la que el hardware de servidor lleva caché con batería.</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Parámetro</th>
-<th>Valor seguro</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL</td>
-<td><code>synchronous_commit</code></td>
-<td><code>on</code></td>
-</tr>
-<tr>
-<td>PostgreSQL</td>
-<td><code>fsync</code></td>
-<td><code>on</code> (nunca <code>off</code> en producción)</td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td><code>innodb_flush_log_at_trx_commit</code></td>
-<td><code>1</code></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td><code>synchronous</code></td>
-<td><code>FULL</code>, o <code>NORMAL</code> con WAL</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="wal-en-sqlite">WAL en SQLite</h3>
-<p>SQLite es lo bastante pequeño para leer su mecanismo completo. En modo WAL:</p>
-<ul>
-<li>Los cambios se añaden al archivo <code>-wal</code>; el archivo principal no se toca en el momento del commit.</li>
-<li>Los lectores consultan un índice en memoria compartida (<code>-shm</code>) para saber qué páginas leer del WAL y cuáles del archivo principal.</li>
-<li>Un <strong>checkpoint</strong> traslada las páginas del WAL al archivo principal.</li>
-</ul>
-<p>De ahí que <code>synchronous = NORMAL</code> sea seguro con WAL frente a la caída del proceso pero no frente a un corte de energía: el WAL no se sincroniza en cada commit, solo en los checkpoints.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Traza de una transacción y su recuperación.</p>
-<pre><code class="language-text">LSN  Registro
-100  BEGIN T1
-101  T1: UPDATE cuentas id=1  saldo 1000 -&gt; 700   [undo: 1000] [redo: 700]
-102  BEGIN T2
-103  T2: UPDATE cuentas id=2  saldo  500 -&gt; 800   [undo: 500]  [redo: 800]
-104  T1: UPDATE cuentas id=2  saldo  800 -&gt; 900   (espera: fila bloqueada por T2)
-105  COMMIT T2                      &lt;- fsync aquí
-106  CHECKPOINT (activas: T1)
-107  T1: UPDATE cuentas id=2  saldo  800 -&gt; 900   [undo: 800] [redo: 900]
-     *** CAÍDA ***   T1 nunca confirmó
+<p>Consulta: <em>«las 20 inscripciones activas más recientes del curso, con nota, ordenadas por fecha»</em>, sobre 5 millones de documentos.</p>
+<p><strong>Sin índice adecuado:</strong></p>
+<pre><code class="language-javascript">db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;})
+              .sort({registrada_en: -1}).limit(20).explain(&quot;executionStats&quot;)
 </code></pre>
-<p><strong>Recuperación:</strong></p>
-<pre><code class="language-text">ANÁLISIS   desde LSN 106: T1 activa, sin COMMIT. Páginas sucias: cuentas(1), cuentas(2)
-REHACER    reaplica 107 (y 101, 103 si sus páginas no estaban en disco)
-           estado tras rehacer: id=1 -&gt; 700, id=2 -&gt; 900     (incluye cambios de T1)
-DESHACER   T1 no confirmó: revertir 107 y 101 usando la información de deshacer
-           107 deshecho -&gt; id=2 vuelve a 800   (CLR con LSN 108)
-           101 deshecho -&gt; id=1 vuelve a 1000  (CLR con LSN 109)
+<pre><code class="language-text">stage:                COLLSCAN
+totalDocsExamined:    5 000 000
+totalKeysExamined:    0
+nReturned:            20
+executionTimeMillis:  4 210
+SORT: in-memory, 38 MB    ← cerca del límite de 100 MB
 </code></pre>
-<p><strong>Estado final:</strong> <code>id=1 → 1000</code> (T1 revertida), <code>id=2 → 800</code> (T2 confirmada y conservada). Exactamente lo que ACID promete: T2 duradera, T1 como si nunca hubiera ocurrido.</p>
-<p>Obsérvese que la fase de rehacer dejó momentáneamente <code>id=2 = 900</code>, un valor de una transacción no confirmada. No es un error: es el estado del instante de la caída, que la fase de deshacer corrige.</p>
-<p><strong>Comprobación en SQLite:</strong></p>
-<pre><code class="language-bash">python - &lt;&lt;'PY'
-import sqlite3, os
-con = sqlite3.connect('demo.db')
-con.execute('PRAGMA journal_mode=WAL')
-con.execute('CREATE TABLE IF NOT EXISTS cuentas(id INTEGER PRIMARY KEY, saldo INTEGER)')
-con.execute('INSERT OR REPLACE INTO cuentas VALUES (1, 1000)')
-con.commit()
-con.execute('BEGIN')
-con.execute('UPDATE cuentas SET saldo = 700 WHERE id = 1')
-print('WAL existe:', os.path.exists('demo.db-wal'))   # los cambios están en el WAL
-os._exit(1)                                            # muerte del proceso, sin COMMIT
-PY
-sqlite3 demo.db &quot;SELECT saldo FROM cuentas WHERE id=1;&quot;   # 1000: la transacción se revirtió
+<p>Cinco millones de documentos leídos para devolver 20. Además el ordenamiento se hace en memoria; superados los 100 MB, MongoDB aborta la consulta salvo que se permita el uso de disco.</p>
+<p><strong>Con índice ESR:</strong></p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1})
 </code></pre>
-<p>El archivo <code>-wal</code> es visible durante la transacción y la reapertura ejecuta la recuperación automáticamente.</p>
+<pre><code class="language-text">stage:                IXSCAN → FETCH → LIMIT
+totalKeysExamined:    20
+totalDocsExamined:    20
+nReturned:            20
+executionTimeMillis:  1
+SORT: ninguno    ← el índice ya entrega el orden
+</code></pre>
+<p>De 5 000 000 a 20 documentos examinados. La desaparición de la etapa <code>SORT</code> es tan importante como la reducción de lecturas: el índice ya está ordenado por <code>registrada_en</code> dentro de cada <code>(course_id, estado)</code>.</p>
+<p><strong>Hacerla cubierta.</strong> Si la interfaz solo necesita <code>student_id</code> y <code>nota</code>:</p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, estado: 1, registrada_en: -1, student_id: 1, nota: 1})
+db.enrollments.find({course_id: &quot;curso-bd&quot;, estado: &quot;activa&quot;},
+                    {_id: 0, student_id: 1, nota: 1, registrada_en: 1})
+              .sort({registrada_en: -1}).limit(20)
+// totalDocsExamined: 0
+</code></pre>
+<p>El índice es más ancho —más espacio y más costo por escritura— y a cambio la consulta no toca la colección. Compensa cuando esa consulta domina el tráfico; no compensa si es una de veinte.</p>
+<p><strong>Índice parcial.</strong> Si el 90 % de las inscripciones están activas, un índice parcial no aporta mucho. Si solo el 5 % está en estado <code>pendiente</code> y esa es la consulta caliente:</p>
+<pre><code class="language-javascript">db.enrollments.createIndex({course_id: 1, registrada_en: -1},
+                           {partialFilterExpression: {estado: &quot;pendiente&quot;}})
+</code></pre>
+<p>El índice pasa de 5 millones de entradas a 250 000: cabe en memoria y se mantiene más barato. Requisito: la consulta debe incluir <code>estado: "pendiente"</code> explícitamente, o el motor no puede usarlo.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Fallo</th>
-<th>Qué lo cubre</th>
+<th>Situación</th>
+<th>Señal en el plan</th>
+<th>Corrección</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Reversión de una transacción</td>
-<td>Registro de deshacer, en marcha</td>
+<td>Sin índice útil</td>
+<td><code>COLLSCAN</code></td>
+<td>Crear índice siguiendo ESR</td>
 </tr>
 <tr>
-<td>Caída del proceso</td>
-<td>Registro en la caché del sistema operativo</td>
+<td>Índice mal ordenado</td>
+<td><code>IXSCAN</code> + <code>SORT</code> en memoria</td>
+<td>Reordenar claves</td>
 </tr>
 <tr>
-<td>Caída de la máquina</td>
-<td><code>fsync</code> del registro en el commit</td>
+<td>Muchos documentos por resultado</td>
+<td><code>totalDocsExamined ≫ nReturned</code></td>
+<td>Añadir campos del filtro al índice</td>
 </tr>
 <tr>
-<td>Corrupción de página</td>
-<td>Suma de comprobación + copia + registro</td>
+<td>Proyección pequeña y repetida</td>
+<td><code>totalDocsExamined &gt; 0</code></td>
+<td>Índice cubriente</td>
 </tr>
 <tr>
-<td>Pérdida del disco</td>
-<td>Réplica o copia externa (clase 048)</td>
-</tr>
-<tr>
-<td>Error humano</td>
-<td>Recuperación a un punto en el tiempo</td>
+<td>Filtro muy selectivo y raro</td>
+<td>Índice enorme</td>
+<td>Índice parcial</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>fsync = off</code> en producción.</strong> Se descubre en el primer corte de energía.</li>
-<li><strong>Puntos de control muy espaciados sin medir el RTO.</strong> La recuperación tarda más de lo que el negocio tolera.</li>
-<li><strong>Confundir el registro del motor con el registro de la aplicación.</strong> Son cosas distintas con propósitos distintos.</li>
-<li><strong>No vigilar el espacio del WAL.</strong> Una réplica detenida impide reciclarlo y llena el disco.</li>
-<li><strong>Suponer que el WAL es una copia de seguridad.</strong> Lo es solo junto con una copia base.</li>
-<li><strong>Almacenamiento que miente sobre <code>fsync</code>.</strong> La durabilidad depende del hardware.</li>
+<li><strong>Un índice por campo.</strong> Los índices compuestos sirven a más consultas; el motor rara vez combina dos índices con eficacia.</li>
+<li><strong>Ignorar el orden ESR.</strong> Provoca ordenamientos en memoria y el límite de 100 MB.</li>
+<li><strong><code>$lookup</code> al principio de la canalización.</strong> Multiplica el trabajo de todas las etapas siguientes.</li>
+<li><strong>Índices que nadie usa.</strong> Revisa <code>$indexStats</code>; cada índice se mantiene en cada escritura.</li>
+<li><strong>Índice multiclave sobre arreglos largos.</strong> Multiplica las entradas por la longitud del arreglo.</li>
+<li><strong>Olvidar <code>_id: 0</code> en una consulta que se quiere cubierta.</strong> Basta para que deje de serlo.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El WAL es también la base de la replicación (clase 043) y de la captura de cambios (clase 056): el mismo flujo que permite recuperarse permite que otro nodo reproduzca los cambios. Entenderlo aquí ahorra explicarlo tres veces más adelante.</p>
+<p>El síntoma habitual —«MongoDB se puso lento al crecer»— casi siempre significa que los índices dejaron de caber en memoria. Vigilar el tamaño total de los índices frente a la RAM disponible es más predictivo que cualquier métrica de CPU.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Reproduce el experimento de SQLite y observa los archivos <code>-wal</code> y <code>-shm</code>.</li>
-<li>Mata el proceso a mitad de una transacción y demuestra que la base queda consistente.</li>
-<li>Mide el tiempo de recuperación con dos intervalos de punto de control distintos.</li>
-<li>Documenta la configuración de durabilidad de tu sistema y qué se pierde en cada tipo de fallo.</li>
+<li>Toma la consulta más frecuente de tu dominio y captura su <code>explain</code> sin índice.</li>
+<li>Diseña el índice con la regla ESR y vuelve a capturar.</li>
+<li>Conviértela en consulta cubierta y compara los tres números del plan.</li>
+<li>Mide el tamaño de los índices con <code>$indexStats</code> y elimina los que no se usan.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué el registro debe llegar al disco antes que la página de datos?</li>
-<li>Explica por qué la fase de rehacer reaplica transacciones que no se confirmaron.</li>
-<li>¿Qué función cumplen los registros de compensación si el sistema cae durante la recuperación?</li>
-<li>Con <code>synchronous_commit = off</code>, ¿qué se pierde exactamente y ante qué fallo?</li>
+<li>¿Por qué el rango va al final en la regla ESR?</li>
+<li>¿Qué condiciones exactas debe cumplir una consulta cubierta?</li>
+<li>Explica el efecto de un <code>$lookup</code> colocado antes de un <code>$match</code> selectivo.</li>
+<li>Da un caso de tu dominio donde un índice parcial reduzca el tamaño más de un 80 %.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Cuánto se vendió por categoría, con las líneas dentro de los documentos</p>
+<p>Agregar sobre documentos obliga a hacer algo que en una tabla no hace falta:
+<strong>desanidar</strong> antes de agrupar. Las líneas viven dentro del pedido, así que
+primero hay que abrirlas en filas y después sumarlas por categoría.</p>
+<p>El caso parte de dos pedidos con sus líneas incrustadas y pide el importe
+total por categoría, ordenado alfabéticamente. La comparación deja a la
+vista dos cosas: que la tubería de agregación de MongoDB y una consulta SQL
+sobre <code>jsonb</code> son la misma idea con distinta sintaxis, y que el índice que
+hace rápida esta consulta no es el mismo en los dos.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>categoria</th>
+<th>importe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>accesorios</code></td>
+<td><code>180</code></td>
+</tr>
+<tr>
+<td><code>perifericos</code></td>
+<td><code>120</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 036</code>: 4 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-json.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/json1.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/unnest.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/opensearch/consulta.json">código</a></td>
+<td><a href="https://docs.opensearch.org/latest/aggregations/bucket/terms/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache CouchDB</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/couchdb/consulta.json">código</a></td>
+<td><a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
+// nota: el indice multiclave sobre lineas.categoria acelera el FILTRO, no el
+//       $group: agrupar siempre recorre los documentos que pasen el filtro, con
+//       un limite de 100 MB por etapa salvo que se permita usar disco.
+
+// === preparacion ===
+db.pedidos.drop();
+db.pedidos.insertMany([
+  { _id: &quot;P-1&quot;, lineas: [
+    { producto: &quot;teclado&quot;, categoria: &quot;perifericos&quot;, importe: 120 },
+    { producto: &quot;raton&quot;, categoria: &quot;accesorios&quot;, importe: 80 },
+  ] },
+  { _id: &quot;P-2&quot;, lineas: [
+    { producto: &quot;cable&quot;, categoria: &quot;accesorios&quot;, importe: 100 },
+  ] },
+]);
+db.pedidos.createIndex({ &quot;lineas.categoria&quot;: 1 });
+
+// === consulta ===
+db.pedidos
+  .aggregate([
+    { $unwind: &quot;$lineas&quot; },
+    { $group: { _id: &quot;$lineas.categoria&quot;, importe: { $sum: &quot;$lineas.importe&quot; } } },
+    { $sort: { _id: 1 } },
+  ])
+  .forEach((d) =&gt; print(d._id + &quot;|&quot; + d.importe));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>$unwind</code> seguido de <code>$group</code> es la forma canónica, y <code>explain("executionStats")</code> dice si la etapa inicial usó índice o recorrió la colección. Con un índice multiclave sobre <code>lineas.categoria</code>, el filtro previo se resuelve sin abrir los documentos que no interesan.</li>
+<li><strong>Por qué no:</strong> El índice ayuda a <strong>filtrar</strong>, no a agrupar: el <code>$group</code> siempre procesa documento a documento en memoria, con el límite de 100 MB por etapa. Para agregaciones grandes hay que permitir disco o precalcular.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline/">https://www.mongodb.com/docs/manual/core/aggregation-pipeline/</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-json.html
+-- nota: lo que aqui se puede hacer y en un almacen documental puro no: esta
+--       misma consulta podria reunir los documentos con tablas normales del
+--       mismo esquema, en la misma transaccion.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS pedidos;
+
+CREATE TABLE pedidos (
+    id     text PRIMARY KEY,
+    lineas jsonb NOT NULL
+);
+CREATE INDEX pedidos_lineas ON pedidos USING GIN (lineas);
+
+INSERT INTO pedidos (id, lineas) VALUES
+    ('P-1', '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;categoria&quot;:&quot;perifericos&quot;,&quot;importe&quot;:120},
+              {&quot;producto&quot;:&quot;raton&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:80}]'::jsonb),
+    ('P-2', '[{&quot;producto&quot;:&quot;cable&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:100}]'::jsonb);
+
+-- === consulta ===
+SELECT l-&gt;&gt;'categoria' AS categoria,
+       SUM((l-&gt;&gt;'importe')::int) AS importe
+FROM pedidos p
+CROSS JOIN LATERAL jsonb_array_elements(p.lineas) AS l
+GROUP BY l-&gt;&gt;'categoria'
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>jsonb_array_elements</code> desanida y el <code>GROUP BY</code> de siempre agrupa: la misma consulta puede reunir documentos con tablas normales, que es justamente lo que un almacén documental puro no puede hacer.</li>
+<li><strong>Por qué no:</strong> El índice GIN acelera la búsqueda dentro del <code>jsonb</code>, pero no evita desanidar en la agregación; y cada elemento extraído se convierte de texto a número en tiempo de consulta, lo que en volúmenes grandes se nota.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-json.html">https://www.postgresql.org/docs/current/functions-json.html</a></li>
+</ul>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/json1.html
+-- nota: json_each se comporta como una tabla virtual, asi que desanidar y
+--       agrupar se escribe como cualquier otra consulta. Lo que no hay es
+--       indice: esto recorre la tabla entera siempre.
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     TEXT PRIMARY KEY,
+    lineas TEXT NOT NULL
+);
+
+INSERT INTO pedidos (id, lineas) VALUES
+    ('P-1', '[{&quot;producto&quot;:&quot;teclado&quot;,&quot;categoria&quot;:&quot;perifericos&quot;,&quot;importe&quot;:120},
+              {&quot;producto&quot;:&quot;raton&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:80}]'),
+    ('P-2', '[{&quot;producto&quot;:&quot;cable&quot;,&quot;categoria&quot;:&quot;accesorios&quot;,&quot;importe&quot;:100}]');
+
+-- === consulta ===
+SELECT json_extract(l.value, '$.categoria') AS categoria,
+       SUM(json_extract(l.value, '$.importe')) AS importe
+FROM pedidos p, json_each(p.lineas) l
+GROUP BY categoria
+ORDER BY categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>json_each</code> se comporta como una tabla virtual, así que desanidar y agrupar se escribe como cualquier otra consulta: sirve para entender el mecanismo sin levantar nada.</li>
+<li><strong>Por qué no:</strong> No hay ningún índice posible sobre el contenido del JSON salvo que se extraiga a una columna generada e indexada: toda agregación recorre la tabla completa.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/json1.html">https://sqlite.org/json1.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/unnest.html
+-- nota: la misma consulta funciona sobre un fichero anidado sin cargarlo:
+--         SELECT ... FROM read_json_auto('pedidos.json'), UNNEST(lineas) ...
+
+-- === preparacion ===
+CREATE TABLE pedidos (
+    id     VARCHAR PRIMARY KEY,
+    lineas STRUCT(producto VARCHAR, categoria VARCHAR, importe INTEGER)[]
+);
+
+INSERT INTO pedidos VALUES
+    ('P-1', [{'producto': 'teclado', 'categoria': 'perifericos', 'importe': 120},
+             {'producto': 'raton',   'categoria': 'accesorios',  'importe': 80}]),
+    ('P-2', [{'producto': 'cable',   'categoria': 'accesorios',  'importe': 100}]);
+
+-- === consulta ===
+SELECT l.categoria, SUM(l.importe) AS importe
+FROM (SELECT UNNEST(lineas) AS l FROM pedidos)
+GROUP BY l.categoria
+ORDER BY l.categoria;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> <code>UNNEST</code> sobre tipos anidados nativos y agregación vectorizada: es el motor donde esta forma de consulta escala mejor sin cambiar de sintaxis, y puede leer directamente un fichero JSON o Parquet anidado.</li>
+<li><strong>Por qué no:</strong> No hay índices que valgan aquí: la velocidad viene de leer menos columnas, no de saltar filas. Si la consulta filtra por un valor muy selectivo, un motor con índice gana.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/unnest.html">https://duckdb.org/docs/stable/sql/query_syntax/unnest.html</a></li>
+</ul>
+<h4 id="opensearch--implementacionesopensearchconsultajson">OpenSearch · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/opensearch/consulta.json"><code>implementaciones/opensearch/consulta.json</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-json">{
+  &quot;_comentario&quot;: [
+    &quot;motor: opensearch&quot;,
+    &quot;doc: https://docs.opensearch.org/latest/aggregations/bucket/terms/&quot;,
+    &quot;nota: implementacion declarada. Para que el desanidado sea CORRECTO, el&quot;,
+    &quot;arreglo `lineas` tiene que estar mapeado como `nested`; si no, OpenSearch&quot;,
+    &quot;aplana los campos y pierde la correlacion entre categoria e importe de la&quot;,
+    &quot;misma linea. Ese mapeo convierte cada linea en un documento oculto con su&quot;,
+    &quot;propio costo de indexacion.&quot;,
+    &quot;Se aplica con:  PUT /pedidos  con el bloque `mappings`&quot;,
+    &quot;y se consulta:  POST /pedidos/_search  con el bloque `busqueda`&quot;
+  ],
+
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;lineas&quot;: {
+        &quot;type&quot;: &quot;nested&quot;,
+        &quot;properties&quot;: {
+          &quot;producto&quot;: { &quot;type&quot;: &quot;keyword&quot; },
+          &quot;categoria&quot;: { &quot;type&quot;: &quot;keyword&quot; },
+          &quot;importe&quot;: { &quot;type&quot;: &quot;integer&quot; }
+        }
+      }
+    }
+  },
+
+  &quot;busqueda&quot;: {
+    &quot;size&quot;: 0,
+    &quot;aggs&quot;: {
+      &quot;lineas&quot;: {
+        &quot;nested&quot;: { &quot;path&quot;: &quot;lineas&quot; },
+        &quot;aggs&quot;: {
+          &quot;por_categoria&quot;: {
+            &quot;terms&quot;: { &quot;field&quot;: &quot;lineas.categoria&quot;, &quot;order&quot;: { &quot;_key&quot;: &quot;asc&quot; } },
+            &quot;aggs&quot;: { &quot;importe&quot;: { &quot;sum&quot;: { &quot;field&quot;: &quot;lineas.importe&quot; } } }
+          }
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las agregaciones por término son su especialidad: calcula el total por categoría sobre millones de documentos en milisegundos, porque el índice invertido y los <code>doc_values</code> columnares ya tienen los datos agrupados por valor.</li>
+<li><strong>Por qué no:</strong> Para que el desanidado sea correcto hay que declarar <code>nested</code>, y eso convierte cada línea en un documento oculto con su propio costo de indexación; sin <code>nested</code>, los campos del arreglo se aplanan y las correlaciones entre ellos se pierden.</li>
+<li>📄 Documentación oficial: <a href="https://docs.opensearch.org/latest/aggregations/bucket/terms/">https://docs.opensearch.org/latest/aggregations/bucket/terms/</a></li>
+</ul>
+<h4 id="apache-couchdb--implementacionescouchdbconsultajson">Apache CouchDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-06-documentos-y-clave-valor/036-consultas-e-indices-sobre-documentos/implementaciones/couchdb/consulta.json"><code>implementaciones/couchdb/consulta.json</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-json">{
+  &quot;_comentario&quot;: [
+    &quot;motor: couchdb&quot;,
+    &quot;doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html&quot;,
+    &quot;nota: implementacion declarada. La vista se calcula de forma INCREMENTAL al&quot;,
+    &quot;escribir y se guarda en un arbol B, asi que la consulta solo lee el&quot;,
+    &quot;resultado ya agregado. El precio: hay que decidir la agregacion antes de&quot;,
+    &quot;necesitarla, y una pregunta nueva es una vista nueva sobre toda la base.&quot;,
+    &quot;Se consulta con: _view/por_categoria?group=true&quot;
+  ],
+
+  &quot;_id&quot;: &quot;_design/ventas&quot;,
+  &quot;language&quot;: &quot;javascript&quot;,
+  &quot;views&quot;: {
+    &quot;por_categoria&quot;: {
+      &quot;map&quot;: &quot;function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit(l.categoria, l.importe); }); } }&quot;,
+      &quot;reduce&quot;: &quot;_sum&quot;
+    }
+  }
+}
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su modelo de vistas <code>map</code>/<code>reduce</code> está pensado exactamente para esto: el resultado se calcula de forma incremental al escribir, así que la consulta solo lee un árbol B ya agregado.</li>
+<li><strong>Por qué no:</strong> Hay que decidir la agregación <strong>antes</strong> de necesitarla: una pregunta nueva es una vista nueva que hay que construir sobre toda la base. No existe la consulta ad hoc.</li>
+<li>📄 Documentación oficial: <a href="https://docs.couchdb.org/en/stable/ddocs/views/intro.html">https://docs.couchdb.org/en/stable/ddocs/views/intro.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>No hay desanidado ni agrupación: los documentos serían cadenas opacas y todo el cálculo tendría que hacerse en el cliente después de traérselos.</td>
+<td>Mantener el total por categoría en un hash actualizado con <code>HINCRBY</code> en cada venta: el resultado está siempre listo, y a cambio solo responde la pregunta que se decidió de antemano.</td>
+<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/05-nosql-workloads/run_nosql_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -323,27 +668,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>C. Mohan, Don Haderle, Bruce Lindsay, Hamid Pirahesh, Peter Schwarz</strong> (1992). <a href="https://dl.acm.org/doi/10.1145/128765.128770">ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging</a>. ACM TODS 17(1). DOI <a href="https://doi.org/10.1145/128765.128770">10.1145/128765.128770</a>.<br />
-  Algoritmo de recuperación con registro anticipado que implementan casi todos los motores.</li>
-<li><strong>SQLite Consortium</strong> (2026). <a href="https://sqlite.org/wal.html">SQLite: Write-Ahead Logging</a>.<br />
-  Registro anticipado explicado en un motor lo bastante pequeno para leerlo entero.</li>
-<li><strong>Alex Petrov</strong> (2019). <a href="https://www.databass.dev/">Database Internals: A Deep Dive into How Distributed Data Systems Work</a>. O'Reilly. ISBN 978-1-4920-4034-7.<br />
-  Motor de almacenamiento (B-Tree y LSM) y consenso explicados con detalle de implementación.</li>
+<li><strong>MongoDB, Inc.</strong> (2026). <a href="https://www.mongodb.com/docs/manual/">MongoDB Manual</a>.<br />
+  Modelo documental, índices, agregación y transacciones multi-documento.</li>
+<li><strong>Shannon Bradshaw, Eoin Brazil, Kristina Chodorow</strong> (2019). <a href="https://www.oreilly.com/library/view/mongodb-the-definitive/9781491954454/">MongoDB: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-5446-1.<br />
+  Modelado documental, índices y canalización de agregación.</li>
+<li><strong>Markus Winand</strong> (2012). <a href="https://use-the-index-luke.com/">SQL Performance Explained</a>. Markus Winand. ISBN 978-3-9503078-2-5.<br />
+  Versión web gratuita. Índices B-Tree y su relación con el orden de las columnas.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 07</a> · <a href="035.html">← Anterior</a> · <a href="037.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="035.html">← Anterior</a> · <a href="037.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="036">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="035.html"><span class="sentido">← Anterior · 035</span>Bloqueo en dos fases, MVCC e instantáneas</a>
-<a class="siguiente" href="037.html"><span class="sentido">Siguiente · 037 →</span>Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a>
+<a class="anterior" href="035.html"><span class="sentido">← Anterior · 035</span>Modelado documental: incrustar o referenciar</a>
+<a class="siguiente" href="037.html"><span class="sentido">Siguiente · 037 →</span>Clave-valor, caché y expiración: qué se pierde exactamente</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

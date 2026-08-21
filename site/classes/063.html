@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Registro de decisiones de arquitectura y costo total. Parte 13: Arquitectura y proyecto final.">
+<meta name="description" content="Privacidad, retención y gobierno del dato. Parte 11: Operación, seguridad y gobierno.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/063.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="063 — Registro de decisiones de arquitectura y costo total · Database Systems Labs">
-<meta property="og:description" content="Registro de decisiones de arquitectura y costo total. Parte 13: Arquitectura y proyecto final.">
+<meta property="og:title" content="063 — Privacidad, retención y gobierno del dato · Database Systems Labs">
+<meta property="og:description" content="Privacidad, retención y gobierno del dato. Parte 11: Operación, seguridad y gobierno.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/063.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "063 — Registro de decisiones de arquitectura y costo total", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["ADR", "contexto", "consecuencia", "costo total de propiedad", "reversibilidad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>063 — Registro de decisiones de arquitectura y costo total · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "063 — Privacidad, retención y gobierno del dato", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["minimización", "limitación de finalidad", "seudonimización", "derecho de supresión"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>063 — Privacidad, retención y gobierno del dato · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,298 +49,698 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-13.html">Parte 13 · Arquitectura y proyecto final</a>
+  <a href="parte-11.html">Parte 11 · Operación, seguridad y gobierno</a>
   <span aria-hidden="true">/</span><span>Clase 063</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="063--registro-de-decisiones-de-arquitectura-y-costo-total">063 — Registro de decisiones de arquitectura y costo total</h1>
+<h1 id="063--privacidad-retención-y-gobierno-del-dato">063 — Privacidad, retención y gobierno del dato</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-11-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-063%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="062.html">← Anterior</a> · <a href="064.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="062.html">← Anterior</a> · <a href="064.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 13 — Arquitectura y proyecto final · Avanzado ·
-3 horas estimadas · motores <code>postgresql</code> · laboratorio
+<p>Parte 11 — Operación, seguridad y gobierno · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>mongodb</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>ADR</code> · <code>contexto</code> · <code>consecuencia</code> · <code>costo total de propiedad</code> · <code>reversibilidad</code></p>
+<p><strong>Conceptos centrales:</strong> <code>minimización</code> · <code>limitación de finalidad</code> · <code>seudonimización</code> · <code>derecho de supresión</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 063&quot;]
+    C --&gt; K1[&quot;minimización&quot;]
+    C --&gt; K2[&quot;limitación de finalidad&quot;]
+    C --&gt; K3[&quot;seudonimización&quot;]
+    C --&gt; K4[&quot;derecho de supresión&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Dejar constancia de por qué el sistema es como es. Sin registro de decisiones, cada relevo del equipo debe reconstruir el razonamiento por arqueología, o lo cambia sin saber qué rompe.</p>
+<p>Traducir las obligaciones de privacidad en decisiones de esquema. Minimización, retención y supresión no son cláusulas de un documento legal: son columnas, políticas y trabajos programados.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Escribir un registro de decisión de arquitectura (ADR) completo.</li>
-<li>Distinguir contexto, decisión, alternativas y consecuencias.</li>
-<li>Calcular el costo total de propiedad de una opción de datos.</li>
-<li>Evaluar la reversibilidad de una decisión y ajustar el rigor a ella.</li>
-<li>Escribir la condición de revisión que evita que la decisión se vuelva dogma.</li>
+<li>Aplicar minimización y limitación de finalidad al diseñar tablas.</li>
+<li>Distinguir anonimización de seudonimización y sus consecuencias legales.</li>
+<li>Implementar una política de retención con supresión verificable.</li>
+<li>Resolver el conflicto entre derecho de supresión y necesidad de conservar evidencia.</li>
+<li>Construir un registro de tratamiento a partir del propio esquema.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="el-adr">El ADR</h3>
-<p>Documento corto, versionado junto al código, inmutable una vez aceptado. Si la decisión cambia, se escribe un ADR nuevo que <strong>supersede</strong> al anterior; no se edita el viejo, porque el histórico es el valor.</p>
-<pre><code class="language-markdown"># ADR-007: Usar pgvector en lugar de un motor vectorial dedicado
-
-- Estado: aceptado
-- Fecha: 2026-08-19
-- Decide: equipo de plataforma
-- Supersede a: —
-
-## Contexto
-[Situación, restricciones y cifras medidas. Sin opiniones.]
-
-## Decisión
-[Qué se hace, en una frase.]
-
-## Alternativas consideradas
-[Cada una con por qué se descartó, no solo que se descartó.]
-
-## Consecuencias
-[Positivas, negativas y neutras. Las negativas son obligatorias.]
-
-## Condición de revisión
-[El umbral medible que obliga a reabrir esta decisión.]
+<h3 id="los-principios-que-afectan-al-esquema">Los principios que afectan al esquema</h3>
+<p>El RGPD europeo y la Ley 19.628 chilena comparten principios cuya traducción técnica es directa:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Principio</th>
+<th>Traducción al esquema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Minimización</strong></td>
+<td>No crear la columna si no hay una finalidad declarada</td>
+</tr>
+<tr>
+<td><strong>Limitación de finalidad</strong></td>
+<td>El dato recogido para A no se usa para B sin nueva base legal</td>
+</tr>
+<tr>
+<td><strong>Limitación del plazo</strong></td>
+<td>Toda tabla con datos personales necesita política de retención</td>
+</tr>
+<tr>
+<td><strong>Exactitud</strong></td>
+<td>Debe existir un camino para rectificar</td>
+</tr>
+<tr>
+<td><strong>Integridad y confidencialidad</strong></td>
+<td>Cifrado, control de acceso (clase 050), auditoría</td>
+</tr>
+<tr>
+<td><strong>Responsabilidad proactiva</strong></td>
+<td>Hay que poder <strong>demostrarlo</strong>, no solo cumplirlo</td>
+</tr>
+</tbody>
+</table></div>
+<p>El último es el que más se subestima: la obligación incluye poder acreditar lo que se hace. Un registro de tratamiento generado desde el esquema es una forma barata de cumplirlo.</p>
+<h3 id="anonimización-frente-a-seudonimización">Anonimización frente a seudonimización</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>Seudonimización</th>
+<th>Anonimización</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué es</td>
+<td>Reemplazar identificadores por códigos, guardando la correspondencia</td>
+<td>Eliminar la posibilidad de reidentificar</td>
+</tr>
+<tr>
+<td>¿Sigue siendo dato personal?</td>
+<td><strong>Sí</strong></td>
+<td>No</td>
+</tr>
+<tr>
+<td>Reversible</td>
+<td>Sí, con la tabla de correspondencia</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Ejemplo</td>
+<td><code>student_id</code> en vez del RUT</td>
+<td>Agregados con supresión de celdas pequeñas</td>
+</tr>
+</tbody>
+</table></div>
+<p>Error frecuente y caro: llamar «anonimizado» a un conjunto seudonimizado. Reemplazar el nombre por un identificador <strong>no</strong> anonimiza: si quedan la fecha de nacimiento, la comuna y el sexo, la reidentificación es factible con datos externos.</p>
+<p>Anonimizar de verdad exige agregación con umbral, generalización o ruido:</p>
+<pre><code class="language-sql">-- Publicable: suprime los grupos demasiado pequeños para reidentificar
+SELECT comuna, extract(year FROM edad_rango) AS rango, count(*) AS n
+FROM v_estudiantes
+GROUP BY comuna, rango
+HAVING count(*) &gt;= 10;      -- k-anonimato con k = 10
 </code></pre>
-<p>La sección que casi siempre falta es <strong>consecuencias negativas</strong>. Un ADR sin ellas no documenta una decisión: la vende. Y la que casi nadie escribe es la <strong>condición de revisión</strong>, que es la que impide que una elección correcta en 2026 siga vigente por inercia en 2030.</p>
-<h3 id="costo-total-de-propiedad">Costo total de propiedad</h3>
-<p>El costo de una decisión de datos no es la licencia ni la instancia:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Componente</th>
-<th>Cómo estimarlo</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Infraestructura</td>
-<td>Instancias, almacenamiento, red, copias</td>
-</tr>
-<tr>
-<td>Licencias</td>
-<td>Si aplica, con su modelo de crecimiento</td>
-</tr>
-<tr>
-<td>Operación</td>
-<td>Horas/mes de mantenimiento × costo/hora</td>
-</tr>
-<tr>
-<td>Guardia</td>
-<td>Incidentes esperados/mes × horas × costo</td>
-</tr>
-<tr>
-<td>Aprendizaje</td>
-<td>Horas hasta competencia, por persona, incluido el suplente</td>
-</tr>
-<tr>
-<td>Migración de salida</td>
-<td><strong>Costo de deshacer la decisión</strong></td>
-</tr>
-<tr>
-<td>Oportunidad</td>
-<td>Lo que el equipo no hace mientras hace esto</td>
-</tr>
-</tbody>
-</table></div>
-<p>La penúltima fila es la que convierte el análisis en útil: una decisión barata de tomar y carísima de revertir merece mucho más rigor que una reversible.</p>
-<h3 id="reversibilidad">Reversibilidad</h3>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tipo</th>
-<th>Ejemplo</th>
-<th>Rigor exigible</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Reversible</strong></td>
-<td>Añadir un índice, ajustar un parámetro</td>
-<td>Bajo: probar y medir</td>
-</tr>
-<tr>
-<td><strong>Costosa de revertir</strong></td>
-<td>Añadir un almacén, cambiar de modelo de embeddings</td>
-<td>Medio: ADR y prueba de concepto</td>
-</tr>
-<tr>
-<td><strong>Prácticamente irreversible</strong></td>
-<td>Clave de partición, clave primaria, formato de datos históricos</td>
-<td><strong>Alto</strong>: ADR, prototipo y revisión externa</td>
-</tr>
-</tbody>
-</table></div>
-<p>El error clásico es aplicar rigor uniforme: se debate una semana sobre un índice —reversible en dos minutos— y se elige la clave de partición en una reunión de media hora.</p>
+<h3 id="retención">Retención</h3>
+<p>Cada tabla con datos personales necesita responder cuatro preguntas: <strong>qué</strong> se guarda, <strong>para qué</strong>, <strong>cuánto tiempo</strong> y <strong>qué pasa después</strong>.</p>
+<p>Documentado en el propio esquema, para que no viva solo en una hoja de cálculo:</p>
+<pre><code class="language-sql">COMMENT ON TABLE  enrollments IS
+  'Datos personales: sí. Finalidad: gestión académica. '
+  'Retención: 5 años tras el egreso (obligación legal de certificación). '
+  'Después: seudonimizar student_id y conservar el agregado.';
+COMMENT ON COLUMN students.rut IS
+  'Identificador nacional. Base legal: obligación legal. '
+  'Acceso: rol_secretaria. Retención: igual que enrollments.';
+</code></pre>
+<h3 id="el-conflicto-de-la-supresión">El conflicto de la supresión</h3>
+<p>El derecho de supresión no es absoluto: cede ante obligaciones legales de conservación. Un estudiante puede pedir borrar su cuenta, y la institución debe conservar el registro académico.</p>
+<p>La solución de diseño es <strong>separar la identidad del hecho</strong>:</p>
 <pre><code class="language-mermaid">flowchart TD
-    D[&quot;Decisión pendiente&quot;] --&gt; R{&quot;¿Reversibilidad?&quot;}
-    R -- &quot;Alta&quot; --&gt; F[&quot;Probar, medir,&lt;br/&gt;decidir rápido&quot;]
-    R -- &quot;Media&quot; --&gt; A[&quot;ADR + prueba de concepto&lt;br/&gt;con datos reales&quot;]
-    R -- &quot;Baja&quot; --&gt; P[&quot;ADR + prototipo +&lt;br/&gt;revisión + plan de salida&quot;]
-    F --&gt; W[&quot;Registrar solo si&lt;br/&gt;sorprende el resultado&quot;]
-    A --&gt; W2[&quot;ADR con consecuencias&lt;br/&gt;y condición de revisión&quot;]
-    P --&gt; W2
-    W2 --&gt; M[&quot;Alerta sobre el umbral&lt;br/&gt;de revisión&quot;]
+    P[&quot;Solicitud de supresión&quot;] --&gt; C{&quot;¿Hay obligación legal&lt;br/&gt;de conservar el hecho?&quot;}
+    C -- &quot;No&quot; --&gt; D[&quot;Borrado real,&lt;br/&gt;incluido en copias tras su rotación&quot;]
+    C -- &quot;Sí&quot; --&gt; S[&quot;Separar identidad del hecho&quot;]
+    S --&gt; S1[&quot;Borrar la fila de identidad&lt;br/&gt;(nombre, RUT, contacto)&quot;]
+    S --&gt; S2[&quot;Conservar el hecho&lt;br/&gt;con identificador seudónimo&quot;]
+    S1 --&gt; R[&quot;Registrar la supresión&lt;br/&gt;(evidencia de cumplimiento)&quot;]
+    S2 --&gt; R
 </code></pre>
+<pre><code class="language-sql">-- Identidad: se puede suprimir
+CREATE TABLE student_identity (
+  student_id INTEGER PRIMARY KEY REFERENCES students(id),
+  rut        TEXT UNIQUE,
+  nombre     TEXT NOT NULL,
+  email      TEXT,
+  suprimida_en TIMESTAMPTZ
+);
+
+-- Hechos académicos: se conservan, referencian solo al identificador interno
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
+</code></pre>
+<p>Con esta separación, ejercer el derecho es borrar una fila de <code>student_identity</code>. El histórico académico sobrevive, referido a un identificador que ya no apunta a ninguna persona identificable.</p>
+<p><strong>Esta decisión hay que tomarla al diseñar.</strong> Si el RUT está copiado en quince tablas —y lo estará si es la clave primaria (clase 007)—, la supresión se convierte en un proyecto.</p>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>ADR completo de la decisión de la clase 062.</p>
-<pre><code class="language-markdown"># ADR-007: Búsqueda semántica con pgvector en lugar de un motor dedicado
+<p>Inventario del dominio, que es el punto de partida de todo lo demás:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Tabla.columna</th>
+<th>¿Personal?</th>
+<th>Finalidad</th>
+<th>Base legal</th>
+<th>Retención</th>
+<th>Acceso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>student_identity.rut</code></td>
+<td>Sí, identificador</td>
+<td>Certificación académica</td>
+<td>Obligación legal</td>
+<td>5 años tras egreso</td>
+<td><code>rol_secretaria</code></td>
+</tr>
+<tr>
+<td><code>student_identity.nombre</code></td>
+<td>Sí</td>
+<td>Emisión de certificados</td>
+<td>Contrato</td>
+<td>Ídem</td>
+<td><code>rol_secretaria</code>, <code>rol_docente</code></td>
+</tr>
+<tr>
+<td><code>student_identity.email</code></td>
+<td>Sí</td>
+<td>Comunicación</td>
+<td>Contrato</td>
+<td>Hasta baja + 1 año</td>
+<td><code>rol_secretaria</code></td>
+</tr>
+<tr>
+<td><code>enrollments.nota</code></td>
+<td>Sí, asociado</td>
+<td>Evaluación</td>
+<td>Contrato</td>
+<td>5 años tras egreso</td>
+<td><code>rol_docente</code> (solo sus cursos)</td>
+</tr>
+<tr>
+<td><code>access_log.ip</code></td>
+<td><strong>Sí</strong></td>
+<td>Seguridad</td>
+<td>Interés legítimo</td>
+<td><strong>90 días</strong></td>
+<td><code>rol_seguridad</code></td>
+</tr>
+<tr>
+<td><code>courses.nombre</code></td>
+<td>No</td>
+<td>—</td>
+<td>—</td>
+<td>Indefinida</td>
+<td>Público</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>access_log.ip</code> es el que se olvida: una dirección IP es dato personal en la mayoría de los marcos, y los registros de acceso suelen guardarse para siempre «por si acaso».</p>
+<p><strong>Retención automatizada:</strong></p>
+<pre><code class="language-sql">CREATE TABLE retencion_politica (
+  tabla       TEXT PRIMARY KEY,
+  columna_ts  TEXT NOT NULL,
+  dias        INTEGER NOT NULL,
+  accion      TEXT NOT NULL CHECK (accion IN ('borrar','seudonimizar')),
+  descripcion TEXT NOT NULL
+);
 
-- Estado: aceptado
-- Fecha: 2026-08-19
-- Decide: equipo de plataforma (3 personas)
-- Supersede a: —
-
-## Contexto
-
-El buscador debe responder preguntas en lenguaje natural sobre 200 000
-fragmentos de contenido del programa.
-
-Cifras medidas sobre el conjunto de evaluación de 60 consultas juzgadas:
-
-| Opción                         | p99    | recall@5 | Sistemas |
-|--------------------------------|--------|----------|----------|
-| PostgreSQL: tsvector + pgvector|  84 ms |    0,89  |    0     |
-| Qdrant + OpenSearch            |  31 ms |    0,91  |    2     |
-
-Exigencia de producto: p99 &lt; 200 ms, recall@5 ≥ 0,85.
-El equipo son 3 personas y ya opera PostgreSQL con guardia 24/7.
-El corpus crece ~15 % anual.
-
-## Decisión
-
-Implementar la búsqueda híbrida dentro de PostgreSQL, con `tsvector` para la
-rama léxica y `pgvector` (HNSW, m=16, ef_search=100) para la vectorial,
-fusionando con RRF (k=60).
-
-## Alternativas consideradas
-
-1. **Qdrant + OpenSearch.** Mejor latencia (31 ms frente a 84) y recall
-   equivalente (0,91 frente a 0,89). Descartada porque ambas cifras superan la
-   exigencia con margen y añade dos sistemas: dos planes de copia, dos modelos
-   de control de acceso, dos canales de sincronización y dos fuentes de guardia
-   para un equipo de tres personas.
-
-2. **Solo búsqueda léxica.** Descartada: recall@5 = 0,74, por debajo de la
-   exigencia. Falla en las preguntas de intención, que son el 45 % del tráfico
-   observado.
-
-3. **Servicio gestionado de búsqueda.** Descartada por costo (estimado 4× la
-   opción elegida) y porque enviaría contenido a un tercero, lo que exigiría
-   revisar el registro de tratamiento (ADR-004).
-
-## Consecuencias
-
-**Positivas**
-- Un solo sistema que operar, respaldar y asegurar.
-- Los filtros por metadatos son SQL ordinario y se combinan con cualquier
-  consulta relacional.
-- La consistencia entre contenido y su índice es transaccional: no hay canal
-  que pueda desincronizarse.
-
-**Negativas**
-- Latencia 2,7× superior a la alternativa dedicada. Aceptable hoy; dejará de
-  serlo si la exigencia baja de 100 ms.
-- El índice HNSW compite por `shared_buffers` con la carga transaccional.
-  Vigilado con la métrica de aciertos de buffer.
-- Reconstruir el índice HNSW tras un cambio de modelo bloquea la tabla; hay que
-  usar `CREATE INDEX CONCURRENTLY` (clase 049).
-- Menos funcionalidad de búsqueda: sin facetas nativas, sin sugerencias, sin
-  tolerancia a erratas más allá de `pg_trgm`.
-
-**Neutras**
-- El equipo debe aprender `pgvector`: estimado en 8 horas por persona.
-
-## Costo total de propiedad a 3 años
-
-| Componente          | pgvector | Qdrant + OpenSearch |
-|---------------------|---------:|--------------------:|
-| Infraestructura     |  $ 1 800 |            $ 12 600 |
-| Operación (h/mes)   |      1 h |                 8 h |
-| Guardia (incid/mes) |      0,2 |                 1,5 |
-| Aprendizaje inicial |     24 h |               120 h |
-| Migración de salida |     40 h |                80 h |
-| **Total estimado**  | **$ 9 400** |       **$ 48 200** |
-
-## Condición de revisión
-
-Se reabre esta decisión si se cumple **cualquiera**:
-
-- El corpus supera 5 000 000 de fragmentos.
-- El p99 de búsqueda supera 150 ms durante 7 días seguidos.
-- El recall@5 medido cae por debajo de 0,85.
-- El producto exige facetas o tolerancia a erratas.
-
-Las tres primeras tienen alerta configurada en el panel de búsqueda.
-La cuarta se revisa en cada planificación trimestral.
+INSERT INTO retencion_politica VALUES
+  ('access_log', 'ocurrido_en',  90, 'borrar',
+   'Registros de acceso: interés legítimo en seguridad, 90 días'),
+  ('notificaciones', 'enviada_en', 365, 'borrar',
+   'Historial de notificaciones enviadas');
 </code></pre>
-<p><strong>Lo que hace útil a este ADR y no a uno genérico:</strong></p>
-<ol>
-<li><strong>Las cifras son medidas</strong>, con el conjunto de evaluación nombrado. No hay «es más rápido».</li>
-<li><strong>La alternativa descartada era mejor en su métrica principal.</strong> Se explica por qué se descarta igualmente. Un ADR donde la opción elegida gana en todo es sospechoso.</li>
-<li><strong>Las consecuencias negativas son concretas y verificables</strong>, incluida la que ya tiene mitigación.</li>
-<li><strong>La condición de revisión tiene umbrales medibles y alertas configuradas.</strong> No es «lo revisaremos si hace falta».</li>
-<li><strong>El costo incluye la salida.</strong> 40 horas de migración es lo que cuesta cambiar de opinión.</li>
-</ol>
+<pre><code class="language-sql">-- Ejecución diaria, por lotes para no bloquear (clase 049)
+DO $$
+DECLARE p RECORD; n INTEGER;
+BEGIN
+  FOR p IN SELECT * FROM retencion_politica WHERE accion = 'borrar' LOOP
+    LOOP
+      EXECUTE format(
+        'DELETE FROM %I WHERE ctid IN (
+           SELECT ctid FROM %I WHERE %I &lt; now() - make_interval(days =&gt; $1)
+           LIMIT 10000)', p.tabla, p.tabla, p.columna_ts) USING p.dias;
+      GET DIAGNOSTICS n = ROW_COUNT;
+      EXIT WHEN n = 0;
+      COMMIT;
+    END LOOP;
+  END LOOP;
+END $$;
+</code></pre>
+<p>Se usa <code>format</code> con <code>%I</code> (clase 051) porque el nombre de tabla no es parametrizable, y viene de una tabla de configuración controlada, no de una entrada de usuario.</p>
+<p><strong>Verificación, que es lo que acredita el cumplimiento:</strong></p>
+<pre><code class="language-sql">SELECT p.tabla, p.dias,
+       (SELECT count(*) FROM access_log
+        WHERE ocurrido_en &lt; now() - make_interval(days =&gt; p.dias)) AS fuera_de_plazo
+FROM retencion_politica p WHERE p.tabla = 'access_log';
+-- fuera_de_plazo debe ser 0
+</code></pre>
+<p><strong>El punto que casi siempre falta: las copias de seguridad.</strong> Borrar de la base no borra de las copias. Un dato suprimido hoy sigue en la copia de ayer, y en la de hace un mes.</p>
+<p>La posición defendible —y la que aceptan los reguladores— es: las copias tienen su propio ciclo de rotación, la supresión se completa cuando la última copia que contenía el dato ha expirado, y ese plazo está documentado.</p>
+<pre><code class="language-text">Retención de copias: 35 días
+→ La supresión se completa como máximo 35 días después de la solicitud.
+→ Se documenta en la respuesta al titular.
+→ Nadie restaura una copia parcialmente para reinsertar datos suprimidos.
+</code></pre>
+<p><strong>Registro de tratamiento generado desde el esquema:</strong></p>
+<pre><code class="language-sql">SELECT c.table_name, c.column_name,
+       col_description(format('%I.%I', c.table_schema, c.table_name)::regclass,
+                       c.ordinal_position) AS documentacion
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+ORDER BY c.table_name, c.ordinal_position;
+</code></pre>
+<p>Una columna con datos personales y sin comentario es un hallazgo de auditoría. Convertir eso en una comprobación de integración continua hace que la documentación no envejezca.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Documento</th>
-<th>Responde</th>
-<th>Cuándo se escribe</th>
+<th>Objetivo</th>
+<th>Técnica</th>
+<th>Consecuencia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>ADR</td>
-<td><strong>Por qué</strong> es así</td>
-<td>Al decidir</td>
+<td>Reducir exposición</td>
+<td>No recoger el dato</td>
+<td>La más eficaz y la menos usada</td>
 </tr>
 <tr>
-<td>Documentación de arquitectura</td>
-<td><strong>Cómo</strong> es</td>
-<td>Al construir y al cambiar</td>
+<td>Permitir análisis sin identidad</td>
+<td>Seudonimización</td>
+<td>Sigue siendo dato personal</td>
 </tr>
 <tr>
-<td>Runbook</td>
-<td><strong>Qué hacer</strong> cuando falla</td>
-<td>Antes de la guardia</td>
+<td>Publicar datos abiertos</td>
+<td>Anonimización con k-anonimato</td>
+<td>Pérdida de detalle</td>
 </tr>
 <tr>
-<td>Postmortem</td>
-<td><strong>Qué pasó</strong> y qué se aprendió</td>
-<td>Tras el incidente</td>
+<td>Cumplir plazos</td>
+<td>Retención automatizada</td>
+<td>Trabajo programado + verificación</td>
 </tr>
 <tr>
-<td>Registro de tratamiento</td>
-<td><strong>Qué datos</strong> y con qué fin</td>
-<td>Al diseñar el esquema (clase 053)</td>
+<td>Atender supresión</td>
+<td>Separar identidad de hecho</td>
+<td>Decisión de diseño temprana</td>
+</tr>
+<tr>
+<td>Acreditar cumplimiento</td>
+<td>Documentación en el esquema</td>
+<td>Auditable y siempre al día</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>ADR sin consecuencias negativas.</strong> Es publicidad, no documentación.</li>
-<li><strong>Sin condición de revisión.</strong> La decisión se convierte en dogma.</li>
-<li><strong>Editar un ADR aceptado.</strong> Se pierde el histórico; hay que superponer uno nuevo.</li>
-<li><strong>Alternativas listadas sin explicar el descarte.</strong> No aporta nada al lector futuro.</li>
-<li><strong>Costo solo de infraestructura.</strong> Omite operación, guardia y aprendizaje.</li>
-<li><strong>Rigor uniforme.</strong> Se debate lo reversible y se improvisa lo irreversible.</li>
-<li><strong>ADR escrito después, para justificar.</strong> Documenta la racionalización, no la decisión.</li>
+<li><strong>Recoger «por si acaso».</strong> Cada columna es una obligación permanente.</li>
+<li><strong>Llamar anonimizado a lo seudonimizado.</strong> Error con consecuencias legales.</li>
+<li><strong>Registros de acceso eternos.</strong> Las IP son datos personales.</li>
+<li><strong>Identificador nacional como clave primaria.</strong> Lo esparce por todo el esquema.</li>
+<li><strong>Ignorar las copias en la supresión.</strong> El dato sigue ahí.</li>
+<li><strong>Política de retención sin verificación.</strong> Se rompe en silencio.</li>
+<li><strong>Borrado lógico llamado supresión.</strong> Marcar <code>borrado = true</code> no suprime nada.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>El valor del ADR se cobra dos años después, cuando alguien propone cambiar algo y puede leer por qué está así, con qué números y bajo qué condición debería cambiarse. Es el documento con mejor relación entre esfuerzo de escritura y utilidad futura de todo el repositorio.</p>
+<p>La mayor parte del trabajo de cumplimiento se ahorra al diseñar: separar identidad de hechos, no recoger lo innecesario y documentar la finalidad de cada columna cuesta una tarde al inicio y evita un proyecto de meses cuando llega la primera solicitud o la primera auditoría.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Escribe el ADR de la decisión de datos más importante de tu sistema actual.</li>
-<li>Incluye una alternativa que fuese mejor en alguna métrica y explica el descarte.</li>
-<li>Calcula el costo total a tres años, incluida la migración de salida.</li>
-<li>Define la condición de revisión con umbrales medibles y configura su alerta.</li>
+<li>Inventaría las columnas con datos personales de tu esquema, con finalidad y base legal.</li>
+<li>Documenta cada una con <code>COMMENT</code> y añade una comprobación en CI que exija comentario.</li>
+<li>Implementa una política de retención con su verificación.</li>
+<li>Diseña el procedimiento de supresión, incluido el plazo derivado de tus copias.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué un ADR aceptado no se edita?</li>
-<li>Da una decisión tuya prácticamente irreversible y di qué rigor recibió.</li>
-<li>Estima el costo de salida de tu almacén principal, en horas.</li>
-<li>Escribe la condición de revisión de una decisión vigente en tu equipo.</li>
+<li>¿Por qué la seudonimización no exime de las obligaciones de protección de datos?</li>
+<li>Da una columna de tu sistema que hoy no tendría base legal declarada.</li>
+<li>Explica cómo atiendes una supresión conservando una obligación legal.</li>
+<li>¿Cuándo se completa realmente una supresión, dado tu ciclo de copias?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Borrar lo que ya no hace falta y enmascarar lo que no debe salir</p>
+<p>El gobierno del dato se reduce, en la práctica, a dos gestos que casi nunca
+se automatizan: <strong>retención</strong> —lo que ya no hace falta se borra— y
+<strong>minimización</strong> —lo que sale del sistema sale con lo mínimo indispensable—.
+Guardar «por si acaso» no es prudencia: cada dato conservado de más es un
+dato que se puede filtrar y que alguien puede reclamar.</p>
+<p>El caso tiene tres eventos, uno de ellos de hace más de un año. Se borra por
+política de retención, y los dos que quedan se exportan con el correo
+enmascarado: se conserva el dominio, que es lo que el análisis necesita, y
+se pierde la persona, que es lo que el análisis no necesita.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>correo</th>
+<th>fecha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>***@example.org</code></td>
+<td><code>2026-08-10</code></td>
+</tr>
+<tr>
+<td><code>***@otro.org</code></td>
+<td><code>2026-08-15</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 063</code>: 5 de
+las 6 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_delete.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/functions/char">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/index-ttl/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td>sí</td>
+<td>declarado</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/cassandra/consulta.cql">código</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/expire/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_delete.html
+-- nota: el DELETE no reduce el archivo ni borra los bytes: el espacio queda en
+--       la lista de paginas libres y los datos siguen legibles hasta que algo
+--       los sobrescriba. Para borrado real hace falta VACUUM, y ni asi se
+--       controla lo que el sistema de archivos haya copiado.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL,
+    fecha  TEXT NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+-- RETENCION: lo que ya no hace falta se borra. Guardar «por si acaso» no es
+-- prudencia, es responsabilidad acumulada: cada dato conservado de mas es un
+-- dato que se puede filtrar y que alguien puede reclamar.
+DELETE FROM eventos WHERE fecha &lt; '2026-01-01';
+
+-- === consulta ===
+-- MINIMIZACION: el analisis necesita el dominio, no la persona. Enmascarar en
+-- la CONSULTA no protege nada —el dato sigue ahi—; esto es lo que se hace al
+-- exportar a un entorno que no deberia tener el dato original.
+SELECT '***@' || SUBSTR(correo, INSTR(correo, '@') + 1) AS correo, fecha
+FROM eventos
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Muestra los dos gestos en su forma desnuda: un <code>DELETE</code> con una condición de fecha y una expresión de enmascarado. No hay nada más, y eso deja claro que el gobierno del dato es una decisión, no una funcionalidad.</li>
+<li><strong>Por qué no:</strong> El <code>DELETE</code> no reduce el archivo: el espacio queda libre para reutilizarse y <strong>los datos siguen ahí</strong> hasta que se sobrescriban. Para borrado real hace falta <code>VACUUM</code>, y aun así el sistema de archivos puede conservar copias.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_delete.html">https://sqlite.org/lang_delete.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/functions/char
+-- nota: aqui es donde el dato SALE hacia otro entorno —analitica, pruebas, un
+--       cuaderno— y de donde ya no vuelve. Enmascarar en la consulta es fragil:
+--       basta escribir otra consulta para llevarse el original. El enmascarado
+--       tiene que estar en el proceso que exporta.
+
+-- === preparacion ===
+CREATE TABLE eventos (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL,
+    fecha  VARCHAR NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+-- RETENCION: lo que ya no hace falta se borra. Guardar «por si acaso» no es
+-- prudencia, es responsabilidad acumulada: cada dato conservado de mas es un
+-- dato que se puede filtrar y que alguien puede reclamar.
+DELETE FROM eventos WHERE fecha &lt; '2026-01-01';
+
+-- === consulta ===
+-- MINIMIZACION: el analisis necesita el dominio, no la persona. Enmascarar en
+-- la CONSULTA no protege nada —el dato sigue ahi—; esto es lo que se hace al
+-- exportar a un entorno que no deberia tener el dato original.
+SELECT '***@' || SUBSTR(correo, INSTR(correo, '@') + 1) AS correo, fecha
+FROM eventos
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde ocurre de verdad la exportación a otro entorno —analítica, pruebas, un cuaderno— y por tanto donde el enmascarado importa más: el dato personal que sale de aquí ya no vuelve.</li>
+<li><strong>Por qué no:</strong> Enmascarar en la consulta de exportación es frágil: basta una consulta distinta para llevarse el original. El enmascarado tiene que estar en el proceso que exporta, no en la voluntad de quien consulta.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/functions/char">https://duckdb.org/docs/stable/sql/functions/char</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+-- nota: con particionado por rango de fecha, la retencion deja de ser un DELETE
+--       de millones de filas y pasa a ser
+--         DROP TABLE eventos_2025_01;
+--       instantaneo y sin hinchar nada. Y el aviso incomodo: las copias de
+--       seguridad conservan lo borrado durante meses, asi que un «derecho al
+--       olvido» de verdad tiene que contemplarlas.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS eventos;
+
+CREATE TABLE eventos (
+    id     integer PRIMARY KEY,
+    correo text NOT NULL,
+    fecha  date NOT NULL
+);
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   DATE '2025-01-15'),
+    (2, 'linus@example.org', DATE '2026-08-10'),
+    (3, 'grace@otro.org',    DATE '2026-08-15');
+
+DELETE FROM eventos WHERE fecha &lt; DATE '2026-01-01';
+
+-- === consulta ===
+SELECT '***@' || split_part(correo, '@', 2) AS correo,
+       to_char(fecha, 'YYYY-MM-DD') AS fecha
+FROM eventos
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Con particionado por rango de fecha, la retención deja de ser un <code>DELETE</code> de millones de filas y pasa a ser <code>DROP TABLE</code> de una partición: instantáneo y sin hinchar la tabla. Y las vistas con <code>security_barrier</code> permiten publicar la versión enmascarada sin dar acceso a la original.</li>
+<li><strong>Por qué no:</strong> Un <code>DELETE</code> normal no libera espacio hasta el vacío, y las filas borradas siguen siendo legibles en el archivo hasta que se sobrescriban: para cumplir un «derecho al olvido» de verdad hay que pensar también en las copias de seguridad, que conservan lo borrado durante meses.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">https://www.postgresql.org/docs/current/ddl-partitioning.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html
+-- nota: la politica se puede dejar declarada DENTRO de la base:
+--         CREATE EVENT retencion_eventos ON SCHEDULE EVERY 1 DAY
+--         DO DELETE FROM eventos WHERE fecha &lt; CURRENT_DATE - INTERVAL 1 YEAR;
+--       Con un aviso: el programador de eventos viene DESACTIVADO por omision
+--       (event_scheduler), asi que la politica puede estar escrita y no
+--       ejecutarse nunca.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS eventos;
+
+CREATE TABLE eventos (
+    id     INT PRIMARY KEY,
+    correo VARCHAR(200) NOT NULL,
+    fecha  DATE NOT NULL
+) ENGINE=InnoDB;
+
+INSERT INTO eventos (id, correo, fecha) VALUES
+    (1, 'ada@example.org',   '2025-01-15'),
+    (2, 'linus@example.org', '2026-08-10'),
+    (3, 'grace@otro.org',    '2026-08-15');
+
+DELETE FROM eventos WHERE fecha &lt; '2026-01-01';
+
+-- === consulta ===
+SELECT CONCAT('***@', SUBSTRING_INDEX(correo, '@', -1)) AS correo,
+       DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha
+FROM eventos
+ORDER BY fecha;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene particionado por rango con <code>ALTER TABLE ... DROP PARTITION</code> para la retención, y el programador de eventos integrado permite dejar la política declarada dentro de la propia base en vez de en un <code>cron</code> que nadie revisa.</li>
+<li><strong>Por qué no:</strong> Ese programador viene desactivado por omisión, así que la política puede estar escrita y no ejecutarse nunca. Y el registro binario conserva las filas borradas durante su periodo de retención, que a veces es más largo que el de los datos.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html">https://dev.mysql.com/doc/refman/8.4/en/partitioning-management-range-list.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/index-ttl/
+// nota: el indice TTL es la forma mas dificil de OLVIDAR una politica de
+//       retencion: se declara una vez y el motor borra. Y el aviso: borra por
+//       documento, compite con la carga normal, no devuelve el espacio hasta
+//       compactar, y si se configura mal borra lo que no debia sin papelera.
+
+// === preparacion ===
+db.eventos.drop();
+db.eventos.insertMany([
+  { _id: 1, correo: &quot;ada@example.org&quot;, fecha: new Date(&quot;2025-01-15&quot;) },
+  { _id: 2, correo: &quot;linus@example.org&quot;, fecha: new Date(&quot;2026-08-10&quot;) },
+  { _id: 3, correo: &quot;grace@otro.org&quot;, fecha: new Date(&quot;2026-08-15&quot;) },
+]);
+
+// Retencion explicita (el indice TTL haria lo mismo sin que nadie lo pida):
+db.eventos.deleteMany({ fecha: { $lt: new Date(&quot;2026-01-01&quot;) } });
+
+// === consulta ===
+db.eventos
+  .aggregate([
+    { $project: {
+        _id: 0,
+        correo: { $concat: [&quot;***@&quot;, { $arrayElemAt: [{ $split: [&quot;$correo&quot;, &quot;@&quot;] }, 1] }] },
+        fecha: { $dateToString: { format: &quot;%Y-%m-%d&quot;, date: &quot;$fecha&quot; } } } },
+    { $sort: { fecha: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.correo + &quot;|&quot; + d.fecha));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El índice TTL aplica la retención sin que nadie programe nada: se declara una vez sobre el campo de fecha y el motor borra. Es la forma más difícil de olvidar.</li>
+<li><strong>Por qué no:</strong> Borra por documento, así que en colecciones grandes el borrado compite con la carga normal; y el espacio en disco no se devuelve al sistema hasta que se compacta. Además, un TTL mal configurado borra lo que no debía y no hay papelera.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/index-ttl/">https://www.mongodb.com/docs/manual/core/index-ttl/</a></li>
+</ul>
+<h4 id="apache-cassandra--implementacionescassandraconsultacql">Apache Cassandra · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/implementaciones/cassandra/consulta.cql"><code>implementaciones/cassandra/consulta.cql</code></a></h4>
+<p>⚪ <strong>declarado</strong> — se revisa a mano contra la documentación citada; la máquina no lo ejecuta</p>
+<pre><code class="language-sql">-- motor: cassandra
+-- doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html
+-- nota: implementacion declarada. Aqui la retencion se declara AL ESCRIBIR, que
+--       es cuando de verdad se sabe cuanto tiempo hace falta el dato:
+--         USING TTL 7776000    -- noventa dias
+--       Con la estrategia de compactacion por ventana temporal (TWCS), expirar
+--       un periodo entero es tirar un archivo completo, sin recorrer filas.
+--       El precio: cada dato expirado deja una lapida que se recorre en las
+--       lecturas hasta que la compactacion la retire.
+
+-- === preparacion ===
+CREATE KEYSPACE IF NOT EXISTS gobierno
+  WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+DROP TABLE IF EXISTS gobierno.eventos;
+
+CREATE TABLE gobierno.eventos (
+    id     int PRIMARY KEY,
+    correo text,
+    fecha  date
+) WITH compaction = {'class': 'TimeWindowCompactionStrategy',
+                     'compaction_window_unit': 'DAYS',
+                     'compaction_window_size': 30};
+
+INSERT INTO gobierno.eventos (id, correo, fecha)
+  VALUES (2, 'linus@example.org', '2026-08-10') USING TTL 7776000;
+INSERT INTO gobierno.eventos (id, correo, fecha)
+  VALUES (3, 'grace@otro.org', '2026-08-15') USING TTL 7776000;
+
+-- === consulta ===
+-- CQL no tiene funciones de cadena para enmascarar: el enmascarado se hace en
+-- la capa que exporta. Es una limitacion, y tambien un recordatorio de donde
+-- deberia estar siempre.
+SELECT id, correo, fecha, TTL(correo) AS segundos_restantes FROM gobierno.eventos;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El TTL por celda expresa la retención en el momento de escribir —«esto caduca en noventa días»—, que es cuando de verdad se sabe cuánto tiempo hace falta el dato. Con la estrategia de compactación por ventana temporal, además, expirar un periodo entero es tirar un archivo.</li>
+<li><strong>Por qué no:</strong> Cada dato expirado deja una lápida, y las lápidas se recorren en las lecturas hasta que la compactación las retira: una política de retención agresiva sobre datos muy leídos degrada las lecturas justo donde más duelen.</li>
+<li>📄 Documentación oficial: <a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html">https://cassandra.apache.org/doc/latest/cassandra/developing/cql/dml.html</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>Tiene caducidad, pero no es el sitio donde vive el dato personal que hay que gobernar: es una caché. Aplicar aquí una política de retención da una falsa sensación de cumplimiento mientras el original sigue en otro sistema.</td>
+<td>Tratarlo como lo que es —una copia derivada y desechable— e invalidar sus claves cuando el dato de origen se borra, para no servir desde la caché algo que ya no debería existir.</td>
+<td><a href="https://redis.io/docs/latest/commands/expire/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
@@ -388,27 +788,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Peter Bailis, Joseph M. Hellerstein, Michael Stonebraker</strong> (2015). <a href="http://www.redbook.io/">Readings in Database Systems</a>. 5.a ed. MIT Press. ISBN 978-0-262-52964-3.<br />
-  Antologia comentada de acceso libre. Cada capitulo situa los papers en su discusión.</li>
-<li><strong>Joe Reis, Matt Housley</strong> (2022). <a href="https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/">Fundamentals of Data Engineering</a>. O'Reilly. ISBN 978-1-0981-0830-4.<br />
-  Ciclo de vida de la ingenieria de datos e integración entre sistemas.</li>
-<li><strong>Laine Campbell, Charity Majors</strong> (2017). <a href="https://www.oreilly.com/library/view/database-reliability-engineering/9781491925935/">Database Reliability Engineering</a>. O'Reilly. ISBN 978-1-4919-2594-2.<br />
-  Operación, respaldos, objetivos de servicio y gestion de cambios.</li>
+<li><strong>Union Europea</strong> (2016). <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Reglamento (UE) 2016/679 - Proteccion de datos personales</a>.<br />
+  Minimización, limitación de finalidad y derecho de supresión con efecto en el esquema.</li>
+<li><strong>Biblioteca del Congreso Nacional de Chile</strong> (1999). <a href="https://www.bcn.cl/leychile/navegar?idNorma=141599">Ley 19.628 sobre proteccion de la vida privada</a>.<br />
+  Marco chileno de datos personales aplicable a los proyectos del programa.</li>
+<li><strong>NIST</strong> (2024). <a href="https://www.nist.gov/cyberframework">NIST Cybersecurity Framework 2.0</a>. DOI <a href="https://doi.org/10.6028/NIST.CSWP.29">10.6028/NIST.CSWP.29</a>.<br />
+  Funciones Gobernar, Identificar, Proteger, Detectar, Responder y Recuperar.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 13</a> · <a href="062.html">← Anterior</a> · <a href="064.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="062.html">← Anterior</a> · <a href="064.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="063">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="062.html"><span class="sentido">← Anterior · 062</span>Persistencia políglota: decidir por evidencia y no por moda</a>
-<a class="siguiente" href="064.html"><span class="sentido">Siguiente · 064 →</span>Proyecto final: diseñar, medir y defender</a>
+<a class="anterior" href="062.html"><span class="sentido">← Anterior · 062</span>Observabilidad, objetivos de servicio y capacidad</a>
+<a class="siguiente" href="064.html"><span class="sentido">Siguiente · 064 →</span>OLTP frente a OLAP: por qué se separan</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

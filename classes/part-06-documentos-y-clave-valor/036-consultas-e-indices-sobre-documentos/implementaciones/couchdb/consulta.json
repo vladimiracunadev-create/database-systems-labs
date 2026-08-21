@@ -1,0 +1,20 @@
+{
+  "_comentario": [
+    "motor: couchdb",
+    "doc: https://docs.couchdb.org/en/stable/ddocs/views/intro.html",
+    "nota: implementacion declarada. La vista se calcula de forma INCREMENTAL al",
+    "escribir y se guarda en un arbol B, asi que la consulta solo lee el",
+    "resultado ya agregado. El precio: hay que decidir la agregacion antes de",
+    "necesitarla, y una pregunta nueva es una vista nueva sobre toda la base.",
+    "Se consulta con: _view/por_categoria?group=true"
+  ],
+
+  "_id": "_design/ventas",
+  "language": "javascript",
+  "views": {
+    "por_categoria": {
+      "map": "function (doc) { if (doc.type === 'pedido') { doc.lineas.forEach(function (l) { emit(l.categoria, l.importe); }); } }",
+      "reduce": "_sum"
+    }
+  }
+}

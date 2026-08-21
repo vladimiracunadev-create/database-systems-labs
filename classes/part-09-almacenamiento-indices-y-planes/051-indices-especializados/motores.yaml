@@ -1,0 +1,122 @@
+---
+caso:
+  titulo: >-
+    Indexar solo lo que se consulta: los dos pedidos pendientes de seis
+  contrato: |
+    El índice B-Tree completo no siempre es la respuesta. Cuando la consulta
+    caliente mira **una fracción pequeña** de la tabla —los pedidos pendientes,
+    las filas no borradas, los usuarios activos—, un índice parcial indexa solo
+    esas filas: ocupa una fracción, se mantiene en una fracción de las
+    escrituras y cabe entero en memoria.
+
+    El caso tiene seis pedidos de los que dos están pendientes, y pide esos dos
+    ordenados por fecha. El resultado es trivial; lo que se compara es qué
+    índice puede construir cada motor para responderlo sin tocar los otros
+    cuatro, y qué hacen los que no tienen índices parciales.
+  columnas: [pedido, fecha]
+  esperado:
+    - [P-2, "2026-08-02"]
+    - [P-5, "2026-08-05"]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Tiene el catálogo más completo y cada tipo resuelve un problema distinto:
+      **parcial** para subconjuntos, `INCLUDE` para cubrir la consulta sin ir a
+      la tabla, **GIN** para arreglos y texto, **GiST** para geometría y rangos,
+      **BRIN** para tablas enormes y ordenadas por naturaleza, y **hash** para
+      igualdad pura.
+    porque_no: >-
+      Elegir mal es fácil y sale caro: BRIN sobre datos desordenados no descarta
+      nada, hash no sirve para rangos ni para ordenar, y cada índice de más se
+      paga en cada escritura. Y un índice parcial solo se usa si el
+      planificador puede **demostrar** que la consulta implica su predicado.
+    doc: https://www.postgresql.org/docs/current/indexes-types.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene índices parciales y por expresión, que es casi todo lo que hace
+      falta: el índice de los pendientes ocupa dos entradas en vez de seis, y en
+      una tabla real la diferencia es de órdenes de magnitud.
+    porque_no: >-
+      No hay GIN, ni GiST, ni BRIN, ni cubrientes explícitos: para buscar dentro
+      de un JSON o por geometría hay que extraer a una columna e indexar esa, o
+      recurrir a extensiones como R-Tree.
+    doc: https://sqlite.org/partialindex.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Tiene índices por prefijo —útiles en columnas de texto largas—,
+      multivaluados sobre JSON y espaciales con R-Tree, y su optimizador aplica
+      «índice cubriente» cuando el índice contiene todas las columnas pedidas.
+    porque_no: >-
+      **No tiene índices parciales**. La única forma de acercarse es una columna
+      generada que valga `NULL` para las filas que no interesan e indexarla, un
+      rodeo que hay que explicar cada vez que alguien lo lee.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      `partialFilterExpression` es el índice parcial con otro nombre, y además
+      tiene índices dispersos, TTL, geoespaciales, de texto y hasta con
+      recolección diferida (`hidden`) para probar si un índice hace falta antes
+      de borrarlo.
+    porque_no: >-
+      Un índice parcial solo se usa si la consulta **incluye** su predicado: si
+      la consulta pide `estado: "pendiente"` y el índice se creó sobre
+      `estado: {$eq: "pendiente"}`, la coincidencia tiene que ser exacta o el
+      índice se ignora en silencio.
+    doc: https://www.mongodb.com/docs/manual/core/index-partial/
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Está aquí para mostrar la alternativa a los índices: no los necesita
+      porque cada grupo de filas guarda los valores mínimo y máximo de cada
+      columna, así que descartar bloques enteros es gratis. Es la misma idea que
+      BRIN, aplicada por omisión a todo.
+    porque_no: >-
+      Esa técnica solo funciona si los datos están **ordenados** por la columna
+      que se filtra: sobre datos desordenados no descarta nada, exactamente
+      igual que un BRIN mal usado.
+    doc: https://duckdb.org/docs/stable/sql/indexes.html
+
+  - id: cassandra
+    aplica: no
+    porque_no: >-
+      Su índice secundario es local a cada nodo, así que una consulta por él
+      pregunta a todo el anillo. Y sobre una columna de baja cardinalidad como
+      `estado`, cada nodo devolvería muchísimas filas: es el antipatrón
+      documentado.
+    alternativa: >-
+      Una tabla `pedidos_pendientes` con `estado` como clave de partición y la
+      fecha como agrupamiento, alimentada por la aplicación y vaciada al
+      entregar: el índice parcial construido a mano.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/indexing/2i/2i-concepts.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay índices que crear sobre datos ya escritos: la estructura de acceso
+      se decide al escribir y no hay forma de añadir otra después sin recorrer
+      todo el espacio de claves.
+    alternativa: >-
+      Un conjunto ordenado `pedidos:pendientes` con la fecha como puntuación,
+      del que se saca el pedido al entregarlo. Es literalmente un índice
+      parcial mantenido a mano, con la ventaja de que se lee en microsegundos y
+      el inconveniente de que hay que acordarse de mantenerlo.
+    doc: https://redis.io/docs/latest/commands/zadd/

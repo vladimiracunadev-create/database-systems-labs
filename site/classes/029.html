@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Columnas anchas: modelar desde la consulta. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta name="description" content="Nulos y lógica de tres valores. Parte 04: SQL en profundidad.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/029.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="029 — Columnas anchas: modelar desde la consulta · Database Systems Labs">
-<meta property="og:description" content="Columnas anchas: modelar desde la consulta. Parte 06: Grafos, columnas, tiempo y búsqueda.">
+<meta property="og:title" content="029 — Nulos y lógica de tres valores · Database Systems Labs">
+<meta property="og:description" content="Nulos y lógica de tres valores. Parte 04: SQL en profundidad.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/029.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "029 — Columnas anchas: modelar desde la consulta", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["clave de partición", "clave de agrupamiento", "desnormalización por consulta"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>029 — Columnas anchas: modelar desde la consulta · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "029 — Nulos y lógica de tres valores", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["UNKNOWN", "IS DISTINCT FROM", "NOT IN con nulos", "agregados y nulos"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>029 — Nulos y lógica de tres valores · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,307 +49,587 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-06.html">Parte 06 · Grafos, columnas, tiempo y búsqueda</a>
+  <a href="parte-04.html">Parte 04 · SQL en profundidad</a>
   <span aria-hidden="true">/</span><span>Clase 029</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="029--columnas-anchas-modelar-desde-la-consulta">029 — Columnas anchas: modelar desde la consulta</h1>
+<h1 id="029--nulos-y-lógica-de-tres-valores">029 — Nulos y lógica de tres valores</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-04-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Intermedio-1f6feb?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-029%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 06 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
-3 horas estimadas · motores <code>cassandra</code>, <code>scylladb</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>clave de partición</code> · <code>clave de agrupamiento</code> · <code>desnormalización por consulta</code></p>
+<p>Parte 04 — SQL en profundidad · Intermedio ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>UNKNOWN</code> · <code>IS DISTINCT FROM</code> · <code>NOT IN con nulos</code> · <code>agregados y nulos</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 029&quot;]
+    C --&gt; K1[&quot;UNKNOWN&quot;]
+    C --&gt; K2[&quot;IS DISTINCT FROM&quot;]
+    C --&gt; K3[&quot;NOT IN con nulos&quot;]
+    C --&gt; K4[&quot;agregados y nulos&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Modelar en un motor de columnas anchas, donde la regla se invierte: no se normaliza y luego se consulta, sino que se enumeran las consultas y se diseña una tabla por cada una.</p>
+<p>Manejar la ausencia de información sin que produzca resultados falsos. El nulo de SQL no es un valor: es una marca, y la lógica que lo gobierna tiene tres estados, no dos.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Distinguir clave de partición de clave de agrupamiento y su efecto físico.</li>
-<li>Diseñar tablas a partir de las consultas, aceptando la duplicación.</li>
-<li>Reconocer las particiones calientes y las particiones sin límite.</li>
-<li>Explicar por qué CQL prohíbe deliberadamente operaciones que SQL permite.</li>
-<li>Elegir el nivel de consistencia y calcular cuándo hay lectura consistente.</li>
+<li>Evaluar expresiones bajo lógica de tres valores.</li>
+<li>Explicar por qué <code>NULL = NULL</code> no es verdadero y dónde sí se comparan como iguales.</li>
+<li>Predecir el efecto de los nulos en <code>WHERE</code>, <code>JOIN</code>, <code>GROUP BY</code>, <code>UNIQUE</code> y <code>CHECK</code>.</li>
+<li>Elegir entre <code>IS DISTINCT FROM</code>, <code>COALESCE</code> y reestructurar el esquema.</li>
+<li>Distinguir los tres significados que la gente mete en un mismo nulo.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-clave-primaria-tiene-dos-partes">La clave primaria tiene dos partes</h3>
-<pre><code class="language-sql">PRIMARY KEY ( (course_id, periodo), registrada_en, student_id )
---             ^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^^^^
---             clave de partición    claves de agrupamiento
+<h3 id="tres-valores-de-verdad">Tres valores de verdad</h3>
+<p>Codd (1979) introdujo el nulo para representar información faltante. La consecuencia es que toda comparación con nulo devuelve <code>UNKNOWN</code>:</p>
+<pre><code class="language-text">AND       V   F   U          OR        V   F   U          NOT
+V         V   F   U          V         V   V   V          V -&gt; F
+F         F   F   F          F         V   F   U          F -&gt; V
+U         U   F   U          U         V   U   U          U -&gt; U
 </code></pre>
-<ul>
-<li><strong>Clave de partición:</strong> decide <strong>en qué nodo</strong> viven los datos, por hash. Todas las filas con la misma clave de partición están juntas en el mismo nodo.</li>
-<li><strong>Claves de agrupamiento:</strong> deciden <strong>el orden dentro</strong> de la partición. Los datos se guardan físicamente ordenados por ellas.</li>
-</ul>
-<p>Consecuencias que rigen todo lo demás:</p>
-<ol>
-<li>Toda consulta eficiente <strong>debe</strong> especificar la clave de partición completa. Sin ella, hay que preguntar a todos los nodos.</li>
-<li>Solo se puede filtrar por rango en las claves de agrupamiento y <strong>en orden</strong>, sin saltarse ninguna.</li>
-<li><code>ORDER BY</code> solo funciona sobre las claves de agrupamiento y en el sentido declarado.</li>
-</ol>
-<h3 id="lo-que-cql-prohíbe-y-por-qué">Lo que CQL prohíbe, y por qué</h3>
+<p>Regla operativa: <strong><code>WHERE</code> deja pasar solo <code>TRUE</code></strong>. <code>FALSE</code> y <code>UNKNOWN</code> se descartan igual, y esa equiparación es la que engaña.</p>
+<h3 id="dónde-los-nulos-se-comportan-de-forma-distinta">Dónde los nulos se comportan de forma distinta</h3>
+<p>Aquí está la inconsistencia real de SQL, y conviene tenerla en una tabla:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Operación SQL</th>
-<th>En CQL</th>
-<th>Motivo</th>
+<th>Contexto</th>
+<th>¿Dos nulos son iguales?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>JOIN</code></td>
-<td>No existe</td>
-<td>Exigiría coordinación entre nodos</td>
+<td><code>WHERE a = b</code></td>
+<td>No (<code>UNKNOWN</code>)</td>
 </tr>
 <tr>
-<td><code>GROUP BY</code> arbitrario</td>
-<td>Muy limitado</td>
-<td>Ídem</td>
+<td><code>GROUP BY</code></td>
+<td><strong>Sí</strong>: todos los nulos forman un solo grupo</td>
 </tr>
 <tr>
-<td>Filtrar por columna no clave</td>
-<td>Requiere <code>ALLOW FILTERING</code></td>
-<td>Sería un barrido del clúster</td>
+<td><code>DISTINCT</code></td>
+<td><strong>Sí</strong>: se conserva un solo nulo</td>
 </tr>
 <tr>
-<td>Subconsultas</td>
-<td>No existen</td>
-<td>Ídem</td>
+<td><code>UNION</code> / <code>INTERSECT</code> / <code>EXCEPT</code></td>
+<td><strong>Sí</strong></td>
 </tr>
 <tr>
-<td><code>OR</code> en el <code>WHERE</code></td>
-<td>No</td>
-<td>Rompería la localización por partición</td>
+<td><code>ORDER BY</code></td>
+<td><strong>Sí</strong>: se agrupan al principio o al final</td>
+</tr>
+<tr>
+<td>Índice <code>UNIQUE</code></td>
+<td><strong>No</strong> (norma): admite varios nulos</td>
+</tr>
+<tr>
+<td><code>IS NOT DISTINCT FROM</code></td>
+<td><strong>Sí</strong>, por definición</td>
+</tr>
+<tr>
+<td>Clave primaria</td>
+<td>Prohibidos</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>ALLOW FILTERING</code> no es una opción avanzada: es una advertencia. Su presencia en código de producción indica casi siempre que el modelo no corresponde a la consulta.</p>
-<p>Las prohibiciones son <strong>de diseño</strong>. Un motor que permitiera reuniones distribuidas ofrecería consultas cuyo costo crece con el tamaño del clúster, y eso es exactamente lo que Cassandra evita para garantizar latencia predecible.</p>
-<h3 id="modelado-dirigido-por-la-consulta">Modelado dirigido por la consulta</h3>
-<pre><code class="language-mermaid">flowchart TD
-    Q[&quot;Enumerar TODAS las consultas&quot;] --&gt; P[&quot;Por cada una: ¿qué se conoce&lt;br/&gt;en el momento de preguntar?&quot;]
-    P --&gt; K[&quot;Eso es la clave de partición&quot;]
-    K --&gt; O[&quot;¿En qué orden se quiere el resultado?&quot;]
-    O --&gt; C[&quot;Eso son las claves de agrupamiento&quot;]
-    C --&gt; T[&quot;Una tabla por consulta&quot;]
-    T --&gt; W[&quot;Escribir en todas ellas&lt;br/&gt;en cada operación&quot;]
-    W --&gt; V{&quot;¿Alguna partición&lt;br/&gt;crece sin límite?&quot;}
-    V -- &quot;Sí&quot; --&gt; B[&quot;Añadir un cubo temporal&lt;br/&gt;a la clave de partición&quot;]
-    V -- &quot;No&quot; --&gt; OK[&quot;Modelo válido&quot;]
+<p>Que <code>GROUP BY</code> los agrupe y <code>=</code> no los iguale no es un error de nadie: son operadores distintos con definiciones distintas. Pero explica por qué un <code>DISTINCT</code> y un <code>JOIN</code> sobre la misma columna dan resultados que no cuadran.</p>
+<h3 id="el-caso-unique">El caso <code>UNIQUE</code></h3>
+<pre><code class="language-sql">CREATE TABLE t (email TEXT UNIQUE);
+INSERT INTO t VALUES (NULL), (NULL), (NULL);   -- las tres pasan
 </code></pre>
-<h3 id="particiones-los-dos-fallos">Particiones: los dos fallos</h3>
-<p><strong>Partición caliente:</strong> una clave concreta recibe una fracción desproporcionada del tráfico. Si <code>course_id</code> es la clave y un curso tiene el 40 % de las inscripciones, un nodo hace el 40 % del trabajo mientras los demás están ociosos.</p>
-<p><strong>Partición sin límite:</strong> una partición que crece indefinidamente. Cassandra recomienda mantenerlas por debajo de ~100 MB y ~100 000 filas. Una partición por <code>sensor_id</code> que recibe una medición por segundo supera esa cota en poco más de un día.</p>
-<p>La solución para ambos es la misma: <strong>añadir un cubo a la clave de partición</strong>.</p>
-<pre><code class="language-sql">PRIMARY KEY ( (sensor_id, dia), medido_en )
+<p>Según la norma, un índice único admite múltiples nulos, porque no puede afirmar que dos desconocidos sean iguales. SQL Server es la excepción: solo admite uno. PostgreSQL 15 añadió <code>UNIQUE NULLS NOT DISTINCT</code> para el otro comportamiento.</p>
+<p>Este detalle se aprovecha a propósito: una columna generada que vale <code>NULL</code> cuando la fila no debe participar en la restricción emula la unicidad condicional en motores sin índices parciales (clase 014).</p>
+<h3 id="las-tres-trampas">Las tres trampas</h3>
+<p><strong>1. <code>NOT IN</code> con nulos:</strong></p>
+<pre><code class="language-sql">SELECT * FROM students WHERE id NOT IN (SELECT student_id FROM enrollments);
 </code></pre>
-<p>Ahora cada partición cubre un día. El costo: una consulta de siete días debe preguntar por siete particiones, lo que el cliente resuelve con siete consultas en paralelo. Elegir el tamaño del cubo es un cálculo, no una intuición:</p>
-<pre><code class="language-text">mediciones por día = 86 400
-tamaño de fila     ≈ 100 bytes
-partición diaria   ≈ 8,6 MB          ← correcto
-partición mensual  ≈ 260 MB          ← demasiado grande
+<p>Si la subconsulta devuelve un nulo, la expresión se convierte en <code>id&lt;&gt;x ∧ id&lt;&gt;y ∧ id&lt;&gt;NULL</code> → <code>... ∧ UNKNOWN</code> → nunca <code>TRUE</code>. Resultado: <strong>cero filas</strong>, sin error. <code>NOT EXISTS</code> no tiene este problema.</p>
+<p><strong>2. Negación que no devuelve el complemento:</strong></p>
+<pre><code class="language-sql">SELECT COUNT(*) FROM enrollments WHERE nota &gt;= 4.0;   -- 24
+SELECT COUNT(*) FROM enrollments WHERE nota &lt;  4.0;   -- 8
+SELECT COUNT(*) FROM enrollments;                      -- 40
 </code></pre>
-<h3 id="consistencia-ajustable">Consistencia ajustable</h3>
-<p>Cada operación elige cuántas réplicas deben responder:</p>
+<p>24 + 8 = 32, no 40. Faltan las 8 filas con nota nula, que no cumplen ninguna de las dos condiciones. Para el complemento real: <code>WHERE nota &lt; 4.0 OR nota IS NULL</code>.</p>
+<p><strong>3. Concatenación y aritmética:</strong></p>
+<pre><code class="language-sql">SELECT 'Total: ' || total FROM ventas;   -- NULL si total es NULL, no 'Total: '
+SELECT precio * cantidad FROM items;     -- NULL si cualquiera lo es
+</code></pre>
+<p>Un nulo se propaga por toda la expresión.</p>
+<h3 id="tres-significados-en-una-sola-marca">Tres significados en una sola marca</h3>
+<p>El problema de fondo, que ninguna sintaxis resuelve: <code>NULL</code> se usa para al menos tres cosas distintas.</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Nivel</th>
 <th>Significado</th>
+<th>Ejemplo</th>
+<th>Tratamiento correcto</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ONE</code></td>
-<td>Una réplica</td>
+<td>Desconocido</td>
+<td>No sabemos el teléfono, pero existe</td>
+<td>Nulo es adecuado</td>
 </tr>
 <tr>
-<td><code>QUORUM</code></td>
-<td>⌊RF/2⌋ + 1</td>
+<td>No aplicable</td>
+<td>Fecha de egreso de quien sigue estudiando</td>
+<td>Mejor reestructurar</td>
 </tr>
 <tr>
-<td><code>LOCAL_QUORUM</code></td>
-<td>Quórum dentro del centro de datos local</td>
-</tr>
-<tr>
-<td><code>ALL</code></td>
-<td>Todas</td>
+<td>Aún no ocurrido</td>
+<td>Nota de una inscripción sin calificar</td>
+<td>Nulo o estado explícito</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Regla de lectura consistente:</strong> <code>R + W &gt; RF</code>. Con factor de replicación 3:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>W</th>
-<th>R</th>
-<th>¿Lectura consistente?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>ONE</code> (1)</td>
-<td><code>ONE</code> (1)</td>
-<td>No: 1+1 = 2 ≤ 3</td>
-</tr>
-<tr>
-<td><code>QUORUM</code> (2)</td>
-<td><code>QUORUM</code> (2)</td>
-<td><strong>Sí</strong>: 2+2 = 4 &gt; 3</td>
-</tr>
-<tr>
-<td><code>ALL</code> (3)</td>
-<td><code>ONE</code> (1)</td>
-<td>Sí, pero sin tolerancia a fallos en escritura</td>
-</tr>
-<tr>
-<td><code>ONE</code> (1)</td>
-<td><code>ALL</code> (3)</td>
-<td>Sí, pero sin tolerancia a fallos en lectura</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>QUORUM</code>/<code>QUORUM</code> es el punto de equilibrio habitual: tolera la caída de una réplica en ambos sentidos. Es el mismo cálculo de quórums de Dynamo, que se retoma en la clase 043.</p>
+<p>Date argumenta que confundirlos es la raíz del problema, y propone evitar los nulos reestructurando: sacar el atributo opcional a una tabla propia donde su ausencia se representa como ausencia de fila. Es la solución más limpia y también la que añade una reunión; la decisión se toma caso a caso.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;Un atributo puede faltar&quot;] --&gt; B{&quot;¿Por qué falta?&quot;}
+    B -- &quot;No aplicable a esta fila&quot; --&gt; C[&quot;Reestructurar:&lt;br/&gt;tabla aparte o subtipo&quot;]
+    B -- &quot;Desconocido hoy,&lt;br/&gt;se sabrá&quot; --&gt; D[&quot;NULL + IS NULL en las consultas&quot;]
+    B -- &quot;Aún no ocurre&quot; --&gt; E{&quot;¿El estado importa&lt;br/&gt;al negocio?&quot;}
+    E -- &quot;Sí&quot; --&gt; F[&quot;Columna de estado explícita&lt;br/&gt;+ NULL en el valor&quot;]
+    E -- &quot;No&quot; --&gt; D
+    C --&gt; G[&quot;Sin lógica de tres valores&quot;]
+    D --&gt; H[&quot;Revisar: NOT IN, negaciones,&lt;br/&gt;agregados, concatenación&quot;]
+    F --&gt; H
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Consultas del dominio:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>#</th>
-<th>Consulta</th>
-<th>Se conoce</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Q1</td>
-<td>Inscripciones de un curso, las más recientes primero</td>
-<td><code>course_id</code>, <code>periodo</code></td>
-</tr>
-<tr>
-<td>Q2</td>
-<td>Cursos de un estudiante</td>
-<td><code>student_id</code></td>
-</tr>
-<tr>
-<td>Q3</td>
-<td>Una inscripción concreta</td>
-<td>ambos</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Tres tablas, una por consulta:</strong></p>
-<pre><code class="language-sql">CREATE TABLE inscripciones_por_curso (
-  course_id     text, periodo text,
-  registrada_en timestamp, student_id int,
-  student_nombre text, nota decimal, estado text,
-  PRIMARY KEY ((course_id, periodo), registrada_en, student_id)
-) WITH CLUSTERING ORDER BY (registrada_en DESC, student_id ASC);
-
-CREATE TABLE cursos_por_estudiante (
-  student_id int, periodo text,
-  course_id text, course_nombre text, nota decimal, estado text,
-  PRIMARY KEY ((student_id), periodo, course_id)
-) WITH CLUSTERING ORDER BY (periodo DESC, course_id ASC);
-
-CREATE TABLE inscripcion (
-  student_id int, course_id text,
-  periodo text, nota decimal, estado text, registrada_en timestamp,
-  PRIMARY KEY ((student_id, course_id))
-);
+<p>Tabla <code>enrollments</code> con 40 filas: 24 con nota ≥ 4,0; 8 con nota &lt; 4,0; 8 con nota nula.</p>
+<pre><code class="language-sql">-- 1. ¿Cuántos no aprobaron?
+SELECT COUNT(*) FROM enrollments WHERE nota &lt; 4.0;                   -- 8
+SELECT COUNT(*) FROM enrollments WHERE NOT (nota &gt;= 4.0);            -- 8  (¡no 16!)
+SELECT COUNT(*) FROM enrollments WHERE nota &lt; 4.0 OR nota IS NULL;   -- 16
 </code></pre>
-<p>Los mismos datos, tres veces. <strong>Eso es correcto en este modelo</strong>: el almacenamiento es barato y la coordinación distribuida es cara.</p>
-<p><strong>Escritura: un lote lógico.</strong></p>
-<pre><code class="language-sql">BEGIN BATCH
-  INSERT INTO inscripciones_por_curso (course_id, periodo, registrada_en, student_id,
-                                       student_nombre, estado)
-         VALUES ('bd','2026-1', toTimestamp(now()), 11, 'Ana Pérez', 'activa');
-  INSERT INTO cursos_por_estudiante (student_id, periodo, course_id, course_nombre, estado)
-         VALUES (11, '2026-1', 'bd', 'Bases de datos', 'activa');
-  INSERT INTO inscripcion (student_id, course_id, periodo, estado, registrada_en)
-         VALUES (11, 'bd', '2026-1', 'activa', toTimestamp(now()));
-APPLY BATCH;
+<p>La segunda consulta es la que engaña: parece la negación de la primera y no lo es, porque <code>NOT UNKNOWN</code> es <code>UNKNOWN</code>.</p>
+<pre><code class="language-sql">-- 2. Promedio: dos preguntas distintas
+SELECT AVG(nota) FROM enrollments;                      -- sobre 32 calificados
+SELECT AVG(COALESCE(nota, 0)) FROM enrollments;         -- sobre 40, no calificadas = 0
 </code></pre>
-<p>Advertencia importante: un <code>BATCH</code> que abarca varias particiones <strong>no</strong> es una transacción. Garantiza que todas las sentencias se aplicarán <em>eventualmente</em>, mediante un registro de lote, y tiene un costo de coordinación notable. Los lotes son adecuados para mantener sincronizadas vistas duplicadas de una misma escritura lógica, no para lógica transaccional.</p>
-<p><strong>Comprobación de la partición sin límite.</strong> <code>inscripciones_por_curso</code> tiene una partición por <code>(course_id, periodo)</code>. Un curso masivo con 50 000 inscritos y filas de ~150 bytes da 7,5 MB: dentro de lo aceptable. Si el dominio admitiera cursos de un millón, habría que cubetear por mes de inscripción.</p>
-<p><strong>Q2 con <code>ALLOW FILTERING</code></strong>, el antipatrón:</p>
-<pre><code class="language-sql">SELECT * FROM inscripciones_por_curso WHERE student_id = 11 ALLOW FILTERING;
+<pre><code class="language-sql">-- 3. Comparar dos columnas que pueden ser nulas
+SELECT * FROM notas WHERE nota_anterior &lt;&gt; nota;                     -- pierde filas
+SELECT * FROM notas WHERE nota_anterior IS DISTINCT FROM nota;       -- correcto
 </code></pre>
-<p>Funciona y pregunta a <strong>todos</strong> los nodos, leyendo todas las particiones. Con 300 cursos, la consulta lee 300 particiones para devolver 8 filas. Por eso existe <code>cursos_por_estudiante</code>.</p>
+<p><code>IS DISTINCT FROM</code> trata dos nulos como iguales y un nulo frente a un valor como distintos, que es lo que casi siempre se quiere al detectar cambios. Está en PostgreSQL y SQLite; MySQL usa el operador <code>&lt;=&gt;</code> para la forma negada.</p>
+<p><strong>Reestructuración como alternativa.</strong> Si <code>fecha_egreso</code> es nula para todos los estudiantes activos, en vez de:</p>
+<pre><code class="language-sql">CREATE TABLE students (id INTEGER PRIMARY KEY, nombre TEXT, fecha_egreso DATE);
+</code></pre>
+<p>se puede escribir:</p>
+<pre><code class="language-sql">CREATE TABLE students  (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL);
+CREATE TABLE egresos   (student_id INTEGER PRIMARY KEY REFERENCES students(id),
+                        fecha DATE NOT NULL);
+</code></pre>
+<p>Ahora «egresado» es la existencia de una fila, no un valor especial. Las consultas usan <code>EXISTS</code>/<code>NOT EXISTS</code> y desaparece la lógica de tres valores. El costo: una reunión más y una tabla más.</p>
+<p><strong>Traza del beneficio:</strong> la consulta «estudiantes no egresados» pasa de <code>WHERE fecha_egreso IS NULL</code> —correcta pero frágil ante quien escriba <code>&lt;&gt; ''</code>— a <code>NOT EXISTS (...)</code>, que no admite interpretación ambigua.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Dimensión</th>
-<th>Relacional</th>
-<th>Columnas anchas</th>
+<th>Operación</th>
+<th>Con nulos</th>
+<th>Alternativa segura</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Punto de partida</td>
-<td>El esquema normalizado</td>
-<td>Las consultas</td>
+<td><code>a = b</code></td>
+<td><code>UNKNOWN</code></td>
+<td><code>a IS NOT DISTINCT FROM b</code></td>
 </tr>
 <tr>
-<td>Duplicación</td>
-<td>Se evita</td>
-<td>Se busca</td>
+<td><code>a &lt;&gt; b</code></td>
+<td><code>UNKNOWN</code></td>
+<td><code>a IS DISTINCT FROM b</code></td>
 </tr>
 <tr>
-<td>Reuniones</td>
-<td>En el motor</td>
-<td>En la escritura</td>
+<td><code>x NOT IN (sub)</code></td>
+<td>Vacío si hay nulos</td>
+<td><code>NOT EXISTS</code></td>
 </tr>
 <tr>
-<td>Consultas no previstas</td>
-<td>Se escriben y funcionan</td>
-<td>Exigen tabla nueva y relleno</td>
+<td><code>SUM(col)</code> sobre vacío</td>
+<td><code>NULL</code></td>
+<td><code>COALESCE(SUM(col), 0)</code></td>
 </tr>
 <tr>
-<td>Coste de escritura</td>
-<td>Uno</td>
-<td>Uno por vista</td>
+<td><code>'a' \|\| col</code></td>
+<td><code>NULL</code></td>
+<td><code>'a' \|\| COALESCE(col, '')</code></td>
 </tr>
 <tr>
-<td>Escalado horizontal de escritura</td>
-<td>Limitado</td>
-<td>Lineal</td>
+<td><code>CHECK (col &gt; 0)</code></td>
+<td>Acepta nulos</td>
+<td><code>CHECK (col IS NOT NULL AND col &gt; 0)</code></td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>ALLOW FILTERING</code> en producción.</strong> Señal de modelo ausente.</li>
-<li><strong>Particiones sin cota.</strong> Degradan la latencia progresivamente hasta el fallo.</li>
-<li><strong>Confundir <code>BATCH</code> con transacción.</strong> No hay atomicidad entre particiones.</li>
-<li><strong>Clave de partición de baja cardinalidad.</strong> Concentra los datos en pocos nodos.</li>
-<li><strong>Leer con <code>ONE</code> tras escribir con <code>ONE</code> y esperar consistencia.</strong> <code>R + W ≤ RF</code>.</li>
-<li><strong>Índices secundarios de Cassandra por costumbre.</strong> Consultan todos los nodos; en general se prefiere una tabla nueva.</li>
+<li><strong><code>= NULL</code> en vez de <code>IS NULL</code>.</strong> No da error: no devuelve nada.</li>
+<li><strong>Suponer que una condición y su negación cubren todas las filas.</strong> Nunca cubren los nulos.</li>
+<li><strong><code>NOT IN</code> con subconsulta sin <code>NOT NULL</code> garantizado.</strong></li>
+<li><strong><code>CHECK</code> que no rechaza nulos.</strong> Deja pasar exactamente lo que se quería prohibir.</li>
+<li><strong>Usar un centinela (<code>-1</code>, <code>''</code>, <code>'1900-01-01'</code>).</strong> Cambia un problema conocido por uno silencioso que contamina agregados.</li>
+<li><strong>Permitir nulos por defecto al crear tablas.</strong> <code>NOT NULL</code> debería ser la elección por omisión mental.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Una consulta no prevista en un modelo de columnas anchas no es un <code>SELECT</code> nuevo: es una tabla nueva más el relleno histórico de todos los datos existentes. Enumerar bien las consultas al principio no es burocracia, es la única forma barata de hacerlo.</p>
+<p>Los descuadres entre informes suelen resolverse en la misma línea: uno de los dos contaba los nulos y el otro no. Declarar <code>NOT NULL</code> siempre que sea cierto elimina la clase entera de problemas antes de que exista.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Enumera las consultas de tu dominio con lo que se conoce en el momento de preguntar.</li>
-<li>Diseña una tabla por consulta con sus claves de partición y agrupamiento.</li>
-<li>Calcula el tamaño máximo de la partición más grande y decide el cubo si hace falta.</li>
-<li>Elige <code>R</code> y <code>W</code> para dos operaciones distintas y justifica con <code>R + W &gt; RF</code>.</li>
+<li>Localiza en un esquema real una columna que admita nulos con dos significados distintos mezclados.</li>
+<li>Escribe una consulta que hoy devuelva un resultado incorrecto por esa causa, con las cifras.</li>
+<li>Propón la reestructuración que elimina el nulo y estima su costo.</li>
+<li>Audita tu código en busca de <code>NOT IN</code> sobre subconsultas y verifica cuáles pueden devolver nulos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué CQL prohíbe las reuniones en lugar de permitirlas y avisar de su costo?</li>
-<li>Calcula el tamaño de partición de una serie tuya y elige el cubo temporal.</li>
-<li>Con RF = 5, ¿qué combinaciones de <code>R</code> y <code>W</code> dan lectura consistente?</li>
-<li>Da una consulta nueva sobre tu modelo y describe el trabajo completo de añadirla.</li>
+<li>Evalúa <code>NULL OR TRUE</code>, <code>NULL AND FALSE</code> y <code>NOT NULL</code> bajo lógica de tres valores.</li>
+<li>¿Por qué <code>GROUP BY</code> agrupa los nulos y <code>=</code> no los iguala?</li>
+<li>Da un caso donde un índice <code>UNIQUE</code> con varios nulos sea el comportamiento deseado.</li>
+<li>Convierte una columna con nulo «no aplicable» a un diseño sin nulos y compara las dos consultas equivalentes.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Quién no está inscrito en nada, cuando hay un nulo de por medio</p>
+<p>En SQL una comparación no devuelve verdadero o falso: devuelve verdadero,
+falso o <strong>desconocido</strong>. Y <code>NULL</code> no es un valor, es la ausencia de valor:
+<code>NULL = NULL</code> no es cierto, y <code>NULL &lt;&gt; 'Ada'</code> tampoco es cierto.</p>
+<p>El caso pide los estudiantes sin ninguna inscripción. En la tabla de
+inscripciones hay una fila con el estudiante en nulo —dato sucio, de los que
+hay en cualquier sistema real—, y esa única fila basta para que la forma
+escrita con <code>NOT IN</code> devuelva <strong>cero filas</strong> en vez de una. No lanza un
+error: devuelve un informe vacío. La forma con <code>NOT EXISTS</code> devuelve lo
+correcto: Grace.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>nombre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Grace</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 029</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/nulls.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/functions-subquery.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/reference/operator/query/type/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Apache Cassandra</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/commands/hget/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/nulls.html
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre TEXT PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INTEGER PRIMARY KEY,
+    estudiante TEXT,          -- admite nulo: el dato sucio del mundo real
+    curso      TEXT NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Implementa la lógica de tres valores del estándar, así que el fallo del <code>NOT IN</code> se reproduce aquí igual que en cualquier motor grande: es el sitio más barato para verlo con los propios ojos.</li>
+<li><strong>Por qué no:</strong> Permite nulos en columnas de clave primaria salvo en tablas <code>STRICT</code> o con <code>NOT NULL</code> explícito, una desviación del estándar que multiplica las ocasiones de encontrarse un nulo donde no debía haberlo.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/nulls.html">https://sqlite.org/nulls.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html
+-- nota: IS DISTINCT FROM compara tratando el nulo como un valor mas. La forma
+--         WHERE i.estudiante IS NOT DISTINCT FROM e.nombre
+--       es la que hay que usar al comparar filas que pueden traer nulos.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INTEGER PRIMARY KEY,
+    estudiante VARCHAR,          -- admite nulo: el dato sucio del mundo real
+    curso      VARCHAR NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sigue el estándar y añade <code>IS DISTINCT FROM</code>, que compara tratando el nulo como un valor más: es la herramienta correcta para detectar cambios entre dos versiones de una fila sin que los nulos estropeen la comparación.</li>
+<li><strong>Por qué no:</strong> En analítica los nulos llegan por millones desde ficheros mal formados, y las funciones de agregación los ignoran en silencio: <code>AVG</code> sobre una columna medio vacía devuelve un número perfectamente creíble y equivocado.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html">https://duckdb.org/docs/stable/sql/expressions/comparison_operators.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/functions-subquery.html
+-- nota: la documentacion avisa expresamente de que NOT IN sobre una subconsulta
+--       con nulos no hace lo que parece. No es un fallo del motor: es la logica
+--       de tres valores del estandar aplicada al pie de la letra.
+
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre text PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         integer PRIMARY KEY,
+    estudiante text,          -- admite nulo: el dato sucio del mundo real
+    curso      text NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su documentación es explícita sobre la trampa del <code>NOT IN</code> con subconsultas que pueden devolver nulos, y ofrece las herramientas para evitarla: <code>NOT EXISTS</code>, <code>IS DISTINCT FROM</code> y restricciones <code>NOT NULL</code>.</li>
+<li><strong>Por qué no:</strong> El índice B-Tree por omisión sí indexa los nulos, pero <code>UNIQUE</code> los deja pasar todos: una columna única y anulable admite mil filas con nulo, que casi nunca es lo que se quería.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/functions-subquery.html">https://www.postgresql.org/docs/current/functions-subquery.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html
+-- nota: el operador &lt;=&gt; compara con nulos de forma segura: NULL &lt;=&gt; NULL es
+--       verdadero. No es estandar, pero evita salir a una subconsulta.
+
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    nombre VARCHAR(50) PRIMARY KEY
+);
+CREATE TABLE inscripciones (
+    id         INT PRIMARY KEY,
+    estudiante VARCHAR(50),          -- admite nulo: el dato sucio del mundo real
+    curso      VARCHAR(50) NOT NULL
+);
+
+INSERT INTO estudiantes (nombre) VALUES ('Ada'), ('Linus'), ('Grace');
+INSERT INTO inscripciones (id, estudiante, curso) VALUES
+    (1, 'Ada',   'DB-101'),
+    (2, 'Linus', 'DB-101'),
+    (3, NULL,    'SE-201');   -- una sola fila asi rompe el NOT IN
+
+-- === consulta ===
+-- La forma CORRECTA. La forma rota seria:
+--   SELECT nombre FROM estudiantes
+--   WHERE nombre NOT IN (SELECT estudiante FROM inscripciones);
+-- que devuelve CERO filas. Al comparar 'Grace' con el nulo, el resultado no es
+-- falso sino DESCONOCIDO; NOT IN exige que todas las comparaciones sean falsas,
+-- y «desconocido» no lo es. El informe sale vacio y nadie ve un error.
+SELECT e.nombre
+FROM estudiantes e
+WHERE NOT EXISTS (
+    SELECT 1 FROM inscripciones i WHERE i.estudiante = e.nombre
+)
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Tiene la misma semántica de tres valores y añade el operador <code>&lt;=&gt;</code>, que compara con nulos de forma segura sin salirse a una subconsulta.</li>
+<li><strong>Por qué no:</strong> Sin modo estricto, insertar <code>NULL</code> en una columna <code>NOT NULL</code> no fallaba: guardaba el valor por omisión y emitía un aviso. Hay tablas heredadas llenas de cadenas vacías y ceros que en realidad significan «no se sabe».</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html">https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/reference/operator/query/type/
+// nota: la trampa aqui es otra. { estudiante: null } encuentra TANTO los
+//       documentos con el campo en null COMO los que no tienen el campo. Para
+//       distinguirlos hay que usar { estudiante: { $type: &quot;null&quot; } } frente a
+//       { estudiante: { $exists: false } }.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.inscripciones.drop();
+
+db.estudiantes.insertMany([
+  { nombre: &quot;Ada&quot; },
+  { nombre: &quot;Linus&quot; },
+  { nombre: &quot;Grace&quot; },
+]);
+db.inscripciones.insertMany([
+  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
+  { estudiante: null, curso: &quot;SE-201&quot; },
+]);
+
+// === consulta ===
+db.estudiantes
+  .aggregate([
+    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;nombre&quot;,
+                 foreignField: &quot;estudiante&quot;, as: &quot;i&quot; } },
+    { $match: { i: { $size: 0 } } },
+    { $project: { _id: 0, nombre: 1 } },
+    { $sort: { nombre: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.nombre));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Resuelve la pregunta sin subconsultas, con <code>$lookup</code> y comprobando que el arreglo resultante esté vacío: la ausencia se mide por tamaño, no por comparación con un nulo.</li>
+<li><strong>Por qué no:</strong> Aquí hay <strong>dos</strong> formas de ausencia —el campo con valor <code>null</code> y el campo que no existe— y <code>{campo: null}</code> encuentra las dos. Es una trampa peor que la de SQL, porque no hay error ni resultado vacío: hay resultados de más.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/query/type/">https://www.mongodb.com/docs/manual/reference/operator/query/type/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apache Cassandra</td>
+<td>Escribir un nulo no guarda un nulo: crea una <strong>lápida</strong> (<code>tombstone</code>), un marcador de borrado que ocupa espacio, viaja a las réplicas y hay que recorrer en cada lectura. Miles de lápidas en una partición hacen que la lectura falle por tiempo de espera.</td>
+<td>No escribir la columna en absoluto cuando no hay valor: en Cassandra una columna ausente y una columna nula no son lo mismo, y la ausente es gratis.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/managing/operating/compaction/">doc</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>No existe el nulo: una clave está o no está, y un campo de hash existe o no existe. La lógica es de dos valores, lo que evita la trampa a cambio de no poder distinguir «no se sabe» de «no aplica».</td>
+<td>Codificar explícitamente el desconocido con un valor centinela acordado, y documentarlo: si el centinela no está escrito en algún sitio, dentro de un año nadie sabrá si <code>""</code> significaba vacío o desconocido.</td>
+<td><a href="https://redis.io/docs/latest/commands/hget/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/05-nosql-workloads/run_nosql_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -393,27 +673,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Fay Chang, Jeffrey Dean, Sanjay Ghemawat</strong> (2006). <a href="https://research.google/pubs/bigtable-a-distributed-storage-system-for-structured-data/">Bigtable: A Distributed Storage System for Structured Data</a>. USENIX OSDI.<br />
-  Origen del modelo de familias de columnas que adoptaron HBase y Cassandra.</li>
-<li><strong>Jeff Carpenter, Eben Hewitt</strong> (2020). <a href="https://www.oreilly.com/library/view/cassandra-the-definitive/9781098115159/">Cassandra: The Definitive Guide</a>. 3.a ed. O'Reilly. ISBN 978-1-0981-1516-3.<br />
-  Modelado dirigido por consultas en un motor de columnas anchas.</li>
-<li><strong>Apache Software Foundation</strong> (2026). <a href="https://cassandra.apache.org/doc/latest/">Apache Cassandra Documentation</a>.<br />
-  CQL, claves de partición y niveles de consistencia ajustables.</li>
+<li><strong>E. F. Codd</strong> (1979). <a href="https://dl.acm.org/doi/10.1145/320107.320109">Extending the Database Relational Model to Capture More Meaning</a>. ACM TODS 4(4). DOI <a href="https://doi.org/10.1145/320107.320109">10.1145/320107.320109</a>.<br />
+  Introduce los valores nulos y la semántica de información faltante.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
+  Documentación de referencia del motor relacional principal del programa.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 06</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="028.html">← Anterior</a> · <a href="030.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="029">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="028.html"><span class="sentido">← Anterior · 028</span>Grafos de propiedades y los recorridos que SQL hace mal</a>
-<a class="siguiente" href="030.html"><span class="sentido">Siguiente · 030 →</span>Series temporales: cardinalidad, retención y agregados continuos</a>
+<a class="anterior" href="028.html"><span class="sentido">← Anterior · 028</span>CTE, subconsultas y funciones de ventana</a>
+<a class="siguiente" href="030.html"><span class="sentido">Siguiente · 030 →</span>Portabilidad: qué exige la norma y qué añade cada motor</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

@@ -1,0 +1,120 @@
+---
+caso:
+  titulo: Cuántos nombres distintos hay, cuando el motor decide si «Ada» y «ada» son el mismo
+  contrato: |
+    Una tabla con cuatro filas: `Ada`, `ada`, `ADA` y `Linus`. La pregunta es
+    cuántos nombres distintos hay, y la respuesta correcta —cuatro— no depende
+    de la consulta: depende de la **intercalación** de la columna, que no está
+    escrita en ninguna parte de la consulta.
+
+    Con la configuración por omisión, MySQL responde **2**: su intercalación
+    `utf8mb4_0900_ai_ci` ignora mayúsculas y acentos, así que las tres primeras
+    filas son el mismo valor. SQL Server responde lo que diga la intercalación
+    de la instancia, que se eligió al instalarla y que casi nadie recuerda.
+    PostgreSQL, SQLite y DuckDB responden 4, porque comparan byte a byte.
+
+    Esta es la divergencia que rompe migraciones sin dar un solo error: los
+    recuentos cambian, los `UNIQUE` aceptan o rechazan cosas distintas, y el
+    `ORDER BY` devuelve otro orden. El caso obliga a escribir en cada motor la
+    versión que responde 4.
+  columnas: [distintos]
+  esperado:
+    - ["4"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Su intercalación por omisión es `BINARY`: compara byte a byte y responde 4
+      sin configurar nada. Para comparar sin mayúsculas hay que pedirlo
+      expresamente con `COLLATE NOCASE`.
+    porque_no: >-
+      `NOCASE` solo ignora mayúsculas en el alfabeto ASCII: `Á` y `á` siguen
+      siendo distintas. Cualquier aplicación con texto en español necesita algo
+      más que la intercalación integrada.
+    doc: https://sqlite.org/datatype3.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Compara respetando mayúsculas por omisión y ofrece intercalaciones ICU
+      como extensión cuando hace falta ordenar por idioma.
+    porque_no: >-
+      Al analizar datos que vienen de MySQL, el recuento distinto que devuelve
+      DuckDB **no coincide** con el del origen: no es un fallo, es la
+      intercalación, y descubrirlo tarde invalida el informe entero.
+    doc: https://duckdb.org/docs/stable/sql/expressions/collations.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      La intercalación es explícita y se puede fijar por columna o por
+      expresión; el comportamiento por omisión distingue mayúsculas, que es lo
+      que casi siempre se quiere para una identidad.
+    porque_no: >-
+      La intercalación depende de la biblioteca del sistema operativo: una
+      actualización de `glibc` puede cambiar el orden y **corromper los índices
+      B-Tree** sobre columnas de texto. Por eso existe el proveedor `icu` y por
+      eso hay que declararlo.
+    doc: https://www.postgresql.org/docs/current/collation.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      Se puede pedir la comparación exacta con `COLLATE utf8mb4_bin` en la
+      columna o en la propia consulta, sin cambiar la configuración del
+      servidor.
+    porque_no: >-
+      Por omisión hace justo lo contrario, y en silencio: `utf8mb4_0900_ai_ci`
+      ignora mayúsculas y acentos. Un `UNIQUE` sobre un correo acepta
+      `Ada@x.org` **o** `ada@x.org`, pero no las dos, y eso es una decisión de
+      producto que nadie tomó.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html
+
+  - id: mariadb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/mariadb/consulta.sql
+    porque_si: >-
+      Comparte la sintaxis de MySQL, así que la corrección con `COLLATE` es la
+      misma y el código migra sin cambios.
+    porque_no: >-
+      Sus intercalaciones por omisión **no son las mismas** que las de MySQL 8
+      (`utf8mb4_general_ci` frente a `utf8mb4_0900_ai_ci`), y ordenan distinto:
+      dos motores que se anuncian compatibles devuelven listas en otro orden.
+    doc: https://mariadb.com/docs/server/reference/data-types/string-data-types/character-sets
+
+  - id: sql-server
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/sql-server/consulta.sql
+    porque_si: >-
+      La intercalación se puede fijar en la propia consulta con `COLLATE
+      Latin1_General_BIN2`, sin tocar la base ni la instancia.
+    porque_no: >-
+      La intercalación por omisión se elige **al instalar la instancia** y
+      afecta también a los nombres de objetos y a las tablas temporales:
+      mezclar dos bases con intercalaciones distintas produce errores al reunir
+      columnas de texto que no se pueden resolver sin conversiones explícitas.
+    doc: https://learn.microsoft.com/sql/relational-databases/collations/collation-and-unicode-support
+
+  - id: oracle-database
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/oracle-database/consulta.sql
+    porque_si: >-
+      Con `NLS_SORT` y `NLS_COMP` se controla el mismo comportamiento por
+      sesión, lo que permite ajustar la comparación sin cambiar el esquema.
+    porque_no: >-
+      Que sea por sesión es también el problema: la misma consulta devuelve
+      resultados distintos según quién la lance. Y la cadena vacía sigue siendo
+      `NULL`, lo que suma una divergencia más al recuento.
+    doc: https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/linguistic-sorting-and-matching.html

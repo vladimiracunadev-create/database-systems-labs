@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="PostgreSQL: tipos, extensiones y modelo de procesos. Parte 04: Motores relacionales y dialectos.">
+<meta name="description" content="Álgebra relacional: selección, proyección, producto y reunión. Parte 03: Modelo relacional y álgebra.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/021.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="021 — PostgreSQL: tipos, extensiones y modelo de procesos · Database Systems Labs">
-<meta property="og:description" content="PostgreSQL: tipos, extensiones y modelo de procesos. Parte 04: Motores relacionales y dialectos.">
+<meta property="og:title" content="021 — Álgebra relacional: selección, proyección, producto y reunión · Database Systems Labs">
+<meta property="og:description" content="Álgebra relacional: selección, proyección, producto y reunión. Parte 03: Modelo relacional y álgebra.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/021.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "021 — PostgreSQL: tipos, extensiones y modelo de procesos", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["extensión", "tipo compuesto", "proceso por conexión", "autovacuum"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>021 — PostgreSQL: tipos, extensiones y modelo de procesos · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "021 — Álgebra relacional: selección, proyección, producto y reunión", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT4H", "teaches": ["selección", "proyección", "producto cartesiano", "reunión natural", "división"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>021 — Álgebra relacional: selección, proyección, producto y reunión · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,271 +49,547 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-04.html">Parte 04 · Motores relacionales y dialectos</a>
+  <a href="parte-03.html">Parte 03 · Modelo relacional y álgebra</a>
   <span aria-hidden="true">/</span><span>Clase 021</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="021--postgresql-tipos-extensiones-y-modelo-de-procesos">021 — PostgreSQL: tipos, extensiones y modelo de procesos</h1>
+<h1 id="021--álgebra-relacional-selección-proyección-producto-y-reunión">021 — Álgebra relacional: selección, proyección, producto y reunión</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-03-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-4%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-021%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 04 — Motores relacionales y dialectos · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>extensión</code> · <code>tipo compuesto</code> · <code>proceso por conexión</code> · <code>autovacuum</code></p>
+<p>Parte 03 — Modelo relacional y álgebra · Fundamentos ·
+4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>selección</code> · <code>proyección</code> · <code>producto cartesiano</code> · <code>reunión natural</code> · <code>división</code></p>
+<p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 021&quot;]
+    C --&gt; K1[&quot;selección&quot;]
+    C --&gt; K2[&quot;proyección&quot;]
+    C --&gt; K3[&quot;producto cartesiano&quot;]
+    C --&gt; K4[&quot;reunión natural&quot;]
+    C --&gt; K5[&quot;división&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Conocer PostgreSQL lo suficiente para usarlo bien y para saber qué de él <strong>no</strong> es transferible a otros motores. Es el motor de referencia del programa por su cobertura de la norma y su documentación.</p>
+<p>Dominar los operadores del álgebra relacional para poder razonar sobre una consulta <strong>antes</strong> de ejecutarla: cuántas filas puede producir, qué la hace cara y por qué el optimizador puede reordenarla sin cambiar el resultado.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Describir el modelo de proceso de PostgreSQL y su consecuencia sobre las conexiones.</li>
-<li>Explicar por qué existe <code>VACUUM</code> y qué ocurre si no se ejecuta.</li>
-<li>Elegir entre <code>json</code> y <code>jsonb</code> con criterio.</li>
-<li>Usar extensiones sin convertir el esquema en algo irreproducible.</li>
-<li>Dimensionar la memoria compartida frente a la de sesión.</li>
+<li>Escribir y leer expresiones con σ, π, ×, ⋈, ∪, −, ρ y ÷.</li>
+<li>Estimar a mano la cardinalidad de cada operador.</li>
+<li>Aplicar las equivalencias que usa el optimizador y explicar por qué son válidas.</li>
+<li>Traducir entre álgebra y SQL en ambos sentidos.</li>
+<li>Resolver una consulta de división relacional, que SQL no ofrece directamente.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="un-proceso-por-conexión">Un proceso por conexión</h3>
-<p>PostgreSQL arranca un proceso del sistema operativo por cada conexión. Ventaja: aislamiento fuerte, un fallo no derriba el servidor. Costo: cada conexión reserva memoria propia y su creación no es barata.</p>
-<p>De ahí la regla operativa más importante del motor: <strong>usar siempre un agrupador de conexiones</strong>. Sin él, 1 000 clientes web abren 1 000 procesos, y el servidor pasa más tiempo cambiando de contexto que trabajando.</p>
+<h3 id="los-operadores">Los operadores</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Parámetro</th>
-<th>Ámbito</th>
+<th>Operador</th>
+<th>Símbolo</th>
+<th>Qué hace</th>
+<th>Cardinalidad del resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selección</td>
+<td>σ<sub>cond</sub>(R)</td>
+<td>Filtra tuplas</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Proyección</td>
+<td>π<sub>attrs</sub>(R)</td>
+<td>Se queda con atributos; elimina duplicados</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Producto cartesiano</td>
+<td>R × S</td>
+<td>Cada tupla con cada tupla</td>
+<td>|R| · |S|</td>
+</tr>
+<tr>
+<td>Reunión natural</td>
+<td>R ⋈ S</td>
+<td>Producto filtrado por igualdad en atributos comunes</td>
+<td>0 … |R|·|S|</td>
+</tr>
+<tr>
+<td>Unión</td>
+<td>R ∪ S</td>
+<td>Tuplas de ambas (mismo esquema)</td>
+<td>≤ |R| + |S|</td>
+</tr>
+<tr>
+<td>Diferencia</td>
+<td>R − S</td>
+<td>Las de R que no están en S</td>
+<td>≤ |R|</td>
+</tr>
+<tr>
+<td>Renombrado</td>
+<td>ρ<sub>x</sub>(R)</td>
+<td>Cambia nombres</td>
+<td>|R|</td>
+</tr>
+<tr>
+<td>División</td>
+<td>R ÷ S</td>
+<td>Tuplas de R asociadas a <strong>todas</strong> las de S</td>
+<td>≤ |R|</td>
+</tr>
+</tbody>
+</table></div>
+<p>Selección, proyección, producto, unión y diferencia forman el conjunto <strong>completo</strong>: los demás se derivan. La reunión es <code>π(σ(R × S))</code>; la intersección es <code>R − (R − S)</code>.</p>
+<h3 id="la-cardinalidad-decide-el-costo">La cardinalidad decide el costo</h3>
+<p>El número que hay que vigilar es el producto cartesiano. Con <code>students</code> (2 000) y <code>courses</code> (300), <code>students × courses</code> produce <strong>600 000</strong> tuplas. La reunión natural sobre <code>enrollments</code> produce, como mucho, tantas como inscripciones haya. Esta diferencia es el motivo de la primera regla de optimización.</p>
+<h3 id="equivalencias-que-aplica-el-optimizador">Equivalencias que aplica el optimizador</h3>
+<pre><code class="language-text">E1  σ_c1(σ_c2(R))            ≡  σ_c1 ∧ c2(R)          conmutar y fusionar filtros
+E2  σ_c(R × S)               ≡  R ⋈_c S               empujar el filtro dentro
+E3  σ_c(R ⋈ S)               ≡  σ_c(R) ⋈ S            si c solo usa atributos de R
+E4  π_a(σ_c(R))              ≡  π_a(σ_c(π_a ∪ attrs(c)(R)))   proyección temprana
+E5  (R ⋈ S) ⋈ T              ≡  R ⋈ (S ⋈ T)           asociatividad
+E6  R ⋈ S                    ≡  S ⋈ R                 conmutatividad
+</code></pre>
+<p>Las dos primeras son el corazón de la optimización: <strong>filtrar antes de combinar</strong>. E5 y E6 dan al planificador libertad para elegir el orden de reunión, que es el problema combinatorio que resuelve el optimizador por costos (clase 042).</p>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph L[&quot;Plan ingenuo&quot;]
+        A1[&quot;students × courses&lt;br/&gt;600 000 tuplas&quot;] --&gt; A2[&quot;× enrollments&quot;]
+        A2 --&gt; A3[&quot;σ periodo='2026-1'&quot;]
+        A3 --&gt; A4[&quot;π nombre&quot;]
+    end
+    subgraph R[&quot;Plan optimizado (E2, E3)&quot;]
+        B1[&quot;σ periodo='2026-1' (courses)&lt;br/&gt;40 tuplas&quot;] --&gt; B2[&quot;⋈ enrollments&lt;br/&gt;por course_id&quot;]
+        B2 --&gt; B3[&quot;⋈ students&lt;br/&gt;por student_id&quot;]
+        B3 --&gt; B4[&quot;π nombre&quot;]
+    end
+    L -- &quot;mismas filas,&lt;br/&gt;coste incomparable&quot; --&gt; R
+</code></pre>
+<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
+<p>Pregunta: <em>«nombres de los estudiantes inscritos en algún curso del período 2026-1»</em>.</p>
+<p><strong>Álgebra, forma ingenua:</strong></p>
+<pre><code class="language-text">π_nombre( σ_periodo='2026-1' (students × enrollments × courses) )
+</code></pre>
+<p><strong>Traza de cardinalidad</strong> con 2 000 estudiantes, 240 000 inscripciones y 300 cursos:</p>
+<pre><code class="language-text">students × enrollments            = 2 000 · 240 000 = 480 000 000
+(...) × courses                   = 480 000 000 · 300 = 1,44 · 10^11
+</code></pre>
+<p>Materializar eso es imposible. Ningún motor lo hace: por eso existe el optimizador.</p>
+<p><strong>Álgebra, forma optimizada</strong> (aplicando E2 y E3):</p>
+<pre><code class="language-text">π_nombre( students ⋈_id=student_id ( enrollments ⋈_course_id=id ( σ_periodo='2026-1'(courses) ) ) )
+</code></pre>
+<pre><code class="language-text">σ periodo (courses)               = 40 cursos
+⋈ enrollments                     ≈ 240 000 · (40/300) = 32 000
+⋈ students                        = 32 000
+π nombre (elimina duplicados)     ≈ 6 000 estudiantes distintos
+</code></pre>
+<p>De 1,44 · 10¹¹ a 32 000. <strong>Las dos expresiones devuelven exactamente el mismo conjunto</strong>; esa equivalencia demostrada es lo que autoriza al motor a reescribir.</p>
+<p><strong>SQL correspondiente:</strong></p>
+<pre><code class="language-sql">SELECT DISTINCT s.nombre
+FROM students s
+JOIN enrollments e ON e.student_id = s.id
+JOIN courses     c ON c.id = e.course_id
+WHERE c.periodo = '2026-1';
+</code></pre>
+<p>El <code>DISTINCT</code> es la proyección relacional; sin él, SQL devuelve un nombre por inscripción (32 000 filas en vez de 6 000). Es la desviación de la clase 010 hecha visible.</p>
+<p><strong>División relacional.</strong> Pregunta: <em>«estudiantes inscritos en TODOS los cursos obligatorios»</em>. SQL no tiene operador; la formulación canónica es doble negación —«no existe curso obligatorio que este estudiante no haya cursado»—:</p>
+<pre><code class="language-sql">SELECT s.id, s.nombre
+FROM students s
+WHERE NOT EXISTS (
+  SELECT 1 FROM courses c
+  WHERE c.obligatorio = 1
+    AND NOT EXISTS (
+      SELECT 1 FROM enrollments e
+      WHERE e.student_id = s.id AND e.course_id = c.id
+    )
+);
+</code></pre>
+<p>Alternativa por conteo, más legible y con el mismo resultado si <code>(student_id, course_id)</code> es único:</p>
+<pre><code class="language-sql">SELECT e.student_id
+FROM enrollments e
+JOIN courses c ON c.id = e.course_id AND c.obligatorio = 1
+GROUP BY e.student_id
+HAVING COUNT(DISTINCT e.course_id) = (SELECT COUNT(*) FROM courses WHERE obligatorio = 1);
+</code></pre>
+<h2 id="comparación">Comparación</h2>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Álgebra</th>
+<th>SQL</th>
 <th>Nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>shared_buffers</code></td>
-<td>Compartido</td>
-<td>Caché de páginas. Típicamente 25 % de la RAM</td>
+<td>σ</td>
+<td><code>WHERE</code></td>
+<td>Antes de agrupar</td>
 </tr>
 <tr>
-<td><code>work_mem</code></td>
-<td><strong>Por operación</strong>, no por conexión</td>
-<td>Un plan con 3 ordenamientos puede usar 3 × <code>work_mem</code></td>
+<td>π</td>
+<td><code>SELECT DISTINCT</code></td>
+<td>Sin <code>DISTINCT</code> no es proyección relacional</td>
 </tr>
 <tr>
-<td><code>maintenance_work_mem</code></td>
-<td>Por operación de mantenimiento</td>
-<td>Afecta a <code>VACUUM</code> y a la creación de índices</td>
+<td>×</td>
+<td><code>CROSS JOIN</code></td>
+<td>Rara vez intencional</td>
 </tr>
 <tr>
-<td><code>effective_cache_size</code></td>
-<td>Estimación para el planificador</td>
-<td>No reserva memoria: informa al optimizador</td>
-</tr>
-</tbody>
-</table></div>
-<p>El error de configuración más caro es tratar <code>work_mem</code> como si fuese por conexión. Con 200 conexiones y planes que usan tres ordenamientos, el consumo real es 600 × <code>work_mem</code>.</p>
-<h3 id="mvcc-y-vacuum">MVCC y <code>VACUUM</code></h3>
-<p>PostgreSQL implementa control de concurrencia multiversión (clase 035): un <code>UPDATE</code> <strong>no</strong> modifica la fila, escribe una versión nueva y marca la anterior como muerta. Un <code>DELETE</code> solo marca.</p>
-<p>Consecuencias que hay que aceptar:</p>
-<ul>
-<li>Las filas muertas ocupan espacio hasta que <code>VACUUM</code> las recupera.</li>
-<li>Una tabla con muchas actualizaciones <strong>se hincha</strong> si el autovacuum no va al ritmo.</li>
-<li>Los identificadores de transacción son finitos; sin vacuum, el motor llega a un punto en que se detiene para protegerse.</li>
-</ul>
-<pre><code class="language-sql">SELECT relname, n_live_tup, n_dead_tup,
-       round(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 1) AS pct_muertas
-FROM pg_stat_user_tables
-ORDER BY n_dead_tup DESC LIMIT 10;
-</code></pre>
-<p>Rogov documenta el mecanismo completo. Lo relevante aquí: <code>VACUUM</code> no es «limpieza opcional», es parte del funcionamiento normal, y su ausencia se manifiesta como degradación progresiva.</p>
-<h3 id="tipos-que-evitan-tablas">Tipos que evitan tablas</h3>
-<p>PostgreSQL ofrece tipos que resuelven modelados que en otros motores exigen tablas adicionales:</p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Tipo</th>
-<th>Reemplaza a</th>
-<th>Cuidado</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>jsonb</code></td>
-<td>Tabla de atributos dinámicos</td>
-<td>Sin restricciones dentro; se indexa con GIN</td>
+<td>⋈</td>
+<td><code>JOIN ... ON</code> / <code>NATURAL JOIN</code></td>
+<td><code>NATURAL</code> es frágil ante columnas nuevas</td>
 </tr>
 <tr>
-<td><code>tstzrange</code></td>
-<td>Par de columnas desde/hasta</td>
-<td>Habilita <code>EXCLUDE</code> contra solapamientos</td>
+<td>∪</td>
+<td><code>UNION</code></td>
+<td><code>UNION ALL</code> no es la unión de conjuntos</td>
 </tr>
 <tr>
-<td><code>text[]</code></td>
-<td>Tabla puente para etiquetas</td>
-<td>Rompe la 1FN; sin integridad referencial</td>
+<td>−</td>
+<td><code>EXCEPT</code></td>
+<td><code>MINUS</code> en Oracle</td>
 </tr>
 <tr>
-<td><code>inet</code>, <code>cidr</code></td>
-<td>Texto con validación manual</td>
-<td>Valida y permite operadores de red</td>
+<td>÷</td>
+<td>—</td>
+<td>Doble <code>NOT EXISTS</code> o conteo</td>
 </tr>
 <tr>
-<td><code>uuid</code></td>
-<td><code>CHAR(36)</code></td>
-<td>16 bytes en vez de 36</td>
-</tr>
-<tr>
-<td><code>numeric</code></td>
-<td>Decimal exacto</td>
-<td>Más lento que <code>bigint</code></td>
-</tr>
-</tbody>
-</table></div>
-<p><strong><code>json</code> frente a <code>jsonb</code>:</strong> <code>json</code> guarda el texto tal cual (conserva orden de claves y espacios, no se indexa bien); <code>jsonb</code> guarda una representación binaria descompuesta (más rápida de consultar, indexable con GIN, no conserva el orden de claves ni los duplicados). Para casi todo uso, <code>jsonb</code>.</p>
-<p>La advertencia importante: <code>jsonb</code> <strong>no</strong> es una excusa para no modelar. Dentro de un <code>jsonb</code> no hay tipos, ni <code>NOT NULL</code>, ni claves foráneas. Es adecuado para datos genuinamente heterogéneos —una carga útil de un proveedor externo, atributos que varían por categoría—, no para las columnas del dominio.</p>
-<h3 id="extensiones">Extensiones</h3>
-<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS vector;      -- pgvector, parte 12
-</code></pre>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Extensión</th>
-<th>Para qué</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pg_stat_statements</code></td>
-<td>Consultas más costosas acumuladas: la primera que instalar</td>
-</tr>
-<tr>
-<td><code>pg_trgm</code></td>
-<td>Búsqueda por similitud y <code>LIKE '%x%'</code> indexado</td>
-</tr>
-<tr>
-<td><code>postgis</code></td>
-<td>Datos geográficos</td>
-</tr>
-<tr>
-<td><code>pgvector</code></td>
-<td>Búsqueda vectorial dentro del mismo motor (clase 059)</td>
-</tr>
-<tr>
-<td><code>citext</code></td>
-<td>Texto insensible a mayúsculas sin depender de la colación</td>
-</tr>
-</tbody>
-</table></div>
-<p>Regla de reproducibilidad: cada <code>CREATE EXTENSION</code> debe estar en una migración versionada. Una extensión instalada a mano en producción convierte el esquema en algo que nadie puede recrear.</p>
-<pre><code class="language-mermaid">flowchart TD
-    C[&quot;Clientes&quot;] --&gt; POOL[&quot;Agrupador de conexiones&lt;br/&gt;(pgbouncer)&quot;]
-    POOL --&gt; PM[&quot;postmaster&quot;]
-    PM --&gt; B1[&quot;backend 1&quot;]
-    PM --&gt; B2[&quot;backend 2&quot;]
-    B1 --&gt; SB[&quot;shared_buffers&lt;br/&gt;(memoria compartida)&quot;]
-    B2 --&gt; SB
-    B1 --&gt; WM1[&quot;work_mem&lt;br/&gt;por operación&quot;]
-    SB --&gt; WAL[&quot;WAL&quot;]
-    SB --&gt; D[(&quot;Archivos de datos&quot;)]
-    AV[&quot;autovacuum&quot;] --&gt; D
-    WR[&quot;writer / checkpointer&quot;] --&gt; D
-</code></pre>
-<h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Modelamos atributos que varían por tipo de curso: los presenciales tienen sala y aforo; los remotos, plataforma y enlace.</p>
-<p><strong>Opción A — columnas para todo:</strong> seis columnas nulas la mitad del tiempo, sin forma de exigir que las de presencial estén presentes justo cuando el curso es presencial.</p>
-<p><strong>Opción B — <code>jsonb</code> con validación explícita:</strong></p>
-<pre><code class="language-sql">CREATE TABLE courses (
-  id        INTEGER PRIMARY KEY,
-  nombre    TEXT NOT NULL,
-  modalidad TEXT NOT NULL CHECK (modalidad IN ('presencial','remoto')),
-  detalles  JSONB NOT NULL DEFAULT '{}'::jsonb,
-  CONSTRAINT detalles_coherentes CHECK (
-    (modalidad = 'presencial' AND detalles ? 'sala'       AND detalles ? 'aforo') OR
-    (modalidad = 'remoto'     AND detalles ? 'plataforma' AND detalles ? 'enlace')
-  )
-);
-
-CREATE INDEX courses_detalles_gin ON courses USING gin (detalles);
-CREATE INDEX courses_sala ON courses ((detalles-&gt;&gt;'sala')) WHERE modalidad = 'presencial';
-</code></pre>
-<p>Lo que aporta cada pieza:</p>
-<ul>
-<li>El <code>CHECK</code> con el operador <code>?</code> («la clave existe») recupera parte de la integridad que <code>jsonb</code> no da por sí solo.</li>
-<li>El índice GIN permite <code>WHERE detalles @&gt; '{"sala":"B-201"}'</code> sin barrido.</li>
-<li>El índice de expresión <strong>parcial</strong> sirve la consulta más frecuente con una fracción del tamaño: solo indexa las filas presenciales.</li>
-</ul>
-<p><strong>Medición del índice parcial</strong> con 100 000 cursos, 30 % presenciales:</p>
-<pre><code class="language-text">Índice completo sobre (detalles-&gt;&gt;'sala')  ~ 100 000 entradas
-Índice parcial WHERE modalidad='presencial' ~ 30 000 entradas
-</code></pre>
-<p>Menos entradas significa menos páginas, más aciertos de caché y mantenimiento más barato en cada escritura de un curso remoto (que ya no toca ese índice).</p>
-<p><strong>Opción C — tablas por subtipo:</strong> dos tablas hijas con clave foránea al curso. Integridad total, sin <code>jsonb</code>, a cambio de una reunión y de DDL para cada modalidad nueva.</p>
-<p>La elección honesta: si las modalidades son dos y estables, C. Si el proveedor añade campos cada mes, B.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Necesidad</th>
-<th>PostgreSQL</th>
-<th>Equivalente portable</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Atributos dinámicos</td>
-<td><code>jsonb</code> + GIN</td>
-<td>Tabla clave-valor</td>
-</tr>
-<tr>
-<td>Unicidad condicional</td>
-<td>Índice único parcial</td>
-<td>Columna generada con nulos</td>
-</tr>
-<tr>
-<td>Sin solapamiento de rangos</td>
-<td><code>EXCLUDE USING gist</code></td>
-<td>Comprobación en la aplicación</td>
-</tr>
-<tr>
-<td>Texto insensible a mayúsculas</td>
-<td><code>citext</code> o <code>lower()</code> indexado</td>
-<td>Normalizar al escribir</td>
-</tr>
-<tr>
-<td>Consultas más caras</td>
-<td><code>pg_stat_statements</code></td>
-<td>Registro de consultas lentas</td>
+<td>ρ</td>
+<td><code>AS</code></td>
+<td>Necesario en autorreuniones</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Conexiones directas sin agrupador.</strong> Es la causa más común de caída bajo carga.</li>
-<li><strong><code>work_mem</code> alto con muchas conexiones.</strong> Multiplica por operación, no por sesión.</li>
-<li><strong>Desactivar el autovacuum «porque consume».</strong> Consume más lo que ocurre después.</li>
-<li><strong><code>jsonb</code> para el dominio.</strong> Se pierden tipos, restricciones y claves foráneas.</li>
-<li><strong>Extensiones instaladas a mano.</strong> El entorno deja de ser reproducible.</li>
-<li><strong>Índices sin usar.</strong> Cada uno se mantiene en cada escritura; revísalos con <code>pg_stat_user_indexes</code>.</li>
+<li><strong>Olvidar la condición de reunión.</strong> Un <code>JOIN</code> sin <code>ON</code> es un producto cartesiano: no da error, da un resultado enorme y erróneo.</li>
+<li><strong>Creer que <code>JOIN</code> multiplica filas por error.</strong> Multiplica porque la cardinalidad del lado derecho lo permite; el modelo lo predice.</li>
+<li><strong>Traducir π como <code>SELECT</code> sin <code>DISTINCT</code>.</strong> Cambia el resultado, no solo el rendimiento.</li>
+<li><strong>Suponer que el orden de los <code>JOIN</code> en el texto es el orden de ejecución.</strong> Por E5 y E6 el motor elige; en SQL solo lo fijan construcciones explícitas.</li>
+<li><strong>Resolver una división con <code>IN</code>.</strong> <code>IN</code> responde «alguno», no «todos».</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los incidentes típicos de PostgreSQL son tres: agotamiento de conexiones, hinchazón por vacuum insuficiente y un plan que cambia tras una carga masiva sin <code>ANALYZE</code>. Los tres se previenen con configuración, no con hardware.</p>
+<p>Estimar cardinalidades a mano es la habilidad que distingue leer un plan de mirarlo. Cuando <code>EXPLAIN</code> dice «filas estimadas: 12» y la realidad son 3 millones, se sabe dónde mirar precisamente porque se sabe cómo debería haberse propagado la cardinalidad.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Levanta el perfil relacional del <code>docker-compose</code> y consulta <code>pg_stat_user_tables</code>.</li>
-<li>Provoca hinchazón con actualizaciones repetidas y mide <code>n_dead_tup</code> antes y después de <code>VACUUM</code>.</li>
-<li>Modela un atributo dinámico de tu dominio con <code>jsonb</code> y añade el <code>CHECK</code> que recupera la integridad.</li>
-<li>Crea el índice parcial equivalente y compara tamaño y plan con el índice completo.</li>
+<li>Escribe en álgebra una consulta real de tu trabajo, en su forma ingenua.</li>
+<li>Aplica E1–E4 paso a paso y anota la cardinalidad estimada en cada nivel.</li>
+<li>Ejecuta ambas versiones en SQL y compara el plan y el tiempo.</li>
+<li>Formula una pregunta de tu dominio que exija división relacional y resuélvela de las dos formas.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué <code>work_mem</code> puede consumirse varias veces en una sola consulta?</li>
-<li>Explica qué ocurre en una tabla con muchas actualizaciones si el autovacuum no llega a tiempo.</li>
-<li>Da un caso de tu dominio donde <code>jsonb</code> sea correcto y otro donde sea una excusa para no modelar.</li>
-<li>¿Qué pierdes al migrar de PostgreSQL a un motor sin índices parciales, y cómo lo compensas?</li>
+<li>Demuestra con un contraejemplo que E3 no vale si la condición usa atributos de ambas relaciones.</li>
+<li>¿Por qué la intersección no es un operador primitivo?</li>
+<li>Da una consulta donde omitir <code>DISTINCT</code> produzca un total inflado en un informe, con números.</li>
+<li>Explica por qué la formulación de división con <code>HAVING COUNT</code> exige unicidad de <code>(student_id, course_id)</code>.</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> Selección, reunión y proyección compuestas en una sola expresión</p>
+<p>El álgebra relacional es cerrada: cada operador toma relaciones y devuelve
+una relación, así que se pueden encadenar. El caso encadena tres —selección
+por curso y nota, reunión con los estudiantes, proyección de dos columnas— y
+devuelve quién aprobó DB-101 con 60 o más, con su nota, ordenado por nombre.</p>
+<p>Lo que hay que ver no es el resultado, sino que <strong>el orden en que el motor
+aplique los operadores no puede cambiarlo</strong>. Que la selección se pueda
+empujar antes de la reunión es una equivalencia algebraica, y de ahí sale la
+optimización de consultas: reescribir la expresión por otra equivalente y
+más barata.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>nombre</th>
+<th>nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ada</code></td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>Grace</code></td>
+<td><code>72</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 021</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/optoverview.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/guides/meta/explain.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/using-explain.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Neo4j</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher">código</a></td>
+<td><a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/optoverview.html
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         TEXT NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> SQL es la implementación práctica del álgebra y aquí se lee sin ruido: una cláusula por operador.</li>
+<li><strong>Por qué no:</strong> Su optimizador aplica pocas reescrituras, así que no sirve para ver el efecto de las equivalencias algebraicas: el plan se parece demasiado a lo que se escribió.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/optoverview.html">https://sqlite.org/optoverview.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/guides/meta/explain.html
+-- nota: anteponer EXPLAIN a esta consulta muestra el arbol de operadores con
+--       el filtro ya empujado a la hoja: la equivalencia algebraica aplicada.
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre VARCHAR NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id INTEGER NOT NULL,
+    curso         VARCHAR NOT NULL,
+    nota          INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su <code>EXPLAIN</code> muestra el árbol de operadores casi como se dibuja en el álgebra, con los filtros ya empujados hacia las hojas: es la mejor forma de ver la reescritura sin instalar nada.</li>
+<li><strong>Por qué no:</strong> Ese mismo optimizador reordena tanto que el plan deja de parecerse a la consulta escrita, lo que confunde a quien está aprendiendo a leerlos.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/guides/meta/explain.html">https://duckdb.org/docs/stable/guides/meta/explain.html</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/using-explain.html
+-- nota: EXPLAIN (ANALYZE) sobre esta consulta nombra los operadores y permite
+--       comprobar que la seleccion se aplico antes de la reunion.
+
+DROP TABLE IF EXISTS notas, estudiantes;
+
+-- === preparacion ===
+CREATE TABLE estudiantes (
+    id     integer PRIMARY KEY,
+    nombre text NOT NULL
+);
+CREATE TABLE notas (
+    estudiante_id integer NOT NULL,
+    curso         text NOT NULL,
+    nota          integer NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
+);
+
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus'), (3, 'Grace');
+INSERT INTO notas (estudiante_id, curso, nota) VALUES
+    (1, 'DB-101', 90),
+    (2, 'DB-101', 58),
+    (3, 'DB-101', 72),
+    (1, 'SE-201', 66),
+    (3, 'SE-201', 78);
+
+-- === consulta ===
+-- Tres operadores del algebra, en este orden:
+--   sigma  (seleccion)  WHERE curso = 'DB-101' AND nota &gt;= 60
+--   |X|    (reunion)    JOIN estudiantes ON ...
+--   pi     (proyeccion) SELECT nombre, nota
+-- El motor puede reordenarlos si el resultado no cambia; eso es exactamente lo
+-- que autoriza el algebra y lo que hace el optimizador.
+SELECT e.nombre, n.nota
+FROM notas n
+JOIN estudiantes e ON e.id = n.estudiante_id
+WHERE n.curso = 'DB-101' AND n.nota &gt;= 60
+ORDER BY e.nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Es donde la teoría se vuelve visible: <code>EXPLAIN</code> nombra los operadores (<code>Seq Scan</code>, <code>Hash Join</code>, <code>Filter</code>) y permite comprobar que la selección se aplicó antes de la reunión aunque estuviera escrita después.</li>
+<li><strong>Por qué no:</strong> El optimizador decide con estadísticas; si están viejas, elige una expresión equivalente pero mucho más cara, y la culpa parecerá de la consulta.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/using-explain.html">https://www.postgresql.org/docs/current/using-explain.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/
+// nota: la tuberia ES la expresion algebraica escrita en orden. El $match va
+//       PRIMERO a proposito: es el empuje del filtro hecho a mano.
+
+// === preparacion ===
+db.estudiantes.drop();
+db.notas.drop();
+
+db.estudiantes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot; },
+  { _id: 2, nombre: &quot;Linus&quot; },
+  { _id: 3, nombre: &quot;Grace&quot; },
+]);
+db.notas.insertMany([
+  { estudiante_id: 1, curso: &quot;DB-101&quot;, nota: 90 },
+  { estudiante_id: 2, curso: &quot;DB-101&quot;, nota: 58 },
+  { estudiante_id: 3, curso: &quot;DB-101&quot;, nota: 72 },
+  { estudiante_id: 1, curso: &quot;SE-201&quot;, nota: 66 },
+  { estudiante_id: 3, curso: &quot;SE-201&quot;, nota: 78 },
+]);
+
+// === consulta ===
+db.notas
+  .aggregate([
+    { $match: { curso: &quot;DB-101&quot;, nota: { $gte: 60 } } },
+    { $lookup: { from: &quot;estudiantes&quot;, localField: &quot;estudiante_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
+    { $unwind: &quot;$e&quot; },
+    { $project: { _id: 0, nombre: &quot;$e.nombre&quot;, nota: 1 } },
+    { $sort: { nombre: 1 } },
+  ])
+  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.nota));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Una tubería de agregación <strong>es</strong> una expresión algebraica escrita en orden: <code>$match</code> es la selección, <code>$lookup</code> la reunión, <code>$project</code> la proyección. Y el propio motor reordena etapas cuando puede, igual que un optimizador relacional.</li>
+<li><strong>Por qué no:</strong> Al escribirse el orden a mano, un <code>$match</code> puesto después de un <code>$lookup</code> puede procesar millones de documentos de más: aquí el usuario carga con parte del trabajo del optimizador.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/">https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/</a></li>
+</ul>
+<h4 id="neo4j--implementacionesneo4jconsultacypher">Neo4j · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/implementaciones/neo4j/consulta.cypher"><code>implementaciones/neo4j/consulta.cypher</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-cypher">// motor: neo4j
+// doc: https://neo4j.com/docs/cypher-manual/current/clauses/where/
+// nota: el mismo algebra con otra forma: el patron es la reunion, el WHERE la
+//       seleccion y el RETURN la proyeccion.
+
+// === preparacion ===
+MATCH (n) DETACH DELETE n;
+CREATE (a:Estudiante {nombre: 'Ada'}),
+       (l:Estudiante {nombre: 'Linus'}),
+       (g:Estudiante {nombre: 'Grace'}),
+       (db:Curso {codigo: 'DB-101'}),
+       (se:Curso {codigo: 'SE-201'}),
+       (a)-[:CURSO {nota: 90}]-&gt;(db),
+       (l)-[:CURSO {nota: 58}]-&gt;(db),
+       (g)-[:CURSO {nota: 72}]-&gt;(db),
+       (a)-[:CURSO {nota: 66}]-&gt;(se),
+       (g)-[:CURSO {nota: 78}]-&gt;(se);
+
+// === consulta ===
+MATCH (e:Estudiante)-[r:CURSO]-&gt;(c:Curso)
+WHERE c.codigo = 'DB-101' AND r.nota &gt;= 60
+RETURN e.nombre AS nombre, r.nota AS nota
+ORDER BY nombre;
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Cypher tiene los mismos operadores con otra forma: el patrón es la reunión, el <code>WHERE</code> la selección y el <code>RETURN</code> la proyección. Ver el mismo álgebra en dos lenguajes es lo que demuestra que el álgebra no es de SQL.</li>
+<li><strong>Por qué no:</strong> El producto cartesiano —que en álgebra es un operador más— aquí es un error de diseño: si el patrón no conecta dos partes, Neo4j avisa de un producto cartesiano porque casi nunca es lo que se quería.</li>
+<li>📄 Documentación oficial: <a href="https://neo4j.com/docs/cypher-manual/current/clauses/where/">https://neo4j.com/docs/cypher-manual/current/clauses/where/</a></li>
+</ul>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/03-transactions/run_transactions_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -357,27 +633,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>PostgreSQL Global Development Group</strong> (2026). <a href="https://www.postgresql.org/docs/current/">PostgreSQL Documentation</a>.<br />
-  Documentación de referencia del motor relacional principal del programa.</li>
-<li><strong>Egor Rogov</strong> (2022). <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a>. Postgres Professional. ISBN 978-5-6041193-2-8.<br />
-  PDF gratuito. MVCC, vacuum, buffers, índices y planificador sobre el código real.</li>
-<li><strong>Joseph M. Hellerstein, Michael Stonebraker, James Hamilton</strong> (2007). <a href="https://dsf.berkeley.edu/papers/fntdb07-architecture.pdf">Architecture of a Database System</a>. Foundations and Trends in Databases 1(2). DOI <a href="https://doi.org/10.1561/1900000002">10.1561/1900000002</a>.<br />
-  Descripción completa de los componentes internos de un SGBD relacional.</li>
+<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
+  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
+  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 04</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="020.html">← Anterior</a> · <a href="022.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="021">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="020.html"><span class="sentido">← Anterior · 020</span>Portabilidad: qué exige la norma y qué añade cada motor</a>
-<a class="siguiente" href="022.html"><span class="sentido">Siguiente · 022 →</span>MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</a>
+<a class="anterior" href="020.html"><span class="sentido">← Anterior · 020</span>La relación como conjunto: tuplas, dominios y acceso por valor</a>
+<a class="siguiente" href="022.html"><span class="sentido">Siguiente · 022 →</span>Cálculo relacional y su equivalencia con el álgebra</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

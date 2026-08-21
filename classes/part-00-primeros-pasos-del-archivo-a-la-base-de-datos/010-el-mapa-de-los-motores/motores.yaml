@@ -1,0 +1,154 @@
+---
+caso:
+  titulo: Seis familias, y la pregunta que decide cuál corresponde
+  modo: conceptual
+  contrato: |
+    Lo que separa a las familias de motores no es la sintaxis: es **qué unidad de
+    datos manejan y qué acceso optimizan**. Y la pregunta que elige familia no es
+    «¿qué motor uso?» sino «¿cómo se van a acceder estos datos?».
+
+    Esta comparación es el índice del resto del programa: un motor
+    representativo de cada familia, con el patrón de acceso que le corresponde y
+    con el precio que se paga al elegirlo. Cada uno tiene después su propia
+    parte, con su modelo, sus consultas, sus límites y su caso ejecutado.
+
+    Y una advertencia que el mapa por sí solo no da: hoy casi todos los motores
+    hacen un poco de todo, así que la respuesta correcta suele ser **un solo
+    motor generalista**, y añadir un segundo tiene que justificarse con una
+    medición y no con una categoría.
+  columnas: []
+  esperado: []
+
+motores:
+  - id: postgresql
+    aplica: si
+    como: >-
+      **Relacional.** La unidad es la fila, en tablas que se relacionan. Optimiza
+      consultas variadas —incluidas las que nadie previó— con integridad
+      declarada y transacciones.
+    porque_si: >-
+      Es la familia que mejor soporta que las preguntas cambien, y hoy además es
+      multimodelo: JSON con índices, búsqueda de texto y vectores en el mismo
+      motor. Cubre cuatro de las cinco cargas de un sistema típico.
+    porque_no: >-
+      No es el mejor en ninguna de esas cuatro por separado, y la escritura
+      concurrente masiva sigue pasando por un único nodo primario.
+    doc: https://www.postgresql.org/docs/current/
+
+  - id: mongodb
+    aplica: si
+    como: >-
+      **Documental.** La unidad es el documento: un agregado completo que se lee
+      y se escribe entero, sin declarar antes su forma.
+    porque_si: >-
+      Cuando el dominio **son** agregados que no se relacionan entre sí, el
+      modelo encaja: una lectura, un viaje, sin reuniones, y el esquema puede
+      evolucionar sin migraciones coordinadas.
+    porque_no: >-
+      El límite del documento —16 MB— y la ausencia de claves foráneas convierten
+      en trabajo del código lo que en un relacional hace el motor. Y si el
+      dominio tiene muchas relaciones, se acaba emulando un relacional sin sus
+      garantías.
+    doc: https://www.mongodb.com/docs/manual/
+
+  - id: redis
+    aplica: si
+    como: >-
+      **Clave-valor.** La unidad es el par, en memoria. Optimiza el acceso por
+      clave conocida con latencia de microsegundos.
+    porque_si: >-
+      Para caché, sesiones, contadores y colas no hay nada más simple ni más
+      rápido, y sus estructuras —conjuntos, conjuntos ordenados, listas— resuelven
+      problemas enteros sin salir de una orden.
+    porque_no: >-
+      Sin consultas por contenido, sin reuniones y con la memoria como límite
+      duro del tamaño de los datos. Y su durabilidad es una elección que hay que
+      configurar, no una promesa.
+    doc: https://redis.io/docs/latest/develop/
+
+  - id: cassandra
+    aplica: si
+    como: >-
+      **Columnas anchas.** La unidad es la partición, ordenada por una clave de
+      agrupamiento. Optimiza la escritura masiva repartida entre muchos nodos y
+      la lectura de una partición completa.
+    porque_si: >-
+      Escala la escritura de forma lineal añadiendo nodos y sigue disponible con
+      nodos caídos: es la familia para el volumen que una máquina no absorbe.
+    porque_no: >-
+      Se modela **desde la consulta**: cada pregunta nueva es una tabla nueva que
+      hay que llenar y mantener sin transacciones. La flexibilidad de consulta se
+      cambia por escalabilidad de escritura.
+    doc: https://cassandra.apache.org/doc/latest/
+
+  - id: neo4j
+    aplica: si
+    como: >-
+      **Grafo.** La unidad es el nodo y la arista. Optimiza recorrer relaciones
+      de profundidad variable —«¿de qué depende esto, y de qué depende eso?»—.
+    porque_si: >-
+      Cuando la pregunta es sobre caminos y el número de saltos no se sabe de
+      antemano, el costo depende del vecindario recorrido y no del tamaño del
+      grafo: es la única familia con esa propiedad.
+    porque_no: >-
+      Todo lo tabular le sale peor: contar y agregar sobre todos los nodos de una
+      etiqueta es más caro que en una tabla, y mantener un grafo para una
+      jerarquía de tres niveles es añadir un sistema por no escribir seis líneas
+      de SQL.
+    doc: https://neo4j.com/docs/
+
+  - id: duckdb
+    aplica: si
+    como: >-
+      **Columnar / analítico.** La unidad es la columna. Optimiza agregar sobre
+      muchísimas filas leyendo solo las columnas que la consulta necesita.
+    porque_si: >-
+      Es la familia que hace posible resumir millones de filas en segundos, y en
+      su versión embebida ni siquiera exige un servidor.
+    porque_no: >-
+      Es pésima para lo contrario —leer una fila entera por su clave, o
+      modificarla— y por eso nunca sustituye al sistema transaccional: lo
+      acompaña.
+    doc: https://duckdb.org/docs/stable/
+
+  - id: opensearch
+    aplica: si
+    como: >-
+      **Búsqueda de texto.** Un índice invertido: guarda términos analizados y,
+      para cada uno, dónde aparece. Optimiza encontrar y **puntuar** documentos
+      por parecido léxico.
+    porque_si: >-
+      Cuando buscar es el producto —sinónimos, errores tipográficos, facetas,
+      relevancia ajustable— ninguna función de búsqueda dentro de otro motor se
+      le acerca.
+    porque_no: >-
+      Es un índice secundario que va por detrás del origen: no es la verdad, es
+      una copia que hay que alimentar y reindexar.
+    doc: https://docs.opensearch.org/latest/
+
+  - id: qdrant
+    aplica: si
+    como: >-
+      **Vectorial.** La unidad es el vector. Optimiza encontrar lo más parecido
+      en significado, con índices aproximados que renuncian a la exactitud a
+      cambio de velocidad.
+    porque_si: >-
+      Es la familia que hace posible «cursos parecidos a este» sin que compartan
+      ninguna palabra, y la base de los sistemas de recuperación para
+      inteligencia artificial.
+    porque_no: >-
+      La respuesta es **aproximada** y hay que medir cuánto: sin recall medido
+      contra una búsqueda exacta, no se sabe qué se está perdiendo. Y los
+      vectores viven separados de los datos de negocio.
+    doc: https://qdrant.tech/documentation/
+
+  - id: sqlite
+    aplica: no
+    porque_no: >-
+      No es una familia distinta: es un motor relacional, y ya está representado
+      por PostgreSQL en este mapa. Lo que lo distingue —que no tenga servidor— es
+      una decisión de despliegue, no un modelo de datos.
+    alternativa: >-
+      Se compara donde esa distinción sí importa: en la clase sobre cuándo no
+      hace falta una base de datos con servidor, y en la de motores embebidos.
+    doc: https://sqlite.org/whentouse.html

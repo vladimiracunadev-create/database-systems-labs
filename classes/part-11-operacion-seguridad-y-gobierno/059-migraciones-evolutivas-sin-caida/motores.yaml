@@ -1,0 +1,122 @@
+---
+caso:
+  titulo: Añadir una columna con la aplicación en marcha y sin que nadie lo note
+  contrato: |
+    Una migración sin caída no es una migración rápida: es una migración
+    **compatible en los dos sentidos**. Durante el despliegue conviven la versión
+    vieja del código y la nueva, así que el esquema tiene que servir a las dos a
+    la vez. De ahí el patrón de tres tiempos: **expandir** —añadir lo nuevo sin
+    tocar lo viejo—, **migrar** —rellenar por lotes mientras ambas versiones
+    funcionan— y **contraer** —retirar lo viejo, y solo cuando ya no queda nadie
+    usándolo.
+
+    El caso ejecuta los tres pasos sobre una tabla de personas: se añade
+    `apellido` anulable, se rellena y se inserta una fila nueva con las dos
+    columnas. El resultado es trivial; lo que cambia entre motores es **cuánto
+    bloquea cada paso**, y ahí está la diferencia entre un despliegue invisible y
+    una caída de veinte minutos.
+  columnas: [id, apellido]
+  esperado:
+    - ["1", Lovelace]
+    - ["2", Torvalds]
+    - ["3", Hopper]
+
+motores:
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Desde la versión 11, añadir una columna con valor por omisión **no
+      reescribe la tabla**: es un cambio de catálogo instantáneo. Y el DDL es
+      transaccional, así que una migración a medias se deshace entera.
+    porque_no: >-
+      Casi todo `ALTER TABLE` pide un bloqueo `ACCESS EXCLUSIVE`, aunque sea por
+      un instante: si hay una consulta larga en marcha, el `ALTER` espera **y
+      todo lo que llegue detrás espera con él**. La regla práctica es poner
+      siempre `lock_timeout` y reintentar, en vez de confiar en que será rápido.
+    doc: https://www.postgresql.org/docs/current/sql-altertable.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      InnoDB tiene DDL en línea con `ALGORITHM=INPLACE` y, para añadir columnas,
+      `ALGORITHM=INSTANT` desde 8.0.12: la columna se añade en milisegundos sin
+      copiar la tabla.
+    porque_no: >-
+      El DDL **no** es transaccional: una migración a medias se queda a medias.
+      Y no todos los cambios admiten `INSTANT`; los que no, copian la tabla
+      entera, así que hay que declarar el algoritmo explícitamente para que el
+      motor **falle** en vez de copiar en silencio una tabla de 200 GB.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      `ALTER TABLE ... ADD COLUMN` es una operación de catálogo, casi
+      instantánea, y desde la versión 3.35 también existe `DROP COLUMN`.
+    porque_no: >-
+      Es casi lo único que se puede alterar: cambiar un tipo, añadir una
+      restricción o reordenar columnas exige el procedimiento de doce pasos que
+      documenta el propio proyecto —crear tabla nueva, copiar, borrar,
+      renombrar—, y durante ese rato la base está bloqueada.
+    doc: https://sqlite.org/lang_altertable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Admite el mismo `ALTER TABLE` para el caso, y sirve para lo que de verdad
+      hace falta antes de migrar: **comprobar sobre una copia de los datos
+      reales** cuántas filas tienen el campo vacío o mal formado. Migrar sin esa
+      cuenta es empezar a ciegas.
+    porque_no: >-
+      No hay aplicación en marcha que proteger: el problema de esta clase —dos
+      versiones del código conviviendo— no existe aquí.
+    doc: https://duckdb.org/docs/stable/sql/statements/alter_table
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      No hay `ALTER TABLE` que ejecutar: añadir un campo es escribir documentos
+      con él. La fase de expandir es gratis y la migración se puede hacer
+      documento a documento sin bloquear nada.
+    porque_no: >-
+      Esa facilidad esconde el trabajo: el esquema pasa a estar en el código,
+      que tiene que tratar con documentos viejos **sin** el campo y nuevos con
+      él, a veces durante años. La migración no desaparece; se vuelve invisible
+      y permanente.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/schema-design-process/
+
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      `ALTER TABLE ... ADD` es un cambio de esquema que se propaga por el
+      clúster y no reescribe datos: las filas viejas devuelven `null` en la
+      columna nueva, sin coste.
+    porque_no: >-
+      Lo que **no** se puede cambiar es la clave primaria, ni el tipo de una
+      columna existente, ni el orden de agrupamiento: para eso hay que crear
+      otra tabla y migrar los datos. La decisión de modelado se toma una vez.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay esquema que migrar, pero sí hay **formato de valor**, y cambiarlo
+      es el mismo problema con menos ayuda: no hay `ALTER` que avise ni catálogo
+      que consultar para saber qué claves tienen el formato viejo.
+    alternativa: >-
+      Versionar el formato en el nombre de la clave (`sesion:v2:123`) y hacer
+      que el código lea las dos versiones durante la transición: expandir,
+      migrar y contraer, escrito a mano.
+    doc: https://redis.io/docs/latest/develop/using-commands/keyspace/

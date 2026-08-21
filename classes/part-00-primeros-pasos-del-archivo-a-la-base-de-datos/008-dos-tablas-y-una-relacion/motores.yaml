@@ -1,0 +1,100 @@
+---
+caso:
+  titulo: Tres tablas que guardan cada hecho una vez y se juntan al consultar
+  contrato: |
+    La tabla única repetía el correo de Ada en cada una de sus inscripciones y el
+    profesor de DB-101 en cada estudiante de ese curso. Repartida en tres
+    —estudiantes, cursos e inscripciones— **cada hecho está escrito una sola
+    vez**, y la vista completa se reconstruye al consultar con una reunión.
+
+    El caso devuelve exactamente lo que devolvía la tabla única: quién está en
+    qué curso y con qué profesor. Lo que ha cambiado no es el resultado, es lo
+    que cuesta corregir un dato —una fila en vez de muchas— y lo que el sistema
+    puede impedir: una inscripción de un estudiante que no existe ya no entra.
+  columnas: [nombre, codigo, profesor]
+  esperado:
+    - [Ada, DB-101, "A. Lovelace"]
+    - [Ada, SE-201, "G. Hopper"]
+    - [Linus, DB-101, "A. Lovelace"]
+
+motores:
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Tiene claves foráneas y reuniones estándar: el modelo completo cabe en un
+      archivo y se puede probar sin instalar nada.
+    porque_no: >-
+      Las comprueba **solo** si `PRAGMA foreign_keys = ON` está activo en esa
+      conexión, y por compatibilidad viene desactivado. Hay muchísimas bases
+      SQLite con claves foráneas declaradas que nunca han comprobado nada.
+    doc: https://sqlite.org/foreignkeys.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Resuelve la reunión igual y es la herramienta para el paso previo: contar
+      cuántas veces se repite un dato en la tabla única es la consulta que
+      justifica partirla.
+    porque_no: >-
+      Sus claves foráneas no protegen con la firmeza de un motor transaccional:
+      es un almacén para analizar datos que otro sistema ya validó.
+    doc: https://duckdb.org/docs/stable/sql/statements/create_table
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Impone las claves foráneas siempre, sin activar nada, y permite decidir qué
+      pasa al borrar el padre —`CASCADE`, `RESTRICT`, `SET NULL`—, que es una
+      decisión de diseño, no un detalle técnico.
+    porque_no: >-
+      Cada clave foránea añade una comprobación por inserción y un bloqueo sobre
+      la fila referenciada; y si nadie indexa la columna que **referencia**, los
+      borrados en cascada recorren la tabla hija entera.
+    doc: https://www.postgresql.org/docs/current/tutorial-fk.html
+
+  - id: mysql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mysql/consulta.sql
+    porque_si: >-
+      InnoDB comprueba las claves foráneas siempre y crea automáticamente el
+      índice sobre la columna que referencia, que es justo el que se olvida en
+      otros motores.
+    porque_no: >-
+      El motor MyISAM, todavía presente en bases antiguas, **acepta** la
+      declaración de clave foránea y no la comprueba: la restricción existe en el
+      esquema y no en la realidad.
+    doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Se puede modelar igual, con referencias entre colecciones y `$lookup` para
+      juntarlas: es lo correcto cuando el dato referenciado cambia y lo comparten
+      muchos documentos, como el nombre de un profesor.
+    porque_no: >-
+      **No hay claves foráneas.** Nada impide una inscripción que apunte a un
+      curso borrado, y ninguna consulta avisa: la comprobación que aquí hace el
+      motor, allí la tiene que hacer el código, en todos los caminos de
+      escritura.
+    doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      No hay reuniones ni referencias que el servidor entienda: juntar las tres
+      tablas exigiría tres viajes por estudiante y hacer la reunión en el
+      cliente, que es exactamente lo que un motor relacional evita.
+    alternativa: >-
+      Guardar el resultado ya reunido como valor de una clave y recalcularlo
+      cuando cambie el origen: Redis como caché de la reunión que hace otro
+      motor, no como sustituto.
+    doc: https://redis.io/docs/latest/develop/data-types/hashes/

@@ -69,10 +69,17 @@ def test_toda_ruta_declara_cargos_y_nivel(curriculo: dict) -> None:
 
 
 def test_toda_ruta_empieza_por_los_fundamentos_y_termina_en_el_proyecto(curriculo: dict) -> None:
-    """La Parte 00 es el cimiento y la 13 el cierre: ninguna ruta puede saltárselos."""
+    """La primera parte es el cimiento y la ultima el cierre: nadie puede saltárselos.
+
+    Los identificadores no se escriben a mano: se leen del curriculo. Asi, el
+    dia que se inserte una parte nueva al principio —como ocurrio con los
+    primeros pasos— la prueba sigue comprobando lo que quiere comprobar.
+    """
+    primera = curriculo["parts"][0]["id"]
+    ultima = curriculo["parts"][-1]["id"]
     for clave, ruta in rutas(curriculo):
-        assert "00" in ruta["partes"], f"{clave}: no incluye los fundamentos"
-        assert "13" in ruta["partes"], f"{clave}: no termina en el proyecto final"
+        assert primera in ruta["partes"], f"{clave}: no incluye los fundamentos"
+        assert ultima in ruta["partes"], f"{clave}: no termina en el proyecto final"
 
 
 def test_las_rutas_cubren_todas_las_partes(curriculo: dict) -> None:

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Agregación, GROUP BY y HAVING sin duplicar filas. Parte 03: SQL en profundidad.">
+<meta name="description" content="Claves, identidad y el debate natural frente a sustituta. Parte 02: Modelado conceptual y requisitos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/017.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="017 — Agregación, GROUP BY y HAVING sin duplicar filas · Database Systems Labs">
-<meta property="og:description" content="Agregación, GROUP BY y HAVING sin duplicar filas. Parte 03: SQL en profundidad.">
+<meta property="og:title" content="017 — Claves, identidad y el debate natural frente a sustituta · Database Systems Labs">
+<meta property="og:description" content="Claves, identidad y el debate natural frente a sustituta. Parte 02: Modelado conceptual y requisitos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/017.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "017 — Agregación, GROUP BY y HAVING sin duplicar filas", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT3H", "teaches": ["agrupación", "agregado", "HAVING", "doble conteo", "dependencia funcional en GROUP BY"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>017 — Agregación, GROUP BY y HAVING sin duplicar filas · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "017 — Claves, identidad y el debate natural frente a sustituta", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["clave candidata", "clave primaria", "clave sustituta", "identidad estable"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>017 — Claves, identidad y el debate natural frente a sustituta · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,245 +49,295 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-03.html">Parte 03 · SQL en profundidad</a>
+  <a href="parte-02.html">Parte 02 · Modelado conceptual y requisitos</a>
   <span aria-hidden="true">/</span><span>Clase 017</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="017--agregación-group-by-y-having-sin-duplicar-filas">017 — Agregación, GROUP BY y HAVING sin duplicar filas</h1>
+<h1 id="017--claves-identidad-y-el-debate-natural-frente-a-sustituta">017 — Claves, identidad y el debate natural frente a sustituta</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-02-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-017%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="016.html">← Anterior</a> · <a href="018.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="016.html">← Anterior</a> · <a href="018.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 03 — SQL en profundidad · Intermedio ·
-3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>duckdb</code> · laboratorio
+<p>Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>agrupación</code> · <code>agregado</code> · <code>HAVING</code> · <code>doble conteo</code> · <code>dependencia funcional en GROUP BY</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p><strong>Conceptos centrales:</strong> <code>clave candidata</code> · <code>clave primaria</code> · <code>clave sustituta</code> · <code>identidad estable</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 017&quot;]
+    C --&gt; K1[&quot;clave candidata&quot;]
+    C --&gt; K2[&quot;clave primaria&quot;]
+    C --&gt; K3[&quot;clave sustituta&quot;]
+    C --&gt; K4[&quot;identidad estable&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Agregar sin perder ni inventar información. La agregación resume, y todo resumen descarta datos: hay que saber exactamente cuáles.</p>
+<p>Decidir cómo se identifica una fila. Es la decisión de modelado más difícil de revertir: cambiar una clave primaria a los tres años obliga a tocar todas las tablas que la referencian y todos los sistemas que la almacenaron.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Explicar cómo tratan los nulos las funciones de agregación y por qué importa.</li>
-<li>Distinguir <code>COUNT(*)</code>, <code>COUNT(col)</code> y <code>COUNT(DISTINCT col)</code>.</li>
-<li>Agrupar por la clave y no por un atributo descriptivo, y decir por qué.</li>
-<li>Usar agregación condicional para pivotar sin salir de SQL estándar.</li>
-<li>Aplicar <code>GROUPING SETS</code>, <code>ROLLUP</code> y <code>CUBE</code> donde el motor los ofrezca.</li>
+<li>Distinguir superclave, clave candidata, clave primaria y clave alternativa.</li>
+<li>Aplicar los tres criterios de una buena clave: unicidad, no nulidad e inmutabilidad.</li>
+<li>Argumentar a favor y en contra de la clave sustituta con casos concretos.</li>
+<li>Conservar las claves naturales como restricciones <code>UNIQUE</code> aunque no sean primarias.</li>
+<li>Elegir entre entero secuencial y UUID con un criterio de rendimiento, no de gusto.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="los-nulos-y-los-agregados">Los nulos y los agregados</h3>
-<p>Todas las funciones de agregación, <strong>salvo <code>COUNT(*)</code></strong>, ignoran los nulos. Es una decisión de la norma con consecuencias directas:</p>
-<pre><code class="language-sql">-- notas: 6.0, 7.0, NULL, NULL
-SELECT COUNT(*)      FROM enrollments;   -- 4  (filas)
-SELECT COUNT(nota)   FROM enrollments;   -- 2  (valores no nulos)
-SELECT SUM(nota)     FROM enrollments;   -- 13.0
-SELECT AVG(nota)     FROM enrollments;   -- 6.5   = 13.0 / 2, NO / 4
-</code></pre>
-<p><code>AVG</code> divide por el número de valores <strong>no nulos</strong>. Si la intención era «promedio contando las no calificadas como cero», hay que decirlo:</p>
-<pre><code class="language-sql">SELECT SUM(COALESCE(nota, 0)) / COUNT(*) FROM enrollments;   -- 3.25
-</code></pre>
-<p>6,5 frente a 3,25: dos respuestas defendibles a dos preguntas distintas. Elegir sin darse cuenta es el error.</p>
-<p>Caso límite que sorprende: <code>SUM</code> sobre un conjunto vacío devuelve <code>NULL</code>, no 0. Un informe que suma pagos de un mes sin pagos muestra un hueco en vez de un cero, salvo que se escriba <code>COALESCE(SUM(monto), 0)</code>.</p>
-<h3 id="agrupar-por-la-clave">Agrupar por la clave</h3>
-<pre><code class="language-sql">-- MAL: fusiona homónimos
-SELECT s.nombre, COUNT(*) FROM students s JOIN enrollments e ON e.student_id = s.id
-GROUP BY s.nombre;
-
--- BIEN
-SELECT s.id, s.nombre, COUNT(*) FROM students s JOIN enrollments e ON e.student_id = s.id
-GROUP BY s.id, s.nombre;
-</code></pre>
-<p>La norma exige que toda columna del <code>SELECT</code> que no sea agregada aparezca en <code>GROUP BY</code>. PostgreSQL permite una excepción sensata: si se agrupa por la clave primaria, admite las demás columnas de esa tabla, porque están funcionalmente determinadas (clase 008). MySQL en modo no estricto lo permitía sin ninguna justificación, y devolvía un valor arbitrario del grupo: origen de innumerables informes silenciosamente erróneos.</p>
-<h3 id="agregación-condicional">Agregación condicional</h3>
-<p><code>FILTER</code> (norma SQL, soportado por PostgreSQL y SQLite) o <code>CASE</code> dentro del agregado permiten varias métricas en un solo recorrido:</p>
-<pre><code class="language-sql">SELECT course_id,
-       COUNT(*)                                      AS total,
-       COUNT(*) FILTER (WHERE nota &gt;= 4.0)           AS aprobados,
-       COUNT(*) FILTER (WHERE nota &lt;  4.0)           AS reprobados,
-       COUNT(*) FILTER (WHERE nota IS NULL)          AS sin_calificar,
-       AVG(nota) FILTER (WHERE nota IS NOT NULL)     AS promedio
-FROM enrollments
-GROUP BY course_id;
-</code></pre>
-<p>Equivalente portable con <code>CASE</code>:</p>
-<pre><code class="language-sql">       SUM(CASE WHEN nota &gt;= 4.0 THEN 1 ELSE 0 END) AS aprobados
-</code></pre>
-<p>Lo importante no es la sintaxis: es que <strong>un solo recorrido</strong> produce las cinco métricas. La alternativa —cinco consultas o cinco subconsultas— recorre la tabla cinco veces.</p>
-<h3 id="subtotales">Subtotales</h3>
-<pre><code class="language-sql">SELECT c.periodo, c.id, COUNT(*) AS inscritos
-FROM courses c JOIN enrollments e ON e.course_id = c.id
-GROUP BY ROLLUP (c.periodo, c.id);
-</code></pre>
-<p><code>ROLLUP</code> añade las filas de subtotal por período y el total general. Distinguir un subtotal de una fila real se hace con <code>GROUPING()</code>, porque en la fila de subtotal <code>c.id</code> es nulo, igual que lo sería un id realmente nulo.</p>
+<h3 id="vocabulario-preciso">Vocabulario preciso</h3>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Construcción</th>
-<th>Qué añade</th>
-<th>Soporte</th>
+<th>Término</th>
+<th>Definición</th>
+<th>Ejemplo en el dominio</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>GROUPING SETS</code></td>
-<td>Las combinaciones que se enumeren</td>
-<td>PostgreSQL, SQL Server, Oracle, MySQL 8</td>
+<td>Superclave</td>
+<td>Conjunto de atributos que identifica unívocamente</td>
+<td><code>(id, nombre)</code></td>
 </tr>
 <tr>
-<td><code>ROLLUP</code></td>
-<td>Jerarquía de subtotales + total</td>
-<td>Amplio</td>
+<td>Clave candidata</td>
+<td>Superclave mínima: quitarle un atributo destruye la unicidad</td>
+<td><code>(id)</code>, <code>(email)</code></td>
 </tr>
 <tr>
-<td><code>CUBE</code></td>
-<td>Todas las combinaciones posibles</td>
-<td>PostgreSQL, SQL Server, Oracle</td>
+<td>Clave primaria</td>
+<td>La candidata elegida como identificador oficial</td>
+<td><code>(id)</code></td>
+</tr>
+<tr>
+<td>Clave alternativa</td>
+<td>Las candidatas no elegidas</td>
+<td><code>(email)</code> con <code>UNIQUE</code></td>
+</tr>
+<tr>
+<td>Clave sustituta</td>
+<td>Valor sin significado de negocio, generado por el sistema</td>
+<td><code>id</code> autoincremental</td>
+</tr>
+<tr>
+<td>Clave natural</td>
+<td>Valor con significado de negocio</td>
+<td>RUT, ISBN, código de curso</td>
 </tr>
 </tbody>
 </table></div>
-<p>SQLite no los implementa; se emulan con <code>UNION ALL</code> de varias agregaciones.</p>
-<pre><code class="language-mermaid">flowchart LR
-    F[&quot;Filas&quot;] --&gt; W[&quot;WHERE&lt;br/&gt;descarta filas&quot;]
-    W --&gt; G[&quot;GROUP BY&lt;br/&gt;forma grupos&quot;]
-    G --&gt; A[&quot;Agregados&lt;br/&gt;ignoran NULL salvo COUNT(*)&quot;]
-    A --&gt; H[&quot;HAVING&lt;br/&gt;descarta grupos&quot;]
-    H --&gt; S[&quot;SELECT&quot;]
-    S --&gt; O[&quot;ORDER BY&quot;]
+<p>Date subraya un punto que se pierde: elegir una clave primaria <strong>no</strong> autoriza a olvidar las demás candidatas. Si <code>email</code> identifica de forma única, esa restricción debe declararse con <code>UNIQUE</code> aunque la primaria sea <code>id</code>. Omitirla convierte una regla del dominio en un accidente.</p>
+<h3 id="los-tres-criterios">Los tres criterios</h3>
+<p>Una clave debe ser:</p>
+<ol>
+<li><strong>Única</strong> en todo el conjunto, no «casi siempre distinta».</li>
+<li><strong>No nula</strong>, siempre conocida en el momento de insertar.</li>
+<li><strong>Inmutable</strong>: si cambia, deja de identificar a la misma cosa.</li>
+</ol>
+<p>El tercero es el que descarta casi todas las claves naturales. El correo cambia. El nombre cambia. El RUT se corrige por errores de digitación. El código de producto se reestructura cuando el catálogo crece. Karwin cataloga como antipatrón usar como clave un valor que el negocio puede reasignar.</p>
+<h3 id="el-caso-a-favor-de-la-sustituta">El caso a favor de la sustituta</h3>
+<ul>
+<li>Inmutable por construcción: nada del negocio la puede cambiar.</li>
+<li>Estrecha: 4 u 8 bytes frente a una cadena; importa mucho porque <strong>la clave primaria se copia en cada clave foránea y en cada índice secundario</strong>.</li>
+<li>Uniforme: todas las tablas se referencian igual, lo que simplifica el código genérico.</li>
+</ul>
+<h3 id="el-caso-en-contra">El caso en contra</h3>
+<ul>
+<li>Añade una columna sin significado y una reunión más para leer algo comprensible.</li>
+<li>Permite insertar duplicados lógicos si nadie declaró la restricción <code>UNIQUE</code> natural. Este es el fallo real: no es culpa de la sustituta, es culpa de omitir la clave natural.</li>
+<li>En tablas puente (<code>enrollments</code>) suele sobrar: la pareja de claves foráneas ya es una clave candidata perfecta e inmutable.</li>
+</ul>
+<h3 id="entero-secuencial-frente-a-uuid">Entero secuencial frente a UUID</h3>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Entero secuencial</th>
+<th>UUID v4</th>
+<th>UUID v7 / ULID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tamaño</td>
+<td>4–8 bytes</td>
+<td>16 bytes</td>
+<td>16 bytes</td>
+</tr>
+<tr>
+<td>Localidad de inserción en B-Tree</td>
+<td>Excelente (siempre al final)</td>
+<td>Mala (inserciones dispersas)</td>
+<td>Buena (prefijo temporal)</td>
+</tr>
+<tr>
+<td>Generable en el cliente</td>
+<td>No</td>
+<td>Sí</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td>Filtra información</td>
+<td>Sí: revela volumen y orden</td>
+<td>No</td>
+<td>Revela el instante</td>
+</tr>
+<tr>
+<td>Colisión entre sistemas</td>
+<td>Segura</td>
+<td>Improbable</td>
+<td>Improbable</td>
+</tr>
+</tbody>
+</table></div>
+<p>El punto no obvio es el de la localidad. Un B-Tree con claves crecientes concentra las inserciones en la página más a la derecha, que está en memoria. Con UUID v4, cada inserción cae en una página distinta al azar: con una tabla mayor que el buffer, cada inserción puede convertirse en una lectura de disco más una escritura. Es la razón técnica —no estética— por la que UUID v7 existe.</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[&quot;¿Hay un atributo natural&lt;br/&gt;único, no nulo e inmutable?&quot;] --&gt;|&quot;No&quot;| S[&quot;Clave sustituta&quot;]
+    A --&gt;|&quot;Sí&quot;| B{&quot;¿Es estrecho y estable&lt;br/&gt;ante cambios legales&lt;br/&gt;o comerciales?&quot;}
+    B --&gt;|&quot;No&quot;| S
+    B --&gt;|&quot;Sí&quot;| C{&quot;¿Se referencia desde&lt;br/&gt;muchas tablas?&quot;}
+    C --&gt;|&quot;Sí&quot;| S
+    C --&gt;|&quot;No&quot;| N[&quot;Clave natural&quot;]
+    S --&gt; U[&quot;Declarar SIEMPRE la clave&lt;br/&gt;natural como UNIQUE&quot;]
+    N --&gt; U
+    U --&gt; V{&quot;¿Se generan filas en&lt;br/&gt;varios sistemas a la vez?&quot;}
+    V --&gt;|&quot;Sí&quot;| W[&quot;UUID v7 / ULID&quot;]
+    V --&gt;|&quot;No&quot;| X[&quot;Entero secuencial&quot;]
 </code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Informe pedido: <em>«por curso: inscritos, aprobados, promedio de los calificados y porcentaje de aprobación»</em>.</p>
-<pre><code class="language-sql">SELECT c.id,
-       c.nombre,
-       COUNT(e.student_id)                                   AS inscritos,
-       COUNT(e.nota)                                         AS calificados,
-       SUM(CASE WHEN e.nota &gt;= 4.0 THEN 1 ELSE 0 END)        AS aprobados,
-       ROUND(AVG(e.nota), 2)                                 AS promedio_calificados,
-       ROUND(100.0 * SUM(CASE WHEN e.nota &gt;= 4.0 THEN 1 ELSE 0 END)
-             / NULLIF(COUNT(e.nota), 0), 1)                  AS pct_aprobacion
-FROM courses c
-LEFT JOIN enrollments e ON e.course_id = c.id
-GROUP BY c.id, c.nombre
-ORDER BY c.id;
+<p>Modelamos estudiantes con RUT chileno.</p>
+<p><strong>Opción A — RUT como clave primaria:</strong></p>
+<pre><code class="language-sql">CREATE TABLE students (
+  rut    TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL
+);
+CREATE TABLE enrollments (
+  student_rut TEXT REFERENCES students(rut),
+  course_id   INTEGER,
+  nota        NUMERIC(2,1)
+);
 </code></pre>
-<p>Cada decisión, con su porqué:</p>
+<p>Falla los tres criterios en distinto grado:</p>
 <ul>
-<li><strong><code>LEFT JOIN</code></strong>: los cursos sin inscritos deben aparecer con 0, no desaparecer del informe.</li>
-<li><strong><code>COUNT(e.student_id)</code> y no <code>COUNT(*)</code></strong>: con <code>LEFT JOIN</code>, un curso sin inscritos genera una fila con nulos; <code>COUNT(*)</code> daría <strong>1</strong> y <code>COUNT(e.student_id)</code> da <strong>0</strong>, que es lo correcto.</li>
-<li><strong><code>COUNT(e.nota)</code> aparte de <code>inscritos</code></strong>: distingue «inscritos» de «calificados». Sin esa columna, el lector no puede saber sobre qué base se calculó el promedio.</li>
-<li><strong><code>NULLIF(COUNT(e.nota), 0)</code></strong>: evita la división por cero en cursos sin calificar; el resultado es nulo, que es honesto (no hay porcentaje definido).</li>
-<li><strong><code>100.0 *</code></strong> y no <code>100 *</code>: fuerza aritmética decimal. Con enteros, <code>100 * 3 / 4</code> da 75 en algunos motores y 0 en otros por división entera.</li>
+<li><em>Unicidad</em>: se sostiene, salvo por RUT provisionales de estudiantes extranjeros — que existen y se repiten.</li>
+<li><em>No nulidad</em>: falla en la preinscripción, cuando el RUT todavía no se ha entregado.</li>
+<li><em>Inmutabilidad</em>: falla al corregir un dígito verificador mal digitado. Y esa corrección obliga a un <code>UPDATE</code> en cascada sobre todas las tablas hijas.</li>
 </ul>
-<p><strong>Traza sobre un curso concreto</strong> — 40 inscritos, 32 calificados, 24 con nota ≥ 4,0, suma de notas 148,8:</p>
-<pre><code class="language-text">inscritos            = 40
-calificados          = 32
-aprobados            = 24
-promedio_calificados = 148,8 / 32 = 4,65
-pct_aprobacion       = 100 · 24 / 32 = 75,0 %
+<p>Además, cada fila de <code>enrollments</code> almacena una cadena de ~12 bytes en lugar de 4. Con 2 millones de inscripciones: 24 MB frente a 8 MB solo en esa columna, replicado en cada índice que la incluya.</p>
+<p><strong>Opción B — sustituta con natural preservada:</strong></p>
+<pre><code class="language-sql">CREATE TABLE students (
+  id     INTEGER PRIMARY KEY,
+  rut    TEXT UNIQUE,                    -- clave candidata, admite nulo transitorio
+  nombre TEXT NOT NULL
+);
+CREATE TABLE enrollments (
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  course_id  INTEGER NOT NULL REFERENCES courses(id),
+  nota       NUMERIC(2,1),
+  PRIMARY KEY (student_id, course_id)
+);
 </code></pre>
-<p>Obsérvese que el porcentaje se calcula sobre <strong>calificados</strong>, no sobre inscritos. Sobre inscritos daría 60 %. Ambos números son ciertos y responden a preguntas distintas; el informe debe decir cuál usa. Es el punto pedagógico central de la clase: <strong>el denominador es una decisión, no un detalle</strong>.</p>
+<p>Corregir un RUT es ahora un <code>UPDATE</code> de una fila. La regla de negocio «no hay dos estudiantes con el mismo RUT» sigue vigente porque está declarada con <code>UNIQUE</code>, no porque sea la primaria.</p>
+<p>Obsérvese la decisión en <code>enrollments</code>: la clave primaria es <strong>natural compuesta</strong>, no sustituta. Aquí sí lo es, porque <code>(student_id, course_id)</code> es única, no nula, inmutable y ya está presente; añadir un <code>enrollment_id</code> sería una columna que nadie consulta y un índice más que mantener.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Expresión</th>
-<th>Cuenta</th>
-<th>Devuelve con conjunto vacío</th>
+<th>Escenario</th>
+<th>Elección defendible</th>
+<th>Motivo</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>COUNT(*)</code></td>
-<td>Filas, incluidas las de nulos</td>
-<td>0</td>
+<td>Entidad de negocio central</td>
+<td>Sustituta + natural <code>UNIQUE</code></td>
+<td>Las naturales de negocio mutan</td>
 </tr>
 <tr>
-<td><code>COUNT(col)</code></td>
-<td>Valores no nulos</td>
-<td>0</td>
+<td>Tabla puente sin atributos propios</td>
+<td>Natural compuesta</td>
+<td>Ya es única e inmutable</td>
 </tr>
 <tr>
-<td><code>COUNT(DISTINCT col)</code></td>
-<td>Valores no nulos distintos</td>
-<td>0</td>
+<td>Catálogo estable normalizado (ISO, monedas)</td>
+<td>Natural</td>
+<td>El código <em>es</em> el estándar y no cambia</td>
 </tr>
 <tr>
-<td><code>SUM(col)</code></td>
-<td>Suma de no nulos</td>
-<td><code>NULL</code></td>
+<td>Datos generados en varios nodos</td>
+<td>UUID v7 / ULID</td>
+<td>Evita coordinación para asignar identificadores</td>
 </tr>
 <tr>
-<td><code>AVG(col)</code></td>
-<td>Suma / cuenta de no nulos</td>
-<td><code>NULL</code></td>
-</tr>
-<tr>
-<td><code>MIN</code>/<code>MAX(col)</code></td>
-<td>Extremos de no nulos</td>
-<td><code>NULL</code></td>
+<td>Tabla de eventos de alto volumen</td>
+<td>Entero secuencial</td>
+<td>Localidad de inserción en el índice</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong><code>COUNT(*)</code> tras un <code>LEFT JOIN</code>.</strong> Cuenta 1 donde debería contar 0.</li>
-<li><strong><code>AVG</code> sin decir sobre qué base.</strong> El lector supone que es sobre el total y casi nunca lo es.</li>
-<li><strong><code>SUM</code> de un conjunto vacío mostrado como hueco.</strong> Falta <code>COALESCE</code>.</li>
-<li><strong>Agrupar por el nombre.</strong> Fusiona entidades distintas.</li>
-<li><strong>División entera silenciosa.</strong> <code>100 * a / b</code> con enteros trunca.</li>
-<li><strong><code>HAVING</code> para condiciones de fila.</strong> Agrupa de más y luego descarta.</li>
+<li><strong>Poner una sustituta y olvidar el <code>UNIQUE</code> natural.</strong> Es la causa número uno de duplicados lógicos en producción.</li>
+<li><strong>Exponer la clave sustituta secuencial en URL públicas.</strong> Revela volumen (<code>/pedido/1043</code> dice cuántos pedidos hay) y facilita el conteo por terceros.</li>
+<li><strong>Usar UUID v4 como clave primaria agrupada en tablas grandes.</strong> Degrada la inserción por pérdida de localidad; v7 resuelve el problema sin renunciar a generar en el cliente.</li>
+<li><strong>Claves compuestas de cuatro o cinco columnas.</strong> Se copian enteras en cada índice secundario y en cada clave foránea.</li>
+<li><strong>Reutilizar identificadores de filas borradas.</strong> Rompe cualquier referencia externa, informe histórico o registro de auditoría.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Dos informes del mismo negocio que no cuadran suelen diferir en el denominador o en el tratamiento de los nulos, no en los datos. Documentar en el propio SQL qué se cuenta y sobre qué base evita reuniones enteras de conciliación.</p>
+<p>Un cambio de clave primaria en un sistema con integraciones no es una migración: es una negociación con cada consumidor externo que guardó ese identificador. Elegir bien al principio cuesta una tarde; elegir mal cuesta un trimestre.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma un informe agregado real y determina, para cada métrica, cuál es su denominador.</li>
-<li>Calcula la misma métrica con dos denominadores defendibles y muestra ambas cifras.</li>
-<li>Reescribe cinco consultas de métrica en una sola con agregación condicional y compara tiempos.</li>
-<li>Añade el manejo de nulos y de conjunto vacío, y demuestra el resultado en un mes sin datos.</li>
+<li>Localiza en un esquema real una clave primaria que pueda cambiar por decisión de negocio.</li>
+<li>Documenta qué tablas y qué sistemas externos se verían afectados por ese cambio.</li>
+<li>Propón la migración a sustituta conservando la natural como <code>UNIQUE</code>.</li>
+<li>Estima el ahorro o el costo en bytes de índice con el volumen real de tus datos.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Con notas <code>6.0, NULL, NULL</code>, ¿qué devuelven <code>COUNT(*)</code>, <code>COUNT(nota)</code>, <code>AVG(nota)</code> y <code>SUM(nota)</code>?</li>
-<li>¿Por qué <code>COUNT(*)</code> es incorrecto tras un <code>LEFT JOIN</code> cuando quieres contar hijos?</li>
-<li>Explica cuándo agrupar solo por la clave primaria es válido y por qué.</li>
-<li>Da dos porcentajes correctos y distintos para la misma pregunta de negocio, y di cómo elegirías.</li>
+<li>Da una clave natural de tu dominio que cumpla los tres criterios y justifica por qué la elegirías.</li>
+<li>¿Por qué el ancho de la clave primaria afecta al tamaño de índices que no la incluyen explícitamente?</li>
+<li>Explica el problema de localidad de UUID v4 con una traza de inserciones sobre un B-Tree.</li>
+<li>En <code>enrollments</code> se eligió clave natural compuesta. Da un requisito futuro que obligaría a añadir una sustituta.</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Contar dos hijos del mismo padre sin que se multipliquen entre sí</p>
-<p>Por cada curso hay que devolver cuántos inscritos tiene y cuántas
-evaluaciones. Son dos recuentos sobre dos tablas distintas que cuelgan del
-mismo padre, y ahí está el error de agregación más caro que existe: reunir
-las dos y contar. Para DB-101, con 2 inscritos y 3 evaluaciones, esa reunión
-produce 6 filas intermedias y los dos recuentos salen 6.</p>
-<p>Lo grave no es el número: es que <strong>el informe se genera igual</strong>. Nadie revisa
-un total que parece plausible. La forma correcta agrega antes de reunir, para
-que cada lado aporte una sola fila por curso.</p>
+<p><strong>Caso:</strong> Cambiar el correo de un estudiante sin romper lo que apunta a él</p>
+<p>El correo parece una buena clave: es único y ya identifica a la persona.
+Hasta que alguien lo cambia. Con clave sustituta, cambiar el correo es
+actualizar <strong>una</strong> fila y ninguna referencia se entera; con clave natural,
+hay que propagar el cambio a toda tabla que lo hubiera copiado.</p>
+<p>El caso hace justo eso: Ada cambia de <code>ada@example.org</code> a <code>ada@nuevo.org</code> y,
+después del cambio, la consulta devuelve por estudiante su correo actual y
+cuántas inscripciones conserva. Si la identidad estaba bien modelada, Ada
+sigue teniendo sus dos inscripciones.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>curso</th>
-<th>inscritos</th>
-<th>evaluaciones</th>
+<th>correo</th>
+<th>inscripciones</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>DB-101</code></td>
+<td><code>ada@nuevo.org</code></td>
 <td><code>2</code></td>
-<td><code>3</code></td>
 </tr>
 <tr>
-<td><code>SE-201</code></td>
-<td><code>1</code></td>
+<td><code>grace@example.org</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>linus@example.org</code></td>
 <td><code>1</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
-<code>python scripts/verificar_equivalencia.py --clase 017</code>: 5 de
-las 5 implementaciones se ejecutan de verdad y su
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 017</code>: 4 de
+las 4 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
 no ejecutado.</p>
 <div class="tabla-scroll"><table>
@@ -305,312 +355,218 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_select.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_createtable.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/groupby.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_sequence.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/tutorial-agg.html">doc oficial</a></td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td>sí</td>
-<td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/ddl-identity-columns.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/mongodb/consulta.js">código</a></td>
-<td><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/core/document/">doc oficial</a></td>
 </tr>
 <tr>
-<td>ClickHouse</td>
+<td>Apache Cassandra</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://clickhouse.com/docs/en/sql-reference/aggregate-functions">doc oficial</a></td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
 <td><strong>no</strong></td>
 <td>—</td>
 <td>—</td>
-<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc oficial</a></td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc oficial</a></td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_select.html
+-- doc: https://sqlite.org/lang_createtable.html
+-- nota: INTEGER PRIMARY KEY es un alias del rowid interno, asi que la clave
+--       sustituta no ocupa una columna adicional.
 
 -- === preparacion ===
-CREATE TABLE cursos (
-    codigo TEXT PRIMARY KEY
+-- La identidad es el id: estable, sin significado y nunca visible para el
+-- usuario. El correo es un ATRIBUTO unico, no la identidad.
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo TEXT NOT NULL UNIQUE
 );
 CREATE TABLE inscripciones (
-    estudiante TEXT NOT NULL,
-    curso      TEXT NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-CREATE TABLE evaluaciones (
-    id     INTEGER PRIMARY KEY,
-    curso  TEXT NOT NULL,
-    titulo TEXT NOT NULL
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso         TEXT NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
 );
 
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
-INSERT INTO evaluaciones (id, curso, titulo) VALUES
-    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
-    (4, 'SE-201', 'Examen');
+INSERT INTO estudiantes (id, correo) VALUES
+    (1, 'ada@example.org'), (2, 'linus@example.org'), (3, 'grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso) VALUES
+    (1, 'DB-101'), (1, 'SE-201'), (2, 'DB-101');
+
+-- El cambio que rompe los modelos con clave natural: una fila, ninguna
+-- referencia tocada. Con el correo como clave foranea, habria que propagarlo a
+-- inscripciones y a toda tabla que lo hubiera copiado.
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE id = 1;
 
 -- === consulta ===
--- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
---   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
--- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
--- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
--- el trabajo sigue estando ahi.
---
--- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
--- por curso, asi que ninguna reunion multiplica nada.
-SELECT c.codigo AS curso,
-       COALESCE(i.inscritos, 0) AS inscritos,
-       COALESCE(e.evaluaciones, 0) AS evaluaciones
-FROM cursos c
-LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
-           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
-LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
-           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
-ORDER BY c.codigo;
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Permite ver el doble conteo y su corrección en el mismo archivo, sin infraestructura: basta cambiar la consulta por la ingenua para que los dos números salten a 6.</li>
-<li><strong>Por qué no:</strong> Tolera <code>GROUP BY</code> con columnas no agregadas y devuelve un valor cualquiera del grupo, sin avisar. Es el motor donde una agregación mal escrita más fácilmente pasa por buena.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_select.html">https://sqlite.org/lang_select.html</a></li>
+<li><strong>Por qué sí:</strong> <code>INTEGER PRIMARY KEY</code> es un alias del <code>rowid</code> interno, así que la clave sustituta no cuesta ni una columna extra de almacenamiento: la identidad estable sale gratis.</li>
+<li><strong>Por qué no:</strong> Ese mismo alias hace que el valor pueda reutilizarse si se borran filas y se usa <code>AUTOINCREMENT</code> mal entendido; una clave sustituta reutilizada es peor que una natural inestable.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_createtable.html">https://sqlite.org/lang_createtable.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/query_syntax/groupby.html
--- nota: DuckDB acepta GROUP BY ALL, que evita el error de olvidar una columna
---       en la lista. Aqui se escribe la forma portable a proposito.
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_sequence.html
+-- nota: util para el argumento numerico de la discusion: contar cuantas filas
+--       habria que tocar si el correo fuera la clave foranea.
 
 -- === preparacion ===
-CREATE TABLE cursos (
-    codigo VARCHAR PRIMARY KEY
+-- La identidad es el id: estable, sin significado y nunca visible para el
+-- usuario. El correo es un ATRIBUTO unico, no la identidad.
+CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    correo VARCHAR NOT NULL UNIQUE
 );
 CREATE TABLE inscripciones (
-    estudiante VARCHAR NOT NULL,
-    curso      VARCHAR NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-CREATE TABLE evaluaciones (
-    id     INTEGER PRIMARY KEY,
-    curso  VARCHAR NOT NULL,
-    titulo VARCHAR NOT NULL
+    estudiante_id INTEGER NOT NULL,
+    curso         VARCHAR NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
 );
 
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
-INSERT INTO evaluaciones (id, curso, titulo) VALUES
-    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
-    (4, 'SE-201', 'Examen');
+INSERT INTO estudiantes (id, correo) VALUES
+    (1, 'ada@example.org'), (2, 'linus@example.org'), (3, 'grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso) VALUES
+    (1, 'DB-101'), (1, 'SE-201'), (2, 'DB-101');
+
+-- El cambio que rompe los modelos con clave natural: una fila, ninguna
+-- referencia tocada. Con el correo como clave foranea, habria que propagarlo a
+-- inscripciones y a toda tabla que lo hubiera copiado.
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE id = 1;
 
 -- === consulta ===
--- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
---   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
--- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
--- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
--- el trabajo sigue estando ahi.
---
--- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
--- por curso, asi que ninguna reunion multiplica nada.
-SELECT c.codigo AS curso,
-       COALESCE(i.inscritos, 0) AS inscritos,
-       COALESCE(e.evaluaciones, 0) AS evaluaciones
-FROM cursos c
-LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
-           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
-LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
-           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
-ORDER BY c.codigo;
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La agregación es su terreno: cuenta y agrupa sobre millones de filas en memoria, y <code>GROUP BY ALL</code> evita el error de olvidar una columna en la lista.</li>
-<li><strong>Por qué no:</strong> Esa velocidad esconde el problema: la versión con doble reunión y <code>DISTINCT</code> también termina rápido aquí, así que el costo del error no se nota hasta que la misma consulta se lleva al motor transaccional.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/groupby.html">https://duckdb.org/docs/stable/sql/query_syntax/groupby.html</a></li>
+<li><strong>Por qué sí:</strong> Permite comprobar el efecto del cambio sobre un volcado completo: contar cuántas filas habría que tocar con clave natural es el argumento numérico que cierra la discusión.</li>
+<li><strong>Por qué no:</strong> No genera identificadores por sí solo con la comodidad de una secuencia de un motor transaccional, así que la identidad hay que traerla ya asignada.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_sequence.html">https://duckdb.org/docs/stable/sql/statements/create_sequence.html</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/tutorial-agg.html
--- nota: EXPLAIN (ANALYZE) sobre la version ingenua muestra «rows=6» en el nodo
---       de la reunion para DB-101: el doble conteo deja de ser un argumento y
---       pasa a ser un numero.
-
-DROP TABLE IF EXISTS evaluaciones, inscripciones, cursos;
+-- doc: https://www.postgresql.org/docs/current/ddl-identity-columns.html
+-- nota: las dos claves conviven, y las dos hacen falta: IDENTITY da la
+--       identidad estable a la que apuntan las referencias, y UNIQUE sobre el
+--       correo impide dos personas con el mismo correo.
 
 -- === preparacion ===
-CREATE TABLE cursos (
-    codigo text PRIMARY KEY
+DROP TABLE IF EXISTS inscripciones, estudiantes;
+
+CREATE TABLE estudiantes (
+    id     integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    correo text NOT NULL UNIQUE
 );
 CREATE TABLE inscripciones (
-    estudiante text NOT NULL,
-    curso      text NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-CREATE TABLE evaluaciones (
-    id     integer PRIMARY KEY,
-    curso  text NOT NULL,
-    titulo text NOT NULL
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso         text NOT NULL,
+    PRIMARY KEY (estudiante_id, curso)
 );
 
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
-INSERT INTO evaluaciones (id, curso, titulo) VALUES
-    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
-    (4, 'SE-201', 'Examen');
+INSERT INTO estudiantes (correo) VALUES
+    ('ada@example.org'), ('linus@example.org'), ('grace@example.org');
+INSERT INTO inscripciones (estudiante_id, curso)
+SELECT id, 'DB-101' FROM estudiantes WHERE correo = 'ada@example.org'
+UNION ALL
+SELECT id, 'SE-201' FROM estudiantes WHERE correo = 'ada@example.org'
+UNION ALL
+SELECT id, 'DB-101' FROM estudiantes WHERE correo = 'linus@example.org';
+
+UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE correo = 'ada@example.org';
 
 -- === consulta ===
--- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
---   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
--- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
--- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
--- el trabajo sigue estando ahi.
---
--- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
--- por curso, asi que ninguna reunion multiplica nada.
-SELECT c.codigo AS curso,
-       COALESCE(i.inscritos, 0) AS inscritos,
-       COALESCE(e.evaluaciones, 0) AS evaluaciones
-FROM cursos c
-LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
-           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
-LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
-           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
-ORDER BY c.codigo;
+SELECT e.correo,
+       COUNT(i.curso) AS inscripciones
+FROM estudiantes e
+LEFT JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.id, e.correo
+ORDER BY e.correo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Rechaza el <code>GROUP BY</code> ambiguo con un error, tiene agregados con <code>FILTER</code> —que evita varias subconsultas— y <code>EXPLAIN (ANALYZE)</code> muestra las filas intermedias reales, que es como se demuestra el doble conteo con números.</li>
-<li><strong>Por qué no:</strong> La agregación previa por subconsulta puede materializarse: en tablas grandes conviene comprobar si una función de ventana o un <code>LATERAL</code> con límite resulta más barato, en vez de asumirlo.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-agg.html">https://www.postgresql.org/docs/current/tutorial-agg.html</a></li>
+<li><strong>Por qué sí:</strong> <code>GENERATED ALWAYS AS IDENTITY</code> es la forma normalizada de la clave sustituta y, junto a un <code>UNIQUE</code> sobre el correo, permite tener las dos cosas: identidad estable para las referencias y unicidad de negocio para el usuario.</li>
+<li><strong>Por qué no:</strong> La clave sustituta no exime de declarar la clave natural: sin el <code>UNIQUE</code> sobre el correo, el sistema acepta dos personas con el mismo correo y nadie lo nota hasta que alguien intenta recuperar su contraseña.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-identity-columns.html">https://www.postgresql.org/docs/current/ddl-identity-columns.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
-<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
-<pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html
-
-DROP TABLE IF EXISTS evaluaciones;
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS cursos;
-
--- === preparacion ===
-CREATE TABLE cursos (
-    codigo VARCHAR(50) PRIMARY KEY
-);
-CREATE TABLE inscripciones (
-    estudiante VARCHAR(50) NOT NULL,
-    curso      VARCHAR(50) NOT NULL,
-    PRIMARY KEY (estudiante, curso)
-);
-CREATE TABLE evaluaciones (
-    id     INT PRIMARY KEY,
-    curso  VARCHAR(50) NOT NULL,
-    titulo VARCHAR(50) NOT NULL
-);
-
-INSERT INTO cursos (codigo) VALUES ('DB-101'), ('SE-201');
-INSERT INTO inscripciones (estudiante, curso) VALUES
-    ('Ada', 'DB-101'), ('Linus', 'DB-101'), ('Grace', 'SE-201');
-INSERT INTO evaluaciones (id, curso, titulo) VALUES
-    (1, 'DB-101', 'Control 1'), (2, 'DB-101', 'Control 2'), (3, 'DB-101', 'Examen'),
-    (4, 'SE-201', 'Examen');
-
--- === consulta ===
--- La forma INGENUA seria reunir las dos tablas hijas y contar con DISTINCT:
---   FROM cursos c LEFT JOIN inscripciones i ... LEFT JOIN evaluaciones e ...
--- Para DB-101, esa reunion produce 2 x 3 = 6 filas intermedias, y sin DISTINCT
--- devolveria 6 inscritos y 6 evaluaciones. Con DISTINCT el numero sale bien y
--- el trabajo sigue estando ahi.
---
--- La forma CORRECTA agrega ANTES de reunir: cada subconsulta devuelve una fila
--- por curso, asi que ninguna reunion multiplica nada.
-SELECT c.codigo AS curso,
-       COALESCE(i.inscritos, 0) AS inscritos,
-       COALESCE(e.evaluaciones, 0) AS evaluaciones
-FROM cursos c
-LEFT JOIN (SELECT curso, COUNT(*) AS inscritos
-           FROM inscripciones GROUP BY curso) i ON i.curso = c.codigo
-LEFT JOIN (SELECT curso, COUNT(*) AS evaluaciones
-           FROM evaluaciones GROUP BY curso) e ON e.curso = c.codigo
-ORDER BY c.codigo;
-</code></pre>
-<ul>
-<li><strong>Por qué sí:</strong> Con <code>ONLY_FULL_GROUP_BY</code> activo por omisión desde 5.7, las agregaciones ambiguas ya no cuelan, y el motor resuelve la agregación previa con tablas derivadas materializadas.</li>
-<li><strong>Por qué no:</strong> Esa materialización crea tablas temporales sin índices: cuando las subconsultas devuelven muchas filas, la reunión posterior se vuelve un escaneo completo de la temporal.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-functions.html</a></li>
-</ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-03-sql-en-profundidad/017-agregacion-group-by-y-having/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-02-modelado-conceptual-y-requisitos/017-claves-identidad-natural-y-sustituta/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
-// doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/
-// nota: aqui el doble conteo NO puede ocurrir: cada $lookup deja su propio
-//       arreglo y $size cuenta cada uno por separado. El precio es que son dos
-//       busquedas por curso, no una reunion.
+// doc: https://www.mongodb.com/docs/manual/core/document/
+// nota: el _id es inmutable. Si se hubiera usado el correo como _id, este
+//       cambio no seria un update: seria borrar el documento y crear otro.
 
 // === preparacion ===
-db.cursos.drop();
+db.estudiantes.drop();
 db.inscripciones.drop();
-db.evaluaciones.drop();
 
-db.cursos.insertMany([{ _id: &quot;DB-101&quot; }, { _id: &quot;SE-201&quot; }]);
+db.estudiantes.insertMany([
+  { _id: 1, correo: &quot;ada@example.org&quot; },
+  { _id: 2, correo: &quot;linus@example.org&quot; },
+  { _id: 3, correo: &quot;grace@example.org&quot; },
+]);
+db.estudiantes.createIndex({ correo: 1 }, { unique: true });
 db.inscripciones.insertMany([
-  { estudiante: &quot;Ada&quot;, curso: &quot;DB-101&quot; },
-  { estudiante: &quot;Linus&quot;, curso: &quot;DB-101&quot; },
-  { estudiante: &quot;Grace&quot;, curso: &quot;SE-201&quot; },
+  { estudiante_id: 1, curso: &quot;DB-101&quot; },
+  { estudiante_id: 1, curso: &quot;SE-201&quot; },
+  { estudiante_id: 2, curso: &quot;DB-101&quot; },
 ]);
-db.evaluaciones.insertMany([
-  { curso: &quot;DB-101&quot;, titulo: &quot;Control 1&quot; },
-  { curso: &quot;DB-101&quot;, titulo: &quot;Control 2&quot; },
-  { curso: &quot;DB-101&quot;, titulo: &quot;Examen&quot; },
-  { curso: &quot;SE-201&quot;, titulo: &quot;Examen&quot; },
-]);
+
+// Una sola escritura, y ninguna inscripcion se entera.
+db.estudiantes.updateOne({ _id: 1 }, { $set: { correo: &quot;ada@nuevo.org&quot; } });
 
 // === consulta ===
-db.cursos
+db.estudiantes
   .aggregate([
     { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
-                 foreignField: &quot;curso&quot;, as: &quot;i&quot; } },
-    { $lookup: { from: &quot;evaluaciones&quot;, localField: &quot;_id&quot;,
-                 foreignField: &quot;curso&quot;, as: &quot;e&quot; } },
-    { $project: { _id: 0, curso: &quot;$_id&quot;,
-                  inscritos: { $size: &quot;$i&quot; }, evaluaciones: { $size: &quot;$e&quot; } } },
-    { $sort: { curso: 1 } },
+                 foreignField: &quot;estudiante_id&quot;, as: &quot;i&quot; } },
+    { $project: { _id: 0, correo: 1, inscripciones: { $size: &quot;$i&quot; } } },
+    { $sort: { correo: 1 } },
   ])
-  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.inscritos + &quot;|&quot; + d.evaluaciones));
+  .forEach((d) =&gt; print(d.correo + &quot;|&quot; + d.inscripciones));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> El problema del doble conteo no aparece si cada <code>$lookup</code> se cuenta por separado con <code>$size</code>: no hay producto cartesiano porque cada búsqueda deja su propio arreglo.</li>
-<li><strong>Por qué no:</strong> Cada <code>$lookup</code> es una consulta más por documento del lado externo; con muchos cursos, lo que en SQL era una reunión se convierte en miles de búsquedas y la latencia crece de forma lineal.</li>
-<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/">https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/</a></li>
+<li><strong>Por qué sí:</strong> El <code>_id</code> es obligatorio y por omisión es un <code>ObjectId</code> generado en el cliente: la identidad sustituta existe siempre, incluso cuando nadie la diseñó, y se puede generar sin ir al servidor.</li>
+<li><strong>Por qué no:</strong> Como es opaco y de 12 bytes, aparece en cada documento y en cada índice; y si se cede a la tentación de usar el correo como <code>_id</code>, cambiarlo obliga a borrar y reinsertar el documento, porque el <code>_id</code> es inmutable.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/core/document/">https://www.mongodb.com/docs/manual/core/document/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
 <p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
@@ -625,16 +581,16 @@ db.cursos
 </thead>
 <tbody>
 <tr>
-<td>ClickHouse</td>
-<td>Resolvería el caso sin esfuerzo, pero compararlo aquí induce a error: su forma idiomática no es agregar dos hijos normalizados, sino guardar los hechos ya aplanados y usar estados de agregación (<code>AggregatingMergeTree</code>) que se combinan al fusionar partes.</td>
-<td>Se estudia en la parte de analítica columnar, con su propio caso y su propia medición, en vez de forzarlo a imitar un esquema transaccional.</td>
-<td><a href="https://clickhouse.com/docs/en/sql-reference/aggregate-functions">doc</a></td>
+<td>Apache Cassandra</td>
+<td>La clave primaria decide en qué nodo vive la fila, así que <strong>no se puede actualizar</strong>: cambiar el correo cuando el correo es la clave de partición significa insertar la fila nueva y borrar la vieja, con todo lo que cuelgue de ella.</td>
+<td>Usar un identificador estable (UUID) como clave de partición y mantener una tabla <code>estudiante_por_correo</code> como índice de búsqueda, aceptando el trabajo de mantener las dos.</td>
+<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/cql/ddl.html">doc</a></td>
 </tr>
 <tr>
 <td>Redis</td>
-<td>No hay <code>GROUP BY</code>: agregar exigiría traer todos los miembros al cliente y contarlos allí, con lo que el recuento deja de ser una propiedad del almacén.</td>
-<td>Mantener un contador por curso y por tipo de hijo, actualizado en cada escritura, con el riesgo de deriva que se estudió en la clase de desnormalización deliberada.</td>
-<td><a href="https://redis.io/docs/latest/commands/hincrby/">doc</a></td>
+<td>La clave de Redis es literalmente la ruta de acceso: si el correo forma parte del nombre de la clave, cambiarlo obliga a renombrar y a corregir todas las referencias, que es la versión más cruda del problema de la clave natural.</td>
+<td>Nombrar las claves por identificador (<code>estudiante:42</code>) y mantener un índice aparte (<code>correo:ada@nuevo.org -&gt; 42</code>), que es exactamente la distinción entre identidad y atributo que enseña esta clase.</td>
+<td><a href="https://redis.io/docs/latest/develop/using-commands/keyspace/">doc</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -685,27 +641,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Joe Celko</strong> (2014). <a href="https://www.sciencedirect.com/book/9780128007617/joe-celkos-sql-for-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a>. 5.a ed. Morgan Kaufmann. ISBN 978-0-12-800761-7.<br />
-  Modelado de jerarquias, conjuntos anidados y SQL declarativo avanzado.</li>
-<li><strong>Anthony Molinaro, Robert de Graaf</strong> (2020). <a href="https://www.oreilly.com/library/view/sql-cookbook-2nd/9781492077435/">SQL Cookbook</a>. 2.a ed. O'Reilly. ISBN 978-1-4920-7744-2.<br />
-  Recetas comparadas entre dialectos, útil para la matriz de portabilidad.</li>
-<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
-  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
+<li><strong>C. J. Date</strong> (2015). <a href="https://www.oreilly.com/library/view/sql-and-relational/9781491941164/">SQL and Relational Theory: How to Write Accurate SQL Code</a>. 3.a ed. O'Reilly. ISBN 978-1-4919-4117-1.<br />
+  Separa el modelo relacional de lo que SQL realmente implementa, incluidos los nulos.</li>
+<li><strong>Bill Karwin</strong> (2010). <a href="https://pragprog.com/titles/bksqla/sql-antipatterns/">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a>. Pragmatic Bookshelf. ISBN 978-1-934356-55-5.<br />
+  Catálogo de errores de modelado con su corrección y cuando el antipatron es aceptable.</li>
+<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
+  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 03</a> · <a href="016.html">← Anterior</a> · <a href="018.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 02</a> · <a href="016.html">← Anterior</a> · <a href="018.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="017">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="016.html"><span class="sentido">← Anterior · 016</span>Reuniones: interna, externa, semi y anti</a>
-<a class="siguiente" href="018.html"><span class="sentido">Siguiente · 018 →</span>CTE, subconsultas y funciones de ventana</a>
+<a class="anterior" href="016.html"><span class="sentido">← Anterior · 016</span>Entidad-relación, cardinalidad y participación</a>
+<a class="siguiente" href="018.html"><span class="sentido">Siguiente · 018 →</span>Normalización de 1FN a BCFN con dependencias funcionales</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

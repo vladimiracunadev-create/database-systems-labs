@@ -1,0 +1,121 @@
+---
+caso:
+  titulo: Sumar las lecturas por hora, que es lo único que se mira de una serie
+  contrato: |
+    Nadie consulta una serie temporal lectura a lectura: se consulta por
+    ventanas. Sumar, promediar o contar por intervalos —el *bucketing*— es la
+    operación central, y todos los motores la resuelven; lo que cambia es si hay
+    que escribirla cada vez, si el resultado se mantiene solo y qué pasa con los
+    datos viejos.
+
+    El caso tiene cinco lecturas repartidas en dos horas y pide el total por
+    hora, ordenado. Las tres preguntas que la clase pone encima de la mesa —la
+    cardinalidad de las series, la retención de lo viejo y el agregado que se
+    mantiene al día— aparecen en el «por qué no» de cada motor, que es donde se
+    decide.
+  columnas: [hora, total]
+  esperado:
+    - ["2026-08-19 10:00", "66"]
+    - ["2026-08-19 11:00", "45"]
+
+motores:
+  - id: timescaledb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/timescaledb/consulta.sql
+    porque_si: >-
+      Es PostgreSQL con la parte temporal resuelta: `time_bucket` para ventanas
+      arbitrarias, hipertablas que particionan por tiempo sin que nadie lo
+      administre, agregados continuos que se actualizan solos y políticas de
+      retención y compresión declarativas. Y sigue siendo SQL, con reuniones
+      contra el resto del esquema.
+    porque_no: >-
+      Es una extensión: en un servicio administrado hay que comprobar que está
+      disponible, y añade su propio ciclo de versiones sobre el de PostgreSQL.
+      La compresión, además, hace las filas comprimidas más caras de modificar.
+    doc: https://docs.timescale.com/use-timescale/latest/time-buckets/
+
+  - id: influxdb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/influxdb/consulta.txt
+    porque_si: >-
+      Está construido solo para esto: escritura por lotes muy alta, compresión
+      específica de series, retención por *bucket* y ventanas como primitiva del
+      lenguaje. Para telemetría pura, el ajuste es directo.
+    porque_no: >-
+      Aquí la cardinalidad manda: cada combinación distinta de etiquetas crea una
+      serie, y un identificador único como etiqueta —un id de usuario, una traza—
+      hace explotar la memoria del índice. Es el error clásico, y no avisa hasta
+      que el servidor deja de arrancar. Además ha cambiado de lenguaje de
+      consulta entre versiones mayores.
+    doc: https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      `date_trunc` con `GROUP BY` resuelve el caso sin extensiones, y el
+      particionado declarativo por rango permite tirar un mes entero con un
+      `DROP TABLE` de la partición, que es la forma barata de la retención:
+      borrar filas una a una es lo caro.
+    porque_no: >-
+      Sin extensión no hay agregados que se mantengan solos ni compresión por
+      columnas: una tabla de telemetría normal ocupa varias veces lo que ocuparía
+      en un motor especializado, y el agregado se recalcula en cada consulta.
+    doc: https://www.postgresql.org/docs/current/functions-datetime.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Tiene `time_bucket` propio y agrega sobre millones de puntos en memoria:
+      es la forma más rápida de explorar un histórico exportado a Parquet sin
+      montar nada.
+    porque_no: >-
+      No ingiere: no hay escritura continua, ni retención, ni agregados
+      mantenidos. Analiza la serie; no la guarda.
+    doc: https://duckdb.org/docs/stable/sql/functions/timestamp.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Con `strftime` se agrupa por hora sin nada más, lo que lo hace perfecto
+      para telemetría **en el dispositivo**: guardar localmente lo que se mide y
+      enviar solo el agregado.
+    porque_no: >-
+      No tiene tipo de fecha: las marcas de tiempo son texto, números o
+      segundos desde la época, y comparar dos formatos distintos no da error, da
+      un resultado equivocado. La zona horaria hay que gestionarla entera a mano.
+    doc: https://sqlite.org/lang_datefunc.html
+
+  - id: clickhouse
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/clickhouse/consulta.sql
+    porque_si: >-
+      `toStartOfHour` y las vistas materializadas que agregan al **insertar**
+      dan el mismo resultado sin recalcular, y su compresión por columnas sobre
+      datos temporales ordenados es de las mejores que existen. Es la opción
+      cuando la serie tiene miles de millones de puntos.
+    porque_no: >-
+      Actualizar o borrar puntos concretos es una operación pesada y asíncrona:
+      corregir una lectura mal enviada no es un `UPDATE`, es una mutación que
+      reescribe partes enteras.
+    doc: https://clickhouse.com/docs/en/sql-reference/functions/date-time-functions
+
+  - id: mongodb
+    aplica: no
+    porque_no: >-
+      Sus colecciones de series temporales resuelven bien el almacenamiento,
+      pero para este caso concreto la comparación no aporta: la agregación por
+      ventana se escribe con `$dateTrunc` y `$group`, que ya se estudió en la
+      clase de agregación sobre documentos.
+    alternativa: >-
+      Se compara donde sí aporta —en el modelado por dispositivo y ventana, en
+      la clase de columnas anchas— en vez de repetir aquí la misma tubería.
+    doc: https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/

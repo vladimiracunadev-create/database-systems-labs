@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="RAG evaluable: medir la recuperación antes que la generación. Parte 12: Vectores, recuperación y RAG.">
+<meta name="description" content="Inyección SQL y el contrato de parametrización. Parte 11: Operación, seguridad y gobierno.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/061.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="061 — RAG evaluable: medir la recuperación antes que la generación · Database Systems Labs">
-<meta property="og:description" content="RAG evaluable: medir la recuperación antes que la generación. Parte 12: Vectores, recuperación y RAG.">
+<meta property="og:title" content="061 — Inyección SQL y el contrato de parametrización · Database Systems Labs">
+<meta property="og:description" content="Inyección SQL y el contrato de parametrización. Parte 11: Operación, seguridad y gobierno.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/061.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "061 — RAG evaluable: medir la recuperación antes que la generación", "inLanguage": "es", "educationalLevel": "Avanzado", "timeRequired": "PT3H", "teaches": ["recall@k", "precisión@k", "MRR", "fragmentación", "trazabilidad de la cita"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>061 — RAG evaluable: medir la recuperación antes que la generación · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "061 — Inyección SQL y el contrato de parametrización", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT3H", "teaches": ["consulta parametrizada", "identificador dinamico", "lista blanca", "defensa en profundidad"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>061 — Inyección SQL y el contrato de parametrización · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,281 +49,616 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-12.html">Parte 12 · Vectores, recuperación y RAG</a>
+  <a href="parte-11.html">Parte 11 · Operación, seguridad y gobierno</a>
   <span aria-hidden="true">/</span><span>Clase 061</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="061--rag-evaluable-medir-la-recuperación-antes-que-la-generación">061 — RAG evaluable: medir la recuperación antes que la generación</h1>
+<h1 id="061--inyección-sql-y-el-contrato-de-parametrización">061 — Inyección SQL y el contrato de parametrización</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-11-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-3%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-061%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 12 — Vectores, recuperación y RAG · Avanzado ·
-3 horas estimadas · motores <code>qdrant</code>, <code>postgresql</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>recall@k</code> · <code>precisión@k</code> · <code>MRR</code> · <code>fragmentación</code> · <code>trazabilidad de la cita</code></p>
+<p>Parte 11 — Operación, seguridad y gobierno · Fundamentos ·
+3 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code>, <code>mysql</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>consulta parametrizada</code> · <code>identificador dinamico</code> · <code>lista blanca</code> · <code>defensa en profundidad</code></p>
+<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 061&quot;]
+    C --&gt; K1[&quot;consulta parametrizada&quot;]
+    C --&gt; K2[&quot;identificador dinamico&quot;]
+    C --&gt; K3[&quot;lista blanca&quot;]
+    C --&gt; K4[&quot;defensa en profundidad&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Construir un sistema de generación aumentada por recuperación cuya calidad se pueda medir. La parte de bases de datos —la recuperación— se evalúa por separado y <strong>antes</strong> que la generación.</p>
+<p>Eliminar la inyección SQL por construcción, entendiendo por qué la parametrización funciona y qué casos no cubre — que son justamente donde siguen apareciendo las vulnerabilidades.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Descomponer un sistema RAG y localizar dónde falla.</li>
-<li>Construir un conjunto de evaluación de recuperación.</li>
-<li>Calcular recall@k, precision@k, MRR y NDCG@k.</li>
-<li>Explicar por qué el techo de la generación es el recall de la recuperación.</li>
-<li>Diseñar la trazabilidad de las citas.</li>
+<li>Explicar por qué una consulta parametrizada es inmune, a nivel de protocolo.</li>
+<li>Identificar las cuatro partes de una consulta que <strong>no</strong> admiten parámetros.</li>
+<li>Aplicar listas blancas y funciones de citado para esos casos.</li>
+<li>Reconocer inyección de segundo orden y en consultas dinámicas del servidor.</li>
+<li>Aplicar defensa en profundidad más allá de la parametrización.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="la-arquitectura-y-sus-puntos-de-fallo">La arquitectura y sus puntos de fallo</h3>
-<p>Lewis et al. definieron RAG: recuperar pasajes relevantes y dárselos al modelo generador como contexto.</p>
-<pre><code class="language-mermaid">flowchart LR
-    D[&quot;Documentos&quot;] --&gt; C[&quot;Fragmentar&lt;br/&gt;FALLO 1: mal corte&quot;]
-    C --&gt; E[&quot;Embeddings&lt;br/&gt;FALLO 2: modelo inadecuado&quot;]
-    E --&gt; I[(&quot;Índice + metadatos&quot;)]
-    Q[&quot;Pregunta&quot;] --&gt; R[&quot;Recuperar top k&lt;br/&gt;FALLO 3: recall bajo&quot;]
-    I --&gt; R
-    R --&gt; RR[&quot;Reordenar&lt;br/&gt;FALLO 4: mal orden&quot;]
-    RR --&gt; P[&quot;Construir contexto&lt;br/&gt;FALLO 5: no cabe&quot;]
-    P --&gt; G[&quot;Generar&lt;br/&gt;FALLO 6: ignora o inventa&quot;]
-    G --&gt; A[&quot;Respuesta + citas&lt;br/&gt;FALLO 7: cita no verificable&quot;]
+<h3 id="por-qué-funciona-la-parametrización">Por qué funciona la parametrización</h3>
+<p>La inyección ocurre porque el motor recibe <strong>una sola cadena</strong> y decide qué es código y qué es dato al analizarla. Si el dato contiene sintaxis, se convierte en código.</p>
+<p>Con una consulta parametrizada, el cliente envía <strong>dos cosas separadas</strong> por el protocolo:</p>
+<pre><code class="language-text">1. La plantilla:  SELECT * FROM students WHERE email = $1
+   → el motor la analiza y planifica AHORA, sin ver ningún valor
+2. Los valores:   ['ana@ejemplo.cl'&quot;; DROP TABLE students;--']
+   → llegan después, cuando el árbol sintáctico YA está fijado
 </code></pre>
-<p>Los fallos 1 a 5 son <strong>de bases de datos</strong>. Solo el 6 es del modelo generador. La consecuencia práctica es que la mayor parte del trabajo de mejora de un RAG es trabajo de recuperación.</p>
-<h3 id="el-techo">El techo</h3>
-<p><strong>Si el pasaje que contiene la respuesta no está entre los <code>k</code> recuperados, ningún modelo puede responder correctamente.</strong> Como mucho, dirá que no lo sabe; en el peor caso, inventará.</p>
-<pre><code class="language-text">recall@5 = 0,60  →  el 40 % de las preguntas son irrespondibles
-                    por muy bueno que sea el generador
+<p>El valor <strong>nunca pasa por el analizador sintáctico</strong>. No es que se escape bien: es que no hay nada que escapar, porque no participa en el análisis. Es una garantía estructural, no una comprobación.</p>
+<p>OWASP lo sitúa como la defensa principal y la especificación PEP 249 la define para todo cliente Python conforme.</p>
+<pre><code class="language-python"># CORRECTO
+cur.execute(&quot;SELECT * FROM students WHERE email = %s&quot;, (email,))
+cur.execute(&quot;SELECT * FROM students WHERE email = ?&quot;, (email,))   # sqlite3
+
+# VULNERABLE — todas las formas, incluida la que parece moderna
+cur.execute(&quot;SELECT * FROM students WHERE email = '&quot; + email + &quot;'&quot;)
+cur.execute(&quot;SELECT * FROM students WHERE email = '%s'&quot; % email)
+cur.execute(f&quot;SELECT * FROM students WHERE email = '{email}'&quot;)
 </code></pre>
-<p>De ahí la regla operativa del programa: <strong>medir la recuperación antes de tocar el generador</strong>. Es también la más barata: no consume tokens.</p>
-<h3 id="las-métricas">Las métricas</h3>
-<p>Con un conjunto de preguntas y, para cada una, los fragmentos relevantes conocidos:</p>
+<p>La tercera es hoy la más frecuente: la f-string parece limpia y es exactamente la misma concatenación.</p>
+<h3 id="lo-que-no-se-puede-parametrizar">Lo que no se puede parametrizar</h3>
+<p>Un parámetro ocupa el lugar de un <strong>valor</strong>. No puede ocupar el lugar de un identificador ni de sintaxis, porque el motor necesita ambos para analizar la consulta:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Métrica</th>
-<th>Fórmula</th>
-<th>Qué mide</th>
+<th>Elemento</th>
+<th>¿Parametrizable?</th>
+<th>Solución</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Recall@k</strong></td>
-<td>relevantes en el top k / relevantes totales</td>
-<td>¿Está la respuesta ahí?</td>
+<td>Valor en <code>WHERE</code>, <code>VALUES</code>, <code>SET</code></td>
+<td><strong>Sí</strong></td>
+<td>Parámetro</td>
 </tr>
 <tr>
-<td><strong>Precision@k</strong></td>
-<td>relevantes en el top k / k</td>
-<td>¿Cuánto ruido acompaña?</td>
+<td>Nombre de tabla o columna</td>
+<td>No</td>
+<td><strong>Lista blanca</strong></td>
 </tr>
 <tr>
-<td><strong>MRR</strong></td>
-<td>media de 1/posición del primer relevante</td>
-<td>¿Cómo de arriba aparece?</td>
+<td>Dirección de <code>ORDER BY</code></td>
+<td>No</td>
+<td>Lista blanca (<code>ASC</code>/<code>DESC</code>)</td>
 </tr>
 <tr>
-<td><strong>NDCG@k</strong></td>
-<td>ganancia descontada / ideal</td>
-<td>Relevancia graduada y posición</td>
+<td>Nombre de esquema</td>
+<td>No</td>
+<td>Lista blanca</td>
+</tr>
+<tr>
+<td>Número de elementos de <code>IN</code></td>
+<td>Parcial</td>
+<td>Generar tantos marcadores como elementos, o pasar un arreglo</td>
+</tr>
+<tr>
+<td><code>LIMIT</code> / <code>OFFSET</code></td>
+<td>Sí en la mayoría</td>
+<td>Parámetro, y validar que sea entero</td>
 </tr>
 </tbody>
 </table></div>
-<p>Para RAG, <strong>recall@k es la métrica principal</strong>: define el techo. Precision importa porque el contexto es finito y el ruido distrae al generador.</p>
-<h3 id="el-conjunto-de-evaluación">El conjunto de evaluación</h3>
-<p>Es el activo central y hay que construirlo:</p>
-<ol>
-<li>Reunir 50–100 preguntas <strong>reales</strong> (de usuarios, de soporte, de registros).</li>
-<li>Para cada una, identificar a mano los fragmentos que contienen la respuesta.</li>
-<li>Guardarlo versionado, junto al código.</li>
-<li>Ejecutarlo en cada cambio de fragmentación, modelo, índice o fusión.</li>
-</ol>
-<p>Sin él, cualquier afirmación sobre la calidad del sistema es una impresión.</p>
+<p><strong>La lista blanca es la única defensa correcta para identificadores.</strong> No una expresión regular, no un escape: una comparación contra un conjunto cerrado de valores permitidos, definido en el código.</p>
+<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;s.nombre&quot;, &quot;nota&quot;: &quot;e.nota&quot;, &quot;fecha&quot;: &quot;e.registrada_en&quot;}
+SENTIDOS  = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
+
+def listar(cur, orden: str, sentido: str, limite: int):
+    col = ORDENABLES.get(orden)
+    dir_ = SENTIDOS.get(sentido.lower())
+    if col is None or dir_ is None:
+        raise ValueError(&quot;orden no permitido&quot;)
+    # `col` y `dir_` salen del diccionario, NUNCA de la entrada del usuario:
+    # la entrada solo se usa como clave de búsqueda.
+    cur.execute(f&quot;SELECT s.nombre, e.nota FROM ... ORDER BY {col} {dir_} LIMIT %s&quot;,
+                (min(int(limite), 100),))
+</code></pre>
+<p>La clave está en el comentario: lo que se interpola es el <strong>valor del diccionario</strong>, no la entrada. La entrada solo decide qué valor conocido se usa.</p>
+<h3 id="inyección-de-segundo-orden">Inyección de segundo orden</h3>
+<p>El dato entra parametrizado —y por tanto se guarda íntegro, con sus comillas— y se inyecta <strong>después</strong>, cuando otro proceso lo concatena:</p>
+<pre><code class="language-python"># Paso 1: guardado correctamente
+cur.execute(&quot;INSERT INTO students (nombre) VALUES (%s)&quot;, (&quot;Ana'; DROP TABLE x;--&quot;,))
+
+# Paso 2: un informe lo lee de la base y lo concatena. Aquí ocurre la inyección.
+nombre = cur.execute(&quot;SELECT nombre FROM students WHERE id=1&quot;).fetchone()[0]
+cur.execute(f&quot;SELECT * FROM logs WHERE usuario = '{nombre}'&quot;)   # VULNERABLE
+</code></pre>
+<p>La lección: <strong>todo dato es entrada, venga de donde venga</strong>. Que esté en la base no lo hace confiable.</p>
+<h3 id="sql-dinámico-en-el-servidor">SQL dinámico en el servidor</h3>
+<p>Dentro de una función PL/pgSQL, el problema reaparece:</p>
+<pre><code class="language-sql">-- VULNERABLE
+EXECUTE 'SELECT * FROM ' || tabla || ' WHERE id = ' || id;
+
+-- CORRECTO: format con %I (identificador citado) y %L (literal citado)
+EXECUTE format('SELECT * FROM %I WHERE id = %L', tabla, id);
+
+-- MEJOR: identificador por lista blanca, valor por parámetro real
+EXECUTE format('SELECT * FROM %I WHERE id = $1', tabla) USING id;
+</code></pre>
+<p><code>%I</code> cita como identificador y <code>%L</code> como literal. <code>USING</code> pasa un parámetro de verdad.</p>
+<pre><code class="language-mermaid">flowchart TD
+    E[&quot;Entrada&quot;] --&gt; T{&quot;¿Dónde va&lt;br/&gt;en la consulta?&quot;}
+    T -- &quot;Valor&quot; --&gt; P[&quot;Parámetro&lt;br/&gt;inmune por protocolo&quot;]
+    T -- &quot;Identificador&quot; --&gt; W{&quot;¿Conjunto cerrado&lt;br/&gt;de valores válidos?&quot;}
+    W -- &quot;Sí&quot; --&gt; L[&quot;Lista blanca&lt;br/&gt;(diccionario en código)&quot;]
+    W -- &quot;No&quot; --&gt; Q[&quot;Función de citado&lt;br/&gt;del motor (%I) · último recurso&quot;]
+    T -- &quot;Sintaxis (ASC/DESC)&quot; --&gt; L
+    P --&gt; D[&quot;Defensa en profundidad&quot;]
+    L --&gt; D
+    D --&gt; D1[&quot;Privilegio mínimo (clase 050)&quot;]
+    D --&gt; D2[&quot;Seguridad por fila&quot;]
+    D --&gt; D3[&quot;Tiempo límite de consulta&quot;]
+    D --&gt; D4[&quot;Registro y alerta de errores SQL&quot;]
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>RAG sobre este programa: 64 clases fragmentadas, preguntas de estudiantes.</p>
-<p><strong>Conjunto de evaluación:</strong></p>
-<pre><code class="language-json">[
-  {&quot;pregunta&quot;: &quot;¿Por qué NOT IN falla con nulos?&quot;,
-   &quot;relevantes&quot;: [&quot;019#3&quot;, &quot;012#5&quot;]},
-  {&quot;pregunta&quot;: &quot;¿Cuándo conviene un índice parcial?&quot;,
-   &quot;relevantes&quot;: [&quot;041#2&quot;, &quot;039#4&quot;]},
-  {&quot;pregunta&quot;: &quot;¿Qué se pierde con appendfsync everysec?&quot;,
-   &quot;relevantes&quot;: [&quot;027#2&quot;]},
-  {&quot;pregunta&quot;: &quot;¿Cómo evito el doble conteo al reunir dos tablas hijas?&quot;,
-   &quot;relevantes&quot;: [&quot;016#4&quot;, &quot;017#1&quot;]}
-]
-</code></pre>
-<p><strong>Evaluación de la recuperación, sin generar nada:</strong></p>
-<pre><code class="language-python">def evaluar(recuperar, conjunto, k=5):
-    recalls, precisions, rr = [], [], []
-    for caso in conjunto:
-        obtenidos = [d.id for d in recuperar(caso[&quot;pregunta&quot;], k=k)]
-        relevantes = set(caso[&quot;relevantes&quot;])
-        aciertos = [d for d in obtenidos if d in relevantes]
+<p>Buscador de cursos con filtros opcionales y orden configurable: el caso donde más veces se abandona la parametrización «porque es dinámico».</p>
+<pre><code class="language-python">ORDENABLES = {&quot;nombre&quot;: &quot;c.nombre&quot;, &quot;periodo&quot;: &quot;c.periodo&quot;,
+              &quot;inscritos&quot;: &quot;inscritos&quot;}
+SENTIDOS   = {&quot;asc&quot;: &quot;ASC&quot;, &quot;desc&quot;: &quot;DESC&quot;}
 
-        recalls.append(len(aciertos) / len(relevantes))
-        precisions.append(len(aciertos) / k)
-        # MRR: solo cuenta la posición del PRIMER relevante
-        pos = next((i + 1 for i, d in enumerate(obtenidos) if d in relevantes), None)
-        rr.append(1 / pos if pos else 0.0)
+def buscar_cursos(cur, *, texto=None, periodo=None, min_inscritos=None,
+                  orden=&quot;nombre&quot;, sentido=&quot;asc&quot;, limite=50):
+    condiciones, params = [], []
 
-    n = len(conjunto)
-    return {&quot;recall@k&quot;: sum(recalls)/n, &quot;precision@k&quot;: sum(precisions)/n,
-            &quot;mrr&quot;: sum(rr)/n}
+    # Cada filtro añade su condición Y su parámetro: la consulta crece
+    # dinámicamente, los valores nunca se concatenan.
+    if texto:
+        condiciones.append(&quot;c.nombre ILIKE %s&quot;)
+        params.append(f&quot;%{texto}%&quot;)
+    if periodo:
+        condiciones.append(&quot;c.periodo = %s&quot;)
+        params.append(periodo)
+    if min_inscritos is not None:
+        condiciones.append(&quot;(SELECT count(*) FROM enrollments e &quot;
+                           &quot; WHERE e.course_id = c.id) &gt;= %s&quot;)
+        params.append(int(min_inscritos))
+
+    where = f&quot;WHERE {' AND '.join(condiciones)}&quot; if condiciones else &quot;&quot;
+
+    col = ORDENABLES.get(orden)
+    dir_ = SENTIDOS.get(str(sentido).lower())
+    if col is None or dir_ is None:
+        raise ValueError(&quot;parámetro de orden no permitido&quot;)
+
+    params.append(min(max(int(limite), 1), 200))
+
+    sql = f&quot;&quot;&quot;
+        SELECT c.id, c.nombre, c.periodo,
+               (SELECT count(*) FROM enrollments e WHERE e.course_id = c.id) AS inscritos
+        FROM courses c
+        {where}
+        ORDER BY {col} {dir_}, c.id
+        LIMIT %s
+    &quot;&quot;&quot;
+    cur.execute(sql, params)
+    return cur.fetchall()
 </code></pre>
-<p><strong>Iteraciones medidas, en orden cronológico:</strong></p>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Configuración</th>
-<th style="text-align: right;">recall@5</th>
-<th style="text-align: right;">precision@5</th>
-<th style="text-align: right;">MRR</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fragmentos de 2 000 car., solo vectorial</td>
-<td style="text-align: right;">0,58</td>
-<td style="text-align: right;">0,23</td>
-<td style="text-align: right;">0,51</td>
-</tr>
-<tr>
-<td>Fragmentos de 600 car. con 15 % de solape</td>
-<td style="text-align: right;">0,71</td>
-<td style="text-align: right;">0,31</td>
-<td style="text-align: right;">0,62</td>
-</tr>
-<tr>
-<td>+ cabecera de sección en cada fragmento</td>
-<td style="text-align: right;">0,78</td>
-<td style="text-align: right;">0,34</td>
-<td style="text-align: right;">0,69</td>
-</tr>
-<tr>
-<td>+ híbrida RRF (clase 060)</td>
-<td style="text-align: right;">0,89</td>
-<td style="text-align: right;">0,39</td>
-<td style="text-align: right;">0,81</td>
-</tr>
-<tr>
-<td>+ reordenador sobre 50</td>
-<td style="text-align: right;">0,89</td>
-<td style="text-align: right;"><strong>0,52</strong></td>
-<td style="text-align: right;"><strong>0,88</strong></td>
-</tr>
-</tbody>
-</table></div>
-<p>Observaciones que enseñan más que las cifras:</p>
+<p><strong>Por qué es seguro:</strong></p>
 <ul>
-<li><strong>Fragmentar mejor fue la mejora más grande</strong> (+13 puntos) y no costó ni un modelo nuevo ni un servicio nuevo.</li>
-<li><strong>Añadir la cabecera de sección</strong> al texto del fragmento (+7 puntos) fue casi gratis: da contexto al embedding sobre de qué trata el fragmento.</li>
-<li><strong>El reordenador no cambia el recall</strong> (0,89 → 0,89) y sube mucho la precisión y el MRR: no recupera más, ordena mejor. Exactamente lo previsto en la clase 060.</li>
-<li>El techo de la generación pasó del 58 % al 89 % <strong>sin tocar el generador</strong>.</li>
+<li>Toda la sintaxis interpolada (<code>where</code>, <code>col</code>, <code>dir_</code>) procede de <strong>literales del código</strong> o de diccionarios cerrados.</li>
+<li>Todos los valores del usuario van como parámetros.</li>
+<li>El límite está acotado: evita que alguien pida un millón de filas.</li>
+<li><code>ORDER BY ... , c.id</code> da orden total (clase 015).</li>
 </ul>
-<p><strong>Construcción del contexto</strong>, donde está el fallo 5:</p>
-<pre><code class="language-python">def construir_contexto(fragmentos, presupuesto_tokens=3000):
-    partes, usados = [], 0
-    for f in fragmentos:                       # ya reordenados: lo mejor primero
-        bloque = (f&quot;[{f.id}] {f.clase} · {f.seccion}\n{f.texto}\n&quot;)
-        t = contar_tokens(bloque)
-        if usados + t &gt; presupuesto_tokens:
-            break                              # truncar por el final, nunca por el principio
-        partes.append(bloque)
-        usados += t
-    return &quot;\n---\n&quot;.join(partes)
+<p><strong>Comprobación con entradas hostiles:</strong></p>
+<pre><code class="language-python">buscar_cursos(cur, texto=&quot;'; DROP TABLE courses;--&quot;)
+# → busca literalmente ese texto. 0 resultados. Ninguna tabla borrada.
+
+buscar_cursos(cur, orden=&quot;nombre; DROP TABLE courses;--&quot;)
+# → ValueError: parámetro de orden no permitido
+
+buscar_cursos(cur, periodo=&quot;2026-1' OR '1'='1&quot;)
+# → busca ese período literal. 0 resultados.
 </code></pre>
-<p>Dos decisiones deliberadas:</p>
-<ul>
-<li><strong>Truncar por el final.</strong> Los fragmentos mejor puntuados van primero y nunca se descartan.</li>
-<li><strong>El identificador <code>[019#3]</code> viaja en el contexto.</strong> Es lo que hace verificable la cita.</li>
-</ul>
-<p><strong>Trazabilidad de la cita:</strong></p>
-<pre><code class="language-python">def verificar_citas(respuesta, contexto_ids):
-    citadas = set(re.findall(r&quot;\[(\d{3}#\d+)\]&quot;, respuesta))
-    inventadas = citadas - set(contexto_ids)
-    if inventadas:
-        raise CitaInvalida(f&quot;cita no presente en el contexto: {inventadas}&quot;)
-    return citadas
+<p><strong>Defensa en profundidad</strong>, porque ningún control único es suficiente:</p>
+<pre><code class="language-sql">-- 1. El usuario de la aplicación no puede borrar tablas
+REVOKE ALL ON SCHEMA public FROM svc_api;
+GRANT  SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO svc_api;
+
+-- 2. Tiempo límite: una inyección basada en tiempo se corta
+ALTER ROLE svc_api SET statement_timeout = '10s';
+
+-- 3. Sin acceso a metadatos innecesarios
+REVOKE SELECT ON pg_authid FROM PUBLIC;
 </code></pre>
-<p>Una cita a un identificador que no estaba en el contexto es una alucinación <strong>detectable mecánicamente</strong>. Es la comprobación más barata y más efectiva de todo el sistema, y no requiere ningún modelo evaluador.</p>
-<p><strong>Registro por consulta</strong>, para poder diagnosticar en producción:</p>
-<pre><code class="language-sql">CREATE TABLE rag_traza (
-  id            BIGSERIAL PRIMARY KEY,
-  pregunta      TEXT NOT NULL,
-  modelo_emb    TEXT NOT NULL,
-  ids_recuperados TEXT[] NOT NULL,
-  ids_citados     TEXT[] NOT NULL,
-  latencia_ms   INTEGER NOT NULL,
-  ocurrido_en   TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-</code></pre>
-<p>Con esta traza, una queja concreta —«me respondió mal»— se diagnostica: si el fragmento correcto no está en <code>ids_recuperados</code>, el problema es de recuperación; si estaba y no se citó, es del generador. <strong>Dos equipos distintos, dos arreglos distintos</strong>, y la traza dice cuál.</p>
+<p>Con estas tres medidas, una inyección que llegara a ejecutarse encontraría un usuario que no puede escribir en el catálogo, con consultas cortadas a los 10 segundos y sin poder enumerar credenciales.</p>
 <h2 id="comparación">Comparación</h2>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Síntoma</th>
-<th>Causa probable</th>
-<th>Diagnóstico</th>
+<th>Técnica</th>
+<th>Eficacia</th>
+<th>Nota</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>«No encuentra información que existe»</td>
-<td>Recall bajo</td>
-<td>Medir recall@k</td>
+<td>Consulta parametrizada</td>
+<td><strong>Total</strong> para valores</td>
+<td>La defensa principal</td>
 </tr>
 <tr>
-<td>«Responde con datos de otro tema»</td>
-<td>Precision baja o fragmentos grandes</td>
-<td>Medir precision, revisar fragmentación</td>
+<td>Lista blanca de identificadores</td>
+<td><strong>Total</strong></td>
+<td>Única correcta para nombres</td>
 </tr>
 <tr>
-<td>«Inventa citas»</td>
-<td>Contexto insuficiente o mal construido</td>
-<td>Verificar citas mecánicamente</td>
+<td>Función de citado del motor (<code>%I</code>)</td>
+<td>Alta</td>
+<td>Solo si la lista blanca es imposible</td>
 </tr>
 <tr>
-<td>«Responde bien a unas y mal a otras»</td>
-<td>Conjunto de evaluación poco representativo</td>
-<td>Ampliar y desglosar</td>
+<td>Escape manual</td>
+<td><strong>Baja</strong></td>
+<td>Depende de codificación y motor; no usar</td>
 </tr>
 <tr>
-<td>«Va lento»</td>
-<td><code>ef_search</code> alto o reordenador sobre demasiados</td>
-<td>Curva de la clase 059</td>
+<td>Cortafuegos de aplicación</td>
+<td>Parcial</td>
+<td>Complemento, nunca sustituto</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Alta por defecto</td>
+<td>Se pierde con SQL en crudo</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Evaluar solo la respuesta final.</strong> No dice dónde está el fallo.</li>
-<li><strong>No medir la recuperación.</strong> Se optimiza el generador contra un techo que no se mueve.</li>
-<li><strong>Conjunto de evaluación con preguntas inventadas.</strong> No refleja el uso real.</li>
-<li><strong>Fragmentos demasiado grandes.</strong> La señal se diluye y el contexto se llena de ruido.</li>
-<li><strong>Fragmentos sin contexto de origen.</strong> Un párrafo suelto no se entiende ni se cita.</li>
-<li><strong>Citas no verificables.</strong> Impide detectar alucinaciones mecánicamente.</li>
-<li><strong>Cambiar el modelo de embeddings sin recalcular la colección</strong> (clase 058).</li>
+<li><strong>f-strings con entrada de usuario.</strong> La forma moderna del mismo error de siempre.</li>
+<li><strong>Escape manual.</strong> Existen bypass por codificación y por multibyte.</li>
+<li><strong>Confiar en datos de la base.</strong> Inyección de segundo orden.</li>
+<li><strong><code>ORDER BY</code> desde la petición sin lista blanca.</strong> El vector más frecuente hoy.</li>
+<li><strong>SQL en crudo dentro de un ORM sin parametrizar.</strong> Se pierde toda la protección.</li>
+<li><strong>Devolver el error SQL al cliente.</strong> Regala el esquema al atacante.</li>
+<li><strong>La aplicación con privilegios de administrador.</strong> Convierte una inyección en un desastre.</li>
 </ol>
 <h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Un RAG en producción se degrada por causas de base de datos: documentos nuevos sin indexar, un cambio de modelo a medias, el recall del índice cayendo al crecer la colección. La traza por consulta y la ejecución periódica del conjunto de evaluación son el equivalente aquí de la prueba de restauración de la clase 048.</p>
+<p>Las inyecciones que llegan a producción hoy casi nunca están en el <code>WHERE</code>: están en el <code>ORDER BY</code>, en un nombre de tabla dinámico o en un informe que concatena datos leídos de la propia base. Buscar concatenación de cadenas cerca de la palabra <code>execute</code> en toda la base de código es una auditoría de una tarde con mucho retorno.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Construye un conjunto de 50 preguntas reales con sus fragmentos relevantes.</li>
-<li>Mide recall@5, precision@5 y MRR con tu configuración actual.</li>
-<li>Prueba tres tamaños de fragmento y quédate con el mejor medido.</li>
-<li>Implementa la verificación mecánica de citas y la traza por consulta.</li>
+<li>Busca en tu proyecto toda construcción de SQL por concatenación o f-string.</li>
+<li>Convierte los valores a parámetros y los identificadores a lista blanca.</li>
+<li>Escribe pruebas con entradas hostiles que demuestren el comportamiento seguro.</li>
+<li>Aplica las tres medidas de defensa en profundidad y verifica cada una.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>¿Por qué recall@k es el techo de la calidad de la respuesta?</li>
-<li>Explica por qué el reordenador sube la precisión y no el recall.</li>
-<li>¿Cómo distingues un fallo de recuperación de uno de generación con la traza?</li>
-<li>Da una comprobación mecánica de alucinación que no requiera otro modelo.</li>
+<li>Explica a nivel de protocolo por qué un parámetro no puede inyectar.</li>
+<li>¿Por qué el nombre de una columna no se puede parametrizar?</li>
+<li>Describe un caso de inyección de segundo orden en tu propio sistema.</li>
+<li>Si una inyección llegara a ejecutarse, ¿qué podría hacer con tus privilegios actuales?</li>
 </ol>
+<hr />
+<h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
+<p><strong>Caso:</strong> El texto que buscaba ser código y se quedó en dato</p>
+<p>Alguien escribe <code>' OR '1'='1</code> en un formulario de búsqueda. Si la aplicación
+construye la consulta pegando cadenas, lo que llega al motor deja de ser una
+búsqueda: <code>WHERE nombre = '' OR '1'='1'</code> devuelve <strong>todos</strong> los usuarios,
+incluido el administrador. Si la aplicación usa un parámetro, la consulta y
+el valor viajan por caminos distintos, el texto nunca se analiza como SQL y
+el resultado es cero: no hay ningún usuario que se llame así.</p>
+<p>Esa es toda la defensa, y no es una biblioteca ni un cortafuegos: es no
+construir sentencias con concatenación. El caso lo comprueba en cada motor,
+y la matriz añade lo que casi nadie mira: que <strong>el mismo problema existe sin
+SQL</strong> —en MongoDB, en Redis, en un índice de búsqueda— con otra sintaxis.</p>
+<p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>encontrados</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<code>python scripts/verificar_equivalencia.py --clase 061</code>: 5 de
+las 5 implementaciones se ejecutan de verdad y su
+resultado se compara con esa tabla; el resto se declara como material revisado,
+no ejecutado.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>¿Resuelve el caso?</th>
+<th>Nivel de prueba</th>
+<th>Código</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/lang_expr.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>sí</td>
+<td>núcleo</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements">doc oficial</a></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/plpgsql-statements.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html">doc oficial</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>sí</td>
+<td>servicio</td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://www.mongodb.com/docs/manual/faq/fundamentals/">doc oficial</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc oficial</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td><strong>no</strong></td>
+<td>—</td>
+<td>—</td>
+<td><a href="https://docs.opensearch.org/latest/query-dsl/full-text/query-string/">doc oficial</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: sqlite
+-- doc: https://sqlite.org/lang_expr.html
+-- nota: en Python, la forma correcta es la de siempre:
+--         cur.execute(&quot;SELECT COUNT(*) FROM usuarios WHERE nombre = ?&quot;, (entrada,))
+--       Y el detalle que empuja al error: executescript() NO admite parametros,
+--       asi que quien necesita varias sentencias acaba concatenando.
+
+-- === preparacion ===
+CREATE TABLE usuarios (
+    nombre TEXT PRIMARY KEY,
+    rol    TEXT NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -&gt; devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Su interfaz de Python usa marcadores <code>?</code> y la biblioteca estándar rechaza pasar parámetros con <code>execute</code> sobre varias sentencias: el camino fácil es también el seguro.</li>
+<li><strong>Por qué no:</strong> <code>executescript</code> <strong>no</strong> admite parámetros, así que quien necesite ejecutar varias sentencias se ve empujado a concatenar. Es un empujón hacia el error justo donde más duele.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_expr.html">https://sqlite.org/lang_expr.html</a></li>
+</ul>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
+<pre><code class="language-sql">-- motor: duckdb
+-- doc: https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements
+-- nota: la trampa propia de la analitica: los IDENTIFICADORES —nombres de tabla
+--       y de columna— no se pueden parametrizar en NINGUN motor, y en un guion
+--       de analisis suelen venir de fuera. Ahi la defensa no es un parametro:
+--       es una lista blanca de nombres permitidos.
+
+-- === preparacion ===
+CREATE TABLE usuarios (
+    nombre VARCHAR PRIMARY KEY,
+    rol    VARCHAR NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -&gt; devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Admite sentencias preparadas con <code>?</code> igual que el resto, y es donde más tentador resulta saltárselas: los guiones de análisis se escriben deprisa, con nombres de tabla pegados desde una variable.</li>
+<li><strong>Por qué no:</strong> Los identificadores —nombres de tabla y de columna— <strong>no</strong> se pueden parametrizar en ningún motor, y en analítica son justo lo que suele venir de fuera. Ahí la defensa es una lista blanca, no un parámetro.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements">https://duckdb.org/docs/stable/sql/query_syntax/prepared_statements</a></li>
+</ul>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: postgresql
+-- doc: https://www.postgresql.org/docs/current/plpgsql-statements.html
+-- nota: la puerta que sigue abierta no esta en la aplicacion, esta DENTRO de la
+--       base. Esto es inyectable igual:
+--         EXECUTE 'SELECT * FROM usuarios WHERE nombre = ''' || entrada || '''';
+--       y la forma correcta es:
+--         EXECUTE format('SELECT * FROM usuarios WHERE nombre = %L', entrada);
+--       Ninguna revision del codigo de la aplicacion va a mirar ahi.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS usuarios;
+
+CREATE TABLE usuarios (
+    nombre text PRIMARY KEY,
+    rol    text NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -&gt; devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> El protocolo extendido separa de verdad la sentencia del valor: no es que el controlador escape bien, es que el valor viaja en otro mensaje. Y <code>quote_literal</code> y <code>format</code> con <code>%L</code> cubren los casos en que hay que construir SQL dinámico dentro de una función.</li>
+<li><strong>Por qué no:</strong> Ese SQL dinámico dentro de funciones es la puerta que sigue abierta: <code>EXECUTE 'SELECT ... ' || parametro</code> es inyectable exactamente igual, y vive dentro de la base, donde ninguna revisión del código de la aplicación lo va a mirar.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/plpgsql-statements.html">https://www.postgresql.org/docs/current/plpgsql-statements.html</a></li>
+</ul>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-sql">-- motor: mysql
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html
+-- nota: durante anos, PDO traia ATTR_EMULATE_PREPARES activado por omision: el
+--       controlador construia la sentencia con escape en el CLIENTE en vez de
+--       enviar sentencia y valor por separado. Miles de aplicaciones creyeron
+--       estar parametrizando mientras concatenaban.
+
+-- === preparacion ===
+DROP TABLE IF EXISTS usuarios;
+
+CREATE TABLE usuarios (
+    nombre VARCHAR(50) PRIMARY KEY,
+    rol    VARCHAR(50) NOT NULL
+);
+INSERT INTO usuarios (nombre, rol) VALUES
+    ('ada', 'admin'), ('linus', 'lector'), ('grace', 'lector');
+
+-- === consulta ===
+-- Alguien escribe esto en el formulario de busqueda:   ' OR '1'='1
+--
+-- CONCATENADO (lo que NO se debe hacer nunca), la consulta que llega al motor
+-- deja de ser una busqueda y pasa a ser otra consulta distinta:
+--     SELECT ... WHERE nombre = '' OR '1'='1'
+--   -&gt; devuelve LOS TRES usuarios, incluido el administrador.
+--
+-- PARAMETRIZADO, el motor recibe la consulta y el valor por caminos separados:
+-- el texto nunca se analiza como SQL, se compara como dato. No existe ningun
+-- usuario que se llame asi, y el resultado es cero.
+--
+-- Aqui el valor va como literal correctamente entrecomillado, que es lo que el
+-- controlador construye por dentro al usar un parametro.
+SELECT COUNT(*) AS encontrados
+FROM usuarios
+WHERE nombre = ''' OR ''1''=''1';
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Sentencias preparadas en el protocolo y <code>PREPARE</code>/<code>EXECUTE</code> en SQL, con la misma separación entre sentencia y valor.</li>
+<li><strong>Por qué no:</strong> Su historial de conectores con opción de «emular» las sentencias preparadas del lado del cliente —PDO con <code>ATTR_EMULATE_PREPARES</code> activado por omisión durante años— hizo que muchas aplicaciones creyeran estar parametrizando cuando estaban concatenando con escape.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html">https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html</a></li>
+</ul>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
+<pre><code class="language-javascript">// motor: mongodb
+// doc: https://www.mongodb.com/docs/manual/faq/fundamentals/
+// nota: la inyeccion clasica no existe —las consultas son documentos, no
+//       cadenas— pero hay otra. Si `entrada` viene de un cuerpo JSON sin
+//       comprobar el tipo y resulta ser un OBJETO:
+//         entrada = { &quot;$ne&quot;: null }
+//         db.usuarios.find({ nombre: entrada })   -&gt; devuelve TODOS
+//       Eso es inyeccion de OPERADOR, y la defensa no es escapar: es comprobar
+//       que lo recibido es una cadena antes de construir el filtro.
+
+// === preparacion ===
+db.usuarios.drop();
+db.usuarios.insertMany([
+  { nombre: &quot;ada&quot;, rol: &quot;admin&quot; },
+  { nombre: &quot;linus&quot;, rol: &quot;lector&quot; },
+  { nombre: &quot;grace&quot;, rol: &quot;lector&quot; },
+]);
+
+// === consulta ===
+const entrada = &quot;' OR '1'='1&quot;;
+if (typeof entrada !== &quot;string&quot;) throw new Error(&quot;entrada no es una cadena&quot;);
+print(db.usuarios.countDocuments({ nombre: entrada }));
+</code></pre>
+<ul>
+<li><strong>Por qué sí:</strong> Las consultas son documentos, no cadenas: no hay sintaxis que romper con comillas, así que la inyección clásica no existe.</li>
+<li><strong>Por qué no:</strong> Existe otra. Si un valor recibido de fuera se inserta tal cual en el filtro y resulta ser un objeto —<code>{"$ne": null}</code> o <code>{"$gt": ""}</code>— deja de ser un dato y pasa a ser un operador: <strong>inyección de operador</strong>. La defensa no es escapar, es comprobar el tipo antes de construir el filtro.</li>
+<li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/faq/fundamentals/">https://www.mongodb.com/docs/manual/faq/fundamentals/</a></li>
+</ul>
+<h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
+<p>Descartar un motor con un argumento es tan formativo como usarlo. Ninguna de estas filas dice que el motor sea peor: dice que este problema no es el suyo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Por qué no</th>
+<th>Qué se hace en su lugar</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td>El protocolo RESP indica la longitud de cada argumento, así que un valor no puede convertirse en otra orden: la inyección de órdenes no es posible por diseño.</td>
+<td>Donde sí reaparece el problema es en los scripts Lua construidos con concatenación: si el guion se arma pegando texto del usuario, hay inyección de Lua. Los valores van en <code>KEYS</code> y <code>ARGV</code>, nunca dentro del texto del script.</td>
+<td><a href="https://redis.io/docs/latest/develop/reference/protocol-spec/">doc</a></td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>Sus consultas son JSON, así que no hay comillas que romper; pero tiene su propia versión del problema con <code>query_string</code>, que <strong>sí</strong> interpreta una sintaxis con operadores dentro de una cadena de texto del usuario.</td>
+<td>Usar <code>match</code> en vez de <code>query_string</code> para el texto que venga de fuera, y si hace falta la sintaxis avanzada, <code>simple_query_string</code>, que ignora los errores en vez de ejecutar cosas raras.</td>
+<td><a href="https://docs.opensearch.org/latest/query-dsl/full-text/query-string/">doc</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="laboratorio">Laboratorio</h2>
 <pre><code class="language-bash">python scripts/validate_repository.py
-python labs/06-vector-search/run_vector_lab.py
+python labs/01-sql-foundations/run_lab.py
 </code></pre>
 <p>Guarda como evidencia la salida completa, la versión del motor y la semilla o
 los parámetros usados. Una captura sin comando no es evidencia: no se puede
@@ -367,27 +702,29 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>Patrick Lewis, Ethan Perez, Aleksandra Piktus</strong> (2020). <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. NeurIPS.<br />
-  Artículo que define RAG: la base de datos es parte del sistema, no un accesorio.</li>
-<li><strong>Vladimir Karpukhin, Barlas Oguz, Sewon Min</strong> (2020). <a href="https://arxiv.org/abs/2004.04906">Dense Passage Retrieval for Open-Domain Question Answering</a>. EMNLP.<br />
-  Recuperación densa entrenada, y su comparación honesta contra BM25.</li>
-<li><strong>Stephen Robertson, Hugo Zaragoza</strong> (2009). <a href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf">The Probabilistic Relevance Framework: BM25 and Beyond</a>. Foundations and Trends in Information Retrieval 3(4). DOI <a href="https://doi.org/10.1561/1500000019">10.1561/1500000019</a>.<br />
-  Función de ranking léxico contra la que se compara toda búsqueda semántica.</li>
+<li><strong>OWASP</strong> (2026). <a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html">SQL Injection Prevention Cheat Sheet</a>.<br />
+  Consultas parametrizadas como defensa principal, con sus excepciones.</li>
+<li><strong>OWASP</strong> (2021). <a href="https://owasp.org/Top10/">OWASP Top 10</a>.<br />
+  A03 Inyección y A01 Control de acceso roto afectan directamente al diseño de datos.</li>
+<li><strong>Marc-Andre Lemburg</strong> (1999). <a href="https://peps.python.org/pep-0249/">PEP 249 - Python Database API Specification v2.0</a>.<br />
+  Contrato de parametrización que evita la concatenación de entradas.</li>
+<li><strong>Python Software Foundation</strong> (2026). <a href="https://docs.python.org/3/library/sqlite3.html">Python: sqlite3</a>.<br />
+  API DB-API 2.0 usada por los laboratorios ejecutables del repositorio.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 12</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 11</a> · <a href="060.html">← Anterior</a> · <a href="062.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="061">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="060.html"><span class="sentido">← Anterior · 060</span>Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a>
-<a class="siguiente" href="062.html"><span class="sentido">Siguiente · 062 →</span>Persistencia políglota: decidir por evidencia y no por moda</a>
+<a class="anterior" href="060.html"><span class="sentido">← Anterior · 060</span>Control de acceso: privilegio mínimo, roles y seguridad por fila</a>
+<a class="siguiente" href="062.html"><span class="sentido">Siguiente · 062 →</span>Observabilidad, objetivos de servicio y capacidad</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

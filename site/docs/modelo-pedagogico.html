@@ -110,12 +110,61 @@
 <li>evaluación por evidencia, no por velocidad de escritura.</li>
 </ul>
 <p>El apoyo adapta la vía de acceso, no elimina el objetivo esencial de aprendizaje.</p>
+<h2 id="el-eje-comparado">El eje comparado</h2>
+<p>A partir de la versión 3, cada clase añade una sección que no existe en un curso
+de SQL corriente: <strong>el mismo problema resuelto en varios motores</strong>.</p>
+<p>Funciona así. La clase declara un <strong>caso</strong> —un enunciado y su salida esperada— y
+lo resuelve en cada motor donde tenga sentido resolverlo. Después, por cada
+motor, escribe dos cosas que pesan lo mismo:</p>
+<ul>
+<li><strong>Por qué sí</strong> conviene resolverlo ahí.</li>
+<li><strong>Por qué no</strong> — porque ningún motor sale gratis.</li>
+</ul>
+<p>Y aparecen también los motores que <strong>no</strong> resuelven el caso, con el motivo y con
+lo que se hace en su lugar. Descartar Redis para una reunión con un argumento
+enseña más que usarlo bien: es la mitad del criterio de arquitectura.</p>
+<h3 id="qué-demuestra-la-máquina-y-qué-no">Qué demuestra la máquina y qué no</h3>
+<p>Que las respuestas coincidan no es una promesa del texto: lo ejecuta
+<code>scripts/verificar_equivalencia.py</code> contra los motores reales. Pero conviene ser
+exacto sobre lo que eso demuestra y lo que no:</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Demuestra</th>
+<th><strong>No</strong> demuestra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Que las implementaciones devuelven el mismo resultado</td>
+<td>Que rindan igual</td>
+</tr>
+<tr>
+<td>Que el código mostrado compila y corre</td>
+<td>Que sea la mejor forma de escribirlo</td>
+</tr>
+<tr>
+<td>Que la sintaxis es válida en ese motor</td>
+<td>Que la decisión de arquitectura sea correcta</td>
+</tr>
+</tbody>
+</table></div>
+<p>Las clases marcadas como <strong>comparación conceptual</strong> —consenso, CAP, gobierno del
+dato— no tienen salida que comparar, y lo dicen: ahí se compara lo que cada
+motor <strong>ofrece</strong> y a qué precio, con la página oficial al lado de cada
+afirmación.</p>
+<h3 id="por-qué-el-orden-es-este">Por qué el orden es este</h3>
+<p>Primero el concepto, después los motores. Nunca al revés. Quien aprende «cómo se
+hace en MongoDB» antes de saber qué es un agregado, acaba escribiendo SQL en
+MongoDB o documentos en PostgreSQL. La pregunta del programa no es «¿cómo se
+escribe en X?», sino <strong>«¿qué permanece y qué cambia —y por qué— al pasar de un
+motor a otro?»</strong>.</p>
 <p class="fuente-meta">Fuente de esta página:
   <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/docs/LEARNING-MODEL.md" rel="noopener"><code>docs/LEARNING-MODEL.md</code></a></p>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·

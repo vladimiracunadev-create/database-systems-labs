@@ -1,0 +1,120 @@
+---
+caso:
+  titulo: Las dos últimas lecturas de un sensor, de la más reciente a la más antigua
+  contrato: |
+    En el modelo de columnas anchas no se modela el dominio: se modela **la
+    consulta**. La clave primaria de Cassandra tiene dos partes con papeles muy
+    distintos: la de partición decide en qué nodo vive la fila, y la de
+    agrupamiento decide en qué orden están las filas **dentro** de esa partición,
+    en el disco.
+
+    El caso lo pone a prueba con la consulta más común de la telemetría: las dos
+    últimas lecturas de `sensor-1`. Con la tabla modelada así, la respuesta son
+    dos celdas contiguas de una sola partición, en un solo nodo, sin ordenar
+    nada. Cambiar la pregunta —«las lecturas de todos los sensores a las 10:01»—
+    obliga a otra tabla, y esa es exactamente la lección.
+  columnas: [momento, valor]
+  esperado:
+    - ["2026-08-19T10:02:00Z", "23"]
+    - ["2026-08-19T10:01:00Z", "22"]
+
+motores:
+  - id: cassandra
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/cassandra/consulta.cql
+    porque_si: >-
+      La consulta se resuelve por el orden físico: `LIMIT 2` lee dos celdas
+      contiguas de una partición, en un nodo, sin ordenación ni reunión. Y añadir
+      nodos aumenta la capacidad de escritura de forma lineal, porque el
+      dispositivo reparte las particiones por todo el anillo.
+    porque_no: >-
+      Solo responde la pregunta con la que se modeló. Cualquier otra exige otra
+      tabla, escrita por la aplicación en la misma operación y sin transacción
+      que garantice que ambas quedaron de acuerdo. Y una partición que crezca sin
+      límite —un sensor que emite para siempre— acaba siendo un problema por sí
+      sola: hay que meter el mes o el día en la clave de partición.
+    doc: https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_queries.html
+
+  - id: scylladb
+    aplica: si
+    ejecucion: declarado
+    archivo: implementaciones/scylladb/consulta.cql
+    porque_si: >-
+      Habla el mismo CQL y usa el mismo modelo de datos, así que el diseño
+      migra sin cambios; su implementación en C++ con un hilo por núcleo y sin
+      recolector de basura elimina las pausas que en Cassandra hay que ajustar.
+    porque_no: >-
+      La compatibilidad no es total —hay diferencias en índices secundarios,
+      vistas materializadas y herramientas— y el ecosistema alrededor es más
+      pequeño: se gana rendimiento y se pierde comunidad.
+    doc: https://opensource.docs.scylladb.com/stable/cql/ddl.html
+
+  - id: sqlite
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/sqlite/consulta.sql
+    porque_si: >-
+      Con la clave primaria `(dispositivo, momento)`, SQLite guarda las filas
+      ordenadas por esa clave en el árbol B: la misma idea de «el orden está en
+      el disco» se puede comprobar aquí sin clúster.
+    porque_no: >-
+      Un solo archivo y un solo escritor: la parte del modelo que justifica
+      Cassandra —repartir la escritura entre muchos nodos— no se puede estudiar
+      aquí en absoluto.
+    doc: https://sqlite.org/lang_createtable.html
+
+  - id: duckdb
+    aplica: si
+    ejecucion: nucleo
+    archivo: implementaciones/duckdb/consulta.sql
+    porque_si: >-
+      Es la herramienta para la otra mitad del trabajo: comprobar si el diseño
+      de particiones aguanta. Contar filas por partición sobre un volcado dice
+      cuál va a crecer sin límite antes de que lo haga en producción.
+    porque_no: >-
+      No hay particionado ni distribución: es donde se analiza la decisión, no
+      donde se ejecuta.
+    doc: https://duckdb.org/docs/stable/sql/query_syntax/orderby.html
+
+  - id: postgresql
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/postgresql/consulta.sql
+    porque_si: >-
+      Un índice sobre `(dispositivo, momento DESC)` da el mismo atajo —leer dos
+      entradas contiguas y parar— y además permite responder cualquier otra
+      pregunta, aunque más despacio. Con particionado declarativo por rango de
+      fecha se cubre buena parte de la carga de telemetría sin salir del motor.
+    porque_no: >-
+      La escritura sigue pasando por un único nodo primario: cuando el volumen
+      de ingesta supera lo que una máquina puede escribir, no hay índice que
+      salve, y ahí es donde el modelo distribuido deja de ser una alternativa y
+      pasa a ser la única.
+    doc: https://www.postgresql.org/docs/current/ddl-partitioning.html
+
+  - id: mongodb
+    aplica: si
+    ejecucion: servicio
+    archivo: implementaciones/mongodb/consulta.js
+    porque_si: >-
+      Las colecciones de series temporales agrupan las medidas por dispositivo y
+      ventana de tiempo, lo que reduce mucho el espacio, y la clave de
+      fragmentación cumple el papel de la clave de partición.
+    porque_no: >-
+      Elegir mal la clave de fragmentación produce el mismo problema que en
+      Cassandra —un fragmento caliente que recibe toda la escritura— y
+      cambiarla en caliente, aunque hoy se pueda, es una operación cara.
+    doc: https://www.mongodb.com/docs/manual/core/timeseries-collections/
+
+  - id: redis
+    aplica: no
+    porque_no: >-
+      Un conjunto ordenado por marca de tiempo responde esta consulta muy bien,
+      pero todo vive en memoria: la telemetría es precisamente el caso donde el
+      volumen histórico no cabe y no se puede permitir perder.
+    alternativa: >-
+      Redis como ventana caliente de las últimas horas, con la serie completa en
+      el almacén que sí puede guardarla; dos sistemas con dos papeles, declarado
+      cuál es cuál.
+    doc: https://redis.io/docs/latest/develop/data-types/timeseries/

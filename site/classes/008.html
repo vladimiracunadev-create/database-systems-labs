@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#05090f">
-<meta name="description" content="Normalización de 1FN a BCFN con dependencias funcionales. Parte 01: Modelado conceptual y requisitos.">
+<meta name="description" content="Dos tablas y una relación: la clave foránea. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta name="author" content="Vladimir Acuña">
 <link rel="canonical" href="https://vladimiracunadev-create.github.io/database-systems-labs/classes/008.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Database Systems Labs">
 <meta property="og:locale" content="es_ES">
-<meta property="og:title" content="008 — Normalización de 1FN a BCFN con dependencias funcionales · Database Systems Labs">
-<meta property="og:description" content="Normalización de 1FN a BCFN con dependencias funcionales. Parte 01: Modelado conceptual y requisitos.">
+<meta property="og:title" content="008 — Dos tablas y una relación: la clave foránea · Database Systems Labs">
+<meta property="og:description" content="Dos tablas y una relación: la clave foránea. Parte 00: Primeros pasos: del archivo a la base de datos.">
 <meta property="og:url" content="https://vladimiracunadev-create.github.io/database-systems-labs/classes/008.html">
 <meta property="og:image" content="https://vladimiracunadev-create.github.io/database-systems-labs/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/class.css">
 <script>try{var t=localStorage.getItem("dsl:tema");if(t)document.documentElement.dataset.tema=t;}catch(e){}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "008 — Normalización de 1FN a BCFN con dependencias funcionales", "inLanguage": "es", "educationalLevel": "Intermedio", "timeRequired": "PT4H", "teaches": ["dependencia funcional", "anomalía de actualización", "BCFN", "descomposición sin pérdida"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
-<title>008 — Normalización de 1FN a BCFN con dependencias funcionales · Database Systems Labs</title>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "008 — Dos tablas y una relación: la clave foránea", "inLanguage": "es", "educationalLevel": "Fundamentos", "timeRequired": "PT2H", "teaches": ["clave foránea", "tabla de relación", "reunión", "anomalías de repetición"], "isPartOf": {"@type": "Course", "name": "Database Systems Labs", "url": "https://vladimiracunadev-create.github.io/database-systems-labs/"}, "license": "https://opensource.org/licenses/MIT"}</script>
+<title>008 — Dos tablas y una relación: la clave foránea · Database Systems Labs</title>
 </head>
 <body>
 <a class="saltar" href="#principal">Saltar al contenido</a>
@@ -49,265 +49,280 @@
 <div class="avance" role="presentation"></div>
 <nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
-  <a href="parte-01.html">Parte 01 · Modelado conceptual y requisitos</a>
+  <a href="parte-00.html">Parte 00 · Primeros pasos: del archivo a la base de datos</a>
   <span aria-hidden="true">/</span><span>Clase 008</span>
 </nav>
 <main class="content" id="principal">
-<h1 id="008--normalización-de-1fn-a-bcfn-con-dependencias-funcionales">008 — Normalización de 1FN a BCFN con dependencias funcionales</h1>
+<h1 id="008--dos-tablas-y-una-relación-la-clave-foránea">008 — Dos tablas y una relación: la clave foránea</h1>
+<p><img alt="🗂️ parte" src="https://img.shields.io/badge/%F0%9F%97%82%EF%B8%8F%20parte-00-2e8b57?style=flat-square" /> <img alt="🎚️ nivel" src="https://img.shields.io/badge/%F0%9F%8E%9A%EF%B8%8F%20nivel-Fundamentos-2e8b57?style=flat-square" /> <img alt="⏱️ duración" src="https://img.shields.io/badge/%E2%8F%B1%EF%B8%8F%20duraci%C3%B3n-2%20h-24292f?style=flat-square" /> <img alt="📗 clase" src="https://img.shields.io/badge/%F0%9F%93%97%20clase-008%20%2F%2074-6e7781?style=flat-square" /></p>
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
 </blockquote>
-<p>Parte 01 — Modelado conceptual y requisitos · Intermedio ·
-4 horas estimadas · motores <code>postgresql</code>, <code>sqlite</code> · laboratorio
-<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
-<p><strong>Conceptos centrales:</strong> <code>dependencia funcional</code> · <code>anomalía de actualización</code> · <code>BCFN</code> · <code>descomposición sin pérdida</code></p>
-<p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<p>Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
+2 horas estimadas · motores <code>sqlite</code>, <code>duckdb</code>, <code>postgresql</code>, <code>mysql</code>, <code>mongodb</code> · laboratorio
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
+<p><strong>Conceptos centrales:</strong> <code>clave foránea</code> · <code>tabla de relación</code> · <code>reunión</code> · <code>anomalías de repetición</code></p>
+<p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<pre><code class="language-mermaid">flowchart LR
+    C[&quot;🗄️ Clase 008&quot;]
+    C --&gt; K1[&quot;clave foránea&quot;]
+    C --&gt; K2[&quot;tabla de relación&quot;]
+    C --&gt; K3[&quot;reunión&quot;]
+    C --&gt; K4[&quot;anomalías de repetición&quot;]
+    classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
+    class C raiz
+</code></pre>
 <hr />
 <h2 id="propósito">Propósito</h2>
-<p>Normalizar con un criterio demostrable, no por costumbre. Las formas normales no son etiquetas de calidad: son teoremas sobre qué anomalías puede o no puede sufrir un esquema.</p>
+<p>Dar el paso que separa «guardar datos» de «modelar»: <strong>partir una tabla en dos y
+relacionarlas</strong>. Es el momento en que aparecen las claves foráneas, y con ellas
+la posibilidad de que el sistema impida por sí solo que un dato apunte a algo que
+no existe.</p>
 <h2 id="resultados-de-aprendizaje">Resultados de aprendizaje</h2>
 <p>Al terminar podrás:</p>
 <ol>
-<li>Escribir dependencias funcionales a partir de reglas de negocio.</li>
-<li>Calcular el cierre de un conjunto de atributos y encontrar las claves candidatas.</li>
-<li>Justificar 1FN, 2FN, 3FN y BCFN señalando la anomalía que cada una elimina.</li>
-<li>Descomponer sin pérdida y comprobarlo.</li>
-<li>Explicar por qué BCFN puede no preservar dependencias, y qué hacer entonces.</li>
+<li>Reconocer cuándo una tabla está guardando dos cosas distintas.</li>
+<li>Partirla en dos y relacionarlas con una clave foránea.</li>
+<li>Consultar las dos tablas juntas con una reunión.</li>
+<li>Explicar qué impide exactamente una clave foránea y qué no.</li>
+<li>Nombrar la fuente de cada afirmación anterior.</li>
 </ol>
 <h2 id="fundamentos">Fundamentos</h2>
-<h3 id="dependencia-funcional">Dependencia funcional</h3>
-<p><code>X → Y</code> significa: si dos filas coinciden en <code>X</code>, coinciden necesariamente en <code>Y</code>. Es una afirmación sobre <strong>todas las instancias posibles</strong>, no sobre los datos de hoy. Que hoy no haya dos estudiantes con el mismo nombre no permite escribir <code>nombre → id</code>.</p>
-<p>Las dependencias vienen del dominio, no del dato. Por eso se descubren preguntando, no consultando.</p>
-<h3 id="cierre-y-claves-candidatas">Cierre y claves candidatas</h3>
-<p>El cierre <code>X⁺</code> es el conjunto de atributos determinables desde <code>X</code>. Algoritmo:</p>
-<pre><code class="language-text">X⁺ := X
-repetir hasta que no cambie:
-    para cada dependencia A → B:
-        si A ⊆ X⁺ entonces X⁺ := X⁺ ∪ B
-</code></pre>
-<p><code>X</code> es superclave si <code>X⁺</code> incluye todos los atributos; es clave candidata si además ningún subconjunto propio lo consigue.</p>
-<h3 id="las-formas-normales-y-su-anomalía">Las formas normales y su anomalía</h3>
+<h3 id="la-señal-el-dato-que-se-repite">La señal: el dato que se repite</h3>
+<p>Cuando una tabla repite el mismo valor en muchas filas, casi siempre está
+guardando dos cosas a la vez:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Forma</th>
-<th>Exige</th>
-<th>Anomalía que elimina</th>
+<th>estudiante</th>
+<th>correo</th>
+<th>curso</th>
+<th>profesor</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>1FN</strong></td>
-<td>Valores atómicos; sin grupos repetidos</td>
-<td>No se puede consultar ni restringir lo que está dentro de un campo compuesto</td>
+<td>Ada</td>
+<td>ada@example.org</td>
+<td>DB-101</td>
+<td>A. Lovelace</td>
 </tr>
 <tr>
-<td><strong>2FN</strong></td>
-<td>1FN + ningún atributo no primo depende de <strong>parte</strong> de una clave</td>
-<td>Redundancia en claves compuestas</td>
+<td>Ada</td>
+<td>ada@example.org</td>
+<td>SE-201</td>
+<td>G. Hopper</td>
 </tr>
 <tr>
-<td><strong>3FN</strong></td>
-<td>2FN + ningún atributo no primo depende de otro no primo</td>
-<td>Dependencia transitiva: actualizar en un sitio y no en otro</td>
-</tr>
-<tr>
-<td><strong>BCFN</strong></td>
-<td>Todo determinante es superclave</td>
-<td>Redundancia residual con claves candidatas solapadas</td>
+<td>Linus</td>
+<td>linus@example.org</td>
+<td>DB-101</td>
+<td>A. Lovelace</td>
 </tr>
 </tbody>
 </table></div>
-<p>Las tres anomalías clásicas que aparecen si no se normaliza:</p>
+<p>El correo de Ada está dos veces. El profesor de DB-101, también. Eso produce tres
+problemas con nombre propio, que se estudiarán en detalle en la parte de
+normalización:</p>
 <ul>
-<li><strong>De inserción:</strong> no se puede registrar un hecho porque falta otro no relacionado.</li>
-<li><strong>De actualización:</strong> el mismo hecho está en N filas y se actualizan N−1.</li>
-<li><strong>De eliminación:</strong> borrar una fila destruye un hecho independiente.</li>
+<li><strong>Anomalía de actualización.</strong> Corregir el correo de Ada exige tocar dos filas,
+  y basta olvidar una para que Ada tenga dos correos distintos.</li>
+<li><strong>Anomalía de inserción.</strong> No se puede registrar un curso que todavía no tiene
+  estudiantes: no habría fila donde ponerlo.</li>
+<li><strong>Anomalía de borrado.</strong> Si Linus abandona y era el único de DB-101, al borrar
+  su fila desaparece también el curso y su profesor.</li>
 </ul>
-<pre><code class="language-mermaid">flowchart TD
-    U[&quot;Tabla universal&quot;] --&gt; A{&quot;¿Valores atómicos?&quot;}
-    A -- &quot;No&quot; --&gt; A1[&quot;Separar → 1FN&quot;]
-    A -- &quot;Sí&quot; --&gt; B{&quot;¿Dependencia parcial&lt;br/&gt;de una clave compuesta?&quot;}
-    B -- &quot;Sí&quot; --&gt; B1[&quot;Extraer el determinante → 2FN&quot;]
-    B -- &quot;No&quot; --&gt; C{&quot;¿Dependencia transitiva&lt;br/&gt;entre no primos?&quot;}
-    C -- &quot;Sí&quot; --&gt; C1[&quot;Extraer el intermedio → 3FN&quot;]
-    C -- &quot;No&quot; --&gt; D{&quot;¿Todo determinante&lt;br/&gt;es superclave?&quot;}
-    D -- &quot;No&quot; --&gt; D1[&quot;Descomponer → BCFN&lt;br/&gt;(puede perder dependencias)&quot;]
-    D -- &quot;Sí&quot; --&gt; E[&quot;BCFN&quot;]
+<h3 id="la-solución-una-tabla-por-cosa">La solución: una tabla por cosa</h3>
+<pre><code class="language-sql">CREATE TABLE estudiantes (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    correo TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE cursos (
+    id       INTEGER PRIMARY KEY,
+    codigo   TEXT NOT NULL UNIQUE,
+    profesor TEXT NOT NULL
+);
+
+CREATE TABLE inscripciones (
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
+);
 </code></pre>
-<h3 id="descomposición-sin-pérdida">Descomposición sin pérdida</h3>
-<p>Descomponer <code>R</code> en <code>R1</code> y <code>R2</code> es <strong>sin pérdida</strong> si <code>R1 ∩ R2</code> es superclave de al menos una de las dos. Si no, la reunión de las partes produce filas que no existían: se han inventado datos. Garcia-Molina, Ullman y Widom lo demuestran; en la práctica basta con comprobar la condición de la intersección antes de partir una tabla.</p>
+<p>Cada hecho vive <strong>una sola vez</strong>. El correo de Ada está en una fila; el profesor
+de DB-101, en otra. Y la tercera tabla —la de inscripciones— guarda la relación:
+una fila por pareja.</p>
+<h3 id="qué-es-una-clave-foránea">Qué es una clave foránea</h3>
+<p><code>REFERENCES estudiantes(id)</code> declara que ese campo <strong>tiene que existir</strong> en la
+otra tabla. A partir de ahí, el motor impide dos cosas:</p>
+<ol>
+<li><strong>Insertar una inscripción de un estudiante que no existe.</strong></li>
+<li><strong>Borrar un estudiante que todavía tiene inscripciones</strong> —salvo que se declare
+   qué hacer en ese caso, que es una decisión de diseño con su propia clase.</li>
+</ol>
+<p>Eso es todo lo que impide, y conviene saberlo: <strong>no</strong> obliga a que un estudiante
+tenga al menos una inscripción, y <strong>no</strong> comprueba nada sobre el contenido de los
+demás campos.</p>
+<h3 id="un-aviso-importante-en-sqlite">Un aviso importante en SQLite</h3>
+<p>SQLite <strong>solo comprueba las claves foráneas si se activan en la conexión</strong>:</p>
+<pre><code class="language-sql">PRAGMA foreign_keys = ON;
+</code></pre>
+<p>Por compatibilidad con versiones antiguas viene desactivado. Hay muchísimas bases
+SQLite en producción con claves foráneas declaradas que nunca se han comprobado.</p>
+<h3 id="volver-a-juntarlas-la-reunión">Volver a juntarlas: la reunión</h3>
+<p>Partir en tres tablas no significa perder la vista completa. <code>JOIN</code> las vuelve a
+unir en el momento de consultar:</p>
+<pre><code class="language-sql">SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
+</code></pre>
+<p>La condición <code>ON</code> dice <strong>cómo se emparejan</strong> las filas. Sin ella, el motor
+combinaría cada fila con todas las de la otra tabla, que casi nunca es lo que se
+quiere.</p>
+<pre><code class="language-mermaid">flowchart LR
+    E[&quot;estudiantes&lt;br/&gt;id, nombre, correo&quot;] --- I[&quot;inscripciones&lt;br/&gt;estudiante_id, curso_id&quot;]
+    I --- C[&quot;cursos&lt;br/&gt;id, codigo, profesor&quot;]
+</code></pre>
 <h2 id="ejemplo-trabajado">Ejemplo trabajado</h2>
-<p>Tabla sin normalizar:</p>
-<pre><code class="language-text">inscripcion(student_id, course_id, student_nombre, course_nombre,
-            teacher_id, teacher_nombre, nota)
+<p>Partiendo de la tabla única del principio, con los mismos datos:</p>
+<pre><code class="language-sql">INSERT INTO estudiantes (id, nombre, correo) VALUES
+    (1, 'Ada', 'ada@example.org'),
+    (2, 'Linus', 'linus@example.org');
+
+INSERT INTO cursos (id, codigo, profesor) VALUES
+    (10, 'DB-101', 'A. Lovelace'),
+    (20, 'SE-201', 'G. Hopper');
+
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 </code></pre>
-<p><strong>Dependencias del dominio:</strong></p>
-<pre><code class="language-text">D1  student_id                -&gt; student_nombre
-D2  course_id                 -&gt; course_nombre, teacher_id
-D3  teacher_id                -&gt; teacher_nombre
-D4  student_id, course_id     -&gt; nota
+<p><strong>Prueba 1: corregir el correo de Ada.</strong></p>
+<pre><code class="language-sql">UPDATE estudiantes SET correo = 'ada@nuevo.org' WHERE id = 1;
 </code></pre>
-<p><strong>Clave candidata.</strong> Calculamos <code>(student_id, course_id)⁺</code>:</p>
-<pre><code class="language-text">inicio        {student_id, course_id}
-por D1  +     student_nombre
-por D2  +     course_nombre, teacher_id
-por D3  +     teacher_nombre
-por D4  +     nota
+<p>Una fila. En la tabla única habrían sido dos, y en un sistema real, cientos.</p>
+<p><strong>Prueba 2: registrar un curso sin estudiantes.</strong></p>
+<pre><code class="language-sql">INSERT INTO cursos (id, codigo, profesor) VALUES (30, 'AR-301', 'M. Hamilton');
 </code></pre>
-<p>El cierre cubre todos los atributos, y ninguna de las dos columnas por separado lo consigue. Clave candidata: <code>(student_id, course_id)</code>.</p>
-<p><strong>Diagnóstico:</strong></p>
-<ul>
-<li><strong>2FN falla</strong> por D1 y D2: <code>student_nombre</code> depende solo de <code>student_id</code>, que es <em>parte</em> de la clave. Consecuencia medible: con 2 000 estudiantes y 8 inscripciones de media, el nombre de cada estudiante se almacena 8 veces. 16 000 copias para 2 000 hechos.</li>
-<li><strong>3FN falla</strong> por D3: <code>teacher_nombre</code> depende de <code>teacher_id</code>, que no es primo. Es transitiva.</li>
-</ul>
-<p><strong>Descomposición:</strong></p>
-<pre><code class="language-sql">CREATE TABLE teachers (
-  id     INTEGER PRIMARY KEY,
-  nombre TEXT NOT NULL
-);
-CREATE TABLE students (
-  id     INTEGER PRIMARY KEY,
-  nombre TEXT NOT NULL
-);
-CREATE TABLE courses (
-  id         INTEGER PRIMARY KEY,
-  nombre     TEXT NOT NULL,
-  teacher_id INTEGER NOT NULL REFERENCES teachers(id)
-);
-CREATE TABLE enrollments (
-  student_id INTEGER NOT NULL REFERENCES students(id),
-  course_id  INTEGER NOT NULL REFERENCES courses(id),
-  nota       NUMERIC(2,1),
-  PRIMARY KEY (student_id, course_id)
-);
+<p>Se puede. En la tabla única, no había dónde ponerlo.</p>
+<p><strong>Prueba 3: intentar inscribir a alguien que no existe.</strong></p>
+<pre><code class="language-sql">INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (99, 10);
 </code></pre>
-<p><strong>Comprobación de no pérdida.</strong> <code>enrollments ∩ students = {student_id}</code>, que es clave de <code>students</code>. Se cumple. Igual para <code>courses</code> y <code>teachers</code>.</p>
-<p><strong>Las tres anomalías, ya resueltas:</strong></p>
+<p>El motor lo rechaza: <code>FOREIGN KEY constraint failed</code>. Sin la clave foránea, esa
+fila entraría y quedaría un huérfano que ninguna consulta encontraría.</p>
+<p><strong>Prueba 4: la vista completa, cuando hace falta.</strong></p>
+<pre><code class="language-sql">SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
+</code></pre>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>Anomalía</th>
-<th>Antes</th>
-<th>Después</th>
+<th>nombre</th>
+<th>codigo</th>
+<th>profesor</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Inserción</td>
-<td>No se puede registrar un curso nuevo sin un estudiante inscrito</td>
-<td><code>INSERT INTO courses</code> basta</td>
+<td>Ada</td>
+<td>DB-101</td>
+<td>A. Lovelace</td>
 </tr>
 <tr>
-<td>Actualización</td>
-<td>Corregir el nombre de un profesor toca N filas</td>
-<td>Toca 1</td>
+<td>Ada</td>
+<td>SE-201</td>
+<td>G. Hopper</td>
 </tr>
 <tr>
-<td>Eliminación</td>
-<td>Borrar la última inscripción borra el curso</td>
-<td>El curso persiste</td>
+<td>Linus</td>
+<td>DB-101</td>
+<td>A. Lovelace</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong>El caso BCFN.</strong> Añadamos la regla «cada curso lo dicta un solo profesor, y cada profesor dicta un solo curso por período». Aparecen dos claves candidatas solapadas y una dependencia <code>teacher_id, periodo → course_id</code> cuyo determinante no es superclave de la tabla resultante. Descomponer para llegar a BCFN elimina la redundancia, pero la dependencia queda repartida entre dos tablas y ya no puede comprobarse sin reunirlas.</p>
-<p>Ese es el compromiso real: <strong>BCFN no siempre preserva dependencias; 3FN siempre se puede alcanzar preservándolas</strong>. Cuando entran en conflicto, la decisión defendible suele ser quedarse en 3FN y auditar la dependencia con una invariante, en vez de perder la capacidad del motor de hacerla cumplir.</p>
-<h2 id="comparación">Comparación</h2>
-<div class="tabla-scroll"><table>
-<thead>
-<tr>
-<th>Nivel</th>
-<th>Redundancia</th>
-<th>Dependencias preservadas</th>
-<th>Costo de consulta</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Sin normalizar</td>
-<td>Alta</td>
-<td>—</td>
-<td>Bajo (sin reuniones)</td>
-</tr>
-<tr>
-<td>3FN</td>
-<td>Baja</td>
-<td>Siempre alcanzable</td>
-<td>Medio</td>
-</tr>
-<tr>
-<td>BCFN</td>
-<td>Mínima</td>
-<td>No siempre</td>
-<td>Medio-alto</td>
-</tr>
-<tr>
-<td>Desnormalizado a propósito (clase 009)</td>
-<td>Controlada y documentada</td>
-<td>Vigiladas por invariantes</td>
-<td>Bajo en lectura, alto en escritura</td>
-</tr>
-</tbody>
-</table></div>
+<p>Los mismos datos del principio, sin ninguna repetición guardada.</p>
 <h2 id="errores-frecuentes">Errores frecuentes</h2>
 <ol>
-<li><strong>Deducir dependencias de los datos actuales.</strong> Los datos muestran lo que ha ocurrido; la dependencia afirma lo que puede ocurrir.</li>
-<li><strong>Normalizar hasta BCFN por reflejo.</strong> Si perder la dependencia obliga a comprobarla en la aplicación, puede ser peor remedio que enfermedad.</li>
-<li><strong>Descomponer sin comprobar la no pérdida.</strong> Reunir dos partes mal elegidas fabrica filas que nunca existieron.</li>
-<li><strong>Creer que 1FN prohíbe los tipos compuestos.</strong> Prohíbe los grupos repetidos y los valores no atómicos <em>para el dominio</em>; un <code>jsonb</code> opaco que nunca se consulta por dentro es discutible, pero uno que se filtra por sus claves internas viola el espíritu de 1FN.</li>
-<li><strong>Confundir normalización con rendimiento.</strong> La normalización decide qué anomalías son posibles; el rendimiento se decide con índices y planes (parte 08).</li>
+<li><strong>No activar <code>PRAGMA foreign_keys = ON</code> en SQLite.</strong> Las restricciones están
+   declaradas y no comprueban nada.</li>
+<li><strong>Declarar la clave foránea y no indexarla.</strong> El campo referenciado ya tiene
+   índice por ser clave primaria; el que <strong>referencia</strong>, no, y las consultas y
+   los borrados en cascada lo pagan.</li>
+<li><strong>Reunir sin condición <code>ON</code>.</strong> Devuelve el producto de las dos tablas: con
+   1000 y 1000 filas, un millón.</li>
+<li><strong>Copiar el nombre además del identificador «para no tener que reunir».</strong> El
+   día que el nombre cambie, la copia queda desactualizada; eso es
+   desnormalización, y se hace a propósito o no se hace.</li>
+<li><strong>Partir en tablas por costumbre.</strong> Si un dato pertenece a una sola cosa y no
+   se comparte, no hace falta otra tabla.</li>
 </ol>
-<h2 id="de-la-clase-a-la-operación">De la clase a la operación</h2>
-<p>Los datos sucios que aparecen en los informes casi siempre son anomalías de actualización que nadie previno. Un esquema en 3FN convierte esos errores en imposibles por construcción, y eso vale más que cualquier proceso de limpieza posterior.</p>
+<h2 id="ejemplo-de-transferencia">Ejemplo de transferencia</h2>
+<p>La misma decisión existe fuera del modelo relacional, con otro nombre: en
+MongoDB se llama «incrustar o referenciar», y la regla se parece —se incrusta lo
+que solo tiene sentido dentro de su padre, se referencia lo que se comparte—. La
+diferencia grande es que allí <strong>no hay clave foránea</strong>: si se borra el curso, las
+inscripciones siguen apuntando al vacío y ninguna consulta avisa.</p>
 <h2 id="reto-de-transferencia">Reto de transferencia</h2>
 <ol>
-<li>Toma una tabla ancha real de tu trabajo y escribe sus dependencias funcionales.</li>
-<li>Calcula el cierre y determina las claves candidatas.</li>
-<li>Diagnostica en qué forma normal está, nombrando la dependencia que la rompe.</li>
-<li>Descompón, comprueba la no pérdida y cuantifica cuántas copias redundantes eliminaste.</li>
+<li>Busca una tabla real con un dato repetido en muchas filas.</li>
+<li>Escribe las tablas en que la partirías y la clave foránea que las une.</li>
+<li>Ejecuta el <code>UPDATE</code> que corrige ese dato repetido en la versión original y
+   cuenta cuántas filas cambia; hazlo después en la versión partida.</li>
+<li>Intenta insertar una referencia a algo que no existe y guarda el mensaje de
+   error.</li>
 </ol>
 <h2 id="preguntas-de-evaluación">Preguntas de evaluación</h2>
 <ol>
-<li>Da una dependencia funcional cierta en tu dominio que hoy los datos no reflejarían.</li>
-<li>Demuestra con un ejemplo pequeño que una descomposición con intersección no clave inventa filas.</li>
-<li>¿Qué anomalía concreta elimina 3FN que 2FN no elimina?</li>
-<li>Presenta un caso donde te quedarías en 3FN pudiendo llegar a BCFN, y di quién vigila entonces la dependencia perdida.</li>
+<li>Nombra las tres anomalías que produce guardar dos cosas en una tabla.</li>
+<li>¿Qué impide exactamente una clave foránea, y qué <strong>no</strong> impide?</li>
+<li>¿Por qué en SQLite una clave foránea puede no estar comprobando nada?</li>
+<li>¿Qué devuelve una reunión escrita sin condición <code>ON</code>, y por qué casi nunca es
+   lo que se quería?</li>
 </ol>
 <hr />
 <h2 id="el-mismo-problema-en-cada-motor">🌐 El mismo problema en cada motor</h2>
-<p><strong>Caso:</strong> Corregir el nombre de un profesor con una sola escritura</p>
-<p>La prueba práctica de que un esquema está normalizado no es recitar formas
-normales: es que <strong>cada hecho está escrito una sola vez</strong>, así que
-corregirlo cuesta una escritura y no puede quedar a medias.</p>
-<p>El caso parte del esquema descompuesto —profesores, cursos, inscripciones—
-y corrige el nombre del profesor de DB-101 con un solo <code>UPDATE</code>. La consulta
-devuelve, por curso, el nombre del profesor y cuántas inscripciones tiene.
-En la tabla sin descomponer, ese nombre estaría repetido en cada
-inscripción y bastaría olvidar una fila para que el mismo profesor tuviera
-dos nombres distintos: la anomalía de actualización.</p>
+<p><strong>Caso:</strong> Tres tablas que guardan cada hecho una vez y se juntan al consultar</p>
+<p>La tabla única repetía el correo de Ada en cada una de sus inscripciones y el
+profesor de DB-101 en cada estudiante de ese curso. Repartida en tres
+—estudiantes, cursos e inscripciones— <strong>cada hecho está escrito una sola
+vez</strong>, y la vista completa se reconstruye al consultar con una reunión.</p>
+<p>El caso devuelve exactamente lo que devolvía la tabla única: quién está en
+qué curso y con qué profesor. Lo que ha cambiado no es el resultado, es lo
+que cuesta corregir un dato —una fila en vez de muchas— y lo que el sistema
+puede impedir: una inscripción de un estudiante que no existe ya no entra.</p>
 <p>Salida esperada, idéntica en todos los motores que lo resuelven:</p>
 <div class="tabla-scroll"><table>
 <thead>
 <tr>
-<th>curso</th>
+<th>nombre</th>
+<th>codigo</th>
 <th>profesor</th>
-<th>inscripciones</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><code>Ada</code></td>
 <td><code>DB-101</code></td>
-<td><code>Ada Lovelace</code></td>
-<td><code>2</code></td>
+<td><code>A. Lovelace</code></td>
 </tr>
 <tr>
+<td><code>Ada</code></td>
 <td><code>SE-201</code></td>
-<td><code>Grace Hopper</code></td>
-<td><code>1</code></td>
+<td><code>G. Hopper</code></td>
+</tr>
+<tr>
+<td><code>Linus</code></td>
+<td><code>DB-101</code></td>
+<td><code>A. Lovelace</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
+<p>El contrato vive en <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/motores.yaml"><code>motores.yaml</code></a> y lo comprueba
 <code>python scripts/verificar_equivalencia.py --clase 008</code>: 5 de
 las 5 implementaciones se ejecutan de verdad y su
 resultado se compara con esa tabla; el resto se declara como material revisado,
@@ -327,43 +342,36 @@ no ejecutado.</p>
 <td>SQLite</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/sqlite/consulta.sql">código</a></td>
-<td><a href="https://sqlite.org/lang_update.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/sqlite/consulta.sql">código</a></td>
+<td><a href="https://sqlite.org/foreignkeys.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>DuckDB</td>
 <td>sí</td>
 <td>núcleo</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/duckdb/consulta.sql">código</a></td>
-<td><a href="https://duckdb.org/docs/stable/sql/statements/update.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/duckdb/consulta.sql">código</a></td>
+<td><a href="https://duckdb.org/docs/stable/sql/statements/create_table">doc oficial</a></td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/postgresql/consulta.sql">código</a></td>
-<td><a href="https://www.postgresql.org/docs/current/ddl-constraints.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/postgresql/consulta.sql">código</a></td>
+<td><a href="https://www.postgresql.org/docs/current/tutorial-fk.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MySQL</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/mysql/consulta.sql">código</a></td>
-<td><a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html">doc oficial</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/mysql/consulta.sql">código</a></td>
+<td><a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>MongoDB</td>
 <td>sí</td>
 <td>servicio</td>
-<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/mongodb/consulta.js">código</a></td>
+<td><a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/mongodb/consulta.js">código</a></td>
 <td><a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">doc oficial</a></td>
-</tr>
-<tr>
-<td>Apache Cassandra</td>
-<td><strong>no</strong></td>
-<td>—</td>
-<td>—</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html">doc oficial</a></td>
 </tr>
 <tr>
 <td>Redis</td>
@@ -375,258 +383,245 @@ no ejecutado.</p>
 </tbody>
 </table></div>
 <h3 id="los-que-resuelven-el-caso">Los que resuelven el caso</h3>
-<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
+<h4 id="sqlite--implementacionessqliteconsultasql">SQLite · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/sqlite/consulta.sql"><code>implementaciones/sqlite/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: sqlite
--- doc: https://sqlite.org/lang_update.html
--- nota: la prueba de la normalizacion esta en el UPDATE, no en el SELECT: una
---       sola escritura corrige el hecho en todas partes.
+-- doc: https://sqlite.org/foreignkeys.html
+-- nota: sin PRAGMA foreign_keys = ON, las claves foraneas de abajo se declaran y
+--       NO se comprueban. El verificador de este repositorio activa el pragma en
+--       cada conexion; una aplicacion real tiene que hacer lo mismo.
+--       Con el activo, esto se rechaza:
+--         INSERT INTO inscripciones VALUES (99, 10);  -- FOREIGN KEY constraint failed
+
+PRAGMA foreign_keys = ON;
 
 -- === preparacion ===
--- Forma normalizada: el nombre del profesor vive UNA vez.
-CREATE TABLE profesores (
+CREATE TABLE estudiantes (
     id     INTEGER PRIMARY KEY,
     nombre TEXT NOT NULL
 );
 CREATE TABLE cursos (
-    id          INTEGER PRIMARY KEY,
-    codigo      TEXT NOT NULL,
-    profesor_id INTEGER NOT NULL REFERENCES profesores(id)
+    id       INTEGER PRIMARY KEY,
+    codigo   TEXT NOT NULL UNIQUE,
+    profesor TEXT NOT NULL
 );
 CREATE TABLE inscripciones (
-    estudiante TEXT NOT NULL,
-    curso_id   INTEGER NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante, curso_id)
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id),
+    curso_id      INTEGER NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
-INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-
--- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
--- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
--- mismo profesor tuviera dos nombres.
-UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus');
+INSERT INTO cursos (id, codigo, profesor) VALUES
+    (10, 'DB-101', 'A. Lovelace'),
+    (20, 'SE-201', 'G. Hopper');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       p.nombre AS profesor,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-JOIN profesores p ON p.id = c.profesor_id
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo, p.nombre
-ORDER BY c.codigo;
+-- Las tres tablas vuelven a juntarse al consultar. Cada hecho sigue guardado UNA
+-- sola vez: el profesor de DB-101 esta en una fila, no en dos.
+SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> La descomposición y la reunión que la deshace son operaciones del modelo relacional puro: aquí se ven sin ruido de infraestructura.</li>
-<li><strong>Por qué no:</strong> No tiene forma de declarar una dependencia funcional distinta de una clave, así que la normalización queda documentada en la cabeza de quien diseñó y no en el esquema.</li>
-<li>📄 Documentación oficial: <a href="https://sqlite.org/lang_update.html">https://sqlite.org/lang_update.html</a></li>
+<li><strong>Por qué sí:</strong> Tiene claves foráneas y reuniones estándar: el modelo completo cabe en un archivo y se puede probar sin instalar nada.</li>
+<li><strong>Por qué no:</strong> Las comprueba <strong>solo</strong> si <code>PRAGMA foreign_keys = ON</code> está activo en esa conexión, y por compatibilidad viene desactivado. Hay muchísimas bases SQLite con claves foráneas declaradas que nunca han comprobado nada.</li>
+<li>📄 Documentación oficial: <a href="https://sqlite.org/foreignkeys.html">https://sqlite.org/foreignkeys.html</a></li>
 </ul>
-<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
+<h4 id="duckdb--implementacionesduckdbconsultasql">DuckDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/duckdb/consulta.sql"><code>implementaciones/duckdb/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta en CI sin servicios</p>
 <pre><code class="language-sql">-- motor: duckdb
--- doc: https://duckdb.org/docs/stable/sql/statements/update.html
--- nota: para DESCUBRIR dependencias funcionales en datos existentes:
---       SELECT curso, COUNT(DISTINCT profesor) FROM plano GROUP BY curso
---       HAVING COUNT(DISTINCT profesor) &gt; 1;  -- si devuelve filas, la
---       dependencia esta rota y hay anomalias ya presentes.
+-- doc: https://duckdb.org/docs/stable/sql/statements/create_table
+-- nota: la consulta que justifica partir la tabla unica es esta, sobre los datos
+--       de origen:
+--         SELECT correo, COUNT(*) FROM tabla_unica GROUP BY correo
+--         HAVING COUNT(*) &gt; 1;
+--       Cada repeticion es una oportunidad de que dos filas digan cosas
+--       distintas sobre el mismo hecho.
 
 -- === preparacion ===
--- Forma normalizada: el nombre del profesor vive UNA vez.
-CREATE TABLE profesores (
+CREATE TABLE estudiantes (
     id     INTEGER PRIMARY KEY,
     nombre VARCHAR NOT NULL
 );
 CREATE TABLE cursos (
-    id          INTEGER PRIMARY KEY,
-    codigo      VARCHAR NOT NULL,
-    profesor_id INTEGER NOT NULL
+    id       INTEGER PRIMARY KEY,
+    codigo   VARCHAR NOT NULL UNIQUE,
+    profesor VARCHAR NOT NULL
 );
 CREATE TABLE inscripciones (
-    estudiante VARCHAR NOT NULL,
-    curso_id   INTEGER NOT NULL,
-    PRIMARY KEY (estudiante, curso_id)
+    estudiante_id INTEGER NOT NULL,
+    curso_id      INTEGER NOT NULL,
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
-INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-
--- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
--- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
--- mismo profesor tuviera dos nombres.
-UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus');
+INSERT INTO cursos (id, codigo, profesor) VALUES
+    (10, 'DB-101', 'A. Lovelace'),
+    (20, 'SE-201', 'G. Hopper');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       p.nombre AS profesor,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-JOIN profesores p ON p.id = c.profesor_id
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo, p.nombre
-ORDER BY c.codigo;
+-- Las tres tablas vuelven a juntarse al consultar. Cada hecho sigue guardado UNA
+-- sola vez: el profesor de DB-101 esta en una fila, no en dos.
+SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Es la herramienta ideal para el paso previo: descubrir las dependencias funcionales que hay <strong>de verdad</strong> en un volcado, contando cuántos valores distintos toma una columna por cada valor de otra.</li>
-<li><strong>Por qué no:</strong> En analítica la normalización se revierte a propósito: el esquema en estrella repite el nombre del profesor en cada fila de hechos porque ahorrarse la reunión vale más que ahorrarse el espacio.</li>
-<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/update.html">https://duckdb.org/docs/stable/sql/statements/update.html</a></li>
+<li><strong>Por qué sí:</strong> Resuelve la reunión igual y es la herramienta para el paso previo: contar cuántas veces se repite un dato en la tabla única es la consulta que justifica partirla.</li>
+<li><strong>Por qué no:</strong> Sus claves foráneas no protegen con la firmeza de un motor transaccional: es un almacén para analizar datos que otro sistema ya validó.</li>
+<li>📄 Documentación oficial: <a href="https://duckdb.org/docs/stable/sql/statements/create_table">https://duckdb.org/docs/stable/sql/statements/create_table</a></li>
 </ul>
-<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
+<h4 id="postgresql--implementacionespostgresqlconsultasql">PostgreSQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/postgresql/consulta.sql"><code>implementaciones/postgresql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: postgresql
--- doc: https://www.postgresql.org/docs/current/ddl-constraints.html
--- nota: las claves foraneas hacen cumplir la descomposicion; sin ellas, la
---       normalizacion es solo una promesa del diagrama.
-
-DROP TABLE IF EXISTS inscripciones, cursos, profesores;
+-- doc: https://www.postgresql.org/docs/current/tutorial-fk.html
+-- nota: las claves foraneas se comprueban siempre, sin activar nada. Y hay que
+--       indexar la columna que REFERENCIA: la referenciada ya tiene indice por
+--       ser clave primaria, la otra no, y los borrados en cascada recorren la
+--       tabla hija entera sin el.
 
 -- === preparacion ===
--- Forma normalizada: el nombre del profesor vive UNA vez.
-CREATE TABLE profesores (
+DROP TABLE IF EXISTS inscripciones, cursos, estudiantes;
+
+CREATE TABLE estudiantes (
     id     integer PRIMARY KEY,
     nombre text NOT NULL
 );
 CREATE TABLE cursos (
-    id          integer PRIMARY KEY,
-    codigo      text NOT NULL,
-    profesor_id integer NOT NULL REFERENCES profesores(id)
+    id       integer PRIMARY KEY,
+    codigo   text NOT NULL UNIQUE,
+    profesor text NOT NULL
 );
 CREATE TABLE inscripciones (
-    estudiante text NOT NULL,
-    curso_id   integer NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante, curso_id)
+    estudiante_id integer NOT NULL REFERENCES estudiantes(id),
+    curso_id      integer NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
-INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-
--- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
--- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
--- mismo profesor tuviera dos nombres.
-UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus');
+INSERT INTO cursos (id, codigo, profesor) VALUES
+    (10, 'DB-101', 'A. Lovelace'),
+    (20, 'SE-201', 'G. Hopper');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       p.nombre AS profesor,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-JOIN profesores p ON p.id = c.profesor_id
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo, p.nombre
-ORDER BY c.codigo;
+-- Las tres tablas vuelven a juntarse al consultar. Cada hecho sigue guardado UNA
+-- sola vez: el profesor de DB-101 esta en una fila, no en dos.
+SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Las claves foráneas hacen cumplir la descomposición: no se puede insertar un curso cuyo profesor no exista, que es la mitad de lo que la normalización promete.</li>
-<li><strong>Por qué no:</strong> Cada nivel de normalización añade una reunión a las consultas de lectura; en un panel que se abre mil veces por minuto, esas reuniones son el costo que después justifica desnormalizar a propósito.</li>
-<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">https://www.postgresql.org/docs/current/ddl-constraints.html</a></li>
+<li><strong>Por qué sí:</strong> Impone las claves foráneas siempre, sin activar nada, y permite decidir qué pasa al borrar el padre —<code>CASCADE</code>, <code>RESTRICT</code>, <code>SET NULL</code>—, que es una decisión de diseño, no un detalle técnico.</li>
+<li><strong>Por qué no:</strong> Cada clave foránea añade una comprobación por inserción y un bloqueo sobre la fila referenciada; y si nadie indexa la columna que <strong>referencia</strong>, los borrados en cascada recorren la tabla hija entera.</li>
+<li>📄 Documentación oficial: <a href="https://www.postgresql.org/docs/current/tutorial-fk.html">https://www.postgresql.org/docs/current/tutorial-fk.html</a></li>
 </ul>
-<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
+<h4 id="mysql--implementacionesmysqlconsultasql">MySQL · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/mysql/consulta.sql"><code>implementaciones/mysql/consulta.sql</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-sql">-- motor: mysql
--- doc: https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html
--- nota: con ONLY_FULL_GROUP_BY activo (por omision desde 5.7) esta consulta es
---       legal porque cada columna no agregada esta en el GROUP BY. Sin ese
---       modo, MySQL aceptaba consultas ambiguas y devolvia cualquier fila.
-
-DROP TABLE IF EXISTS inscripciones;
-DROP TABLE IF EXISTS cursos;
-DROP TABLE IF EXISTS profesores;
+-- doc: https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html
+-- nota: InnoDB crea automaticamente el indice sobre la columna que referencia,
+--       que es justo el que se olvida en otros motores. Y el aviso historico:
+--       el motor MyISAM ACEPTA la declaracion de clave foranea y no la
+--       comprueba; en bases antiguas, la restriccion existe en el esquema y no
+--       en la realidad.
 
 -- === preparacion ===
--- Forma normalizada: el nombre del profesor vive UNA vez.
-CREATE TABLE profesores (
+DROP TABLE IF EXISTS inscripciones;
+DROP TABLE IF EXISTS cursos;
+DROP TABLE IF EXISTS estudiantes;
+
+CREATE TABLE estudiantes (
     id     INT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL
 );
 CREATE TABLE cursos (
-    id          INT PRIMARY KEY,
-    codigo      VARCHAR(50) NOT NULL,
-    profesor_id INT NOT NULL REFERENCES profesores(id)
+    id       INT PRIMARY KEY,
+    codigo   VARCHAR(50) NOT NULL UNIQUE,
+    profesor VARCHAR(50) NOT NULL
 );
 CREATE TABLE inscripciones (
-    estudiante VARCHAR(50) NOT NULL,
-    curso_id   INT NOT NULL REFERENCES cursos(id),
-    PRIMARY KEY (estudiante, curso_id)
+    estudiante_id INT NOT NULL REFERENCES estudiantes(id),
+    curso_id      INT NOT NULL REFERENCES cursos(id),
+    PRIMARY KEY (estudiante_id, curso_id)
 );
 
-INSERT INTO profesores (id, nombre) VALUES (1, 'A. Lovelace'), (2, 'Grace Hopper');
-INSERT INTO cursos (id, codigo, profesor_id) VALUES (10, 'DB-101', 1), (20, 'SE-201', 2);
-INSERT INTO inscripciones (estudiante, curso_id) VALUES
-    ('Ada', 10), ('Linus', 10), ('Grace', 20);
-
--- La correccion de un dato es UNA escritura. En la tabla sin normalizar habria
--- que actualizar una fila por inscripcion, y bastaria olvidar una para que el
--- mismo profesor tuviera dos nombres.
-UPDATE profesores SET nombre = 'Ada Lovelace' WHERE id = 1;
+INSERT INTO estudiantes (id, nombre) VALUES (1, 'Ada'), (2, 'Linus');
+INSERT INTO cursos (id, codigo, profesor) VALUES
+    (10, 'DB-101', 'A. Lovelace'),
+    (20, 'SE-201', 'G. Hopper');
+INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (1, 10), (1, 20), (2, 10);
 
 -- === consulta ===
-SELECT c.codigo AS curso,
-       p.nombre AS profesor,
-       COUNT(i.estudiante) AS inscripciones
-FROM cursos c
-JOIN profesores p ON p.id = c.profesor_id
-LEFT JOIN inscripciones i ON i.curso_id = c.id
-GROUP BY c.id, c.codigo, p.nombre
-ORDER BY c.codigo;
+-- Las tres tablas vuelven a juntarse al consultar. Cada hecho sigue guardado UNA
+-- sola vez: el profesor de DB-101 esta en una fila, no en dos.
+SELECT e.nombre, c.codigo, c.profesor
+FROM inscripciones i
+JOIN estudiantes e ON e.id = i.estudiante_id
+JOIN cursos      c ON c.id = i.curso_id
+ORDER BY e.nombre, c.codigo;
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Mismo esquema y mismas garantías con InnoDB; es además el motor donde más se encuentran tablas heredadas sin normalizar, así que es donde más se practica la descomposición sobre datos reales.</li>
-<li><strong>Por qué no:</strong> Su modo <code>ONLY_FULL_GROUP_BY</code> no siempre estuvo activo: hay código antiguo que agrupa mal y sigue devolviendo un resultado, lo que esconde justo los errores que la normalización previene.</li>
-<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html</a></li>
+<li><strong>Por qué sí:</strong> InnoDB comprueba las claves foráneas siempre y crea automáticamente el índice sobre la columna que referencia, que es justo el que se olvida en otros motores.</li>
+<li><strong>Por qué no:</strong> El motor MyISAM, todavía presente en bases antiguas, <strong>acepta</strong> la declaración de clave foránea y no la comprueba: la restricción existe en el esquema y no en la realidad.</li>
+<li>📄 Documentación oficial: <a href="https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html">https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html</a></li>
 </ul>
-<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-01-modelado-conceptual-y-requisitos/008-normalizacion-y-dependencias-funcionales/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
+<h4 id="mongodb--implementacionesmongodbconsultajs">MongoDB · <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/implementaciones/mongodb/consulta.js"><code>implementaciones/mongodb/consulta.js</code></a></h4>
 <p>✅ <strong>verificado</strong> — se ejecuta contra el motor real levantado con <code>docker compose</code></p>
 <pre><code class="language-javascript">// motor: mongodb
 // doc: https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/
-// nota: modelo normalizado A PROPOSITO. Es lo correcto cuando el dato
-//       referenciado cambia y lo comparten muchos documentos; si el nombre del
-//       profesor estuviera incrustado en cada inscripcion, este updateOne
-//       tendria que ser un updateMany sobre miles de documentos.
+// nota: el mismo modelo con referencias, y la diferencia que importa: NO HAY
+//       CLAVES FORANEAS. Esto se acepta sin protestar:
+//         db.inscripciones.insertOne({ estudiante_id: 99, curso_id: 10 })
+//       y ninguna consulta avisa: la inscripcion huerfana simplemente no
+//       aparece en el $lookup, como si no existiera.
 
 // === preparacion ===
-db.profesores.drop();
+db.estudiantes.drop();
 db.cursos.drop();
 db.inscripciones.drop();
 
-db.profesores.insertMany([
-  { _id: 1, nombre: &quot;A. Lovelace&quot; },
-  { _id: 2, nombre: &quot;Grace Hopper&quot; },
+db.estudiantes.insertMany([
+  { _id: 1, nombre: &quot;Ada&quot; },
+  { _id: 2, nombre: &quot;Linus&quot; },
 ]);
 db.cursos.insertMany([
-  { _id: 10, codigo: &quot;DB-101&quot;, profesor_id: 1 },
-  { _id: 20, codigo: &quot;SE-201&quot;, profesor_id: 2 },
+  { _id: 10, codigo: &quot;DB-101&quot;, profesor: &quot;A. Lovelace&quot; },
+  { _id: 20, codigo: &quot;SE-201&quot;, profesor: &quot;G. Hopper&quot; },
 ]);
 db.inscripciones.insertMany([
-  { estudiante: &quot;Ada&quot;, curso_id: 10 },
-  { estudiante: &quot;Linus&quot;, curso_id: 10 },
-  { estudiante: &quot;Grace&quot;, curso_id: 20 },
+  { estudiante_id: 1, curso_id: 10 },
+  { estudiante_id: 1, curso_id: 20 },
+  { estudiante_id: 2, curso_id: 10 },
 ]);
 
-db.profesores.updateOne({ _id: 1 }, { $set: { nombre: &quot;Ada Lovelace&quot; } });
-
 // === consulta ===
-db.cursos
+db.inscripciones
   .aggregate([
-    { $lookup: { from: &quot;profesores&quot;, localField: &quot;profesor_id&quot;,
-                 foreignField: &quot;_id&quot;, as: &quot;p&quot; } },
-    { $unwind: &quot;$p&quot; },
-    { $lookup: { from: &quot;inscripciones&quot;, localField: &quot;_id&quot;,
-                 foreignField: &quot;curso_id&quot;, as: &quot;i&quot; } },
-    { $project: { _id: 0, curso: &quot;$codigo&quot;, profesor: &quot;$p.nombre&quot;,
-                  inscripciones: { $size: &quot;$i&quot; } } },
-    { $sort: { curso: 1 } },
+    { $lookup: { from: &quot;estudiantes&quot;, localField: &quot;estudiante_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;e&quot; } },
+    { $lookup: { from: &quot;cursos&quot;, localField: &quot;curso_id&quot;,
+                 foreignField: &quot;_id&quot;, as: &quot;c&quot; } },
+    { $unwind: &quot;$e&quot; },
+    { $unwind: &quot;$c&quot; },
+    { $project: { _id: 0, nombre: &quot;$e.nombre&quot;, codigo: &quot;$c.codigo&quot;,
+                  profesor: &quot;$c.profesor&quot; } },
+    { $sort: { nombre: 1, codigo: 1 } },
   ])
-  .forEach((d) =&gt; print(d.curso + &quot;|&quot; + d.profesor + &quot;|&quot; + d.inscripciones));
+  .forEach((d) =&gt; print(d.nombre + &quot;|&quot; + d.codigo + &quot;|&quot; + d.profesor));
 </code></pre>
 <ul>
-<li><strong>Por qué sí:</strong> Admite el modelo normalizado con referencias entre colecciones, y es la forma correcta cuando el dato referenciado cambia y lo comparten muchos documentos, como el nombre de un profesor.</li>
-<li><strong>Por qué no:</strong> Va contra la corriente del modelo documental: al no haber claves foráneas, nada impide que un curso apunte a un profesor borrado, y la reunión hay que pedirla explícitamente con <code>$lookup</code> en cada consulta.</li>
+<li><strong>Por qué sí:</strong> Se puede modelar igual, con referencias entre colecciones y <code>$lookup</code> para juntarlas: es lo correcto cuando el dato referenciado cambia y lo comparten muchos documentos, como el nombre de un profesor.</li>
+<li><strong>Por qué no:</strong> <strong>No hay claves foráneas.</strong> Nada impide una inscripción que apunte a un curso borrado, y ninguna consulta avisa: la comprobación que aquí hace el motor, allí la tiene que hacer el código, en todos los caminos de escritura.</li>
 <li>📄 Documentación oficial: <a href="https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/">https://www.mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/</a></li>
 </ul>
 <h3 id="los-que-no-resuelven-este-caso--y-qué-se-hace-en-su-lugar">Los que no resuelven este caso — y qué se hace en su lugar</h3>
@@ -642,15 +637,9 @@ db.cursos
 </thead>
 <tbody>
 <tr>
-<td>Apache Cassandra</td>
-<td>Su guía de modelado recomienda lo contrario: duplicar el nombre del profesor en cada fila que lo necesite, porque no hay reuniones y una lectura debe resolverse en una sola partición.</td>
-<td>Aceptar la duplicación y asumir el costo de actualizarla: cambiar el nombre del profesor pasa a ser un trabajo por lotes sobre todas las filas que lo copiaron, no un <code>UPDATE</code>.</td>
-<td><a href="https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/data-modeling_rdbms.html">doc</a></td>
-</tr>
-<tr>
 <td>Redis</td>
-<td>No hay reuniones ni referencias que el servidor entienda: normalizar significaría hacer dos o tres viajes por lectura y reunir en el cliente.</td>
-<td>Guardar el nombre del profesor en una clave propia y referenciarla desde la aplicación, aceptando que la coherencia entre claves la mantiene el código.</td>
+<td>No hay reuniones ni referencias que el servidor entienda: juntar las tres tablas exigiría tres viajes por estudiante y hacer la reunión en el cliente, que es exactamente lo que un motor relacional evita.</td>
+<td>Guardar el resultado ya reunido como valor de una clave y recalcularlo cuando cambie el origen: Redis como caché de la reunión que hace otro motor, no como sustituto.</td>
 <td><a href="https://redis.io/docs/latest/develop/data-types/hashes/">doc</a></td>
 </tr>
 </tbody>
@@ -702,29 +691,27 @@ la salida que la respalda y declara al menos un límite del ejercicio.</p>
 <a href="../fuentes.html"><code>catalog/sources.json</code></a> y el estado de los
 enlaces se comprueba con <code>python scripts/check_external_links.py</code>.</p>
 <ul>
-<li><strong>E. F. Codd</strong> (1970). <a href="https://dl.acm.org/doi/10.1145/362384.362685">A Relational Model of Data for Large Shared Data Banks</a>. Communications of the ACM 13(6). DOI <a href="https://doi.org/10.1145/362384.362685">10.1145/362384.362685</a>.<br />
-  Artículo fundacional del modelo relacional y de la independencia de datos.</li>
-<li><strong>Hector Garcia-Molina, Jeffrey D. Ullman, Jennifer Widom</strong> (2008). <a href="http://infolab.stanford.edu/~ullman/dscb.html">Database Systems: The Complete Book</a>. 2.a ed. Pearson. ISBN 978-0-13-187325-4.<br />
-  Tratamiento formal de dependencias funcionales, normalización y optimización.</li>
-<li><strong>Abraham Silberschatz, Henry F. Korth, S. Sudarshan</strong> (2019). <a href="https://db-book.com/">Database System Concepts</a>. 7.a ed. McGraw-Hill. ISBN 978-0-07-802215-9.<br />
-  Texto de referencia universitario. El sitio oficial publica diapositivas y capítulos de muestra.</li>
-<li><strong>Raghu Ramakrishnan, Johannes Gehrke</strong> (2002). <a href="https://pages.cs.wisc.edu/~dbbook/">Database Management Systems</a>. 3.a ed. McGraw-Hill. ISBN 978-0-07-246563-1.<br />
-  Fuerte en álgebra relacional, evaluación de consultas y estructuras de almacenamiento.</li>
+<li><strong>Peter Pin-Shan Chen</strong> (1976). <a href="https://dl.acm.org/doi/10.1145/320434.320440">The Entity-Relationship Model - Toward a Unified View of Data</a>. ACM TODS 1(1). DOI <a href="https://doi.org/10.1145/320434.320440">10.1145/320434.320440</a>.<br />
+  Origen del diagrama entidad-relación.</li>
+<li><strong>Michael J. Hernandez</strong> (2020). <a href="https://www.informit.com/store/database-design-for-mere-mortals-a-hands-on-guide-to-9780136788041">Database Design for Mere Mortals</a>. 4.a ed. Addison-Wesley. ISBN 978-0-13-678804-1.<br />
+  Método de diseño paso a paso, independiente de producto.</li>
+<li><strong>Ramez Elmasri, Shamkant B. Navathe</strong> (2015). <a href="https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546">Fundamentals of Database Systems</a>. 7.a ed. Pearson. ISBN 978-0-13-397077-7.<br />
+  Modelado entidad-relación tratado con más detalle que en otros manuales.</li>
 </ul>
 <hr />
 <blockquote>
-<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 01</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
+<p><a href="../index.html">Programa</a> · <a href="indice.html">Parte 00</a> · <a href="007.html">← Anterior</a> · <a href="009.html">Siguiente →</a></p>
 </blockquote>
 <button id="completar" class="completar" type="button" aria-pressed="false"
         data-clase="008">Marcar como completada</button>
 <nav class="paso-a-paso" aria-label="Clase anterior y siguiente">
-<a class="anterior" href="007.html"><span class="sentido">← Anterior · 007</span>Claves, identidad y el debate natural frente a sustituta</a>
-<a class="siguiente" href="009.html"><span class="sentido">Siguiente · 009 →</span>Desnormalización deliberada y patrones de acceso</a>
+<a class="anterior" href="007.html"><span class="sentido">← Anterior · 007</span>La clave primaria: cómo se distingue una fila de otra</a>
+<a class="siguiente" href="009.html"><span class="sentido">Siguiente · 009 →</span>Cuándo NO necesitas una base de datos</a>
 </nav>
 </main>
 <footer>
-  <p><strong>Database Systems Labs</strong> · versión 2.0.0 ·
-  licencia MIT · actualizado el 2026-08-19.
+  <p><strong>Database Systems Labs</strong> · versión 3.0.0 ·
+  licencia MIT · actualizado el 2026-08-20.
   Los productos citados conservan sus licencias y marcas.</p>
   <p>Sin rastreo y sin cuentas: el progreso de lectura se guarda solo en tu navegador.</p>
   <p><a href="https://github.com/vladimiracunadev-create/database-systems-labs">Código fuente</a> ·
