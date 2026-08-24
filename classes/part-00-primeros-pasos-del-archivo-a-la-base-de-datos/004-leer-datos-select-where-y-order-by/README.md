@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Leer con precisión: filtrar filas, elegir columnas y ordenar el resultado. La idea que más consecuencias tendrá después es que el resultado de una consulta no tiene orden hasta que lo declaras, así que `LIMIT` sin `ORDER BY` devuelve filas cualesquiera.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 004"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-filtrado"></a>**filtrado** | Quedarse con las filas que cumplen un predicado (`WHERE`). En álgebra relacional es la selección: reduce el número de filas, nunca el de columnas. | se introduce aquí |
+| <a id="v-proyección"></a>**proyección** | Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con `DISTINCT`, cosa que SQL no hace por defecto y el álgebra sí. | se introduce aquí |
+| <a id="v-orden"></a>**orden** | El resultado de una consulta es un conjunto: no tiene orden hasta que se declara `ORDER BY`. Confiar en el orden «que salió» es un error que sobrevive en pruebas y falla en producción el día que cambia el plan. | se introduce aquí |
+| <a id="v-limit"></a>**LIMIT** | Corta el resultado a las primeras N filas. Sin `ORDER BY` no significa nada estable: «las primeras N» sin criterio de orden es «N cualesquiera». | se introduce aquí |
+| <a id="v-is-null"></a>**IS NULL** | El único predicado que comprueba ausencia de valor. `= NULL` nunca es cierto —da `UNKNOWN`— porque nada, ni siquiera otro nulo, es igual a lo desconocido. | se introduce aquí |
 
 ---
 

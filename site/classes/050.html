@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>memtable</code> · <code>SSTable</code> · <code>compactación</code> · <code>amplificación de escritura</code> · <code>filtro de Bloom</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La otra familia de estructuras de almacenamiento: memtable, SSTable y compactación. Explica por qué un LSM absorbe mucha más escritura que un B-Tree y qué paga a cambio —amplificación de escritura y compactaciones que consumen recursos justo cuando el sistema está cargado—, con el filtro de Bloom como pieza que salva lecturas.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 050&quot;]
     C --&gt; K1[&quot;memtable&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="048.html">048</a></td>
+<td>Páginas, filas y buffer: por qué la entrada y salida manda</td>
+<td>pagina · factor de bloque · buffer pool · localidad · lectura secuencial</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-memtable"></a><strong>memtable</strong></td>
+<td>Estructura ordenada en memoria donde un motor LSM acumula las escrituras antes de volcarlas a disco. Convierte escrituras aleatorias en secuenciales, que es la razón de que los LSM absorban mucha más carga de escritura que un B-Tree.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-sstable"></a><strong>SSTable</strong></td>
+<td>Fichero ordenado e inmutable resultante de volcar una memtable. Al ser inmutable no se actualiza: los cambios posteriores viven en ficheros más nuevos, y por eso una lectura puede tener que consultar varios niveles.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-compactación"></a><strong>compactación</strong></td>
+<td>Proceso de fusionar SSTables, descartar versiones antiguas y aplicar los borrados. Es lo que impide que las lecturas se degraden sin fin, y también lo que consume entrada y salida en segundo plano justo cuando el sistema está cargado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-amplificación-de-escritura"></a><strong>amplificación de escritura</strong></td>
+<td>Cuántos bytes acaba escribiendo el motor en disco por cada byte que escribió la aplicación, sumando registro y compactaciones sucesivas. Es la métrica que decide el desgaste del disco y el techo real de escritura de un motor LSM.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-filtro-de-bloom"></a><strong>filtro de Bloom</strong></td>
+<td>Estructura probabilística compacta que responde «seguro que no está» o «puede que esté». Ahorra abrir SSTables que no contienen la clave; nunca produce falsos negativos, así que es seguro usarla para descartar.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender la otra gran familia de estructuras de almacenamiento. El LSM-Tree sostiene Cassandra, RocksDB, ScyllaDB y LevelDB, y su compromiso es el inverso al del B-Tree.</p>

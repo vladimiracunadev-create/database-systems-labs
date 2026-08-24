@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El control de acceso con una comprobación incómoda como punto de partida: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo. Trata roles, separación de funciones y seguridad por fila, cuya ventaja sobre filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 060"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [013](../../part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/README.md) | Independencia de datos y los tres niveles de esquema | esquema conceptual · esquema físico · vista externa · independencia lógica |
+| [024](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) | DDL: el esquema como contrato ejecutable | tipo de dato · restricción · valor por defecto · DDL transaccional |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-privilegio-mínimo"></a>**privilegio mínimo** | Cada identidad recibe exactamente los permisos que necesita para su función y ninguno más. La comprobación práctica es incómoda y reveladora: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo. | se introduce aquí |
+| <a id="v-rol"></a>**rol** | Agrupación de privilegios que se concede a personas o a aplicaciones. Permite razonar sobre permisos por función en lugar de por individuo, y revocar el acceso de alguien sin tener que auditar cada objeto. | se introduce aquí |
+| <a id="v-seguridad-por-fila"></a>**seguridad por fila** | Políticas que el motor añade automáticamente a cada consulta para que un usuario solo vea las filas que le corresponden. La ventaja sobre filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro. | se introduce aquí |
+| <a id="v-separación-de-funciones"></a>**separación de funciones** | Que quien desarrolla no sea quien despliega en producción, y que quien opera no pueda borrar sus propias huellas de auditoría. Es un control organizativo antes que técnico, y sin él el registro de auditoría no prueba nada. | se introduce aquí |
 
 ---
 

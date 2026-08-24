@@ -12,6 +12,10 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las tres arquitecturas de réplica y el compromiso que define cada una. La consecuencia visible para el usuario es el retraso de réplica: guardar algo y al recargar no verlo. Introduce las garantías de sesión que lo tapan y el quórum de los sistemas sin líder.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 053"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [043](../../part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/README.md) | ACID: qué garantiza cada letra y quién la implementa | atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación |
+| [046](../../part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md) | Registro anticipado y recuperación: WAL y ARIES | WAL · punto de control · rehacer · deshacer · LSN |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-replicación-sincrónica"></a>**replicación sincrónica** | El líder no confirma la escritura hasta que al menos una réplica la ha recibido. Garantiza que no se pierda al caer el líder, a cambio de que la latencia del cliente incluya la de la réplica más lenta y de que una réplica caída pueda detener las escrituras. | se introduce aquí |
+| <a id="v-retraso-de-réplica"></a>**retraso de réplica** | La distancia temporal entre lo que ya está en el líder y lo que la réplica ha aplicado. Con replicación asíncrona es inevitable, y es la causa directa de que un usuario guarde algo y al recargar no lo vea. | se introduce aquí |
+| <a id="v-quórum"></a>**quórum** | Regla de los sistemas sin líder: si las escrituras van a W réplicas, las lecturas consultan R, y `W + R > N`, entonces toda lectura toca al menos una réplica con el último valor. Permite ajustar el compromiso entre latencia y frescura por operación. | se introduce aquí |
+| <a id="v-lectura-de-tu-propia-escritura"></a>**lectura de tu propia escritura** | Garantía de sesión que asegura que quien acaba de escribir verá su propio cambio, aunque otros aún no. Se implementa dirigiendo al líder las lecturas recientes de ese usuario, o esperando a que la réplica alcance el LSN de su escritura. | se introduce aquí |
 
 ---
 

@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La clase que convierte una intención en una garantía medida. RPO y RTO se declaran en números, la recuperación a un punto en el tiempo se demuestra restaurando de verdad, y la conclusión es incómoda a propósito: un respaldo que nunca se ha restaurado no es un respaldo, es un fichero con nombre esperanzador.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 058"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [046](../../part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md) | Registro anticipado y recuperación: WAL y ARIES | WAL · punto de control · rehacer · deshacer · LSN |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-rpo"></a>**RPO** | Objetivo de punto de recuperación: cuántos datos se acepta perder, medido en tiempo. Un RPO de cinco minutos obliga a archivar el registro al menos cada cinco minutos; si no está escrito y probado, el RPO real es «el que salga». | se introduce aquí |
+| <a id="v-rto"></a>**RTO** | Objetivo de tiempo de recuperación: cuánto se acepta estar caído. Se mide restaurando de verdad y cronometrando, no estimando; casi siempre resulta ser varias veces mayor de lo que el equipo suponía. | se introduce aquí |
+| <a id="v-recuperación-a-un-punto-en-el-tiempo"></a>**recuperación a un punto en el tiempo** | Restaurar una copia base y reaplicar el registro archivado hasta un instante concreto, justo antes del `DELETE` sin `WHERE`. Exige que el archivado del registro esté activo y verificado desde antes del incidente. | se introduce aquí |
+| <a id="v-prueba-de-restauración"></a>**prueba de restauración** | Restaurar la copia en un entorno limpio, comprobar la integridad de los datos y medir cuánto tardó. Un respaldo que nunca se ha restaurado no es un respaldo: es un fichero con nombre esperanzador. | se introduce aquí |
 
 ---
 

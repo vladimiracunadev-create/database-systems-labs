@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>espacio vectorial</code> · <code>coseno</code> · <code>producto interno</code> · <code>normalización</code> · <code>dimensión</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Qué significa «parecido» cuando lo decide un modelo. Presenta el espacio vectorial, las métricas de coseno y producto interno, y la normalización que las vuelve equivalentes. La advertencia que ordena toda la parte: el parecido es el que aprendió ese modelo concreto, así que cambiar de modelo cambia el significado de cerca.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 068&quot;]
     C --&gt; K1[&quot;espacio vectorial&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="041.html">041</a></td>
+<td>Búsqueda de texto: índice invertido, análisis y relevancia</td>
+<td>índice invertido · analizador · TF-IDF · BM25 · precisión y exhaustividad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-espacio-vectorial"></a><strong>espacio vectorial</strong></td>
+<td>Representación de un texto, una imagen o un usuario como un punto de N coordenadas, colocado por un modelo de forma que la cercanía refleje parecido semántico. El parecido es el que aprendió ese modelo concreto: cambiar de modelo cambia el significado de «cerca».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-coseno"></a><strong>coseno</strong></td>
+<td>Medida de similitud basada en el ángulo entre dos vectores, que ignora su magnitud. Es la métrica habitual con embeddings de texto, donde importa la dirección del significado y no la longitud del documento.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-producto-interno"></a><strong>producto interno</strong></td>
+<td>Métrica que sí tiene en cuenta la magnitud, útil cuando el modelo codifica intensidad en la norma del vector. Sobre vectores normalizados es equivalente al coseno, y de ahí que normalizar simplifique la elección.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-normalización"></a><strong>normalización</strong></td>
+<td>Escalar cada vector a longitud 1. Hace equivalentes coseno y producto interno y permite usar el índice más rápido sin cambiar el orden de los resultados; es un paso rutinario que conviene declarar, porque mezclar vectores normalizados y sin normalizar arruina la búsqueda.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-dimensión"></a><strong>dimensión</strong></td>
+<td>Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.)</td>
+<td>se introdujo en la <a href="065.html">065</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender qué se guarda en una base vectorial y qué significa exactamente «parecido». Sin esa precisión, la búsqueda semántica se convierte en una caja negra que a veces acierta.</p>

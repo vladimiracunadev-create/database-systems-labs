@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Fundamentos ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La inyección SQL explicada por su causa —mezclar código y datos en la misma cadena— y su solución completa: la consulta parametrizada, que no es una mitigación sino una defensa total. Cubre además el caso que los parámetros no resuelven, los identificadores dinámicos, que solo se validan con lista blanca.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 061"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+| [024](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) | DDL: el esquema como contrato ejecutable | tipo de dato · restricción · valor por defecto · DDL transaccional |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-consulta-parametrizada"></a>**consulta parametrizada** | Enviar la sentencia y los valores por canales distintos, de modo que el motor nunca interprete el dato como código. Es la defensa completa contra la inyección SQL, no una mitigación: bien usada, no hay cadena de entrada que cambie la estructura de la consulta. | se introduce aquí |
+| <a id="v-identificador-dinamico"></a>**identificador dinamico** | El caso que los parámetros no cubren: nombres de tabla, de columna o la dirección de un `ORDER BY` no se pueden enviar como valor. La única solución correcta es validarlos contra una lista blanca cerrada, nunca escaparlos a mano. | se introduce aquí |
+| <a id="v-lista-blanca"></a>**lista blanca** | Permitir solo lo que está explícitamente enumerado y rechazar todo lo demás. Se prefiere a la lista negra porque no hay que anticipar todas las formas de atacar, solo todas las formas válidas de usar. | se introduce aquí |
+| <a id="v-defensa-en-profundidad"></a>**defensa en profundidad** | Poner varias barreras independientes, de modo que fallar una no baste: parametrizar, además dar privilegio mínimo, además registrar, además limitar por fila. Cada capa asume que las otras pueden fallar. | se introduce aquí |
 
 ---
 

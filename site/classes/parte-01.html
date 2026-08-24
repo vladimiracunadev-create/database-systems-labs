@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,26 @@
 <main class="content" id="principal">
 <h1>Parte 01 — Fundamentos, sistemas y método</h1>
 <p class="lead">Qué problema resuelve un gestor de bases de datos, qué hay dentro de él y cómo se monta un entorno donde cada afirmación pueda comprobarse.</p>
-<p><strong>4 clases · 12 horas</strong></p>
+<p><strong>4 clases · 12 horas ·
+19 conceptos · 11 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>La parte 00 mostró qué se hace con una base de datos. Esta pregunta por qué existe y qué hay dentro. Es la transición de usuario a persona que puede razonar sobre el sistema, y sin ella las partes 08 y 09 —transacciones y planes de ejecución— son magia con nombres técnicos.</p>
+<p>Las cuatro clases responden a cuatro preguntas encadenadas. Qué garantiza un gestor y qué no, para no atribuirle poderes que no tiene. Qué componentes lo forman, del analizador al gestor de almacenamiento, para saber después en cuál vive cada problema. Por qué se separan tres niveles de esquema, que es la idea de Codd de la que depende toda la evolución del esquema sin caída. Y cómo se monta un entorno donde cada afirmación se pueda comprobar, que es el método de trabajo del resto del programa.</p>
+<p>La clase 014 no es un anexo técnico: es la que define qué cuenta como evidencia en este programa. A partir de ella, ninguna afirmación de rendimiento se acepta sin comando, versión, semilla y salida.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Enumerar las garantías que aporta un gestor y nombrar al menos tres cosas que explícitamente no resuelve.</li>
+<li>Trazar el recorrido de una consulta desde el cliente hasta el disco nombrando cada componente.</li>
+<li>Distinguir esquema externo, conceptual y físico, y dar un ejemplo de cambio que cada nivel absorbe.</li>
+<li>Montar un entorno reproducible con versión fijada, datos con semilla y evidencia repetible.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -61,6 +81,89 @@
 <tr><td><a href="013.html">013</a></td><td><a href="013.html">Independencia de datos y los tres niveles de esquema</a></td><td class="nivel-fundamentos">Fundamentos</td><td>3</td><td>3</td></tr>
 <tr><td><a href="014.html">014</a></td><td><a href="014.html">Entorno reproducible y evidencia comprobable</a></td><td class="nivel-fundamentos">Fundamentos</td><td>3</td><td>4</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="011.html">011 — Qué resuelve un sistema de bases de datos y qué no</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      4 fuentes · requiere <a href="002.html">002</a>, <a href="010.html">010</a></p>
+    <p>La misma pregunta de la clase 002, ahora con el vocabulario de sistemas: qué garantiza un gestor —persistencia, concurrencia, integridad, recuperación— y, con la misma seriedad, qué no garantiza. La independencia de datos aparece aquí como la idea de Codd que ordena todo lo demás.</p>
+    <p><span class="tag">persistencia</span> <span class="tag">concurrencia</span> <span class="tag">integridad</span> <span class="tag">recuperación</span> <span class="tag">independencia de datos</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="012.html">012 — Arquitectura interna de un gestor, del cliente al disco</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="011.html">011</a></p>
+    <p>El recorrido completo de una consulta desde el cliente hasta el disco: analizador, planificador, ejecutor, gestor de almacenamiento y buffer. Es el mapa mental que después permite leer un plan de ejecución sin adivinar, y saber en qué componente vive cada problema de rendimiento.</p>
+    <p><span class="tag">analizador</span> <span class="tag">planificador</span> <span class="tag">ejecutor</span> <span class="tag">gestor de almacenamiento</span> <span class="tag">buffer pool</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="013.html">013 — Independencia de datos y los tres niveles de esquema</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="011.html">011</a></p>
+    <p>Los tres niveles de esquema —externo, conceptual y físico— y por qué separarlos es lo que permite añadir un índice, particionar una tabla o dividir una entidad sin reescribir las aplicaciones. La independencia lógica que se define aquí es el fundamento técnico de las migraciones sin caída de la parte 11.</p>
+    <p><span class="tag">esquema conceptual</span> <span class="tag">esquema físico</span> <span class="tag">vista externa</span> <span class="tag">independencia lógica</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="014.html">014 — Entorno reproducible y evidencia comprobable</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      4 fuentes · requiere <a href="011.html">011</a></p>
+    <p>El método de trabajo del resto del programa: entorno en contenedor con la versión fijada, datos generados con semilla declarada, invariantes escritos y evidencia que otra persona pueda reproducir. Es la clase que convierte «me funcionó» en un resultado defendible.</p>
+    <p><span class="tag">reproducibilidad</span> <span class="tag">semilla</span> <span class="tag">contenedor</span> <span class="tag">invariante</span> <span class="tag">evidencia</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«El motor garantiza que mis datos sean correctos.» Solo garantiza lo que le declaraste. Lo que no está en una restricción no está protegido.</li>
+<li>«El motor ejecuta la consulta como la escribí.» Ejecuta el plan que su optimizador estimó más barato; el orden del texto es casi irrelevante.</li>
+<li>«Independencia de datos es que la aplicación no vea el motor.» No: es poder cambiar cómo se guardan los datos sin reescribir lo que los consulta.</li>
+<li>«Lo medí y va rápido.» Sin versión, datos y semilla declarados, eso no es una medición, es una anécdota.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 19 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#analizador"><strong>analizador</strong></a></td><td>Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.)</td><td><a href="012.html">012</a></td></tr>
+<tr><td><a href="../glosario.html#buffer-pool"><strong>buffer pool</strong></a></td><td>La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms.</td><td><a href="012.html">012</a></td></tr>
+<tr><td><a href="../glosario.html#concurrencia"><strong>concurrencia</strong></a></td><td>Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones.</td><td><a href="011.html">011</a></td></tr>
+<tr><td><a href="../glosario.html#contenedor"><strong>contenedor</strong></a></td><td>Entorno de ejecución aislado con el motor y su versión congelados. Elimina el «en mi máquina funciona» y convierte la versión del motor en parte de la evidencia, no en un detalle olvidado.</td><td><a href="014.html">014</a></td></tr>
+<tr><td><a href="../glosario.html#ejecutor"><strong>ejecutor</strong></a></td><td>Recorre el plan elegido operador a operador y produce las filas. Es donde `EXPLAIN ANALYZE` muestra los tiempos reales frente a los que el planificador había estimado.</td><td><a href="012.html">012</a></td></tr>
+<tr><td><a href="../glosario.html#esquema-conceptual"><strong>esquema conceptual</strong></a></td><td>La descripción del qué: entidades, atributos y relaciones del dominio, sin decir cómo se guardan. Es el nivel en el que se discute con quien conoce el negocio.</td><td><a href="013.html">013</a></td></tr>
+<tr><td><a href="../glosario.html#esquema-físico"><strong>esquema físico</strong></a></td><td>Cómo se materializan realmente los datos: ficheros, páginas, índices, particiones, compresión. Debe poder cambiar —añadir un índice, particionar una tabla— sin que ninguna consulta se reescriba.</td><td><a href="013.html">013</a></td></tr>
+<tr><td><a href="../glosario.html#evidencia"><strong>evidencia</strong></a></td><td>La salida real de un comando, con su versión y sus parámetros, que respalda una afirmación. Una captura sin comando no es evidencia, porque no se puede repetir.</td><td><a href="014.html">014</a></td></tr>
+<tr><td><a href="../glosario.html#gestor-de-almacenamiento"><strong>gestor de almacenamiento</strong></a></td><td>La capa que traduce filas a páginas en disco y de vuelta, y que sostiene el registro, el buffer y las estructuras de índice. Es donde se decide si el motor es B-Tree o LSM, y con ello su perfil de lectura y escritura.</td><td><a href="012.html">012</a></td></tr>
+<tr><td><a href="../glosario.html#independencia-de-datos"><strong>independencia de datos</strong></a></td><td>Poder cambiar cómo se guardan los datos sin reescribir las aplicaciones que los consultan. Es la idea central del artículo de Codd de 1970 y la razón de que exista un nivel lógico separado del físico.</td><td><a href="011.html">011</a></td></tr>
+<tr><td><a href="../glosario.html#independencia-lógica"><strong>independencia lógica</strong></a></td><td>Poder cambiar el esquema conceptual —dividir una tabla, renombrar una columna— sin romper las aplicaciones, apoyándose en vistas que preservan el contrato anterior. Es más difícil de lograr que la independencia física y es la base técnica de las migraciones sin caída.</td><td><a href="013.html">013</a></td></tr>
+<tr><td><a href="../glosario.html#integridad"><strong>integridad</strong></a></td><td>Que los datos cumplan siempre las reglas del dominio, incluidas las que ninguna aplicación recordó comprobar. El gestor la sostiene con restricciones declaradas y con transacciones.</td><td><a href="011.html">011</a></td></tr>
+<tr><td><a href="../glosario.html#invariante"><strong>invariante</strong></a></td><td>Algo que tiene que ser verdad siempre en el sistema: «ningún pedido sin cliente», «el saldo nunca es negativo». Un invariante que no está comprobado por una restricción o una prueba es un deseo.</td><td><a href="014.html">014</a></td></tr>
+<tr><td><a href="../glosario.html#persistencia"><strong>persistencia</strong></a></td><td>Que el dato siga existiendo cuando el proceso que lo escribió ya no está. Es el requisito mínimo de una base de datos y la única de sus funciones que un archivo también cumple.</td><td><a href="011.html">011</a></td></tr>
+<tr><td><a href="../glosario.html#planificador"><strong>planificador</strong></a></td><td>Decide *cómo* ejecutar la consulta: qué índice usar, en qué orden reunir las tablas, con qué algoritmo. Elige por costo estimado a partir de estadísticas, no por el orden en que está escrita la consulta.</td><td><a href="012.html">012</a></td></tr>
+<tr><td><a href="../glosario.html#recuperación"><strong>recuperación</strong></a></td><td>Volver a un estado correcto después de una caída, descartando lo no confirmado y rehaciendo lo confirmado. Es lo que distingue una base de datos de un archivo que se corrompió a medio escribir.</td><td><a href="011.html">011</a></td></tr>
+<tr><td><a href="../glosario.html#reproducibilidad"><strong>reproducibilidad</strong></a></td><td>Que otra persona, en otra máquina, obtenga el mismo resultado con las instrucciones dadas. Exige fijar versión del motor, datos de partida y semilla; sin eso, una medición es una anécdota.</td><td><a href="014.html">014</a></td></tr>
+<tr><td><a href="../glosario.html#semilla"><strong>semilla</strong></a></td><td>El número que fija la secuencia de un generador pseudoaleatorio. Declararla convierte un conjunto de datos «aleatorio» en uno reproducible, que es la condición para poder comparar dos ejecuciones.</td><td><a href="014.html">014</a></td></tr>
+<tr><td><a href="../glosario.html#vista-externa"><strong>vista externa</strong></a></td><td>La porción del esquema que ve cada aplicación o cada rol, normalmente mediante vistas. Permite dar acceso a lo necesario y solo a eso, y absorber cambios del esquema sin romper a quien consulta.</td><td><a href="013.html">013</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>11 obras distintas sostienen lo que se afirma en estas
+4 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-codd-1970">A Relational Model of Data for Large Shared Data Banks</a> <span class="fuente-meta">(1970)</span> — <span class="fuente-meta">se cita en 011, 013</span></li>
+<li><a href="../fuentes.html#src-hellerstein-architecture">Architecture of a Database System</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 011, 012</span></li>
+<li><a href="../fuentes.html#src-kent-data-and-reality">Data and Reality</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 011</span></li>
+<li><a href="../fuentes.html#src-petrov-database-internals">Database Internals: A Deep Dive into How Distributed Data Systems Work</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 012</span></li>
+<li><a href="../fuentes.html#src-silberschatz-dsc7">Database System Concepts</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 011, 013</span></li>
+<li><a href="../fuentes.html#src-docs-docker-compose">Docker Compose Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 014</span></li>
+<li><a href="../fuentes.html#src-rogov-postgresql-internals">PostgreSQL 14 Internals</a> <span class="fuente-meta">(2022)</span> — <span class="fuente-meta">se cita en 012</span></li>
+<li><a href="../fuentes.html#src-docs-python-sqlite3">Python: sqlite3</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 014</span></li>
+<li><a href="../fuentes.html#src-date-sql-relational-theory">SQL and Relational Theory: How to Write Accurate SQL Code</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 013</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite">SQLite Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 014</span></li>
+<li><a href="../fuentes.html#src-google-sre-book">Site Reliability Engineering: How Google Runs Production Systems</a> <span class="fuente-meta">(2016)</span> — <span class="fuente-meta">se cita en 014</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

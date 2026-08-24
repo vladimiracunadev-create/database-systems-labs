@@ -12,6 +12,10 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los recorridos que SQL hace mal: profundidad variable, caminos y vecindarios. Explica la ventaja estructural del motor de grafos —la reunión sin índice, porque cada nodo guarda las direcciones de sus vecinos— y también cuándo una CTE recursiva sobre PostgreSQL es suficiente y no hace falta otro sistema.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 038"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [026](../../part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md) | Reuniones: interna, externa, semi y anti | reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas |
+| [028](../../part-04-sql-en-profundidad/028-cte-subconsultas-y-funciones-de-ventana/README.md) | CTE, subconsultas y funciones de ventana | CTE · recursión · subconsulta correlacionada · partición de ventana · marco |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-nodo"></a>**nodo** | Vértice del grafo de propiedades: una cosa con etiquetas y con pares clave-valor propios. Equivale a una fila, con la diferencia de que sus conexiones son parte de la estructura y no se recomponen por reunión. | se introduce aquí |
+| <a id="v-arista"></a>**arista** | Relación dirigida y con tipo entre dos nodos, que puede llevar sus propias propiedades. En un motor de grafos es un puntero real, no una clave foránea que haya que buscar en un índice, y de ahí viene su ventaja al recorrer. | se introduce aquí |
+| <a id="v-recorrido-de-profundidad-variable"></a>**recorrido de profundidad variable** | Consulta del tipo «amigos de amigos hasta cinco saltos» o «cualquier camino entre A y B». En SQL exige una CTE recursiva y una reunión por nivel; en un motor de grafos el costo depende del subgrafo recorrido, no del tamaño total del grafo. | se introduce aquí |
+| <a id="v-reunión-sin-índice"></a>**reunión sin índice** | Propiedad de los motores de grafos nativos: cada nodo guarda las direcciones físicas de sus vecinos, así que pasar de uno a otro no consulta ningún índice. Es la razón técnica de que el recorrido profundo escale donde el `JOIN` repetido se degrada. | se introduce aquí |
 
 ---
 

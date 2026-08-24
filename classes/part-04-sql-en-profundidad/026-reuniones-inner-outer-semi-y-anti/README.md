@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Intermedio ·
 
 **En este caso se comparan 12 motores**: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las cuatro formas de reunir y cuándo se quiere cada una. La distinción que más código corrige es la semirreunión: el `EXISTS` que casi siempre se quería cuando se escribió un `JOIN` seguido de `DISTINCT`, sin multiplicar filas ni arriesgar el doble conteo.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 026"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [008](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) | Dos tablas y una relación: la clave foránea | clave foránea · tabla de relación · reunión · anomalías de repetición |
+| [021](../../part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/README.md) | Álgebra relacional: selección, proyección, producto y reunión | selección · proyección · producto cartesiano · reunión natural · división |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-reunión-interna"></a>**reunión interna** | `INNER JOIN`: devuelve solo los pares que casan. Las filas sin pareja desaparecen, y ese descarte silencioso es la causa más frecuente de informes con menos filas de las esperadas. | se introduce aquí |
+| <a id="v-reunión-externa"></a>**reunión externa** | `LEFT`, `RIGHT` o `FULL OUTER JOIN`: conserva las filas sin pareja y rellena con nulos. Cuidado con poner en el `WHERE` una condición sobre la tabla externa: la convierte de nuevo en interna. | se introduce aquí |
+| <a id="v-semirreunion"></a>**semirreunion** | Filtrar una tabla por la existencia de una pareja, sin traer columnas de la otra ni multiplicar filas: `WHERE EXISTS (…)` o `IN (…)`. Es lo que casi siempre se quería cuando se escribió un `JOIN` seguido de `DISTINCT`. | se introduce aquí |
+| <a id="v-antirreunion"></a>**antirreunion** | Quedarse con las filas que *no* tienen pareja: `NOT EXISTS`, o `LEFT JOIN … WHERE clave IS NULL`. `NOT IN` parece equivalente y no lo es: basta un nulo en la subconsulta para que devuelva el conjunto vacío. | se introduce aquí |
+| <a id="v-multiplicación-de-filas"></a>**multiplicación de filas** | Efecto de reunir con una tabla que tiene varias filas por clave: cada fila del lado uno aparece repetida. Es la causa del doble conteo cuando después se suma, y la razón de que agregar antes de reunir sea a menudo la corrección. | se introduce aquí |
 
 ---
 

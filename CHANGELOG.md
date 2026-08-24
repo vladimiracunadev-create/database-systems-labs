@@ -4,8 +4,56 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## No publicado
 
-Avance del hito 2.1: el núcleo ejecutable pasa de dos laboratorios a cinco, y
-el validador deja de ser el único componente sin pruebas.
+Dos avances: la **capa pedagógica** —el programa deja de ser un catálogo de
+clases para explicarse a sí mismo de principio a fin— y el hito 2.1, en el que
+el núcleo ejecutable pasa de dos laboratorios a cinco y el validador deja de ser
+el único componente sin pruebas.
+
+### Añadido — capa pedagógica
+
+- **Glosario del programa** ([`GLOSARIO.md`](GLOSARIO.md), generado desde
+  `catalog/glosario.json`): los **306 conceptos** que declaran las 74 clases,
+  definidos una sola vez. Cada entrada trae la definición, la clase donde el
+  término se introduce, la fuente que la respalda y sus términos relacionados.
+  La cobertura contra el currículo es **exacta en los dos sentidos** y la
+  comprueba el validador.
+- **Pauta pedagógica en `curriculum.yaml`**: cada clase declara ahora su
+  `resumen` —para qué está y qué cambia al terminarla— y sus `prerrequisitos`;
+  cada parte declara su `introduccion`, sus `resultados` de aprendizaje y los
+  `errores` frecuentes que desmonta. Son 1 207 líneas nuevas de material
+  escrito, no metadatos.
+- **Portada de parte reconstruida**: donde antes había un resumen de tres líneas
+  y una tabla, ahora hay «antes de esta parte», «de qué trata», «al terminar
+  podrás», un mapa de las clases encadenadas, **una ficha explicada por clase**,
+  los errores frecuentes, el vocabulario completo de la parte y su bibliografía
+  agregada con las clases que citan cada obra.
+- **Tres secciones nuevas en cada una de las 74 clases**: «De qué trata esta
+  clase», «Antes de empezar» —qué se da por sabido, con enlace a la clase donde
+  se explicó— y «Vocabulario de la clase», que define cada concepto antes de que
+  el texto lo use.
+- **[Guía de estudio](docs/GUIA-DE-ESTUDIO.md)**: los
+  cuatro niveles de lectura, el método de ocho pasos por clase, el orden y sus
+  atajos legítimos con lo que cuesta cada uno, tres ritmos con su duración, la
+  autocomprobación de fin de parte y qué hacer cuando algo no sale.
+- **Página de glosario en el sitio** (`site/glosario.html`), con filtro en vivo,
+  navegación alfabética y enlace cruzado a la clase de cada término; más el
+  vocabulario y la bibliografía de cada parte en su página.
+- **16 pruebas nuevas** (`tests/test_glosario.py`, 143 en total): comprueban la
+  cobertura del glosario en los dos sentidos, que ninguna remisión apunte al
+  vacío, que cada término se defina en una clase que lo declara, que toda clase
+  publique su vocabulario y sus prerrequisitos, y que la portada de cada parte
+  explique todas sus clases. Además someten al validador a cinco repositorios
+  rotos a propósito —concepto sin definir, definición huérfana, remisión rota,
+  resumen vacío y prerrequisito circular— y exigen que los detecte.
+
+### Cambiado — capa pedagógica
+
+- `scripts/validate_repository.py` incorpora `validar_glosario` y
+  `validar_pauta`. La segunda regla del repositorio pasa a ser explícita:
+  **ningún concepto se usa sin estar definido en el glosario**. Un prerrequisito
+  que no precede a su clase se trata como dependencia circular y falla.
+- El índice general (`classes/README.md`) explica cómo se lee el material y
+  resume cada clase en una línea, en lugar de listar solo títulos.
 
 ### Añadido
 
@@ -23,7 +71,7 @@ el validador deja de ser el único componente sin pruebas.
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.
-- **Pruebas** (`tests/`): 127 pruebas que ejecutan los laboratorios, comprueban
+- **Pruebas** (`tests/`): una batería que ejecuta los laboratorios, comprueba
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo `--check`, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro

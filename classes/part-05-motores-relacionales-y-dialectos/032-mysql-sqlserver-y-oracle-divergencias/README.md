@@ -12,6 +12,10 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 
 **En este caso se comparan 7 motores**: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las divergencias concretas que rompen código al cambiar de motor: el modo estricto de MySQL que convierte datos inválidos en silencio, la cadena vacía que Oracle trata como nulo, y el plegado de mayúsculas de los identificadores sin citar. Cada una se demuestra con el `INSERT` que en un motor falla y en otro «funciona».
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 032"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [030](../../part-05-motores-relacionales-y-dialectos/030-portabilidad-y-matriz-de-dialectos/README.md) | Portabilidad: qué exige la norma y qué añade cada motor | norma frente a producto · matriz de portabilidad · extensión propietaria |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-colación"></a>**colación** | El conjunto de reglas que decide cómo se comparan y ordenan los textos: si `a` = `A`, dónde va la `ñ`, si los acentos cuentan. Cambia el resultado de `ORDER BY`, de `=` y de un `UNIQUE`, y es distinta por defecto en cada motor. | se introdujo en la [025](../../part-04-sql-en-profundidad/025-select-filtrado-proyeccion-y-orden/README.md) |
+| <a id="v-modo-estricto"></a>**modo estricto** | Ajuste que decide si el motor rechaza un dato inválido o lo convierte en silencio. MySQL sin modo estricto trunca cadenas y transforma fechas imposibles en ceros; el mismo `INSERT` que en PostgreSQL falla, allí «funciona» y corrompe. | se introduce aquí |
+| <a id="v-cadena-vacia-frente-a-nulo"></a>**cadena vacia frente a nulo** | Divergencia que rompe código al migrar: Oracle trata la cadena vacía `''` como `NULL`, y el resto de motores la distingue. Una condición `= ''` cambia de significado según el producto, y un `NOT NULL` deja de proteger lo que se creía. | se introduce aquí |
+| <a id="v-identificador-citado"></a>**identificador citado** | Nombre de objeto entre comillas dobles —o entre acentos graves en MySQL, entre corchetes en SQL Server—. Al citarlo se vuelve sensible a mayúsculas y se congela tal cual; sin citar, cada motor lo pliega a un caso distinto, y ahí nacen los «la tabla no existe» al cambiar de producto. | se introduce aquí |
 
 ---
 

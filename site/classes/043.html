@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>atomicidad</code> · <code>consistencia</code> · <code>aislamiento</code> · <code>durabilidad</code> · <code>unidad de recuperación</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Qué garantiza cada letra de ACID y quién la implementa, con especial cuidado en la que más se malinterpreta: la consistencia es respetar las restricciones declaradas, así que lo que el motor no sabe no lo protege. Deja planteado que el aislamiento es la única letra que se vende por niveles.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 043&quot;]
     C --&gt; K1[&quot;atomicidad&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="005.html">005</a></td>
+<td>Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva</td>
+<td>UPDATE · DELETE · alcance del cambio · filas afectadas · transacción como red</td>
+</tr>
+<tr>
+<td><a href="023.html">023</a></td>
+<td>Integridad: restricciones, claves foraneas y acciones referenciales</td>
+<td>integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-atomicidad"></a><strong>atomicidad</strong></td>
+<td>Todo o nada: la transacción se aplica entera o no deja rastro. No promete que sea correcta ni que sea rápida, solo que no habrá estados a medias visibles para nadie.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-consistencia"></a><strong>consistencia</strong></td>
+<td>La letra tramposa de ACID: significa que la transacción lleva la base de un estado válido a otro <em>según las restricciones declaradas</em>. Lo que el motor no sabe, no lo protege; la consistencia de negocio la pone quien declara las reglas, no el gestor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-aislamiento"></a><strong>aislamiento</strong></td>
+<td>Grado en que una transacción concurrente no ve los pasos intermedios de otra. Es la única letra de ACID que se vende por niveles, y el nivel por defecto de casi todos los motores no es el más fuerte.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-durabilidad"></a><strong>durabilidad</strong></td>
+<td>Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho».</td>
+<td>se introdujo en la <a href="002.html">002</a></td>
+</tr>
+<tr>
+<td><a id="v-unidad-de-recuperación"></a><strong>unidad de recuperación</strong></td>
+<td>La transacción como frontera de lo que se rehace o se deshace tras una caída. Es lo que conecta ACID con el registro anticipado: sin transacción no hay nada que delimite qué debe sobrevivir.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Precisar qué garantiza cada letra de ACID, quién la implementa y qué queda fuera. «Usamos una base ACID» no significa que el sistema sea correcto: significa que existen unas garantías concretas si se usan bien.</p>

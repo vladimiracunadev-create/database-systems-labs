@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 9 motores**: 8 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El mapa que se usará durante todo el programa: seis familias de motores, qué patrón de acceso optimiza cada una y qué paga a cambio. Cierra la rampa de entrada con un criterio de elección en lugar de una lista de nombres de producto.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 010"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [009](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) | Cuándo NO necesitas una base de datos | criterio de decisión · motor embebido · costo de operación · alternativas |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-familias-de-motores"></a>**familias de motores** | Las formas de organizar datos que estructuran este programa: relacional, documental, clave-valor, grafo, columnas anchas y series temporales, más los índices de búsqueda y los vectoriales como casos especializados. Cada familia optimiza un patrón de acceso y paga en los demás. | se introduce aquí |
+| <a id="v-modelo-de-agregado"></a>**modelo de agregado** | Cómo agrupa el motor los datos que lee y escribe de una vez. El relacional trabaja con filas que se recomponen por reunión; los motores de agregado guardan la unidad completa junta y evitan la reunión, a cambio de duplicar. | se introduce aquí |
+| <a id="v-patrón-de-acceso"></a>**patrón de acceso** | La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar. | se introduce aquí |
+| <a id="v-multimodelo"></a>**multimodelo** | Motor que soporta varias familias a la vez —PostgreSQL con JSONB, vectores y búsqueda de texto—. Reduce el número de sistemas que hay que operar; el riesgo es dar por hecho que hacer varias cosas equivale a hacerlas todas bien. | se introduce aquí |
 
 ---
 

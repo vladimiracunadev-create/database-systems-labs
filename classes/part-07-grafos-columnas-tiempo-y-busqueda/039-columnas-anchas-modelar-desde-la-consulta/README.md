@@ -12,6 +12,10 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El método de diseño invertido de las columnas anchas: primero se escribe la lista de consultas y después una tabla por consulta, aunque los mismos datos queden repetidos cinco veces. La clave de partición decide en qué nodo vive la fila y la de agrupamiento el orden dentro de ella; equivocarse en la primera es el error de diseño más caro de esta familia.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 039"]
@@ -21,6 +25,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [019](../../part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md) | Desnormalización deliberada y patrones de acceso | redundancia controlada · costo de escritura · agregado · patrón de lectura |
+| [034](../../part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/README.md) | El agregado como unidad de consistencia | agregado · frontera transaccional · entidad · actividad |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-clave-de-partición"></a>**clave de partición** | La parte de la clave primaria que decide en qué nodo vive la fila. Toda consulta eficiente debe fijarla; una consulta sin ella obliga a preguntar a todo el anillo, y es el error de diseño número uno en columnas anchas. | se introduce aquí |
+| <a id="v-clave-de-agrupamiento"></a>**clave de agrupamiento** | La parte de la clave primaria que ordena las filas dentro de una partición. Es lo que permite leer rangos —«los últimos 20 mensajes de este chat»— con una sola lectura secuencial, y por eso el orden se decide al crear la tabla, no al consultar. | se introduce aquí |
+| <a id="v-desnormalización-por-consulta"></a>**desnormalización por consulta** | Método de diseño de columnas anchas: se escribe primero la lista de consultas y luego una tabla por consulta, aunque los mismos datos queden repetidos en cinco tablas. La coherencia entre copias pasa a ser responsabilidad de la aplicación. | se introduce aquí |
 
 ---
 

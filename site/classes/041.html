@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>índice invertido</code> · <code>analizador</code> · <code>TF-IDF</code> · <code>BM25</code> · <code>precisión y exhaustividad</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Por qué <code>LIKE '%algo%'</code> no es buscar. Presenta el índice invertido, el analizador que decide qué es un término, y la relevancia de TF-IDF a BM25. Cierra con precisión y exhaustividad, el par de métricas que hace que una búsqueda se pueda evaluar en lugar de opinar sobre ella; ambas reaparecen en la parte 13.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 041&quot;]
     C --&gt; K1[&quot;índice invertido&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="004.html">004</a></td>
+<td>Leer datos: SELECT, WHERE y ORDER BY</td>
+<td>filtrado · proyección · orden · LIMIT · IS NULL</td>
+</tr>
+<tr>
+<td><a href="025.html">025</a></td>
+<td>SELECT: filtrado, proyección y orden con semántica precisa</td>
+<td>predicado · orden de evaluación · colación · determinismo de orden</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-índice-invertido"></a><strong>índice invertido</strong></td>
+<td>Estructura que va de cada término al listado de documentos que lo contienen —lo contrario de recorrer los documentos buscando el término—. Es la base de todo buscador de texto y la razón de que <code>LIKE '%algo%'</code> no sea comparable a una búsqueda de verdad.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-analizador"></a><strong>analizador</strong></td>
+<td>Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.)</td>
+<td>se introdujo en la <a href="012.html">012</a></td>
+</tr>
+<tr>
+<td><a id="v-tf-idf"></a><strong>TF-IDF</strong></td>
+<td>Peso clásico de un término: crece con su frecuencia en el documento (TF) y decrece con el número de documentos en que aparece (IDF). Formaliza la intuición de que «el» no distingue nada y «hipervisor» distingue mucho.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-bm25"></a><strong>BM25</strong></td>
+<td>Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros <code>k1</code> y <code>b</code>. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-precisión-y-exhaustividad"></a><strong>precisión y exhaustividad</strong></td>
+<td>Precisión: qué proporción de lo devuelto era relevante. Exhaustividad (o <em>recall</em>): qué proporción de lo relevante se devolvió. Casi siempre se compensan entre sí, y por eso una búsqueda solo puede evaluarse fijando cuál de las dos importa en ese caso.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender cómo se busca texto: qué es un índice invertido, qué hace el analizador y cómo se ordena por relevancia. Es también la base de comparación honesta para la búsqueda vectorial de la parte 12.</p>

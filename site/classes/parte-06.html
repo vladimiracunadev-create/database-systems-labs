@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,26 @@
 <main class="content" id="principal">
 <h1>Parte 06 — Documentos y clave-valor</h1>
 <p class="lead">Modelos sin reunión en el servidor: el agregado como frontera de consistencia, cuando incrustar y que se pierde en una caché.</p>
-<p><strong>4 clases · 13 horas</strong></p>
+<p><strong>4 clases · 13 horas ·
+16 conceptos · 9 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-02.html">Parte 02 — Modelado conceptual y requisitos</a></li><li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>La primera salida del relacional, y se hace por la puerta correcta: no por la moda, sino por una idea con nombre propio. El agregado es el conjunto de datos que se lee, se escribe y se mantiene consistente como una unidad, y en los motores documentales la frontera transaccional coincide con él. Diseñar el agregado es, por tanto, decidir dónde termina la garantía del motor y empieza el trabajo de tu aplicación.</p>
+<p>Las cuatro clases desarrollan esa idea. La primera la establece. La segunda la aplica a la decisión central del modelado documental —incrustar o referenciar— con sus dos criterios: si el dato se lee siempre junto, y si puede crecer sin techo. La tercera enseña a consultar e indexar lo modelado, con la regla que más rendimiento decide en una canalización de agregación. La cuarta trata el clave- valor y la caché diciendo con precisión qué se pierde: la consulta por contenido, la integridad declarada y, según la configuración, parte de la durabilidad.</p>
+<p>Nada aquí sugiere abandonar el relacional. Sugiere saber qué se está comprando y con qué moneda se paga.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Identificar los agregados de un dominio y justificar dónde se pone la frontera transaccional.</li>
+<li>Decidir entre incrustar y referenciar con criterios de patrón de lectura y crecimiento acotado.</li>
+<li>Diseñar índices y canalizaciones de agregación que usen el índice en lugar de recorrer la colección.</li>
+<li>Declarar la política de caché —TTL, invalidación y durabilidad— en términos de pérdida aceptable.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -61,6 +81,84 @@
 <tr><td><a href="036.html">036</a></td><td><a href="036.html">Consultas, índices y agregación sobre documentos</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 <tr><td><a href="037.html">037</a></td><td><a href="037.html">Clave-valor, caché y expiración: qué se pierde exactamente</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="034.html">034 — El agregado como unidad de consistencia</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="019.html">019</a>, <a href="023.html">023</a></p>
+    <p>El agregado como unidad de lectura, escritura y consistencia, y la consecuencia que ordena toda la parte: en los motores documentales la frontera transaccional coincide con el agregado. Diseñar el agregado es, por tanto, decidir dónde termina la garantía del motor y empieza el trabajo de la aplicación.</p>
+    <p><span class="tag">agregado</span> <span class="tag">frontera transaccional</span> <span class="tag">entidad</span> <span class="tag">actividad</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="035.html">035 — Modelado documental: incrustar o referenciar</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      3 fuentes · requiere <a href="034.html">034</a></p>
+    <p>La decisión central del modelado documental —incrustar o referenciar— con sus dos criterios: si el dato se lee siempre junto y si puede crecer sin techo. Presenta el crecimiento no acotado como el fallo característico del modelo documental y los patrones de extensión que lo evitan.</p>
+    <p><span class="tag">incrustación</span> <span class="tag">referencia</span> <span class="tag">crecimiento no acotado</span> <span class="tag">patrón de extensión</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="036.html">036 — Consultas, índices y agregación sobre documentos</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="035.html">035</a></p>
+    <p>Cómo se consulta e indexa lo que se modeló en la clase anterior: índices compuestos y multiclave, cobertura, y la canalización de agregación con la regla que más rendimiento decide —poner `$match` al principio para que el índice sirva, no después.</p>
+    <p><span class="tag">índice compuesto</span> <span class="tag">canalización de agregación</span> <span class="tag">índice multiclave</span> <span class="tag">cobertura</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="037.html">037 — Clave-valor, caché y expiración: qué se pierde exactamente</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="034.html">034</a></p>
+    <p>Qué se gana y qué se pierde exactamente al poner una caché delante. Trata el TTL como política de retención, la invalidación como el problema difícil que es, la estampida como fallo predecible, y la durabilidad configurable de Redis como una decisión de negocio que hay que escribir en segundos de pérdida aceptable.</p>
+    <p><span class="tag">TTL</span> <span class="tag">invalidación</span> <span class="tag">estampida de caché</span> <span class="tag">durabilidad configurable</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«En documentales no hay esquema.» Hay esquema; lo que no hay es quien lo imponga. Se traslada de la base a la aplicación, donde nadie lo comprueba en cada escritura.</li>
+<li>«Incrustar es más rápido siempre.» Hasta que el arreglo incrustado crece sin techo y cada lectura arrastra megabytes que nadie pidió.</li>
+<li>«Redis es una base de datos.» Puede serlo con la configuración adecuada, pero por defecto es una caché: si no declaraste la durabilidad, aceptaste perder datos.</li>
+<li>«El `$lookup` es como un `JOIN`.» Existe, pero no está optimizado como una reunión relacional; si tu modelo lo necesita en cada consulta, el modelo probablemente era relacional.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 16 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#actividad"><strong>actividad</strong></a></td><td>Hecho que ocurre en un instante y relaciona entidades: un pedido, un pago, una inscripción. Su volumen crece sin límite con el tiempo, lo que la convierte en la candidata natural a tabla de hechos o a flujo de eventos, y en la mala candidata a incrustarse dentro de una entidad.</td><td><a href="034.html">034</a></td></tr>
+<tr><td><a href="../glosario.html#agregado"><strong>agregado</strong></a></td><td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.)</td><td><a href="034.html">034</a></td></tr>
+<tr><td><a href="../glosario.html#canalización-de-agregación"><strong>canalización de agregación</strong></a></td><td>Secuencia de etapas (`$match`, `$group`, `$sort`, `$lookup`) por las que pasan los documentos en MongoDB. El orden importa de verdad: poner `$match` al principio permite usar el índice, ponerlo después obliga a recorrer la colección entera.</td><td><a href="036.html">036</a></td></tr>
+<tr><td><a href="../glosario.html#cobertura"><strong>cobertura</strong></a></td><td>Que el índice contenga todas las columnas que la consulta necesita, de modo que el motor responda sin tocar la tabla. Es la diferencia entre una lectura y dos, y suele ser la optimización con mejor relación entre esfuerzo y resultado.</td><td><a href="036.html">036</a></td></tr>
+<tr><td><a href="../glosario.html#crecimiento-no-acotado"><strong>crecimiento no acotado</strong></a></td><td>Un arreglo incrustado que puede crecer indefinidamente —los comentarios de una publicación viral, el histórico de un sensor—. Acaba chocando con el límite de tamaño del documento y degrada cada lectura, aunque solo se quería un campo. Es la señal de que ese arreglo debía ser una colección aparte.</td><td><a href="035.html">035</a></td></tr>
+<tr><td><a href="../glosario.html#durabilidad-configurable"><strong>durabilidad configurable</strong></a></td><td>Poder elegir cuánta pérdida se acepta a cambio de latencia: Redis ofrece desde ninguna persistencia hasta `appendfsync always`, pasando por instantáneas periódicas. La decisión es de negocio, y hay que escribirla: «se pueden perder hasta N segundos de escrituras».</td><td><a href="037.html">037</a></td></tr>
+<tr><td><a href="../glosario.html#entidad"><strong>entidad</strong></a></td><td>Cosa del dominio con identidad propia que persiste a lo largo del tiempo: un cliente, un producto, una cuenta. Se distingue de la actividad en que existe aunque no pase nada, y suele ser la raíz de un agregado.</td><td><a href="034.html">034</a></td></tr>
+<tr><td><a href="../glosario.html#estampida-de-caché"><strong>estampida de caché</strong></a></td><td>Cuando una clave muy consultada expira y miles de peticiones van a la vez a la base de datos a recalcularla. Se mitiga con expiraciones escalonadas, recálculo anticipado o un cerrojo que deja pasar a uno solo.</td><td><a href="037.html">037</a></td></tr>
+<tr><td><a href="../glosario.html#frontera-transaccional"><strong>frontera transaccional</strong></a></td><td>El límite dentro del cual el motor garantiza atomicidad y aislamiento. En los motores de agregado coincide con el agregado: una escritura sobre un documento es atómica, dos sobre documentos distintos ya no. Diseñar el agregado es, por tanto, diseñar dónde termina la garantía.</td><td><a href="034.html">034</a></td></tr>
+<tr><td><a href="../glosario.html#incrustación"><strong>incrustación</strong></a></td><td>Guardar los datos relacionados dentro del propio documento. Una sola lectura devuelve todo y la escritura es atómica, a cambio de duplicar el dato si otro documento también lo necesita y de arriesgar un documento que crece sin techo.</td><td><a href="035.html">035</a></td></tr>
+<tr><td><a href="../glosario.html#invalidación"><strong>invalidación</strong></a></td><td>Borrar o marcar como obsoleta una entrada de caché cuando cambia el dato de origen. Es el problema difícil de las cachés porque exige que quien escribe en la base sepa qué claves quedaron mentirosas —y normalmente no lo sabe.</td><td><a href="037.html">037</a></td></tr>
+<tr><td><a href="../glosario.html#patrón-de-extensión"><strong>patrón de extensión</strong></a></td><td>Familia de soluciones para el crecimiento no acotado: partir el arreglo en cubos de tamaño fijo, guardar solo los N últimos elementos incrustados y el resto en otra colección, o separar los campos grandes en un documento satélite.</td><td><a href="035.html">035</a></td></tr>
+<tr><td><a href="../glosario.html#referencia"><strong>referencia</strong></a></td><td>Guardar el identificador del documento relacionado en lugar de su contenido. Evita la duplicación y el crecimiento no acotado, a cambio de una segunda consulta —o de un `$lookup`— que el motor no optimiza como un `JOIN` relacional.</td><td><a href="035.html">035</a></td></tr>
+<tr><td><a href="../glosario.html#ttl"><strong>TTL</strong></a></td><td>Tiempo de vida tras el cual la clave expira y desaparece. Es la política de retención más simple que existe y la que convierte a una caché en caché: sin TTL, un almacén clave-valor es solo una base de datos en memoria que crece hasta llenarla.</td><td><a href="037.html">037</a></td></tr>
+<tr><td><a href="../glosario.html#índice-compuesto"><strong>índice compuesto</strong></a></td><td>Índice sobre varias claves en un orden concreto. Sirve para las consultas que filtran por un prefijo de esa lista, no para cualquier subconjunto: `(a, b, c)` acelera filtrar por `a` o por `a, b`, pero no por `b` a secas.</td><td><a href="036.html">036</a></td></tr>
+<tr><td><a href="../glosario.html#índice-multiclave"><strong>índice multiclave</strong></a></td><td>Índice sobre un campo que contiene un arreglo: MongoDB crea una entrada por elemento. Permite buscar dentro del arreglo, y explica por qué el índice de una colección puede tener muchas más entradas que documentos.</td><td><a href="036.html">036</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>9 obras distintas sostienen lo que se afirma en estas
+4 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 034, 037</span></li>
+<li><a href="../fuentes.html#src-helland-life-beyond-2007">Life beyond Distributed Transactions: An Apostate's Opinion</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 034</span></li>
+<li><a href="../fuentes.html#src-docs-mongodb">MongoDB Manual</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 036</span></li>
+<li><a href="../fuentes.html#src-docs-mongodb-modeling">MongoDB: Data Modeling</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 035</span></li>
+<li><a href="../fuentes.html#src-mongodb-definitive-3ed">MongoDB: The Definitive Guide</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 035, 036</span></li>
+<li><a href="../fuentes.html#src-sadalage-fowler-nosql">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 034, 035</span></li>
+<li><a href="../fuentes.html#src-docs-redis">Redis Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 037</span></li>
+<li><a href="../fuentes.html#src-docs-redis-persistence">Redis: Persistence</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 037</span></li>
+<li><a href="../fuentes.html#src-winand-sql-performance">SQL Performance Explained</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 036</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

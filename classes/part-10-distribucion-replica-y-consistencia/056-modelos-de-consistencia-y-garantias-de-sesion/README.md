@@ -12,6 +12,10 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El espectro entre linealizabilidad y consistencia eventual, con las garantías de sesión —leer tu propia escritura, lectura monótona— que resuelven en la práctica la mayoría de los síntomas visibles. Insiste en que la consistencia eventual solo converge si existe una regla determinista de resolución de conflictos.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 056"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [055](../../part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md) | CAP, PACELC y lo que realmente se elige | partición de red · disponibilidad · latencia frente a consistencia |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-linealizabilidad"></a>**linealizabilidad** | La garantía más fuerte para un objeto: el sistema se comporta como si hubiera una sola copia y cada operación ocurriera en un instante entre su inicio y su fin. Es cara porque exige coordinación, y casi ninguna aplicación la necesita para todo. | se introduce aquí |
+| <a id="v-consistencia-causal"></a>**consistencia causal** | Si un evento pudo influir en otro, todos los observadores los ven en ese orden; los eventos sin relación causal pueden verse en cualquier orden. Es el punto dulce entre lo débil y lo caro: evita el efecto «respuesta antes que la pregunta» sin exigir coordinación global. | se introduce aquí |
+| <a id="v-lectura-monotona"></a>**lectura monotona** | Garantía de sesión que impide retroceder en el tiempo: si ya viste un valor, no volverás a ver uno anterior. Sin ella, alternar entre réplicas con distinto retraso hace que un dato aparezca y desaparezca al recargar. | se introduce aquí |
+| <a id="v-convergencia"></a>**convergencia** | Que las réplicas acaben en el mismo estado si cesan las escrituras. Es la promesa de la consistencia eventual, y solo se cumple si hay una regla determinista de resolución de conflictos, como la que dan los CRDT. | se introduce aquí |
 
 ---
 

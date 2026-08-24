@@ -12,6 +12,10 @@ Parte 13 — Vectores, recuperación y RAG · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué lo léxico y lo vectorial se combinan en lugar de competir: uno acierta con el término exacto, el otro con el significado. La fusión recíproca de rangos los une sin exigir que sus puntuaciones sean comparables, y el filtrado por metadatos plantea la decisión entre filtro previo y posterior, cada uno con su fallo característico.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 070"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [041](../../part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md) | Búsqueda de texto: índice invertido, análisis y relevancia | índice invertido · analizador · TF-IDF · BM25 · precisión y exhaustividad |
+| [069](../../part-13-vectores-recuperacion-y-rag/069-indices-vectoriales-aproximados/README.md) | Índices vectoriales aproximados: HNSW, IVF y el recall | búsqueda aproximada · recall · HNSW · cuantización · latencia frente a exactitud |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-bm25"></a>**BM25** | Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros `k1` y `b`. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales. | se introdujo en la [041](../../part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md) |
+| <a id="v-fusión-de-rangos"></a>**fusión de rangos** | Combinar dos listas ordenadas —la léxica y la vectorial— en una sola. La fusión recíproca de rangos suma el inverso de la posición en cada lista, y funciona bien precisamente porque no exige que las puntuaciones de ambos sistemas sean comparables entre sí. | se introduce aquí |
+| <a id="v-filtro-previo"></a>**filtro previo** | Aplicar el filtro de metadatos antes de la búsqueda vectorial, de modo que solo se exploren los candidatos admisibles. Conserva el número de resultados pedido, pero puede degradar la navegación del grafo si el filtro es muy selectivo. | se introduce aquí |
+| <a id="v-filtro-posterior"></a>**filtro posterior** | Buscar primero y filtrar después. Es simple y tiene un fallo característico: si de los K vecinos ninguno cumple el filtro, la respuesta llega vacía aunque existieran resultados válidos algo más lejos. | se introduce aquí |
 
 ---
 

@@ -12,6 +12,10 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los dos motores embebidos del programa y por qué no compiten entre sí: SQLite es transaccional y por filas, DuckDB es analítico, columnar y vectorizado. La comparación deja ver, con la menor cantidad posible de ruido operativo, cómo el formato de almacenamiento decide el perfil de rendimiento.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 033"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [009](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) | Cuándo NO necesitas una base de datos | criterio de decisión · motor embebido · costo de operación · alternativas |
+| [031](../../part-05-motores-relacionales-y-dialectos/031-postgresql-tipos-extensiones-y-procesos/README.md) | PostgreSQL: tipos, extensiones y modelo de procesos | extensión · tipo compuesto · proceso por conexión · autovacuum |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-motor-embebido"></a>**motor embebido** | Base de datos que corre dentro del proceso de la aplicación, sin servidor ni puerto: SQLite, DuckDB. Elimina el costo de operación y la latencia de red, a cambio de no poder servir a varias máquinas. | se introdujo en la [009](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) |
+| <a id="v-tipado-dinamico"></a>**tipado dinamico** | En SQLite el tipo pertenece al valor, no a la columna: la declaración es una sugerencia (afinidad) y no una barrera. Cómodo para prototipar, peligroso para datos que otro sistema leerá; desde la versión 3.37 existen las tablas `STRICT` para recuperar el rigor. | se introduce aquí |
+| <a id="v-almacenamiento-columnar"></a>**almacenamiento columnar** | Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí. | se introduce aquí |
+| <a id="v-vectorización"></a>**vectorización** | Procesar lotes de miles de valores por llamada en lugar de una fila cada vez. Amortiza el costo de interpretación del plan y aprovecha las instrucciones SIMD del procesador; es la segunda mitad —junto al formato columnar— de la ventaja analítica de DuckDB o ClickHouse. | se introduce aquí |
 
 ---
 

@@ -12,6 +12,10 @@ Parte 12 — Analítica, integración y streaming · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El modelo dimensional de Kimball, con el grano como primera decisión y la que no se corrige después sin rehacerlo todo. Trata las dimensiones de cambio lento como lo que realmente deciden: si el informe del año pasado sigue diciendo lo que decía entonces.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 065"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [018](../../part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/README.md) | Normalización de 1FN a BCFN con dependencias funcionales | dependencia funcional · anomalía de actualización · BCFN · descomposición sin pérdida |
+| [064](../../part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md) | OLTP frente a OLAP: por qué se separan | carga transaccional · carga analítica · contención · formato de almacenamiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-tabla-de-hechos"></a>**tabla de hechos** | Tabla central del modelo dimensional: una fila por evento medible, con sus métricas numéricas y sus claves a las dimensiones. Crece indefinidamente y se consulta siempre agregando. | se introduce aquí |
+| <a id="v-dimensión"></a>**dimensión** | Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.) | se introduce aquí |
+| <a id="v-grano"></a>**grano** | Qué representa exactamente una fila de la tabla de hechos: ¿una venta, una línea de venta, un resumen diario? Es la primera decisión del modelo dimensional y la que no se puede corregir después sin rehacerlo todo. | se introduce aquí |
+| <a id="v-dimensión-de-cambio-lento"></a>**dimensión de cambio lento** | Técnica para tratar los atributos que cambian con el tiempo: sobrescribir y perder la historia (tipo 1), o añadir una fila nueva con vigencia y conservarla (tipo 2). Determina si un informe del año pasado sigue diciendo lo que decía entonces. | se introduce aquí |
 
 ---
 

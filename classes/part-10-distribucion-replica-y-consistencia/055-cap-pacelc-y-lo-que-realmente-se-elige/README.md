@@ -12,6 +12,10 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+CAP dicho con precisión y despojado de la versión de póster. La disponibilidad del teorema es mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas. PACELC añade lo que CAP calla: el compromiso entre latencia y consistencia existe también los días en que no hay avería.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 055"]
@@ -21,6 +25,30 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [053](../../part-10-distribucion-replica-y-consistencia/053-replica-lider-unico-multilider-y-sin-lider/README.md) | Réplica: líder único, multilíder y sin líder | replicación sincrónica · retraso de réplica · quórum · lectura de tu propia escritura |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-partición-de-red"></a>**partición de red** | Situación en la que dos grupos de nodos siguen vivos pero no pueden comunicarse. No es un fallo hipotético: es lo que ocurre con un cable, un cortafuegos mal aplicado o una latencia lo bastante alta como para que los tiempos de espera venzan. | se introduce aquí |
+| <a id="v-disponibilidad"></a>**disponibilidad** | En el enunciado formal de CAP, que toda petición a un nodo no caído reciba respuesta. Es una definición mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas del teorema. | se introduce aquí |
+| <a id="v-latencia-frente-a-consistencia"></a>**latencia frente a consistencia** | La mitad de PACELC que CAP ignora: incluso sin particiones hay que elegir entre responder rápido desde una réplica cercana o esperar la coordinación que garantiza el dato más reciente. Es el compromiso que se paga todos los días, no solo el día de la avería. | se introduce aquí |
 
 ---
 

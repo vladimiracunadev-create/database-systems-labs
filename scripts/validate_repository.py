@@ -1,13 +1,15 @@
 """Validacion estructural del repositorio.
 
-La regla que este script existe para hacer cumplir es una sola:
+Las dos reglas que este script existe para hacer cumplir son:
 
     NINGUNA CLASE SE PUBLICA SIN FUENTES, Y NINGUNA CITA APUNTA AL VACIO.
+    NINGUN CONCEPTO SE USA SIN ESTAR DEFINIDO EN EL GLOSARIO.
 
-Alrededor de ella se comprueba todo lo que puede desincronizarse en silencio:
-el curriculo frente a las carpetas, las lecciones frente a su estructura
-minima, los motores citados frente al catalogo, los enlaces relativos y la
-integridad del conjunto de datos de referencia.
+Alrededor de ellas se comprueba todo lo que puede desincronizarse en silencio:
+el curriculo frente a las carpetas, la pauta pedagogica frente al curriculo,
+las lecciones frente a su estructura minima, los motores citados frente al
+catalogo, los enlaces relativos y la integridad del conjunto de datos de
+referencia.
 
 Se ejecuta en cada `push` y es lo que decide si `main` esta en verde.
 
@@ -36,9 +38,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 ARCHIVOS_OBLIGATORIOS = [
     "README.md", "LICENSE", "PROMPT_MAESTRO.md", "curriculum.yaml",
-    "catalog/databases.json", "catalog/sources.json",
-    "classes/README.md",
+    "catalog/databases.json", "catalog/sources.json", "catalog/glosario.json",
+    "classes/README.md", "GLOSARIO.md",
     "docs/ARCHITECTURE.md", "docs/LEARNING-MODEL.md", "docs/SOURCES.md",
+    "docs/GUIA-DE-ESTUDIO.md",
     "labs/01-sql-foundations/run_lab.py",
     "labs/03-transactions/run_transactions_lab.py",
     "labs/04-indexing/run_indexing_lab.py",
@@ -110,7 +113,8 @@ def cargar():
     curriculo = yaml.safe_load((ROOT / "curriculum.yaml").read_text(encoding="utf-8"))
     fuentes = json.loads((ROOT / "catalog" / "sources.json").read_text(encoding="utf-8"))
     motores = json.loads((ROOT / "catalog" / "databases.json").read_text(encoding="utf-8"))
-    return curriculo, fuentes, motores
+    glosario = json.loads((ROOT / "catalog" / "glosario.json").read_text(encoding="utf-8"))
+    return curriculo, fuentes, motores, glosario
 
 
 def validar_archivos() -> None:
@@ -519,6 +523,112 @@ def validar_clases(curriculo: dict) -> None:
                 fallo(f"clase {clase['id']}: la leccion no incluye ningun bloque de codigo")
 
 
+MINIMO_CARACTERES_DEFINICION = 80
+MINIMO_CARACTERES_RESUMEN = 120
+MINIMO_PARRAFOS_INTRODUCCION = 2
+MINIMO_RESULTADOS_POR_PARTE = 3
+MINIMO_ERRORES_POR_PARTE = 3
+
+
+def validar_glosario(curriculo: dict, glosario: dict, fuentes: dict) -> int:
+    """El glosario y el curriculo tienen que cubrirse el uno al otro, exactamente.
+
+    Un concepto sin definicion deja al lector deduciendo del contexto, que es
+    justo lo que este programa dice no hacer. Una definicion sin concepto es
+    peso muerto que envejece sin que nadie la revise. Las dos son error.
+    """
+    ids_fuente = {f["id"] for f in fuentes["sources"]}
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    conceptos = {c for p in curriculo["parts"] for cl in p["classes"] for c in cl["concepts"]}
+
+    terminos: dict[str, dict] = {}
+    for entrada in glosario["terms"]:
+        nombre = entrada["termino"]
+        if nombre in terminos:
+            fallo(f"glosario: termino duplicado {nombre!r}")
+        terminos[nombre] = entrada
+
+        if len(entrada["definicion"]) < MINIMO_CARACTERES_DEFINICION:
+            fallo(f"glosario: {nombre!r} tiene una definicion de "
+                  f"{len(entrada['definicion'])} caracteres; el minimo es "
+                  f"{MINIMO_CARACTERES_DEFINICION}")
+        if entrada["fuente"] not in ids_fuente:
+            fallo(f"glosario: {nombre!r} cita la fuente inexistente {entrada['fuente']!r}")
+        if entrada["clase"] not in ids_clase:
+            fallo(f"glosario: {nombre!r} apunta a la clase inexistente {entrada['clase']!r}")
+
+    for concepto in sorted(conceptos - set(terminos)):
+        fallo(f"concepto sin entrada en catalog/glosario.json: {concepto!r}")
+    for sobrante in sorted(set(terminos) - conceptos):
+        fallo(f"glosario: {sobrante!r} no lo declara ninguna clase de curriculum.yaml")
+
+    for nombre, entrada in terminos.items():
+        for relacionado in entrada["ver_tambien"]:
+            if relacionado not in terminos:
+                fallo(f"glosario: {nombre!r} remite a {relacionado!r}, que no existe")
+            if relacionado == nombre:
+                fallo(f"glosario: {nombre!r} se remite a si mismo")
+
+    # El termino debe estar definido en una clase que realmente lo declare.
+    declarado_en: dict[str, set[str]] = {}
+    for parte in curriculo["parts"]:
+        for clase in parte["classes"]:
+            for concepto in clase["concepts"]:
+                declarado_en.setdefault(concepto, set()).add(clase["id"])
+    for nombre, entrada in terminos.items():
+        if nombre in declarado_en and entrada["clase"] not in declarado_en[nombre]:
+            fallo(f"glosario: {nombre!r} dice introducirse en la clase "
+                  f"{entrada['clase']}, que no lo declara entre sus conceptos")
+
+    return len(terminos)
+
+
+def validar_pauta(curriculo: dict) -> None:
+    """Cada clase explicada y cada parte presentada, sin excepciones.
+
+    Estas claves alimentan la portada de la parte y el indice general. Si una
+    falta, la pagina se genera con un hueco silencioso, que es exactamente el
+    problema que la pauta vino a resolver.
+    """
+    ids_parte = {p["id"] for p in curriculo["parts"]}
+    ids_clase = {c["id"] for p in curriculo["parts"] for c in p["classes"]}
+    orden = [c["id"] for p in curriculo["parts"] for c in p["classes"]]
+    posicion = {cid: i for i, cid in enumerate(orden)}
+
+    for parte in curriculo["parts"]:
+        pid = parte["id"]
+        introduccion = parte.get("introduccion") or []
+        if len(introduccion) < MINIMO_PARRAFOS_INTRODUCCION:
+            fallo(f"parte {pid}: introduccion de {len(introduccion)} parrafos; "
+                  f"el minimo es {MINIMO_PARRAFOS_INTRODUCCION}")
+        if len(parte.get("resultados") or []) < MINIMO_RESULTADOS_POR_PARTE:
+            fallo(f"parte {pid}: menos de {MINIMO_RESULTADOS_POR_PARTE} resultados "
+                  f"de aprendizaje declarados")
+        if len(parte.get("errores") or []) < MINIMO_ERRORES_POR_PARTE:
+            fallo(f"parte {pid}: menos de {MINIMO_ERRORES_POR_PARTE} errores "
+                  f"frecuentes declarados")
+        for previa in parte.get("prerrequisitos") or []:
+            if previa not in ids_parte:
+                fallo(f"parte {pid}: prerrequisito inexistente {previa!r}")
+            elif previa >= pid:
+                fallo(f"parte {pid}: el prerrequisito {previa!r} no es anterior")
+
+        for clase in parte["classes"]:
+            cid = clase["id"]
+            resumen = clase.get("resumen") or ""
+            if len(resumen) < MINIMO_CARACTERES_RESUMEN:
+                fallo(f"clase {cid}: resumen de {len(resumen)} caracteres; el minimo "
+                      f"es {MINIMO_CARACTERES_RESUMEN}")
+            if "prerrequisitos" not in clase:
+                fallo(f"clase {cid}: no declara prerrequisitos (usa [] si no tiene)")
+            for previa in clase.get("prerrequisitos") or []:
+                if previa not in ids_clase:
+                    fallo(f"clase {cid}: prerrequisito inexistente {previa!r}")
+                elif posicion[previa] >= posicion[cid]:
+                    fallo(f"clase {cid}: el prerrequisito {previa!r} no la precede; "
+                          f"un prerrequisito posterior es una dependencia circular")
+
+
 def validar_catalogo_motores(motores: dict) -> None:
     sistemas = motores["systems"]
     ids = [s["id"] for s in sistemas]
@@ -621,9 +731,11 @@ def main() -> int:
         _informe(args.verbose)
         return 1
 
-    curriculo, fuentes, motores = cargar()
+    curriculo, fuentes, motores, glosario = cargar()
     validar_fuentes(fuentes)
     validar_catalogo_motores(motores)
+    terminos = validar_glosario(curriculo, fuentes=fuentes, glosario=glosario)
+    validar_pauta(curriculo)
     citadas_labs = validar_laboratorios(curriculo, fuentes)
     citadas_rutas = validar_rutas(curriculo, fuentes)
     citadas_certs = validar_certificaciones(curriculo, fuentes)
@@ -644,9 +756,9 @@ def main() -> int:
     horas = sum(c["hours"] for p in curriculo["parts"] for c in p["classes"])
     implementaciones = sum(len(c.aplicables) for c in ml.todas(ROOT))
     print(f"REPOSITORY_OK  {len(curriculo['parts'])} partes · {total} clases · "
-          f"{horas} horas · {len(fuentes['sources'])} fuentes · "
-          f"{len(motores['systems'])} motores · {comparadas} clases comparadas "
-          f"con {implementaciones} implementaciones")
+          f"{horas} horas · {len(fuentes['sources'])} fuentes · {terminos} terminos "
+          f"de glosario · {len(motores['systems'])} motores · {comparadas} clases "
+          f"comparadas con {implementaciones} implementaciones")
     return 0
 
 

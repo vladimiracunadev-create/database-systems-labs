@@ -12,6 +12,10 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las series temporales y sus tres restricciones propias: la cardinalidad de etiquetas, que explota si se usa un identificador como etiqueta; la retención, que hay que decidir antes de acumular; y el submuestreo con agregados continuos, que es cómo se sostiene un histórico largo sin crecimiento lineal.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 040"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [006](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/README.md) | Tipos de datos: por qué un número no es un texto | tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos |
+| [019](../../part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md) | Desnormalización deliberada y patrones de acceso | redundancia controlada · costo de escritura · agregado · patrón de lectura |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-cardinalidad-de-etiquetas"></a>**cardinalidad de etiquetas** | Número de combinaciones distintas de etiquetas en una base de series temporales; cada combinación es una serie con su índice y su memoria. Meter un identificador de usuario o de petición como etiqueta produce una explosión de cardinalidad que tumba el motor. | se introduce aquí |
+| <a id="v-submuestreo"></a>**submuestreo** | Reducir la resolución de los datos antiguos: guardar cada segundo la última hora, cada minuto la última semana, cada hora el último año. Es cómo se sostiene un histórico largo sin que el tamaño crezca de forma lineal para siempre. | se introduce aquí |
+| <a id="v-retención"></a>**retención** | Cuánto tiempo se conservan los datos antes de borrarlos automáticamente. En series temporales es una decisión de capacidad; en datos personales es además una obligación legal, y las dos deben coincidir en la misma política escrita. | se introduce aquí |
+| <a id="v-agregado-continuo"></a>**agregado continuo** | Vista materializada que se actualiza de forma incremental según llegan datos nuevos, típicamente con medias u otros resúmenes por intervalo. Permite responder «el promedio por hora del último año» sin recorrer mil millones de puntos en cada consulta. | se introduce aquí |
 
 ---
 

@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>familias de motores</code> · <code>modelo de agregado</code> · <code>patrón de acceso</code> · <code>multimodelo</code></p>
 <p><strong>En este caso se comparan 9 motores</strong>: 8 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El mapa que se usará durante todo el programa: seis familias de motores, qué patrón de acceso optimiza cada una y qué paga a cambio. Cierra la rampa de entrada con un criterio de elección en lugar de una lista de nombres de producto.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 010&quot;]
     C --&gt; K1[&quot;familias de motores&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="009.html">009</a></td>
+<td>Cuándo NO necesitas una base de datos</td>
+<td>criterio de decisión · motor embebido · costo de operación · alternativas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-familias-de-motores"></a><strong>familias de motores</strong></td>
+<td>Las formas de organizar datos que estructuran este programa: relacional, documental, clave-valor, grafo, columnas anchas y series temporales, más los índices de búsqueda y los vectoriales como casos especializados. Cada familia optimiza un patrón de acceso y paga en los demás.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-modelo-de-agregado"></a><strong>modelo de agregado</strong></td>
+<td>Cómo agrupa el motor los datos que lee y escribe de una vez. El relacional trabaja con filas que se recomponen por reunión; los motores de agregado guardan la unidad completa junta y evitan la reunión, a cambio de duplicar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-patrón-de-acceso"></a><strong>patrón de acceso</strong></td>
+<td>La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-multimodelo"></a><strong>multimodelo</strong></td>
+<td>Motor que soporta varias familias a la vez —PostgreSQL con JSONB, vectores y búsqueda de texto—. Reduce el número de sistemas que hay que operar; el riesgo es dar por hecho que hacer varias cosas equivale a hacerlas todas bien.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Poner orden en los nombres. Antes de estudiar cada familia de motores conviene

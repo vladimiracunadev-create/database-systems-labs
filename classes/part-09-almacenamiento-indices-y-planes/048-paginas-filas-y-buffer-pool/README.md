@@ -12,6 +12,10 @@ Parte 09 — Almacenamiento, índices y planes · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué la entrada y salida manda: el motor no lee filas, lee páginas. De ahí salen el factor de bloque, la localidad y la ventaja de la lectura secuencial, que explica por qué a veces recorrer la tabla entera le gana a usar el índice —y por qué el planificador lo elige a propósito.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 048"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [012](../../part-01-fundamentos-datos-sistemas-y-metodo/012-arquitectura-interna-de-un-gestor/README.md) | Arquitectura interna de un gestor, del cliente al disco | analizador · planificador · ejecutor · gestor de almacenamiento · buffer pool |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-pagina"></a>**pagina** | La unidad mínima de lectura y escritura en disco, típicamente de 4 a 16 KB. El motor nunca lee «una fila»: lee la página que la contiene, y de ahí que quepan más filas por página sea una optimización real. | se introduce aquí |
+| <a id="v-factor-de-bloque"></a>**factor de bloque** | Cuántas filas caben en una página. Depende del ancho de la fila, así que columnas anchas que nadie consulta encarecen todas las lecturas de esa tabla, incluidas las que no las piden. | se introduce aquí |
+| <a id="v-buffer-pool"></a>**buffer pool** | La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms. | se introdujo en la [012](../../part-01-fundamentos-datos-sistemas-y-metodo/012-arquitectura-interna-de-un-gestor/README.md) |
+| <a id="v-localidad"></a>**localidad** | Que los datos que se usan juntos estén guardados juntos. Es la propiedad que convierte muchas lecturas lógicas en pocas lecturas físicas, y el motivo por el que el orden físico de una tabla —y la clave de agrupamiento— importa tanto. | se introduce aquí |
+| <a id="v-lectura-secuencial"></a>**lectura secuencial** | Leer páginas contiguas, que es órdenes de magnitud más barato por fila que saltar de una a otra. Por eso un recorrido completo puede ganarle a un índice cuando la consulta devuelve una fracción grande de la tabla. | se introduce aquí |
 
 ---
 

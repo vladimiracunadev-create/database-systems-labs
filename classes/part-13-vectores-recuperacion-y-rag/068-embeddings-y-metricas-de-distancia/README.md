@@ -12,6 +12,10 @@ Parte 13 — Vectores, recuperación y RAG · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Qué significa «parecido» cuando lo decide un modelo. Presenta el espacio vectorial, las métricas de coseno y producto interno, y la normalización que las vuelve equivalentes. La advertencia que ordena toda la parte: el parecido es el que aprendió ese modelo concreto, así que cambiar de modelo cambia el significado de cerca.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 068"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [041](../../part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md) | Búsqueda de texto: índice invertido, análisis y relevancia | índice invertido · analizador · TF-IDF · BM25 · precisión y exhaustividad |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-espacio-vectorial"></a>**espacio vectorial** | Representación de un texto, una imagen o un usuario como un punto de N coordenadas, colocado por un modelo de forma que la cercanía refleje parecido semántico. El parecido es el que aprendió ese modelo concreto: cambiar de modelo cambia el significado de «cerca». | se introduce aquí |
+| <a id="v-coseno"></a>**coseno** | Medida de similitud basada en el ángulo entre dos vectores, que ignora su magnitud. Es la métrica habitual con embeddings de texto, donde importa la dirección del significado y no la longitud del documento. | se introduce aquí |
+| <a id="v-producto-interno"></a>**producto interno** | Métrica que sí tiene en cuenta la magnitud, útil cuando el modelo codifica intensidad en la norma del vector. Sobre vectores normalizados es equivalente al coseno, y de ahí que normalizar simplifique la elección. | se introduce aquí |
+| <a id="v-normalización"></a>**normalización** | Escalar cada vector a longitud 1. Hace equivalentes coseno y producto interno y permite usar el índice más rápido sin cambiar el orden de los resultados; es un paso rutinario que conviene declarar, porque mezclar vectores normalizados y sin normalizar arruina la búsqueda. | se introduce aquí |
+| <a id="v-dimensión"></a>**dimensión** | Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.) | se introdujo en la [065](../../part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md) |
 
 ---
 

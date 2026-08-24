@@ -460,10 +460,82 @@ parts:
       hasta llegar a dos tablas relacionadas. Termina con las dos preguntas que
       hay que saber contestar antes de seguir: cuándo NO hace falta una base de
       datos y qué familias de motores existen.
+    prerrequisitos: []
+    introduccion:
+      - >-
+          Esta parte existe porque el resto del programa da por sabidas cosas que casi nadie
+          aprendió de forma ordenada. Antes de discutir normalización, aislamiento o
+          consenso hay que poder decir sin dudar qué es un dato, qué es una fila, qué
+          garantiza una clave y por qué una hoja de cálculo deja de servir. Diez clases,
+          veinte horas, y ninguna teoría que no se pueda ejecutar en la misma sesión en que
+          se lee.
+      - >-
+          El recorrido tiene una forma deliberada. Las tres primeras clases construyen el
+          vocabulario y la primera base de datos real. Las tres siguientes enseñan a leer, a
+          cambiar datos sin destruirlos y a elegir tipos que no mientan. Las dos siguientes
+          introducen la identidad —la clave primaria— y la primera relación entre tablas,
+          que es donde aparecen por primera vez las anomalías que justifican toda la parte
+          02. Las dos últimas cierran con las dos preguntas de criterio que un profesional
+          debe saber contestar: cuándo NO hace falta una base de datos, y qué familias de
+          motores existen.
+      - >-
+          El motor de referencia es SQLite, porque no hay que instalar nada ni operar nada y
+          así el ruido no compite con el concepto. Aun así cada clase muestra el mismo
+          problema resuelto en varios motores, incluidos los que no lo resuelven y por qué,
+          para que la costumbre de comparar se instale desde el primer día.
+      - >-
+          Si ya sabes SQL y quieres ir más rápido, no te saltes las clases 006, 009 y 010:
+          tipos, criterio de decisión y mapa de familias son las tres que más se dan por
+          sabidas y menos se dominan.
+    resultados:
+      - >-
+          Explicar la diferencia entre dato, información, registro, campo y tabla con un
+          ejemplo propio.
+      - >-
+          Crear una base de datos, poblarla y consultarla desde cero sin copiar
+          instrucciones.
+      - >-
+          Cambiar datos comprobando antes el alcance y usando la transacción como red de
+          seguridad.
+      - >-
+          Elegir el tipo correcto para dinero, fechas e identificadores, y decir qué se
+          rompe con el tipo equivocado.
+      - >-
+          Declarar claves primarias y foráneas, y justificar la elección entre clave natural
+          y sustituta.
+      - >-
+          Argumentar cuándo un archivo o un motor embebido es la respuesta correcta y cuándo
+          no.
+    errores:
+      - >-
+          «Una tabla es una lista.» No: una tabla exige que todas las filas tengan la misma
+          forma. Una lista con filas de distinta estructura no se puede consultar sin saber
+          de antemano qué hay dentro.
+      - >-
+          «La clave primaria es un número autoincremental.» Ese es un mecanismo posible, no
+          la definición. La clave primaria es la clave candidata elegida por ser única, no
+          nula y estable.
+      - >-
+          «Guardo las fechas como texto porque así las veo bien.» El texto libre no se
+          compara ni se ordena de forma fiable. ISO-8601 ordena alfabéticamente igual que
+          cronológicamente, y esa es toda la discusión.
+      - >-
+          «Si usara una base de datos de verdad, esto iría más rápido.» Muchas veces no: un
+          CSV leído entero en memoria le gana a cualquier motor para volúmenes pequeños. La
+          base de datos se justifica por concurrencia, integridad y durabilidad antes que
+          por velocidad.
     classes:
       - id: "001"
         slug: que-es-un-dato-un-registro-y-una-tabla
         title: Qué es un dato, un registro y una tabla
+        resumen: >-
+          La clase que pone nombre a las tres piezas de las que se habla el resto del
+          programa. Separa el dato de la información que produce al interpretarlo, define el
+          registro como un hecho completo y la tabla como el conjunto de filas que comparten
+          forma. Casi todos los errores de diseño de las partes siguientes empiezan en una
+          confusión de este nivel: un campo que guarda dos hechos, un número guardado como
+          texto, una lista a la que se llama tabla.
+        prerrequisitos: []
         hours: 2
         level: fundamentos
         concepts: [dato, información, registro, campo, tabla]
@@ -473,6 +545,13 @@ parts:
       - id: "002"
         slug: del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos
         title: Del archivo y la hoja de cálculo a la base de datos
+        resumen: >-
+          Por qué llega un momento en que la hoja de cálculo deja de servir, expresado en
+          cuatro capacidades que un archivo no tiene: integridad declarada, concurrencia,
+          consulta declarativa y durabilidad. No es una clase contra las hojas de cálculo
+          —siguen siendo la herramienta correcta muchas veces— sino el primer criterio
+          explícito para saber de qué lado está tu problema.
+        prerrequisitos: ["001"]
         hours: 2
         level: fundamentos
         concepts: [integridad declarada, concurrencia, consulta declarativa, durabilidad]
@@ -482,6 +561,12 @@ parts:
       - id: "003"
         slug: tu-primera-base-de-datos
         title: "Tu primera base de datos: crear, insertar y leer"
+        resumen: >-
+          La primera base de datos real, creada, poblada y consultada en la misma sesión.
+          Introduce la separación entre definir estructuras y manipular contenido, y la
+          primera aparición del nulo. A partir de aquí todo el programa se puede ejecutar,
+          no solo leer.
+        prerrequisitos: ["001", "002"]
         hours: 2
         level: fundamentos
         concepts: [CREATE TABLE, INSERT, SELECT, definición frente a manipulación, "NULL"]
@@ -491,6 +576,12 @@ parts:
       - id: "004"
         slug: leer-datos-select-where-y-order-by
         title: "Leer datos: SELECT, WHERE y ORDER BY"
+        resumen: >-
+          Leer con precisión: filtrar filas, elegir columnas y ordenar el resultado. La idea
+          que más consecuencias tendrá después es que el resultado de una consulta no tiene
+          orden hasta que lo declaras, así que `LIMIT` sin `ORDER BY` devuelve filas
+          cualesquiera.
+        prerrequisitos: ["003"]
         hours: 2
         level: fundamentos
         concepts: [filtrado, proyección, orden, LIMIT, IS NULL]
@@ -500,6 +591,12 @@ parts:
       - id: "005"
         slug: cambiar-datos-insert-update-delete
         title: "Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva"
+        resumen: >-
+          Las tres órdenes que cambian datos y la disciplina que las hace seguras: comprobar
+          el alcance con un `SELECT` antes de escribir, leer el número de filas afectadas y
+          envolver el cambio en una transacción que se pueda deshacer. Es la clase que evita
+          el `UPDATE` sin `WHERE` que todo el mundo cuenta haber hecho una vez.
+        prerrequisitos: ["003", "004"]
         hours: 2
         level: fundamentos
         concepts: [UPDATE, DELETE, alcance del cambio, filas afectadas, transacción como red]
@@ -509,6 +606,13 @@ parts:
       - id: "006"
         slug: tipos-de-datos-un-numero-no-es-un-texto
         title: "Tipos de datos: por qué un número no es un texto"
+        resumen: >-
+          Por qué el tipo de una columna no es burocracia: decide qué comparaciones tienen
+          sentido, qué ordenaciones son correctas y si el dinero se calcula bien. Distingue
+          decimal exacto de coma flotante, fija el formato ISO-8601 para fechas y explica la
+          afinidad de tipos de SQLite, que es la razón de que un dato inválido entre en un
+          motor y sea rechazado en otro.
+        prerrequisitos: ["003"]
         hours: 2
         level: fundamentos
         concepts: [tipo, decimal exacto, coma flotante, fecha ISO-8601, afinidad de tipos]
@@ -518,6 +622,12 @@ parts:
       - id: "007"
         slug: la-clave-primaria
         title: "La clave primaria: cómo se distingue una fila de otra"
+        resumen: >-
+          Cómo se distingue una fila de otra. Presenta la clave primaria y el debate entre
+          clave natural y sustituta con su criterio real —cuál de las dos sobrevive a los
+          cambios del mundo— y la clave compuesta, que reaparecerá al hablar de índices y de
+          particionado.
+        prerrequisitos: ["003", "006"]
         hours: 2
         level: fundamentos
         concepts: [clave primaria, clave natural, clave sustituta, clave compuesta, UNIQUE]
@@ -527,6 +637,12 @@ parts:
       - id: "008"
         slug: dos-tablas-y-una-relacion
         title: "Dos tablas y una relación: la clave foránea"
+        resumen: >-
+          La segunda tabla y el momento en que aparece la relación. La clave foránea
+          convierte una convención en una regla que el motor impone, la tabla intermedia
+          resuelve el muchos-a-muchos y la reunión permite volver a ver el hecho completo.
+          Aquí se ven por primera vez las anomalías que justifican toda la parte 02.
+        prerrequisitos: ["007"]
         hours: 2
         level: fundamentos
         concepts: [clave foránea, tabla de relación, reunión, anomalías de repetición]
@@ -536,6 +652,12 @@ parts:
       - id: "009"
         slug: cuando-no-necesitas-una-base-de-datos
         title: Cuándo NO necesitas una base de datos
+        resumen: >-
+          La clase que da permiso para no usar una base de datos. Enumera los casos en que
+          un archivo, un Parquet o un motor embebido es la respuesta correcta, y pone precio
+          a la alternativa: el costo de operación de un motor servidor no aparece en la
+          factura de licencia sino en las guardias, los respaldos y las actualizaciones.
+        prerrequisitos: ["002", "008"]
         hours: 2
         level: fundamentos
         concepts: [criterio de decisión, motor embebido, costo de operación, alternativas]
@@ -545,6 +667,11 @@ parts:
       - id: "010"
         slug: el-mapa-de-los-motores
         title: "El mapa de los motores: seis familias y un criterio"
+        resumen: >-
+          El mapa que se usará durante todo el programa: seis familias de motores, qué
+          patrón de acceso optimiza cada una y qué paga a cambio. Cierra la rampa de entrada
+          con un criterio de elección en lugar de una lista de nombres de producto.
+        prerrequisitos: ["009"]
         hours: 2
         level: fundamentos
         concepts: [familias de motores, modelo de agregado, patrón de acceso, multimodelo]
@@ -558,10 +685,61 @@ parts:
     summary: >-
       Qué problema resuelve un gestor de bases de datos, qué hay dentro de él y
       cómo se monta un entorno donde cada afirmación pueda comprobarse.
+    prerrequisitos: ["00"]
+    introduccion:
+      - >-
+          La parte 00 mostró qué se hace con una base de datos. Esta pregunta por qué existe
+          y qué hay dentro. Es la transición de usuario a persona que puede razonar sobre el
+          sistema, y sin ella las partes 08 y 09 —transacciones y planes de ejecución— son
+          magia con nombres técnicos.
+      - >-
+          Las cuatro clases responden a cuatro preguntas encadenadas. Qué garantiza un
+          gestor y qué no, para no atribuirle poderes que no tiene. Qué componentes lo
+          forman, del analizador al gestor de almacenamiento, para saber después en cuál
+          vive cada problema. Por qué se separan tres niveles de esquema, que es la idea de
+          Codd de la que depende toda la evolución del esquema sin caída. Y cómo se monta un
+          entorno donde cada afirmación se pueda comprobar, que es el método de trabajo del
+          resto del programa.
+      - >-
+          La clase 014 no es un anexo técnico: es la que define qué cuenta como evidencia en
+          este programa. A partir de ella, ninguna afirmación de rendimiento se acepta sin
+          comando, versión, semilla y salida.
+    resultados:
+      - >-
+          Enumerar las garantías que aporta un gestor y nombrar al menos tres cosas que
+          explícitamente no resuelve.
+      - >-
+          Trazar el recorrido de una consulta desde el cliente hasta el disco nombrando cada
+          componente.
+      - >-
+          Distinguir esquema externo, conceptual y físico, y dar un ejemplo de cambio que
+          cada nivel absorbe.
+      - >-
+          Montar un entorno reproducible con versión fijada, datos con semilla y evidencia
+          repetible.
+    errores:
+      - >-
+          «El motor garantiza que mis datos sean correctos.» Solo garantiza lo que le
+          declaraste. Lo que no está en una restricción no está protegido.
+      - >-
+          «El motor ejecuta la consulta como la escribí.» Ejecuta el plan que su optimizador
+          estimó más barato; el orden del texto es casi irrelevante.
+      - >-
+          «Independencia de datos es que la aplicación no vea el motor.» No: es poder
+          cambiar cómo se guardan los datos sin reescribir lo que los consulta.
+      - >-
+          «Lo medí y va rápido.» Sin versión, datos y semilla declarados, eso no es una
+          medición, es una anécdota.
     classes:
       - id: "011"
         slug: que-resuelve-un-sistema-de-bases-de-datos
         title: Qué resuelve un sistema de bases de datos y qué no
+        resumen: >-
+          La misma pregunta de la clase 002, ahora con el vocabulario de sistemas: qué
+          garantiza un gestor —persistencia, concurrencia, integridad, recuperación— y, con
+          la misma seriedad, qué no garantiza. La independencia de datos aparece aquí como
+          la idea de Codd que ordena todo lo demás.
+        prerrequisitos: ["002", "010"]
         hours: 3
         level: fundamentos
         concepts: [persistencia, concurrencia, integridad, recuperación, independencia de datos]
@@ -571,6 +749,12 @@ parts:
       - id: "012"
         slug: arquitectura-interna-de-un-gestor
         title: Arquitectura interna de un gestor, del cliente al disco
+        resumen: >-
+          El recorrido completo de una consulta desde el cliente hasta el disco: analizador,
+          planificador, ejecutor, gestor de almacenamiento y buffer. Es el mapa mental que
+          después permite leer un plan de ejecución sin adivinar, y saber en qué componente
+          vive cada problema de rendimiento.
+        prerrequisitos: ["011"]
         hours: 3
         level: fundamentos
         concepts: [analizador, planificador, ejecutor, gestor de almacenamiento, buffer pool]
@@ -580,6 +764,12 @@ parts:
       - id: "013"
         slug: independencia-de-datos-y-niveles-de-esquema
         title: Independencia de datos y los tres niveles de esquema
+        resumen: >-
+          Los tres niveles de esquema —externo, conceptual y físico— y por qué separarlos es
+          lo que permite añadir un índice, particionar una tabla o dividir una entidad sin
+          reescribir las aplicaciones. La independencia lógica que se define aquí es el
+          fundamento técnico de las migraciones sin caída de la parte 11.
+        prerrequisitos: ["011"]
         hours: 3
         level: fundamentos
         concepts: [esquema conceptual, esquema físico, vista externa, independencia lógica]
@@ -589,6 +779,12 @@ parts:
       - id: "014"
         slug: entorno-reproducible-y-evidencia
         title: Entorno reproducible y evidencia comprobable
+        resumen: >-
+          El método de trabajo del resto del programa: entorno en contenedor con la versión
+          fijada, datos generados con semilla declarada, invariantes escritos y evidencia
+          que otra persona pueda reproducir. Es la clase que convierte «me funcionó» en un
+          resultado defendible.
+        prerrequisitos: ["011"]
         hours: 3
         level: fundamentos
         concepts: [reproducibilidad, semilla, contenedor, invariante, evidencia]
@@ -602,10 +798,68 @@ parts:
     summary: >-
       Del enunciado ambiguo al esquema defendible: entidades, claves,
       dependencias funcionales y la decisión consciente de desnormalizar.
+    prerrequisitos: ["00", "01"]
+    introduccion:
+      - >-
+          Aquí empieza el trabajo de diseño. El material de entrada es lo que suele haber en
+          la realidad: un enunciado ambiguo escrito por alguien que no piensa en tablas. El
+          material de salida es un esquema que se puede defender frente a preguntas, no solo
+          dibujar.
+      - >-
+          Las cinco clases forman una secuencia que va de lo blando a lo formal y vuelve.
+          Primero se extraen entidades, reglas de negocio y un alcance escrito de lo que el
+          modelo decide no representar. Después el modelo entidad-relación fija cardinalidad
+          y participación, que son las dos decisiones que determinan dónde va cada clave
+          foránea y si admite nulos. La tercera clase resuelve el debate de las claves con
+          un criterio y no con preferencias. La cuarta introduce el aparato formal
+          —dependencias funcionales, formas normales, descomposición sin pérdida— que
+          convierte «esto está mal modelado» en una demostración. Y la quinta cierra el
+          círculo dando permiso para desnormalizar, pero solo con un patrón de lectura
+          medido y el costo de escritura aceptado por escrito.
+      - >-
+          La tensión entre las clases 018 y 019 es intencionada y no se resuelve a favor de
+          ninguna: normalizar es la posición por defecto, desnormalizar es una decisión que
+          hay que ganarse con datos.
+    resultados:
+      - >-
+          Convertir un enunciado ambiguo en entidades, atributos y reglas de negocio
+          explícitas.
+      - >-
+          Dibujar un modelo entidad-relación con cardinalidad y participación justificadas.
+      - >-
+          Elegir entre clave natural y sustituta argumentando desde la estabilidad de la
+          identidad.
+      - >-
+          Demostrar con dependencias funcionales que un esquema alcanza la forma normal de
+          Boyce-Codd.
+      - >-
+          Justificar una desnormalización con un patrón de lectura medido y un mecanismo de
+          sincronización declarado.
+    errores:
+      - >-
+          «Normalizar hasta la tercera forma normal y ya está.» La tercera forma normal deja
+          pasar anomalías que BCFN elimina; el listón práctico de este programa es BCFN.
+      - >-
+          «La normalización hace las consultas lentas.» La normalización cambia dónde está
+          el costo. Sin medir el patrón de lectura, esa frase es una creencia.
+      - >-
+          «El diagrama entidad-relación es documentación bonita.» Es donde se deciden
+          cardinalidad y participación, que se traducen directamente en columnas, claves y
+          nulos.
+      - >-
+          «Uso UUID como clave primaria, así no hay debate.» Sigue habiendo debate: falta el
+          `UNIQUE` sobre la clave natural, sin el cual el sistema admitirá duplicados del
+          mundo real.
     classes:
       - id: "015"
         slug: de-requisitos-a-entidades
         title: De requisitos ambiguos a entidades defendibles
+        resumen: >-
+          El paso del enunciado ambiguo a un conjunto de entidades que se puede defender.
+          Trabaja tres herramientas: las reglas de negocio que acabarán siendo
+          restricciones, el diccionario de datos que impide que dos equipos llamen igual a
+          cosas distintas, y el alcance escrito de lo que el modelo decide no representar.
+        prerrequisitos: ["001", "008"]
         hours: 3
         level: fundamentos
         concepts: [regla de negocio, diccionario de datos, alcance, patrón de acceso]
@@ -615,6 +869,13 @@ parts:
       - id: "016"
         slug: entidad-relacion-cardinalidad-y-participacion
         title: Entidad-relación, cardinalidad y participación
+        resumen: >-
+          El modelo entidad-relación de Chen con las dos decisiones que más consecuencias
+          tienen: la cardinalidad, que determina dónde va la clave foránea, y la
+          participación, que determina si esa columna admite nulos. Introduce la entidad
+          débil y el atributo que pertenece a la relación y no a ninguna de las dos
+          entidades.
+        prerrequisitos: ["015"]
         hours: 3
         level: fundamentos
         concepts: [entidad débil, cardinalidad, participación total, atributo de relación]
@@ -624,6 +885,12 @@ parts:
       - id: "017"
         slug: claves-identidad-natural-y-sustituta
         title: Claves, identidad y el debate natural frente a sustituta
+        resumen: >-
+          El debate entre clave natural y clave sustituta resuelto por un criterio y no por
+          preferencia: cuál de las dos mantiene la identidad estable cuando el mundo cambia.
+          La conclusión práctica —usar sustituta y proteger además la natural con `UNIQUE`—
+          se aplica al resto del programa.
+        prerrequisitos: ["007", "016"]
         hours: 3
         level: fundamentos
         concepts: [clave candidata, clave primaria, clave sustituta, identidad estable]
@@ -633,6 +900,12 @@ parts:
       - id: "018"
         slug: normalizacion-y-dependencias-funcionales
         title: Normalización de 1FN a BCFN con dependencias funcionales
+        resumen: >-
+          La normalización explicada como lo que es: una demostración a partir de
+          dependencias funcionales, no una intuición sobre qué pertenece a qué. Recorre de
+          la primera forma normal a la de Boyce-Codd y exige que cada descomposición sea sin
+          pérdida, es decir, que reunir las tablas devuelva exactamente la original.
+        prerrequisitos: ["008", "016"]
         hours: 4
         level: intermedio
         concepts: [dependencia funcional, anomalía de actualización, BCFN, descomposición sin pérdida]
@@ -642,6 +915,12 @@ parts:
       - id: "019"
         slug: desnormalizacion-deliberada
         title: Desnormalización deliberada y patrones de acceso
+        resumen: >-
+          El contrapeso de la clase anterior: cuándo duplicar a propósito. Exige tres cosas
+          antes de desnormalizar —un patrón de lectura medido, un mecanismo declarado que
+          mantenga las copias al día y el costo de escritura aceptado por escrito—, y así
+          separa la redundancia controlada de la accidental.
+        prerrequisitos: ["018"]
         hours: 3
         level: intermedio
         concepts: [redundancia controlada, costo de escritura, agregado, patrón de lectura]
@@ -655,10 +934,60 @@ parts:
     summary: >-
       La teoría que SQL implementa a medias: relaciones como conjuntos,
       operadores del álgebra, cálculo relacional e integridad declarada.
+    prerrequisitos: ["02"]
+    introduccion:
+      - >-
+          Esta parte da la teoría que SQL implementa a medias, y lo hace precisamente para
+          que las diferencias entre teoría y lenguaje dejen de ser sorpresas. La relación de
+          Codd es un conjunto: no tiene orden y no tiene duplicados. SQL trabaja con
+          multiconjuntos ordenables. Conocer esa brecha explica de antemano por qué hace
+          falta `DISTINCT`, por qué no se puede confiar en el orden y por qué `NOT IN` se
+          comporta como se comporta.
+      - >-
+          Las cuatro clases van de la definición al operador y del operador a la garantía.
+          La relación como conjunto; los operadores del álgebra, que son el lenguaje en el
+          que el optimizador piensa; el cálculo relacional y el teorema de equivalencia, que
+          es literalmente el permiso que tiene el motor para reescribir tu consulta; y la
+          integridad declarada en su forma completa, incluidas las acciones referenciales.
+      - >-
+          Es la parte más formal del programa y la que más rendimiento da a largo plazo:
+          quien la trabaja lee después un plan de ejecución sin adivinar.
+    resultados:
+      - >-
+          Explicar las dos propiedades de la relación que SQL no respeta y sus consecuencias
+          prácticas.
+      - >-
+          Traducir una consulta SQL a una expresión del álgebra relacional y viceversa.
+      - >-
+          Argumentar por qué el optimizador puede reordenar una consulta sin cambiar su
+          resultado.
+      - >-
+          Declarar integridad de entidad, referencial y de dominio, eligiendo la acción
+          referencial adecuada.
+    errores:
+      - >-
+          «Álgebra relacional es teoría que no se usa.» Es exactamente lo que muestra un
+          plan de ejecución: selecciones, proyecciones y reuniones reordenadas.
+      - >-
+          «`SELECT` devuelve un conjunto.» Devuelve un multiconjunto: los duplicados
+          sobreviven salvo que se pidan `DISTINCT` o se agrupen.
+      - >-
+          «`ON DELETE CASCADE` es lo cómodo.» Es una decisión de dominio: sobre datos
+          contables o de auditoría, borra historia que había obligación de conservar.
+      - >-
+          «La reunión natural es más limpia.» Y más frágil: empareja por todos los nombres
+          coincidentes, así que añadir una columna homónima cambia el significado de la
+          consulta sin avisar.
     classes:
       - id: "020"
         slug: la-relacion-como-conjunto
         title: "La relación como conjunto: tuplas, dominios y acceso por valor"
+        resumen: >-
+          La relación como conjunto de tuplas sobre dominios, con dos propiedades que SQL no
+          respeta: no hay orden y no hay duplicados. Entender esa brecha explica de antemano
+          la mitad de las sorpresas del lenguaje, del `DISTINCT` que hace falta al `ORDER
+          BY` que no se puede dar por supuesto.
+        prerrequisitos: ["001", "004"]
         hours: 3
         level: fundamentos
         concepts: [relación, tupla, dominio, acceso por valor, cierre]
@@ -668,6 +997,12 @@ parts:
       - id: "021"
         slug: algebra-relacional-operadores
         title: "Álgebra relacional: selección, proyección, producto y reunión"
+        resumen: >-
+          Los operadores del álgebra relacional —selección, proyección, producto, reunión y
+          división— como el lenguaje en el que el optimizador piensa. Ver una consulta como
+          una expresión algebraica es lo que después permite entender por qué el motor la
+          reordena y por qué eso es legítimo.
+        prerrequisitos: ["020"]
         hours: 4
         level: fundamentos
         concepts: [selección, proyección, producto cartesiano, reunión natural, división]
@@ -677,6 +1012,12 @@ parts:
       - id: "022"
         slug: calculo-relacional-y-equivalencia
         title: Cálculo relacional y su equivalencia con el álgebra
+        resumen: >-
+          El cálculo relacional y el teorema que lo hace equivalente al álgebra. No es
+          formalismo por gusto: esa equivalencia es exactamente el permiso que tiene el
+          optimizador para reescribir tu consulta, y la razón de que SQL pueda ser
+          declarativo.
+        prerrequisitos: ["021"]
         hours: 3
         level: intermedio
         concepts: [cálculo de tuplas, seguridad de expresión, equivalencia, declaratividad]
@@ -686,6 +1027,12 @@ parts:
       - id: "023"
         slug: integridad-restricciones-y-acciones-referenciales
         title: "Integridad: restricciones, claves foraneas y acciones referenciales"
+        resumen: >-
+          La integridad declarada en su forma completa: integridad de entidad, integridad
+          referencial, `CHECK` y las acciones referenciales. Insiste en que `ON DELETE
+          CASCADE` es una decisión de dominio y no técnica, y presenta el aplazamiento para
+          los casos en que el estado intermedio tiene que ser inválido.
+        prerrequisitos: ["008", "016"]
         hours: 3
         level: intermedio
         concepts: [integridad de entidad, integridad referencial, CHECK, ON DELETE, aplazamiento]
@@ -699,10 +1046,69 @@ parts:
     summary: >-
       Escribir SQL cuya semántica se pueda defender: definición del esquema,
       reuniones, agregación, ventanas y el comportamiento real de los nulos.
+    prerrequisitos: ["03"]
+    introduccion:
+      - >-
+          Seis clases para escribir SQL cuya semántica se pueda defender. No es un recorrido
+          por la sintaxis: es la parte donde se cierran los huecos por los que se cuelan los
+          resultados silenciosamente incorrectos, que son mucho peores que los errores,
+          porque no fallan.
+      - >-
+          El orden sigue el ciclo de vida de una consulta. Primero el DDL como contrato
+          ejecutable, porque lo que el esquema rechaza no hay que validarlo en ningún
+          lenguaje. Después el `SELECT` con su orden lógico de evaluación y la colación, que
+          decide si `a` es igual a `A`. Luego las cuatro formas de reunir, con la
+          semirreunión como la corrección que más código arregla. La agregación y el doble
+          conteo que produce una reunión previa. Las CTE, la recursión y las funciones de
+          ventana, para lo que no cabe en una expresión. Y al final los nulos, colocados a
+          propósito al cierre para que se vean actuando sobre todo lo anterior.
+      - >-
+          Si solo hay tiempo para dos clases de esta parte, son la 026 y la 029: reuniones y
+          nulos concentran la mayoría de los errores que llegan a producción sin ser
+          detectados.
+    resultados:
+      - >-
+          Escribir DDL que exprese las reglas del dominio como restricciones que el motor
+          impone.
+      - >-
+          Predecir el resultado de una consulta razonando desde el orden lógico de
+          evaluación.
+      - >-
+          Elegir entre reunión interna, externa, semi y anti según lo que la pregunta
+          realmente pide.
+      - >-
+          Detectar y corregir un doble conteo causado por una reunión que multiplica filas.
+      - >-
+          Resolver con CTE, recursión o funciones de ventana lo que no cabe en una consulta
+          plana.
+      - >-
+          Predecir el efecto de los nulos en comparaciones, agregados y `NOT IN`.
+    errores:
+      - >-
+          «`WHERE` y `HAVING` son intercambiables.» `WHERE` filtra filas antes de agrupar y
+          `HAVING` filtra grupos después. Cambiar uno por otro cambia el resultado o el
+          costo.
+      - >-
+          «Añadí un `DISTINCT` y ya salen bien.» El `DISTINCT` tapa el síntoma de una
+          reunión que multiplica filas; casi siempre lo que se quería era una semirreunión.
+      - >-
+          «`NOT IN` y `NOT EXISTS` son lo mismo.» Con un solo nulo en la subconsulta, `NOT
+          IN` devuelve el conjunto vacío. `NOT EXISTS` no.
+      - >-
+          «`LEFT JOIN` conserva las filas sin pareja.» Salvo que pongas una condición sobre
+          la tabla externa en el `WHERE`, que la convierte de nuevo en interna.
+      - >-
+          «`COUNT(*)` y `COUNT(columna)` son lo mismo.» El segundo ignora los nulos.
     classes:
       - id: "024"
         slug: ddl-el-esquema-como-contrato
         title: "DDL: el esquema como contrato ejecutable"
+        resumen: >-
+          El DDL leído como un contrato ejecutable: cada tipo y cada restricción es una
+          validación que ya no hay que escribir en ninguna aplicación. Incluye una
+          divergencia que decide cómo se hacen las migraciones: si el DDL es transaccional
+          en tu motor o si una migración a medias deja un estado sin retorno.
+        prerrequisitos: ["006", "023"]
         hours: 3
         level: fundamentos
         concepts: [tipo de dato, restricción, valor por defecto, DDL transaccional]
@@ -712,6 +1118,13 @@ parts:
       - id: "025"
         slug: select-filtrado-proyeccion-y-orden
         title: "SELECT: filtrado, proyección y orden con semántica precisa"
+        resumen: >-
+          El `SELECT` con su semántica exacta: el orden lógico de evaluación que explica por
+          qué un alias del `SELECT` no vale en el `WHERE`, y la colación, que decide si `a`
+          es igual a `A` y dónde va la `ñ`. Cierra con el determinismo de orden, que es la
+          diferencia entre una consulta reproducible y una que cambia el día que cambia el
+          plan.
+        prerrequisitos: ["004", "020"]
         hours: 3
         level: fundamentos
         concepts: [predicado, orden de evaluación, colación, determinismo de orden]
@@ -721,6 +1134,12 @@ parts:
       - id: "026"
         slug: reuniones-inner-outer-semi-y-anti
         title: "Reuniones: interna, externa, semi y anti"
+        resumen: >-
+          Las cuatro formas de reunir y cuándo se quiere cada una. La distinción que más
+          código corrige es la semirreunión: el `EXISTS` que casi siempre se quería cuando
+          se escribió un `JOIN` seguido de `DISTINCT`, sin multiplicar filas ni arriesgar el
+          doble conteo.
+        prerrequisitos: ["008", "021"]
         hours: 4
         level: intermedio
         concepts: [reunión interna, reunión externa, semirreunion, antirreunion, multiplicación de filas]
@@ -730,6 +1149,12 @@ parts:
       - id: "027"
         slug: agregacion-group-by-y-having
         title: Agregación, GROUP BY y HAVING sin duplicar filas
+        resumen: >-
+          Agregar sin mentir. Explica por qué `WHERE` y `HAVING` no son intercambiables,
+          cómo una reunión previa multiplica filas y produce totales inflados, y cómo se
+          corrige agregando en una CTE antes de reunir. Incluye la divergencia entre motores
+          sobre qué columnas se pueden seleccionar sin agrupar.
+        prerrequisitos: ["026"]
         hours: 3
         level: intermedio
         concepts: [agrupación, agregado, HAVING, doble conteo, dependencia funcional en GROUP BY]
@@ -739,6 +1164,12 @@ parts:
       - id: "028"
         slug: cte-subconsultas-y-funciones-de-ventana
         title: CTE, subconsultas y funciones de ventana
+        resumen: >-
+          Las herramientas para consultas que no caben en una sola expresión: CTE para
+          nombrar pasos, recursión para recorrer jerarquías y funciones de ventana para
+          calcular por grupo sin perder el detalle. La sutileza que más resultados cambia es
+          el marco por defecto de una ventana con `ORDER BY`.
+        prerrequisitos: ["026", "027"]
         hours: 4
         level: intermedio
         concepts: [CTE, recursión, subconsulta correlacionada, partición de ventana, marco]
@@ -748,6 +1179,12 @@ parts:
       - id: "029"
         slug: nulos-y-logica-de-tres-valores
         title: Nulos y lógica de tres valores
+        resumen: >-
+          La lógica de tres valores y sus consecuencias prácticas: `NOT IN` que devuelve
+          vacío por un solo nulo, agregados que ignoran ausencias y comparaciones que nunca
+          son ciertas. Presenta `IS DISTINCT FROM` como la forma correcta de comparar
+          columnas opcionales, que reaparece al detectar cambios en una migración.
+        prerrequisitos: ["003", "025"]
         hours: 3
         level: intermedio
         concepts: [UNKNOWN, IS DISTINCT FROM, NOT IN con nulos, agregados y nulos]
@@ -761,10 +1198,64 @@ parts:
     summary: >-
       Que exige la norma, que añade cada producto y como se escribe código que
       sobrevive a un cambio de motor.
+    prerrequisitos: ["04"]
+    introduccion:
+      - >-
+          SQL no es un lenguaje, son varios que se parecen. Esta parte separa lo que exige
+          la norma ISO/IEC 9075 de lo que cada producto añade por su cuenta, y produce un
+          artefacto revisable en lugar de una intención: una matriz que registra,
+          construcción por construcción, si es de norma y cómo la escribe cada motor del
+          proyecto.
+      - >-
+          Después de la matriz vienen tres estudios de caso elegidos por contraste.
+          PostgreSQL, como ejemplo de motor extensible que absorbe familias enteras
+          —vectores, geometría, series— sin dejar de ser relacional. El bloque MySQL,
+          MariaDB, SQL Server y Oracle, centrado exclusivamente en las divergencias que
+          rompen código: modo estricto, cadena vacía tratada como nulo, plegado de
+          identificadores. Y los dos motores embebidos, SQLite y DuckDB, cuya comparación
+          deja ver el efecto del formato de almacenamiento con la menor cantidad posible de
+          ruido operativo.
+      - >-
+          El objetivo no es ser portable a toda costa. Es saber, línea a línea, cuándo estás
+          atando el proyecto a un producto —lo que muchas veces es la decisión correcta— y
+          cuándo lo estás haciendo sin darte cuenta.
+    resultados:
+      - >-
+          Distinguir qué construcciones de una consulta son de norma y cuáles son
+          extensiones del producto.
+      - >-
+          Mantener una matriz de portabilidad de las construcciones que el proyecto
+          realmente usa.
+      - >-
+          Explicar tres divergencias entre motores que rompen código y demostrar cada una
+          con un ejemplo ejecutable.
+      - >-
+          Elegir entre motor embebido y motor servidor, y entre orientación a filas y a
+          columnas, con un argumento de carga de trabajo.
+    errores:
+      - >-
+          «SQL es SQL.» Paginación, concatenación, tipos de fecha, `UPSERT` y comillas de
+          identificadores divergen en todos los motores relevantes.
+      - >-
+          «Usar una extensión propietaria es mala práctica.» A menudo es la decisión
+          correcta. Lo malo es usarla sin saber que se está usando.
+      - >-
+          «SQLite es una base de datos de juguete.» Es una de las piezas de software más
+          desplegadas del planeta; su límite es la concurrencia de escritura y el servicio
+          en red, no la seriedad.
+      - >-
+          «DuckDB es SQLite para datos grandes.» Son motores con propósitos distintos: uno
+          transaccional y por filas, otro analítico y columnar.
     classes:
       - id: "030"
         slug: portabilidad-y-matriz-de-dialectos
         title: "Portabilidad: qué exige la norma y qué añade cada motor"
+        resumen: >-
+          Qué exige la norma ISO/IEC 9075 y qué añade cada producto por su cuenta. El
+          resultado de la clase no es una opinión sobre portabilidad sino un artefacto: una
+          matriz que registra, construcción por construcción, si es de norma y cómo la
+          escribe cada motor del proyecto.
+        prerrequisitos: ["024", "029"]
         hours: 3
         level: intermedio
         concepts: [norma frente a producto, matriz de portabilidad, extensión propietaria]
@@ -774,6 +1265,12 @@ parts:
       - id: "031"
         slug: postgresql-tipos-extensiones-y-procesos
         title: "PostgreSQL: tipos, extensiones y modelo de procesos"
+        resumen: >-
+          PostgreSQL como caso de estudio de motor extensible: tipos compuestos, arreglos,
+          rangos y JSONB de fábrica, extensiones que añaden vectores o geometría sin tocar
+          el núcleo, y un modelo de proceso por conexión que explica por qué el agrupador de
+          conexiones deja de ser opcional. Incluye autovacuum, que reaparece en la parte 08.
+        prerrequisitos: ["012", "024"]
         hours: 3
         level: intermedio
         concepts: [extensión, tipo compuesto, proceso por conexión, autovacuum]
@@ -783,6 +1280,12 @@ parts:
       - id: "032"
         slug: mysql-sqlserver-y-oracle-divergencias
         title: "MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código"
+        resumen: >-
+          Las divergencias concretas que rompen código al cambiar de motor: el modo estricto
+          de MySQL que convierte datos inválidos en silencio, la cadena vacía que Oracle
+          trata como nulo, y el plegado de mayúsculas de los identificadores sin citar. Cada
+          una se demuestra con el `INSERT` que en un motor falla y en otro «funciona».
+        prerrequisitos: ["030"]
         hours: 3
         level: intermedio
         concepts: [colación, modo estricto, cadena vacia frente a nulo, identificador citado]
@@ -792,6 +1295,12 @@ parts:
       - id: "033"
         slug: sqlite-y-duckdb-motores-embebidos
         title: "SQLite y DuckDB: motores embebidos, transaccional frente a analítico"
+        resumen: >-
+          Los dos motores embebidos del programa y por qué no compiten entre sí: SQLite es
+          transaccional y por filas, DuckDB es analítico, columnar y vectorizado. La
+          comparación deja ver, con la menor cantidad posible de ruido operativo, cómo el
+          formato de almacenamiento decide el perfil de rendimiento.
+        prerrequisitos: ["009", "031"]
         hours: 3
         level: intermedio
         concepts: [motor embebido, tipado dinamico, almacenamiento columnar, vectorización]
@@ -805,10 +1314,64 @@ parts:
     summary: >-
       Modelos sin reunión en el servidor: el agregado como frontera de
       consistencia, cuando incrustar y que se pierde en una caché.
+    prerrequisitos: ["02", "04"]
+    introduccion:
+      - >-
+          La primera salida del relacional, y se hace por la puerta correcta: no por la
+          moda, sino por una idea con nombre propio. El agregado es el conjunto de datos que
+          se lee, se escribe y se mantiene consistente como una unidad, y en los motores
+          documentales la frontera transaccional coincide con él. Diseñar el agregado es,
+          por tanto, decidir dónde termina la garantía del motor y empieza el trabajo de tu
+          aplicación.
+      - >-
+          Las cuatro clases desarrollan esa idea. La primera la establece. La segunda la
+          aplica a la decisión central del modelado documental —incrustar o referenciar— con
+          sus dos criterios: si el dato se lee siempre junto, y si puede crecer sin techo.
+          La tercera enseña a consultar e indexar lo modelado, con la regla que más
+          rendimiento decide en una canalización de agregación. La cuarta trata el clave-
+          valor y la caché diciendo con precisión qué se pierde: la consulta por contenido,
+          la integridad declarada y, según la configuración, parte de la durabilidad.
+      - >-
+          Nada aquí sugiere abandonar el relacional. Sugiere saber qué se está comprando y
+          con qué moneda se paga.
+    resultados:
+      - >-
+          Identificar los agregados de un dominio y justificar dónde se pone la frontera
+          transaccional.
+      - >-
+          Decidir entre incrustar y referenciar con criterios de patrón de lectura y
+          crecimiento acotado.
+      - >-
+          Diseñar índices y canalizaciones de agregación que usen el índice en lugar de
+          recorrer la colección.
+      - >-
+          Declarar la política de caché —TTL, invalidación y durabilidad— en términos de
+          pérdida aceptable.
+    errores:
+      - >-
+          «En documentales no hay esquema.» Hay esquema; lo que no hay es quien lo imponga.
+          Se traslada de la base a la aplicación, donde nadie lo comprueba en cada
+          escritura.
+      - >-
+          «Incrustar es más rápido siempre.» Hasta que el arreglo incrustado crece sin techo
+          y cada lectura arrastra megabytes que nadie pidió.
+      - >-
+          «Redis es una base de datos.» Puede serlo con la configuración adecuada, pero por
+          defecto es una caché: si no declaraste la durabilidad, aceptaste perder datos.
+      - >-
+          «El `$lookup` es como un `JOIN`.» Existe, pero no está optimizado como una reunión
+          relacional; si tu modelo lo necesita en cada consulta, el modelo probablemente era
+          relacional.
     classes:
       - id: "034"
         slug: el-agregado-como-unidad-de-consistencia
         title: El agregado como unidad de consistencia
+        resumen: >-
+          El agregado como unidad de lectura, escritura y consistencia, y la consecuencia
+          que ordena toda la parte: en los motores documentales la frontera transaccional
+          coincide con el agregado. Diseñar el agregado es, por tanto, decidir dónde termina
+          la garantía del motor y empieza el trabajo de la aplicación.
+        prerrequisitos: ["019", "023"]
         hours: 3
         level: intermedio
         concepts: [agregado, frontera transaccional, entidad, actividad]
@@ -818,6 +1381,12 @@ parts:
       - id: "035"
         slug: modelado-documental-incrustar-o-referenciar
         title: "Modelado documental: incrustar o referenciar"
+        resumen: >-
+          La decisión central del modelado documental —incrustar o referenciar— con sus dos
+          criterios: si el dato se lee siempre junto y si puede crecer sin techo. Presenta
+          el crecimiento no acotado como el fallo característico del modelo documental y los
+          patrones de extensión que lo evitan.
+        prerrequisitos: ["034"]
         hours: 4
         level: intermedio
         concepts: [incrustación, referencia, crecimiento no acotado, patrón de extensión]
@@ -827,6 +1396,12 @@ parts:
       - id: "036"
         slug: consultas-e-indices-sobre-documentos
         title: Consultas, índices y agregación sobre documentos
+        resumen: >-
+          Cómo se consulta e indexa lo que se modeló en la clase anterior: índices
+          compuestos y multiclave, cobertura, y la canalización de agregación con la regla
+          que más rendimiento decide —poner `$match` al principio para que el índice sirva,
+          no después.
+        prerrequisitos: ["035"]
         hours: 3
         level: intermedio
         concepts: [índice compuesto, canalización de agregación, índice multiclave, cobertura]
@@ -836,6 +1411,12 @@ parts:
       - id: "037"
         slug: clave-valor-cache-y-expiracion
         title: "Clave-valor, caché y expiración: qué se pierde exactamente"
+        resumen: >-
+          Qué se gana y qué se pierde exactamente al poner una caché delante. Trata el TTL
+          como política de retención, la invalidación como el problema difícil que es, la
+          estampida como fallo predecible, y la durabilidad configurable de Redis como una
+          decisión de negocio que hay que escribir en segundos de pérdida aceptable.
+        prerrequisitos: ["034"]
         hours: 3
         level: intermedio
         concepts: [TTL, invalidación, estampida de caché, durabilidad configurable]
@@ -849,10 +1430,66 @@ parts:
     summary: >-
       Modelos especializados y el criterio para saber cuando la carga de
       trabajo justifica salir del relacional.
+    prerrequisitos: ["06"]
+    introduccion:
+      - >-
+          Cinco familias especializadas y un mismo criterio para todas: qué carga de trabajo
+          justifica salir del relacional, y qué se paga por hacerlo. La estructura de la
+          parte es deliberadamente comparativa, porque el error habitual no es elegir mal el
+          motor especializado, sino adoptarlo sin haber comprobado que el relacional ya no
+          daba más.
+      - >-
+          Grafos, para los recorridos de profundidad variable que SQL resuelve mal —con la
+          aclaración honesta de cuándo una CTE recursiva sobre PostgreSQL es suficiente—.
+          Columnas anchas, con su método de diseño invertido: primero la lista de consultas,
+          después una tabla por consulta. Series temporales, con sus tres restricciones
+          propias: cardinalidad de etiquetas, retención y submuestreo. Búsqueda de texto,
+          con el índice invertido y la relevancia de TF-IDF a BM25. Y analítica columnar,
+          donde se miden las cuatro contribuciones que producen los dos órdenes de magnitud,
+          en lugar de atribuirlos al producto.
+      - >-
+          Las clases 041 y 042 son además preparación directa de la parte 13: BM25 vuelve
+          como componente léxico de la búsqueda híbrida, y precisión y exhaustividad vuelven
+          como métricas de un sistema RAG.
+    resultados:
+      - >-
+          Decidir si un recorrido justifica un motor de grafos o si una CTE recursiva es
+          suficiente.
+      - >-
+          Diseñar tablas de columnas anchas partiendo de la lista de consultas y no del
+          modelo conceptual.
+      - >-
+          Controlar la cardinalidad, la retención y el submuestreo de una serie temporal.
+      - >-
+          Explicar cómo se construye un índice invertido y cómo BM25 ordena los resultados.
+      - >-
+          Medir de dónde sale la ventaja de un motor columnar en lugar de atribuirla al
+          producto.
+    errores:
+      - >-
+          «Mis datos son un grafo, necesito un motor de grafos.» Casi todo es un grafo. Lo
+          que justifica el motor es el recorrido de profundidad variable, no la forma de los
+          datos.
+      - >-
+          «En Cassandra modelo como en SQL y ya.» Una consulta que no fija la clave de
+          partición obliga a preguntar a todo el anillo; es el error de diseño número uno de
+          esa familia.
+      - >-
+          «Pongo el identificador de usuario como etiqueta para poder filtrar.» Eso
+          multiplica la cardinalidad de series y tumba el motor de series temporales.
+      - >-
+          «Con `LIKE '%texto%'` ya busco.» Eso recorre la tabla y no ordena por relevancia.
+          Buscar es índice invertido más una función de puntuación.
     classes:
       - id: "038"
         slug: grafos-de-propiedades-y-recorridos
         title: Grafos de propiedades y los recorridos que SQL hace mal
+        resumen: >-
+          Los recorridos que SQL hace mal: profundidad variable, caminos y vecindarios.
+          Explica la ventaja estructural del motor de grafos —la reunión sin índice, porque
+          cada nodo guarda las direcciones de sus vecinos— y también cuándo una CTE
+          recursiva sobre PostgreSQL es suficiente y no hace falta otro sistema.
+        prerrequisitos: ["026", "028"]
         hours: 3
         level: intermedio
         concepts: [nodo, arista, recorrido de profundidad variable, reunión sin índice]
@@ -862,6 +1499,13 @@ parts:
       - id: "039"
         slug: columnas-anchas-modelar-desde-la-consulta
         title: "Columnas anchas: modelar desde la consulta"
+        resumen: >-
+          El método de diseño invertido de las columnas anchas: primero se escribe la lista
+          de consultas y después una tabla por consulta, aunque los mismos datos queden
+          repetidos cinco veces. La clave de partición decide en qué nodo vive la fila y la
+          de agrupamiento el orden dentro de ella; equivocarse en la primera es el error de
+          diseño más caro de esta familia.
+        prerrequisitos: ["019", "034"]
         hours: 3
         level: avanzado
         concepts: [clave de partición, clave de agrupamiento, desnormalización por consulta]
@@ -871,6 +1515,12 @@ parts:
       - id: "040"
         slug: series-temporales-cardinalidad-y-retencion
         title: "Series temporales: cardinalidad, retención y agregados continuos"
+        resumen: >-
+          Las series temporales y sus tres restricciones propias: la cardinalidad de
+          etiquetas, que explota si se usa un identificador como etiqueta; la retención, que
+          hay que decidir antes de acumular; y el submuestreo con agregados continuos, que
+          es cómo se sostiene un histórico largo sin crecimiento lineal.
+        prerrequisitos: ["006", "019"]
         hours: 3
         level: intermedio
         concepts: [cardinalidad de etiquetas, submuestreo, retención, agregado continuo]
@@ -880,6 +1530,12 @@ parts:
       - id: "041"
         slug: busqueda-de-texto-indice-invertido-y-relevancia
         title: "Búsqueda de texto: índice invertido, análisis y relevancia"
+        resumen: >-
+          Por qué `LIKE '%algo%'` no es buscar. Presenta el índice invertido, el analizador
+          que decide qué es un término, y la relevancia de TF-IDF a BM25. Cierra con
+          precisión y exhaustividad, el par de métricas que hace que una búsqueda se pueda
+          evaluar en lugar de opinar sobre ella; ambas reaparecen en la parte 13.
+        prerrequisitos: ["004", "025"]
         hours: 3
         level: intermedio
         concepts: [índice invertido, analizador, TF-IDF, BM25, precisión y exhaustividad]
@@ -889,6 +1545,13 @@ parts:
       - id: "042"
         slug: analitica-columnar-y-vectorizacion
         title: "Analítica columnar: por qué el formato cambia el orden de magnitud"
+        resumen: >-
+          De dónde salen realmente los dos órdenes de magnitud de la analítica: leer solo
+          las columnas necesarias, comprimirlas mejor porque los valores contiguos se
+          parecen, procesarlas en lotes vectorizados y podar bloques enteros por sus
+          estadísticas. La clase mide las cuatro contribuciones en lugar de atribuirlas al
+          producto.
+        prerrequisitos: ["033"]
         hours: 3
         level: avanzado
         concepts: [almacenamiento columnar, compresión, ejecución vectorizada, poda de particiones]
@@ -902,10 +1565,65 @@ parts:
     summary: >-
       Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de
       aislamiento y como se vuelve de una caída.
+    prerrequisitos: ["04"]
+    introduccion:
+      - >-
+          La parte donde el programa se pone serio con la corrección. Todo lo anterior asume
+          implícitamente que las operaciones ocurren una detrás de otra y que la máquina no
+          se apaga. Las cinco clases de aquí retiran esas dos suposiciones y muestran qué
+          hace falta para que el sistema siga siendo correcto sin ellas.
+      - >-
+          ACID primero, con cuidado especial en la letra que más se malinterpreta: la
+          consistencia es respetar las restricciones declaradas, así que lo que el motor no
+          sabe no lo protege. Después las anomalías reales y la crítica de Berenson y otros,
+          que demuestra que los niveles de la norma no las definen sin ambigüedad —de ahí
+          que el nivel por defecto de tu motor no sea el que crees y haya que comprobarlo
+          experimentalmente—. Luego los dos mecanismos que sostienen el aislamiento:
+          bloqueo, que hace esperar, y versiones, que hacen copias. Después la recuperación,
+          con el registro anticipado y ARIES. Y al final la parte que el motor no resuelve
+          por ti: idempotencia, reintentos y bloqueo optimista en la aplicación.
+      - >-
+          Es la parte con más laboratorio por clase del programa, y no por casualidad: las
+          anomalías de aislamiento se creen cuando se ven ocurrir en dos sesiones abiertas
+          al mismo tiempo.
+    resultados:
+      - >-
+          Explicar qué garantiza cada letra de ACID y quién implementa cada garantía.
+      - >-
+          Reproducir experimentalmente una lectura no repetible, un fantasma y un sesgo de
+          escritura.
+      - >-
+          Explicar por qué con MVCC las lecturas no bloquean y qué costo de mantenimiento
+          genera.
+      - >-
+          Describir la recuperación tras una caída en términos de registro, punto de
+          control, rehacer y deshacer.
+      - >-
+          Diseñar una operación idempotente con clave de idempotencia y reintento con
+          retroceso.
+    errores:
+      - >-
+          «Mi motor es ACID, entonces mis transacciones son serializables.» El nivel por
+          defecto casi nunca es serializable: suele ser `READ COMMITTED` o snapshot.
+      - >-
+          «Snapshot isolation elimina todas las anomalías.» Deja pasar el sesgo de
+          escritura, que es justo el que rompe invariantes de negocio.
+      - >-
+          «MVCC no tiene costo.» Cada versión muerta hay que recogerla; cuando el vacuum se
+          queda atrás, la tabla se hincha y los planes se degradan.
+      - >-
+          «Si la transacción falla, reintento y ya.» Solo si la operación es idempotente. Si
+          no, el reintento cobra dos veces.
     classes:
       - id: "043"
         slug: acid-que-garantiza-cada-letra
         title: "ACID: qué garantiza cada letra y quién la implementa"
+        resumen: >-
+          Qué garantiza cada letra de ACID y quién la implementa, con especial cuidado en la
+          que más se malinterpreta: la consistencia es respetar las restricciones
+          declaradas, así que lo que el motor no sabe no lo protege. Deja planteado que el
+          aislamiento es la única letra que se vende por niveles.
+        prerrequisitos: ["005", "023"]
         hours: 3
         level: intermedio
         concepts: [atomicidad, consistencia, aislamiento, durabilidad, unidad de recuperación]
@@ -915,6 +1633,12 @@ parts:
       - id: "044"
         slug: anomalias-de-aislamiento-y-la-critica-ansi
         title: Anomalías de aislamiento y la crítica a los niveles ANSI
+        resumen: >-
+          Las anomalías reales —lectura sucia, no repetible, fantasma y sesgo de escritura—
+          y la crítica de Berenson y otros que demuestra que los niveles de la norma no las
+          definen sin ambigüedad. La consecuencia práctica es que el nivel por defecto de tu
+          motor no es el que crees y hay que comprobarlo experimentalmente.
+        prerrequisitos: ["043"]
         hours: 4
         level: avanzado
         concepts: [lectura sucia, lectura no repetible, fantasma, sesgo de escritura, snapshot isolation]
@@ -924,6 +1648,12 @@ parts:
       - id: "045"
         slug: bloqueo-en-dos-fases-y-mvcc
         title: Bloqueo en dos fases, MVCC e instantáneas
+        resumen: >-
+          Las dos formas de sostener el aislamiento: bloqueo en dos fases, que hace esperar,
+          y control de versiones, que hace copias. Explica por qué con MVCC las lecturas no
+          bloquean, y también su factura escondida: las versiones muertas que el vacuum
+          tiene que recoger.
+        prerrequisitos: ["044"]
         hours: 4
         level: avanzado
         concepts: [2PL, versión de fila, instantánea, interbloqueo, vacuum]
@@ -933,6 +1663,12 @@ parts:
       - id: "046"
         slug: registro-anticipado-y-recuperacion
         title: "Registro anticipado y recuperación: WAL y ARIES"
+        resumen: >-
+          Cómo se vuelve de una caída. El registro anticipado escribe la intención antes que
+          el dato, el punto de control acorta la recuperación y ARIES ordena las fases de
+          rehacer y deshacer de modo que repetirlas sea inofensivo —lo que permite
+          recuperarse de una caída ocurrida durante la recuperación.
+        prerrequisitos: ["043"]
         hours: 4
         level: avanzado
         concepts: [WAL, punto de control, rehacer, deshacer, LSN]
@@ -942,6 +1678,12 @@ parts:
       - id: "047"
         slug: concurrencia-en-la-aplicacion
         title: "Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista"
+        resumen: >-
+          La parte de la concurrencia que el motor no resuelve por ti. Trata la idempotencia
+          como la única defensa realista frente a una red que no distingue «no llegó» de «se
+          perdió la respuesta», y el bloqueo optimista y el reintento con retroceso como los
+          dos patrones que toda aplicación con transacciones acaba necesitando.
+        prerrequisitos: ["045"]
         hours: 3
         level: avanzado
         concepts: [idempotencia, clave de idempotencia, bloqueo optimista, reintento con retroceso]
@@ -955,10 +1697,63 @@ parts:
     summary: >-
       Por qué una consulta tarda: páginas, estructuras de índice, estadísticas
       y la lectura honesta de un plan de ejecución.
+    prerrequisitos: ["01", "04"]
+    introduccion:
+      - >-
+          Por qué una consulta tarda, respondido desde el disco hacia arriba. La parte
+          empieza donde de verdad empieza el costo —la página, no la fila— y termina en la
+          única herramienta que convierte el rendimiento en un asunto de evidencia: el plan
+          de ejecución.
+      - >-
+          Primero páginas, factor de bloque, buffer y localidad, que explican por qué a
+          veces recorrer la tabla entera le gana a usar el índice. Después las dos grandes
+          familias de estructuras: B-Tree, con la regla del prefijo más a la izquierda que
+          decide el orden de las columnas de un índice compuesto, y LSM-Tree, con su
+          compactación y su amplificación de escritura. Luego los índices especializados,
+          cada uno con el caso concreto en que gana y con el costo de mantenimiento que hace
+          que un índice inútil sea una penalización permanente. Y al final leer `EXPLAIN`
+          para refutar una hipótesis, comparando filas estimadas contra reales nodo a nodo.
+      - >-
+          La clase 052 es la que cambia la forma de trabajar: después de ella, «creo que va
+          lento por el índice» deja de ser una frase aceptable sin un plan al lado.
+    resultados:
+      - >-
+          Explicar por qué la unidad de costo es la página y qué consecuencias tiene para el
+          diseño de la fila.
+      - >-
+          Elegir el orden de las columnas de un índice compuesto y justificarlo con las
+          consultas que debe servir.
+      - >-
+          Comparar B-Tree y LSM-Tree en términos de amplificación de lectura y de escritura.
+      - >-
+          Elegir el índice especializado adecuado y contar su costo de mantenimiento.
+      - >-
+          Leer un plan de ejecución y refutar una hipótesis de rendimiento con filas
+          estimadas frente a reales.
+    errores:
+      - >-
+          «Añadir índices siempre ayuda.» Cada índice se paga en cada escritura y ocupa
+          espacio; el que no usa ninguna consulta es una penalización permanente.
+      - >-
+          «Tengo el índice pero el motor no lo usa.» Casi siempre es la regla del prefijo
+          más a la izquierda, una función aplicada a la columna, o una selectividad
+          demasiado baja.
+      - >-
+          «El `cost` de `EXPLAIN` son milisegundos.» Es una unidad interna comparativa. El
+          tiempo solo aparece con `EXPLAIN ANALYZE`.
+      - >-
+          «El recorrido secuencial siempre es malo.» Es lo correcto cuando la consulta
+          devuelve una fracción grande de la tabla, y el planificador lo elige a propósito.
     classes:
       - id: "048"
         slug: paginas-filas-y-buffer-pool
         title: "Páginas, filas y buffer: por qué la entrada y salida manda"
+        resumen: >-
+          Por qué la entrada y salida manda: el motor no lee filas, lee páginas. De ahí
+          salen el factor de bloque, la localidad y la ventaja de la lectura secuencial, que
+          explica por qué a veces recorrer la tabla entera le gana a usar el índice —y por
+          qué el planificador lo elige a propósito.
+        prerrequisitos: ["012"]
         hours: 3
         level: intermedio
         concepts: [pagina, factor de bloque, buffer pool, localidad, lectura secuencial]
@@ -968,6 +1763,12 @@ parts:
       - id: "049"
         slug: b-tree-orden-de-columnas-y-selectividad
         title: "B-Tree: estructura, orden de columnas y selectividad"
+        resumen: >-
+          El B-Tree y las dos preguntas que responde en la práctica: en qué orden poner las
+          columnas de un índice compuesto —la regla del prefijo más a la izquierda— y cuándo
+          el índice no compensa, que es cuando la selectividad es baja. Introduce el índice
+          cubriente, la optimización con mejor relación entre esfuerzo y resultado.
+        prerrequisitos: ["048"]
         hours: 4
         level: intermedio
         concepts: [B-Tree, prefijo más a la izquierda, selectividad, índice cubriente]
@@ -977,6 +1778,13 @@ parts:
       - id: "050"
         slug: lsm-tree-compactacion-y-amplificacion
         title: LSM-Tree, compactación y amplificación de escritura
+        resumen: >-
+          La otra familia de estructuras de almacenamiento: memtable, SSTable y
+          compactación. Explica por qué un LSM absorbe mucha más escritura que un B-Tree y
+          qué paga a cambio —amplificación de escritura y compactaciones que consumen
+          recursos justo cuando el sistema está cargado—, con el filtro de Bloom como pieza
+          que salva lecturas.
+        prerrequisitos: ["048"]
         hours: 3
         level: avanzado
         concepts: [memtable, SSTable, compactación, amplificación de escritura, filtro de Bloom]
@@ -986,6 +1794,13 @@ parts:
       - id: "051"
         slug: indices-especializados
         title: "Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes"
+        resumen: >-
+          Los índices que no son B-Tree y el caso concreto en que cada uno gana: hash para
+          igualdad pura, GIN para contenido de arreglos y documentos, GiST para geometría y
+          rangos, BRIN cuando el orden físico se correlaciona con la columna, más parciales,
+          de expresión y cubrientes. Cierra con el costo de mantenimiento, que hace que un
+          índice inútil no sea neutro sino una penalización permanente.
+        prerrequisitos: ["049"]
         hours: 3
         level: avanzado
         concepts: [índice parcial, índice de expresión, GIN, BRIN, costo de mantenimiento]
@@ -995,6 +1810,12 @@ parts:
       - id: "052"
         slug: planes-de-ejecucion-y-refutacion
         title: "Planes de ejecución: leer EXPLAIN y refutar una hipótesis"
+        resumen: >-
+          Leer un plan de ejecución para refutar una hipótesis, no para confirmarla. La
+          técnica central es comparar filas estimadas contra reales nodo a nodo: un error de
+          estimación explica casi cualquier plan absurdo. Insiste en que el `cost` no son
+          milisegundos y en que solo `EXPLAIN ANALYZE` mide tiempo.
+        prerrequisitos: ["049", "051"]
         hours: 4
         level: avanzado
         concepts: [optimizador por costos, estadística, estimación de cardinalidad, costo frente a tiempo]
@@ -1008,10 +1829,69 @@ parts:
     summary: >-
       Qué se gana y qué se paga al repartir los datos: replicación, partición,
       los teoremas que acotan lo posible y el consenso.
+    prerrequisitos: ["08"]
+    introduccion:
+      - >-
+          Repartir los datos entre máquinas resuelve problemas de capacidad y de
+          disponibilidad, y crea una clase entera de problemas nuevos que no existían en una
+          sola máquina. Esta parte los nombra con precisión y acota lo que es teóricamente
+          posible, para que las decisiones de arquitectura dejen de apoyarse en eslóganes.
+      - >-
+          Réplica primero, con las tres arquitecturas y la consecuencia que el usuario nota:
+          guardar algo y al recargar no verlo. Después particionado, con los dos esquemas de
+          reparto y el punto caliente que cada uno genera. Luego CAP dicho con precisión —la
+          disponibilidad del teorema es mucho más estricta que el noventa y nueve coma nueve
+          del lenguaje operativo— y PACELC, que añade lo que CAP calla: el compromiso entre
+          latencia y consistencia existe también los días en que no hay avería. Después el
+          espectro de modelos de consistencia con las garantías de sesión que resuelven en
+          la práctica la mayoría de los síntomas. Y al final consenso, commit en dos fases y
+          sagas.
+      - >-
+          Es la parte más citada del programa en fuentes primarias: Gilbert y Lynch, Brewer,
+          Abadi, Lamport, Ongaro, DeCandia y Corbett. Merece leerse con los artículos
+          abiertos al lado.
+    resultados:
+      - >-
+          Elegir entre líder único, multilíder y sin líder según el patrón de escritura y la
+          tolerancia a conflictos.
+      - >-
+          Diseñar un esquema de particionado que evite puntos calientes y permita
+          rebalancear.
+      - >-
+          Enunciar CAP con precisión y explicar por qué «elegir dos de tres» es una
+          simplificación errónea.
+      - >-
+          Elegir el modelo de consistencia y las garantías de sesión que el caso realmente
+          necesita.
+      - >-
+          Comparar consenso, commit en dos fases y saga por lo que cada uno bloquea y
+          garantiza.
+    errores:
+      - >-
+          «CAP dice que elijas dos de tres.» El propio Brewer lo corrigió: cuando no hay
+          partición no hay que renunciar a nada, y cuando la hay se elige entre consistencia
+          y disponibilidad solo durante la partición.
+      - >-
+          «Consistencia eventual significa que al final se arregla solo.» Solo converge si
+          existe una regla determinista de resolución de conflictos. Sin ella, diverge para
+          siempre.
+      - >-
+          «Añado réplicas de lectura y escalo.» Añades retraso de réplica, que es un cambio
+          de semántica visible para el usuario, no solo un ajuste de capacidad.
+      - >-
+          «El commit en dos fases resuelve las transacciones distribuidas.» Es correcto y es
+          bloqueante: si el coordinador cae entre las dos fases, los participantes quedan
+          con los cerrojos tomados.
     classes:
       - id: "053"
         slug: replica-lider-unico-multilider-y-sin-lider
         title: "Réplica: líder único, multilíder y sin líder"
+        resumen: >-
+          Las tres arquitecturas de réplica y el compromiso que define cada una. La
+          consecuencia visible para el usuario es el retraso de réplica: guardar algo y al
+          recargar no verlo. Introduce las garantías de sesión que lo tapan y el quórum de
+          los sistemas sin líder.
+        prerrequisitos: ["043", "046"]
         hours: 4
         level: avanzado
         concepts: [replicación sincrónica, retraso de réplica, quórum, lectura de tu propia escritura]
@@ -1021,6 +1901,12 @@ parts:
       - id: "054"
         slug: particionado-rebalanceo-y-claves-calientes
         title: Particionado, rebalanceo y claves calientes
+        resumen: >-
+          Repartir los datos entre nodos sin crear un cuello de botella. Compara hash
+          consistente y partición por rango por lo que cada una permite y por el punto
+          caliente que cada una genera, y explica por qué el rebalanceo se diseña fijando
+          muchas más particiones que nodos desde el principio.
+        prerrequisitos: ["039", "053"]
         hours: 3
         level: avanzado
         concepts: [hash consistente, partición por rango, punto caliente, reequilibrio]
@@ -1030,6 +1916,13 @@ parts:
       - id: "055"
         slug: cap-pacelc-y-lo-que-realmente-se-elige
         title: CAP, PACELC y lo que realmente se elige
+        resumen: >-
+          CAP dicho con precisión y despojado de la versión de póster. La disponibilidad del
+          teorema es mucho más estricta que el «99,9 % de tiempo activo» del lenguaje
+          operativo, y confundirlas es el origen de casi todas las lecturas erróneas. PACELC
+          añade lo que CAP calla: el compromiso entre latencia y consistencia existe también
+          los días en que no hay avería.
+        prerrequisitos: ["053"]
         hours: 3
         level: avanzado
         concepts: [partición de red, disponibilidad, latencia frente a consistencia]
@@ -1039,6 +1932,12 @@ parts:
       - id: "056"
         slug: modelos-de-consistencia-y-garantias-de-sesion
         title: Modelos de consistencia y garantías de sesión
+        resumen: >-
+          El espectro entre linealizabilidad y consistencia eventual, con las garantías de
+          sesión —leer tu propia escritura, lectura monótona— que resuelven en la práctica
+          la mayoría de los síntomas visibles. Insiste en que la consistencia eventual solo
+          converge si existe una regla determinista de resolución de conflictos.
+        prerrequisitos: ["055"]
         hours: 3
         level: avanzado
         concepts: [linealizabilidad, consistencia causal, lectura monotona, convergencia]
@@ -1048,6 +1947,13 @@ parts:
       - id: "057"
         slug: consenso-y-transacciones-distribuidas
         title: "Consenso y transacciones distribuidas: Raft, 2PC y sagas"
+        resumen: >-
+          Cómo se ponen de acuerdo varios nodos y cómo se confirma algo que abarca varios
+          sistemas. Raft para el consenso y la elección de líder, el commit en dos fases con
+          su fragilidad conocida —el coordinador que cae dejando cerrojos tomados— y la saga
+          con compensaciones como la alternativa que renuncia al aislamiento para no
+          bloquear.
+        prerrequisitos: ["055", "047"]
         hours: 4
         level: avanzado
         concepts: [consenso, elección de líder, commit en dos fases, saga, compensación]
@@ -1061,10 +1967,66 @@ parts:
     summary: >-
       Lo que separa un ejercicio de un sistema: restauración probada,
       migraciones sin caída, control de acceso, observabilidad y privacidad.
+    prerrequisitos: ["08"]
+    introduccion:
+      - >-
+          Lo que separa un ejercicio de un sistema. Seis clases sobre las tareas que no
+          aparecen en ningún tutorial de SQL y que son las que deciden si el sistema
+          sobrevive a su segundo año: restaurar, migrar sin caída, controlar el acceso, no
+          ser vulnerable, medir lo que los usuarios notan y tratar el dato personal como una
+          obligación de diseño.
+      - >-
+          El orden es el de la gravedad de las consecuencias. Primero el respaldo, con la
+          afirmación más incómoda del programa: solo cuenta lo que se ha restaurado. Después
+          las migraciones evolutivas con expandir y contraer, que es el patrón que permite
+          desplegar esquema y código por separado. Luego el control de acceso, con una
+          comprobación que suele salir mal: si la aplicación se conecta como propietaria del
+          esquema, no hay privilegio mínimo. Después la inyección SQL, explicada por su
+          causa y con su solución completa. Luego la observabilidad, donde la media oculta y
+          el p99 enseña. Y al final privacidad, retención y gobierno.
+      - >-
+          La clase 061 está clasificada como fundamentos a propósito, aunque esté en una
+          parte avanzada: no hay nivel de experiencia en el que la parametrización sea
+          opcional.
+    resultados:
+      - >-
+          Declarar RPO y RTO en números y demostrarlos con una restauración cronometrada.
+      - >-
+          Ejecutar una migración de esquema sin ventana de caída usando expandir y contraer.
+      - >-
+          Configurar roles con privilegio mínimo y seguridad por fila, y comprobar que el
+          filtro no se puede eludir.
+      - >-
+          Escribir código inmune a inyección y validar los identificadores dinámicos con
+          lista blanca.
+      - >-
+          Definir objetivos de servicio por percentil y usar el presupuesto de error para
+          decidir.
+      - >-
+          Diseñar retención y supresión de datos personales incluyendo respaldos y réplicas.
+    errores:
+      - >-
+          «Tengo respaldos automáticos.» Tienes ficheros. Hasta que no se restaura uno en un
+          entorno limpio y se cronometra, el RTO real es desconocido.
+      - >-
+          «Escapo las comillas y ya estoy protegido.» Escapar a mano falla; parametrizar no.
+          Y para identificadores dinámicos ni una cosa ni la otra: lista blanca.
+      - >-
+          «La latencia media está bien.» La media oculta la cola. Con veinte consultas por
+          petición, casi todos los usuarios tocan al menos una lenta.
+      - >-
+          «Borro al usuario de la tabla y cumplo.» Sigue estando en los respaldos, en las
+          réplicas y probablemente en el registro de auditoría.
     classes:
       - id: "058"
         slug: respaldo-y-restauracion-probada
         title: "Respaldo y restauración: solo cuenta lo que se ha restaurado"
+        resumen: >-
+          La clase que convierte una intención en una garantía medida. RPO y RTO se declaran
+          en números, la recuperación a un punto en el tiempo se demuestra restaurando de
+          verdad, y la conclusión es incómoda a propósito: un respaldo que nunca se ha
+          restaurado no es un respaldo, es un fichero con nombre esperanzador.
+        prerrequisitos: ["046"]
         hours: 4
         level: intermedio
         concepts: [RPO, RTO, recuperación a un punto en el tiempo, prueba de restauración]
@@ -1074,6 +2036,13 @@ parts:
       - id: "059"
         slug: migraciones-evolutivas-sin-caida
         title: Migraciones evolutivas sin ventana de caída
+        resumen: >-
+          Cambiar el esquema con el sistema en marcha, usando expandir y contraer: primero
+          añadir sin quitar, después trasladar el tráfico y rellenar el histórico por lotes
+          reanudables, y solo al final eliminar lo viejo. La compatibilidad hacia atrás deja
+          de ser una buena práctica y pasa a ser obligatoria en cuanto el despliegue es
+          gradual.
+        prerrequisitos: ["013", "024"]
         hours: 3
         level: avanzado
         concepts: [expandir y contraer, doble escritura, relleno, compatibilidad hacia atras]
@@ -1083,6 +2052,12 @@ parts:
       - id: "060"
         slug: control-de-acceso-y-seguridad-por-fila
         title: "Control de acceso: privilegio mínimo, roles y seguridad por fila"
+        resumen: >-
+          El control de acceso con una comprobación incómoda como punto de partida: si la
+          aplicación se conecta como propietaria del esquema, no hay privilegio mínimo.
+          Trata roles, separación de funciones y seguridad por fila, cuya ventaja sobre
+          filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro.
+        prerrequisitos: ["013", "024"]
         hours: 3
         level: intermedio
         concepts: [privilegio mínimo, rol, seguridad por fila, separación de funciones]
@@ -1092,6 +2067,12 @@ parts:
       - id: "061"
         slug: inyeccion-sql-y-parametrizacion
         title: Inyección SQL y el contrato de parametrización
+        resumen: >-
+          La inyección SQL explicada por su causa —mezclar código y datos en la misma
+          cadena— y su solución completa: la consulta parametrizada, que no es una
+          mitigación sino una defensa total. Cubre además el caso que los parámetros no
+          resuelven, los identificadores dinámicos, que solo se validan con lista blanca.
+        prerrequisitos: ["003", "024"]
         hours: 3
         level: fundamentos
         concepts: [consulta parametrizada, identificador dinamico, lista blanca, defensa en profundidad]
@@ -1101,6 +2082,12 @@ parts:
       - id: "062"
         slug: observabilidad-slo-y-capacidad
         title: Observabilidad, objetivos de servicio y capacidad
+        resumen: >-
+          Medir lo que los usuarios notan. La media oculta y el p99 enseña; con veinte
+          consultas por petición, casi todo el mundo toca la cola lenta. Une objetivos de
+          servicio, presupuesto de error, saturación como señal anticipada y el registro de
+          consultas lentas ordenado por tiempo total, no por la peor.
+        prerrequisitos: ["052", "058"]
         hours: 3
         level: avanzado
         concepts: [percentil, presupuesto de error, saturación, consulta lenta]
@@ -1110,6 +2097,12 @@ parts:
       - id: "063"
         slug: privacidad-retencion-y-gobierno-del-dato
         title: Privacidad, retención y gobierno del dato
+        resumen: >-
+          El dato personal como una obligación de diseño y no como un anexo legal.
+          Minimización, limitación de finalidad, seudonimización y derecho de supresión, con
+          el choque que hay que resolver antes de que llegue la solicitud: los respaldos,
+          las réplicas y los registros de auditoría también contienen ese dato.
+        prerrequisitos: ["058", "060"]
         hours: 3
         level: intermedio
         concepts: [minimización, limitación de finalidad, seudonimización, derecho de supresión]
@@ -1123,10 +2116,65 @@ parts:
     summary: >-
       Sacar los datos del sistema que los produjo sin perder su significado:
       almacen dimensional, captura de cambios y procesamiento continuo.
+    prerrequisitos: ["07", "09"]
+    introduccion:
+      - >-
+          Sacar los datos del sistema que los produjo sin perder su significado. La parte
+          parte de una pregunta operativa —por qué la analítica acaba mudándose a otro
+          sistema— y la responde con dos argumentos independientes: el formato de
+          almacenamiento, que decide el orden de magnitud, y la contención, que es el
+          informe mensual compitiendo con las transacciones por el mismo buffer y el mismo
+          disco.
+      - >-
+          Después viene el modelado dimensional de Kimball, con el grano como primera
+          decisión y la que no se corrige luego sin rehacerlo todo, y las dimensiones de
+          cambio lento, que deciden si el informe del año pasado sigue diciendo lo que
+          decía. Luego la integración: ETL frente a ELT por lo que cada uno hace auditable,
+          la captura de cambios leyendo el registro de transacciones, y el desmontaje de la
+          escritura dual. Y al final el procesamiento continuo, con la distinción
+          fundacional entre tiempo de evento y tiempo de proceso.
+      - >-
+          La clase 066 conecta directamente con la 046: la captura de cambios funciona
+          porque el registro anticipado que se estudió para la recuperación resulta ser
+          también el flujo de eventos más fiable que el sistema produce.
+    resultados:
+      - >-
+          Justificar la separación entre OLTP y OLAP con argumentos de formato y de
+          contención.
+      - >-
+          Diseñar un modelo dimensional declarando el grano y el tipo de cambio lento de
+          cada dimensión.
+      - >-
+          Elegir entre ETL y ELT y diseñar una carga idempotente que se pueda relanzar.
+      - >-
+          Explicar por qué la escritura dual es un antipatrón y qué se usa en su lugar.
+      - >-
+          Distinguir tiempo de evento y de proceso, y decidir qué hacer con los datos que
+          llegan tarde.
+    errores:
+      - >-
+          «Hago los informes contra la base de producción, total son pocas consultas.» Pocas
+          y largas: compiten por el buffer y por el disco justo cuando más carga
+          transaccional hay.
+      - >-
+          «El almacén se modela como el operacional.» El grano y las dimensiones de cambio
+          lento no existen en el operacional y son las decisiones que más pesan.
+      - >-
+          «Escribo en la base y publico en la cola desde la aplicación.» No hay atomicidad
+          entre los dos destinos. Es captura de cambios o bandeja de salida.
+      - >-
+          «Exactamente una vez.» De extremo a extremo se construye sobre entrega al menos
+          una vez más consumidores idempotentes, no en lugar de eso.
     classes:
       - id: "064"
         slug: oltp-frente-a-olap
         title: "OLTP frente a OLAP: por qué se separan"
+        resumen: >-
+          Por qué la analítica acaba mudándose a otro sistema, con dos argumentos
+          independientes: el formato de almacenamiento, que decide el orden de magnitud, y
+          la contención, que es la razón operativa —el informe mensual compitiendo con las
+          transacciones por el mismo buffer y el mismo disco.
+        prerrequisitos: ["042", "048"]
         hours: 3
         level: intermedio
         concepts: [carga transaccional, carga analítica, contención, formato de almacenamiento]
@@ -1136,6 +2184,12 @@ parts:
       - id: "065"
         slug: modelado-dimensional
         title: "Modelado dimensional: hechos, dimensiones y cambios lentos"
+        resumen: >-
+          El modelo dimensional de Kimball, con el grano como primera decisión y la que no
+          se corrige después sin rehacerlo todo. Trata las dimensiones de cambio lento como
+          lo que realmente deciden: si el informe del año pasado sigue diciendo lo que decía
+          entonces.
+        prerrequisitos: ["018", "064"]
         hours: 4
         level: intermedio
         concepts: [tabla de hechos, dimensión, grano, dimensión de cambio lento]
@@ -1145,6 +2199,12 @@ parts:
       - id: "066"
         slug: integracion-etl-elt-y-captura-de-cambios
         title: "Integración: ETL, ELT, captura de cambios y el registro como nexo"
+        resumen: >-
+          Mover datos entre sistemas sin perder cambios ni significado. Compara ETL y ELT
+          por lo que cada uno hace auditable, presenta la captura de cambios leyendo el
+          registro de transacciones, y desmonta la escritura dual: escribir a la vez en la
+          base y en la cola no es atómico y tarde o temprano una recibe lo que la otra no.
+        prerrequisitos: ["046", "065"]
         hours: 3
         level: avanzado
         concepts: [ETL, ELT, CDC, escritura dual, idempotencia de carga]
@@ -1154,6 +2214,12 @@ parts:
       - id: "067"
         slug: streaming-tiempo-de-evento-y-ventanas
         title: "Streaming: tiempo de evento, ventanas y semántica de entrega"
+        resumen: >-
+          El procesamiento continuo y su distinción fundacional: tiempo de evento frente a
+          tiempo de proceso. La marca de agua permite cerrar una ventana sabiendo que es una
+          apuesta, y la entrega al menos una vez obliga a que el consumidor sea idempotente
+          —el «exactamente una vez» se construye sobre eso, no en lugar de eso.
+        prerrequisitos: ["066"]
         hours: 3
         level: avanzado
         concepts: [tiempo de evento, marca de agua, ventana, entrega al menos una vez]
@@ -1167,10 +2233,65 @@ parts:
     summary: >-
       La base de datos como componente de un sistema de inteligencia
       artificial: distancias, indices aproximados y recuperación medida.
+    prerrequisitos: ["07"]
+    introduccion:
+      - >-
+          La base de datos como componente de un sistema de inteligencia artificial, tratada
+          con el mismo rigor que el resto del programa: nada se da por bueno sin medirlo. Es
+          la parte más nueva en fecha y la más expuesta a afirmaciones sin evidencia, así
+          que es donde más se insiste en el conjunto de evaluación propio.
+      - >-
+          Primero qué significa parecido cuando lo decide un modelo: espacio vectorial,
+          coseno, producto interno y normalización, con la advertencia que ordena toda la
+          parte —el parecido es el que aprendió ese modelo concreto, así que cambiar de
+          modelo cambia el significado de cerca—. Después los índices aproximados, HNSW e
+          IVF, con la disciplina de medir el recall contra una búsqueda exhaustiva antes de
+          dar por buena una configuración. Luego la búsqueda híbrida, porque lo léxico y lo
+          vectorial se complementan: uno acierta con el término exacto y el otro con el
+          significado. Y al final la evaluación de la recuperación, antes de mirar la
+          generación.
+      - >-
+          La conexión con la parte 07 es directa: BM25 vuelve como componente léxico, y
+          precisión y exhaustividad vuelven convertidas en recall@k y precisión@k.
+    resultados:
+      - >-
+          Elegir la métrica de distancia adecuada y explicar el papel de la normalización.
+      - >-
+          Configurar un índice aproximado y medir su recall contra una búsqueda exhaustiva.
+      - >-
+          Combinar búsqueda léxica y vectorial con fusión de rangos y filtrado por
+          metadatos.
+      - >-
+          Evaluar la recuperación de un sistema RAG con recall@k, precisión@k y MRR sobre un
+          conjunto propio.
+      - >-
+          Justificar una estrategia de fragmentación con una medición y no con el valor por
+          defecto.
+    errores:
+      - >-
+          «La búsqueda vectorial sustituye a la de texto.» Falla justo con los términos
+          exactos —códigos, nombres propios, referencias—, que es donde la léxica es
+          imbatible.
+      - >-
+          «Uso HNSW y ya es rápido y bueno.» Sin medir el recall no sabes qué estás
+          perdiendo; «funciona» solo significa «devolvió algo».
+      - >-
+          «Fragmento en trozos de 512 y listo.» La fragmentación es la decisión que más
+          mueve la calidad de un RAG y la que más se toma sin medir.
+      - >-
+          «El modelo alucinó.» A menudo el modelo no recibió el fragmento correcto: el fallo
+          estaba en la recuperación, que es medible.
     classes:
       - id: "068"
         slug: embeddings-y-metricas-de-distancia
         title: "Embeddings y métricas de distancia: qué significa parecido"
+        resumen: >-
+          Qué significa «parecido» cuando lo decide un modelo. Presenta el espacio
+          vectorial, las métricas de coseno y producto interno, y la normalización que las
+          vuelve equivalentes. La advertencia que ordena toda la parte: el parecido es el
+          que aprendió ese modelo concreto, así que cambiar de modelo cambia el significado
+          de cerca.
+        prerrequisitos: ["041"]
         hours: 3
         level: intermedio
         concepts: [espacio vectorial, coseno, producto interno, normalización, dimensión]
@@ -1180,6 +2301,13 @@ parts:
       - id: "069"
         slug: indices-vectoriales-aproximados
         title: "Índices vectoriales aproximados: HNSW, IVF y el recall"
+        resumen: >-
+          Los índices que hacen viable la búsqueda vectorial renunciando a la exactitud.
+          HNSW e IVF con sus parámetros, la cuantización que cambia memoria por precisión, y
+          la disciplina que la clase impone: medir el recall contra una búsqueda exhaustiva
+          antes de dar por buena una configuración, porque sin ese número «funciona» solo
+          significa «devolvió algo».
+        prerrequisitos: ["068", "049"]
         hours: 4
         level: avanzado
         concepts: [búsqueda aproximada, recall, HNSW, cuantización, latencia frente a exactitud]
@@ -1189,6 +2317,13 @@ parts:
       - id: "070"
         slug: busqueda-hibrida-y-filtrado
         title: "Búsqueda híbrida: léxica más vectorial y filtrado por metadatos"
+        resumen: >-
+          Por qué lo léxico y lo vectorial se combinan en lugar de competir: uno acierta con
+          el término exacto, el otro con el significado. La fusión recíproca de rangos los
+          une sin exigir que sus puntuaciones sean comparables, y el filtrado por metadatos
+          plantea la decisión entre filtro previo y posterior, cada uno con su fallo
+          característico.
+        prerrequisitos: ["041", "069"]
         hours: 3
         level: avanzado
         concepts: [BM25, fusión de rangos, filtro previo, filtro posterior]
@@ -1198,6 +2333,13 @@ parts:
       - id: "071"
         slug: rag-evaluable
         title: "RAG evaluable: medir la recuperación antes que la generación"
+        resumen: >-
+          Medir la recuperación antes de mirar la generación, porque si el fragmento
+          correcto no entra en el contexto ningún modelo de lenguaje podrá responder bien.
+          Recall@k, precisión@k y MRR sobre un conjunto de evaluación propio, con la
+          fragmentación como la decisión que más mueve la calidad y la que más se toma por
+          defecto sin medirla.
+        prerrequisitos: ["070"]
         hours: 3
         level: avanzado
         concepts: [recall@k, precisión@k, MRR, fragmentación, trazabilidad de la cita]
@@ -1211,10 +2353,62 @@ parts:
     summary: >-
       Cerrar el programa con una decisión defendible: comparación por
       evidencia, costo total y una demostración que se pueda auditar.
+    prerrequisitos: ["10", "11", "12", "13"]
+    introduccion:
+      - >-
+          Tres clases para convertir catorce partes de conocimiento en una decisión que se
+          pueda defender. No hay material nuevo de motores aquí: hay método, registro y
+          defensa.
+      - >-
+          La primera clase pone la elección de motores en su forma técnica: carga de trabajo
+          cuantificada, criterio de comparación escrito antes de mirar los productos, y la
+          complejidad añadida contada como lo que cuesta —otro modelo de fallo, otro
+          respaldo, otra guardia—. La segunda enseña a dejar constancia con registros de
+          decisión de arquitectura, costo total de propiedad a varios años y reversibilidad
+          como criterio para saber cuánto análisis merece cada decisión. La tercera es el
+          proyecto final: diseñar, medir y defender ante preguntas hostiles, declarando los
+          límites de lo que el trabajo demuestra.
+      - >-
+          El proyecto final se evalúa como una revisión de arquitectura real. La pregunta no
+          es si funciona, sino qué mediste, qué alternativa descartaste y con qué dato.
+    resultados:
+      - >-
+          Cuantificar una carga de trabajo y derivar de ella un criterio de selección
+          escrito.
+      - >-
+          Comparar candidatos por evidencia reproducible y no por características
+          anunciadas.
+      - >-
+          Escribir registros de decisión con contexto, alternativas y consecuencias
+          negativas aceptadas.
+      - >-
+          Estimar el costo total de propiedad a tres años, incluidas las horas de operación.
+      - >-
+          Defender el diseño ante preguntas hostiles declarando explícitamente sus límites.
+    errores:
+      - >-
+          «Elegimos X porque es el estándar de la industria.» Eso no es un criterio, es una
+          apelación a la costumbre. El criterio es la carga de trabajo.
+      - >-
+          «Persistencia políglota es usar varios motores.» Es usar varios motores cuando
+          cada uno está justificado, contando la complejidad añadida que eso cuesta.
+      - >-
+          «Comparé el precio por hora de cómputo.» Falta el costo mayor: las personas, las
+          guardias, la formación y la migración de salida.
+      - >-
+          «Declarar límites debilita la defensa.» La refuerza: distingue lo que mediste de
+          lo que esperas, y eso es exactamente lo que un revisor busca.
     classes:
       - id: "072"
         slug: persistencia-poliglota-por-evidencia
         title: "Persistencia políglota: decidir por evidencia y no por moda"
+        resumen: >-
+          La elección de motores hecha como decisión técnica: carga de trabajo cuantificada,
+          criterio de comparación escrito antes de mirar los productos, y la complejidad
+          añadida contada como lo que cuesta —otro modelo de fallo, otro respaldo, otra
+          guardia. Es la clase que convierte las catorce partes anteriores en un método de
+          decisión.
+        prerrequisitos: ["010", "064"]
         hours: 3
         level: avanzado
         concepts: [carga de trabajo, criterio de selección, costo de operación, complejidad añadida]
@@ -1224,6 +2418,13 @@ parts:
       - id: "073"
         slug: registro-de-decisiones-y-costo-total
         title: Registro de decisiones de arquitectura y costo total
+        resumen: >-
+          Dejar constancia de por qué se decidió lo que se decidió. El registro de decisión
+          de arquitectura con su contexto, sus alternativas descartadas y sus consecuencias
+          negativas aceptadas; el costo total de propiedad a varios años, que suele invertir
+          el ranking; y la reversibilidad, que es el criterio para saber cuánto análisis
+          merece cada decisión.
+        prerrequisitos: ["072"]
         hours: 3
         level: avanzado
         concepts: [ADR, contexto, consecuencia, costo total de propiedad, reversibilidad]
@@ -1233,6 +2434,12 @@ parts:
       - id: "074"
         slug: proyecto-final-disenar-medir-y-defender
         title: "Proyecto final: diseñar, medir y defender"
+        resumen: >-
+          El cierre del programa: diseñar un sistema, medirlo y defenderlo ante preguntas
+          hostiles. Se evalúa como una revisión de arquitectura real —qué mediste, qué
+          alternativa descartaste, con qué dato— y exige declarar los límites: qué no
+          demuestra el trabajo y qué faltaría para llevarlo a producción.
+        prerrequisitos: ["073", "062"]
         hours: 6
         level: avanzado
         concepts: [defensa técnica, evidencia reproducible, límite declarado, plan de evolución]

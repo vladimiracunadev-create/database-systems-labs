@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 07 — Grafos, columnas, tiempo y búsqueda</h1>
 <p class="lead">Modelos especializados y el criterio para saber cuando la carga de trabajo justifica salir del relacional.</p>
-<p><strong>5 clases · 15 horas</strong></p>
+<p><strong>5 clases · 15 horas ·
+20 conceptos · 16 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-06.html">Parte 06 — Documentos y clave-valor</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Cinco familias especializadas y un mismo criterio para todas: qué carga de trabajo justifica salir del relacional, y qué se paga por hacerlo. La estructura de la parte es deliberadamente comparativa, porque el error habitual no es elegir mal el motor especializado, sino adoptarlo sin haber comprobado que el relacional ya no daba más.</p>
+<p>Grafos, para los recorridos de profundidad variable que SQL resuelve mal —con la aclaración honesta de cuándo una CTE recursiva sobre PostgreSQL es suficiente—. Columnas anchas, con su método de diseño invertido: primero la lista de consultas, después una tabla por consulta. Series temporales, con sus tres restricciones propias: cardinalidad de etiquetas, retención y submuestreo. Búsqueda de texto, con el índice invertido y la relevancia de TF-IDF a BM25. Y analítica columnar, donde se miden las cuatro contribuciones que producen los dos órdenes de magnitud, en lugar de atribuirlos al producto.</p>
+<p>Las clases 041 y 042 son además preparación directa de la parte 13: BM25 vuelve como componente léxico de la búsqueda híbrida, y precisión y exhaustividad vuelven como métricas de un sistema RAG.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Decidir si un recorrido justifica un motor de grafos o si una CTE recursiva es suficiente.</li>
+<li>Diseñar tablas de columnas anchas partiendo de la lista de consultas y no del modelo conceptual.</li>
+<li>Controlar la cardinalidad, la retención y el submuestreo de una serie temporal.</li>
+<li>Explicar cómo se construye un índice invertido y cómo BM25 ordena los resultados.</li>
+<li>Medir de dónde sale la ventaja de un motor columnar en lugar de atribuirla al producto.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -62,6 +83,102 @@
 <tr><td><a href="041.html">041</a></td><td><a href="041.html">Búsqueda de texto: índice invertido, análisis y relevancia</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 <tr><td><a href="042.html">042</a></td><td><a href="042.html">Analítica columnar: por qué el formato cambia el orden de magnitud</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>4</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="038.html">038 — Grafos de propiedades y los recorridos que SQL hace mal</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="026.html">026</a>, <a href="028.html">028</a></p>
+    <p>Los recorridos que SQL hace mal: profundidad variable, caminos y vecindarios. Explica la ventaja estructural del motor de grafos —la reunión sin índice, porque cada nodo guarda las direcciones de sus vecinos— y también cuándo una CTE recursiva sobre PostgreSQL es suficiente y no hace falta otro sistema.</p>
+    <p><span class="tag">nodo</span> <span class="tag">arista</span> <span class="tag">recorrido de profundidad variable</span> <span class="tag">reunión sin índice</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="039.html">039 — Columnas anchas: modelar desde la consulta</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="019.html">019</a>, <a href="034.html">034</a></p>
+    <p>El método de diseño invertido de las columnas anchas: primero se escribe la lista de consultas y después una tabla por consulta, aunque los mismos datos queden repetidos cinco veces. La clave de partición decide en qué nodo vive la fila y la de agrupamiento el orden dentro de ella; equivocarse en la primera es el error de diseño más caro de esta familia.</p>
+    <p><span class="tag">clave de partición</span> <span class="tag">clave de agrupamiento</span> <span class="tag">desnormalización por consulta</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="040.html">040 — Series temporales: cardinalidad, retención y agregados continuos</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="006.html">006</a>, <a href="019.html">019</a></p>
+    <p>Las series temporales y sus tres restricciones propias: la cardinalidad de etiquetas, que explota si se usa un identificador como etiqueta; la retención, que hay que decidir antes de acumular; y el submuestreo con agregados continuos, que es cómo se sostiene un histórico largo sin crecimiento lineal.</p>
+    <p><span class="tag">cardinalidad de etiquetas</span> <span class="tag">submuestreo</span> <span class="tag">retención</span> <span class="tag">agregado continuo</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="041.html">041 — Búsqueda de texto: índice invertido, análisis y relevancia</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="004.html">004</a>, <a href="025.html">025</a></p>
+    <p>Por qué `LIKE '%algo%'` no es buscar. Presenta el índice invertido, el analizador que decide qué es un término, y la relevancia de TF-IDF a BM25. Cierra con precisión y exhaustividad, el par de métricas que hace que una búsqueda se pueda evaluar en lugar de opinar sobre ella; ambas reaparecen en la parte 13.</p>
+    <p><span class="tag">índice invertido</span> <span class="tag">analizador</span> <span class="tag">TF-IDF</span> <span class="tag">BM25</span> <span class="tag">precisión y exhaustividad</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="042.html">042 — Analítica columnar: por qué el formato cambia el orden de magnitud</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      4 fuentes · requiere <a href="033.html">033</a></p>
+    <p>De dónde salen realmente los dos órdenes de magnitud de la analítica: leer solo las columnas necesarias, comprimirlas mejor porque los valores contiguos se parecen, procesarlas en lotes vectorizados y podar bloques enteros por sus estadísticas. La clase mide las cuatro contribuciones en lugar de atribuirlas al producto.</p>
+    <p><span class="tag">almacenamiento columnar</span> <span class="tag">compresión</span> <span class="tag">ejecución vectorizada</span> <span class="tag">poda de particiones</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Mis datos son un grafo, necesito un motor de grafos.» Casi todo es un grafo. Lo que justifica el motor es el recorrido de profundidad variable, no la forma de los datos.</li>
+<li>«En Cassandra modelo como en SQL y ya.» Una consulta que no fija la clave de partición obliga a preguntar a todo el anillo; es el error de diseño número uno de esa familia.</li>
+<li>«Pongo el identificador de usuario como etiqueta para poder filtrar.» Eso multiplica la cardinalidad de series y tumba el motor de series temporales.</li>
+<li>«Con `LIKE '%texto%'` ya busco.» Eso recorre la tabla y no ordena por relevancia. Buscar es índice invertido más una función de puntuación.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 20 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#agregado-continuo"><strong>agregado continuo</strong></a></td><td>Vista materializada que se actualiza de forma incremental según llegan datos nuevos, típicamente con medias u otros resúmenes por intervalo. Permite responder «el promedio por hora del último año» sin recorrer mil millones de puntos en cada consulta.</td><td><a href="040.html">040</a></td></tr>
+<tr><td><a href="../glosario.html#almacenamiento-columnar"><strong>almacenamiento columnar</strong></a></td><td>Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí.</td><td><a href="042.html">042</a></td></tr>
+<tr><td><a href="../glosario.html#analizador"><strong>analizador</strong></a></td><td>Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.)</td><td><a href="041.html">041</a></td></tr>
+<tr><td><a href="../glosario.html#arista"><strong>arista</strong></a></td><td>Relación dirigida y con tipo entre dos nodos, que puede llevar sus propias propiedades. En un motor de grafos es un puntero real, no una clave foránea que haya que buscar en un índice, y de ahí viene su ventaja al recorrer.</td><td><a href="038.html">038</a></td></tr>
+<tr><td><a href="../glosario.html#bm25"><strong>BM25</strong></a></td><td>Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros `k1` y `b`. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales.</td><td><a href="041.html">041</a></td></tr>
+<tr><td><a href="../glosario.html#cardinalidad-de-etiquetas"><strong>cardinalidad de etiquetas</strong></a></td><td>Número de combinaciones distintas de etiquetas en una base de series temporales; cada combinación es una serie con su índice y su memoria. Meter un identificador de usuario o de petición como etiqueta produce una explosión de cardinalidad que tumba el motor.</td><td><a href="040.html">040</a></td></tr>
+<tr><td><a href="../glosario.html#clave-de-agrupamiento"><strong>clave de agrupamiento</strong></a></td><td>La parte de la clave primaria que ordena las filas dentro de una partición. Es lo que permite leer rangos —«los últimos 20 mensajes de este chat»— con una sola lectura secuencial, y por eso el orden se decide al crear la tabla, no al consultar.</td><td><a href="039.html">039</a></td></tr>
+<tr><td><a href="../glosario.html#clave-de-partición"><strong>clave de partición</strong></a></td><td>La parte de la clave primaria que decide en qué nodo vive la fila. Toda consulta eficiente debe fijarla; una consulta sin ella obliga a preguntar a todo el anillo, y es el error de diseño número uno en columnas anchas.</td><td><a href="039.html">039</a></td></tr>
+<tr><td><a href="../glosario.html#compresión"><strong>compresión</strong></a></td><td>En un formato columnar, los valores contiguos se parecen, así que técnicas como el diccionario, la codificación por carrera o el delta reducen el tamaño en un orden de magnitud. Menos bytes leídos es menos entrada y salida, que es de donde sale casi toda la ventaja analítica.</td><td><a href="042.html">042</a></td></tr>
+<tr><td><a href="../glosario.html#desnormalización-por-consulta"><strong>desnormalización por consulta</strong></a></td><td>Método de diseño de columnas anchas: se escribe primero la lista de consultas y luego una tabla por consulta, aunque los mismos datos queden repetidos en cinco tablas. La coherencia entre copias pasa a ser responsabilidad de la aplicación.</td><td><a href="039.html">039</a></td></tr>
+<tr><td><a href="../glosario.html#ejecución-vectorizada"><strong>ejecución vectorizada</strong></a></td><td>El ejecutor procesa lotes de valores por operador en lugar de fila a fila. Reduce el costo por fila del intérprete y permite usar instrucciones SIMD; combinada con el formato columnar, es la explicación de las diferencias de dos órdenes de magnitud frente a un motor de filas.</td><td><a href="042.html">042</a></td></tr>
+<tr><td><a href="../glosario.html#nodo"><strong>nodo</strong></a></td><td>Vértice del grafo de propiedades: una cosa con etiquetas y con pares clave-valor propios. Equivale a una fila, con la diferencia de que sus conexiones son parte de la estructura y no se recomponen por reunión.</td><td><a href="038.html">038</a></td></tr>
+<tr><td><a href="../glosario.html#poda-de-particiones"><strong>poda de particiones</strong></a></td><td>Descartar ficheros o bloques enteros sin abrirlos, gracias a los mínimos y máximos guardados en sus metadatos. Es lo que hace que consultar un día concreto sobre un histórico de diez años cueste casi lo mismo que consultar ese día solo.</td><td><a href="042.html">042</a></td></tr>
+<tr><td><a href="../glosario.html#precisión-y-exhaustividad"><strong>precisión y exhaustividad</strong></a></td><td>Precisión: qué proporción de lo devuelto era relevante. Exhaustividad (o *recall*): qué proporción de lo relevante se devolvió. Casi siempre se compensan entre sí, y por eso una búsqueda solo puede evaluarse fijando cuál de las dos importa en ese caso.</td><td><a href="041.html">041</a></td></tr>
+<tr><td><a href="../glosario.html#recorrido-de-profundidad-variable"><strong>recorrido de profundidad variable</strong></a></td><td>Consulta del tipo «amigos de amigos hasta cinco saltos» o «cualquier camino entre A y B». En SQL exige una CTE recursiva y una reunión por nivel; en un motor de grafos el costo depende del subgrafo recorrido, no del tamaño total del grafo.</td><td><a href="038.html">038</a></td></tr>
+<tr><td><a href="../glosario.html#retención"><strong>retención</strong></a></td><td>Cuánto tiempo se conservan los datos antes de borrarlos automáticamente. En series temporales es una decisión de capacidad; en datos personales es además una obligación legal, y las dos deben coincidir en la misma política escrita.</td><td><a href="040.html">040</a></td></tr>
+<tr><td><a href="../glosario.html#reunión-sin-índice"><strong>reunión sin índice</strong></a></td><td>Propiedad de los motores de grafos nativos: cada nodo guarda las direcciones físicas de sus vecinos, así que pasar de uno a otro no consulta ningún índice. Es la razón técnica de que el recorrido profundo escale donde el `JOIN` repetido se degrada.</td><td><a href="038.html">038</a></td></tr>
+<tr><td><a href="../glosario.html#submuestreo"><strong>submuestreo</strong></a></td><td>Reducir la resolución de los datos antiguos: guardar cada segundo la última hora, cada minuto la última semana, cada hora el último año. Es cómo se sostiene un histórico largo sin que el tamaño crezca de forma lineal para siempre.</td><td><a href="040.html">040</a></td></tr>
+<tr><td><a href="../glosario.html#tf-idf"><strong>TF-IDF</strong></a></td><td>Peso clásico de un término: crece con su frecuencia en el documento (TF) y decrece con el número de documentos en que aparece (IDF). Formaliza la intuición de que «el» no distingue nada y «hipervisor» distingue mucho.</td><td><a href="041.html">041</a></td></tr>
+<tr><td><a href="../glosario.html#índice-invertido"><strong>índice invertido</strong></a></td><td>Estructura que va de cada término al listado de documentos que lo contienen —lo contrario de recorrer los documentos buscando el término—. Es la base de todo buscador de texto y la razón de que `LIKE '%algo%'` no sea comparable a una búsqueda de verdad.</td><td><a href="041.html">041</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>16 obras distintas sostienen lo que se afirma en estas
+5 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-docs-cassandra">Apache Cassandra Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 039</span></li>
+<li><a href="../fuentes.html#src-chang-bigtable-2006">Bigtable: A Distributed Storage System for Structured Data</a> <span class="fuente-meta">(2006)</span> — <span class="fuente-meta">se cita en 039</span></li>
+<li><a href="../fuentes.html#src-cassandra-definitive-3ed">Cassandra: The Definitive Guide</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 039</span></li>
+<li><a href="../fuentes.html#src-docs-clickhouse">ClickHouse Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 042</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 040</span></li>
+<li><a href="../fuentes.html#src-docs-duckdb">DuckDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 042</span></li>
+<li><a href="../fuentes.html#src-graph-databases-2ed">Graph Databases</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 038</span></li>
+<li><a href="../fuentes.html#src-flajolet-hyperloglog-2007">HyperLogLog: The Analysis of a Near-Optimal Cardinality Estimation Algorithm</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 042</span></li>
+<li><a href="../fuentes.html#src-docs-influxdb">InfluxDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 040</span></li>
+<li><a href="../fuentes.html#src-celko-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a> <span class="fuente-meta">(2014)</span> — <span class="fuente-meta">se cita en 038</span></li>
+<li><a href="../fuentes.html#src-docs-neo4j">Neo4j Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 038</span></li>
+<li><a href="../fuentes.html#src-docs-opensearch">OpenSearch Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 041</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql">PostgreSQL Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 041</span></li>
+<li><a href="../fuentes.html#src-stonebraker-end-of-era-2007">The End of an Architectural Era (It's Time for a Complete Rewrite)</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 042</span></li>
+<li><a href="../fuentes.html#src-robertson-bm25-2009">The Probabilistic Relevance Framework: BM25 and Beyond</a> <span class="fuente-meta">(2009)</span> — <span class="fuente-meta">se cita en 041</span></li>
+<li><a href="../fuentes.html#src-docs-timescale">TimescaleDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 040</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

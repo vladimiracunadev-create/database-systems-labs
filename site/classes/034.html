@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>agregado</code> · <code>frontera transaccional</code> · <code>entidad</code> · <code>actividad</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El agregado como unidad de lectura, escritura y consistencia, y la consecuencia que ordena toda la parte: en los motores documentales la frontera transaccional coincide con el agregado. Diseñar el agregado es, por tanto, decidir dónde termina la garantía del motor y empieza el trabajo de la aplicación.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 034&quot;]
     C --&gt; K1[&quot;agregado&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="019.html">019</a></td>
+<td>Desnormalización deliberada y patrones de acceso</td>
+<td>redundancia controlada · costo de escritura · agregado · patrón de lectura</td>
+</tr>
+<tr>
+<td><a href="023.html">023</a></td>
+<td>Integridad: restricciones, claves foraneas y acciones referenciales</td>
+<td>integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-agregado"></a><strong>agregado</strong></td>
+<td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como <code>SUM</code> o <code>COUNT</code>.)</td>
+<td>se introdujo en la <a href="019.html">019</a></td>
+</tr>
+<tr>
+<td><a id="v-frontera-transaccional"></a><strong>frontera transaccional</strong></td>
+<td>El límite dentro del cual el motor garantiza atomicidad y aislamiento. En los motores de agregado coincide con el agregado: una escritura sobre un documento es atómica, dos sobre documentos distintos ya no. Diseñar el agregado es, por tanto, diseñar dónde termina la garantía.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-entidad"></a><strong>entidad</strong></td>
+<td>Cosa del dominio con identidad propia que persiste a lo largo del tiempo: un cliente, un producto, una cuenta. Se distingue de la actividad en que existe aunque no pase nada, y suele ser la raíz de un agregado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-actividad"></a><strong>actividad</strong></td>
+<td>Hecho que ocurre en un instante y relaciona entidades: un pedido, un pago, una inscripción. Su volumen crece sin límite con el tiempo, lo que la convierte en la candidata natural a tabla de hechos o a flujo de eventos, y en la mala candidata a incrustarse dentro de una entidad.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender la idea que organiza casi todo el mundo no relacional: el <strong>agregado</strong>. Elegir sus fronteras es elegir dónde hay transacciones y dónde no.</p>

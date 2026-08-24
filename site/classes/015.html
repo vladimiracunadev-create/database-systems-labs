@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>regla de negocio</code> · <code>diccionario de datos</code> · <code>alcance</code> · <code>patrón de acceso</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El paso del enunciado ambiguo a un conjunto de entidades que se puede defender. Trabaja tres herramientas: las reglas de negocio que acabarán siendo restricciones, el diccionario de datos que impide que dos equipos llamen igual a cosas distintas, y el alcance escrito de lo que el modelo decide no representar.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 015&quot;]
     C --&gt; K1[&quot;regla de negocio&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="001.html">001</a></td>
+<td>Qué es un dato, un registro y una tabla</td>
+<td>dato · información · registro · campo · tabla</td>
+</tr>
+<tr>
+<td><a href="008.html">008</a></td>
+<td>Dos tablas y una relación: la clave foránea</td>
+<td>clave foránea · tabla de relación · reunión · anomalías de repetición</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-regla-de-negocio"></a><strong>regla de negocio</strong></td>
+<td>Una afirmación del dominio que el sistema debe respetar: «un estudiante no puede inscribirse dos veces en el mismo curso». Cada regla acaba en una restricción, en un índice único o en una prueba; la que no acaba en ninguna de las tres es solo una frase en un documento.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-diccionario-de-datos"></a><strong>diccionario de datos</strong></td>
+<td>La lista de cada atributo con su significado exacto, su tipo, su unidad y su origen. Es lo que impide que «fecha» signifique alta para un equipo y último acceso para otro.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-alcance"></a><strong>alcance</strong></td>
+<td>Lo que el modelo decide representar y lo que decide ignorar. Kent lo formula sin rodeos: ningún modelo captura el mundo, siempre hay un recorte, y ese recorte es una decisión humana que conviene escribir en lugar de sufrir después.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-patrón-de-acceso"></a><strong>patrón de acceso</strong></td>
+<td>La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar.</td>
+<td>se introdujo en la <a href="010.html">010</a></td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Convertir un enunciado en prosa —ambiguo, incompleto y contradictorio, como todos— en una lista de entidades, atributos y reglas que se pueda defender frente a quien encargó el sistema.</p>

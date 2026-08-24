@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>consenso</code> · <code>elección de líder</code> · <code>commit en dos fases</code> · <code>saga</code> · <code>compensación</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Cómo se ponen de acuerdo varios nodos y cómo se confirma algo que abarca varios sistemas. Raft para el consenso y la elección de líder, el commit en dos fases con su fragilidad conocida —el coordinador que cae dejando cerrojos tomados— y la saga con compensaciones como la alternativa que renuncia al aislamiento para no bloquear.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 057&quot;]
     C --&gt; K1[&quot;consenso&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="055.html">055</a></td>
+<td>CAP, PACELC y lo que realmente se elige</td>
+<td>partición de red · disponibilidad · latencia frente a consistencia</td>
+</tr>
+<tr>
+<td><a href="047.html">047</a></td>
+<td>Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</td>
+<td>idempotencia · clave de idempotencia · bloqueo optimista · reintento con retroceso</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-consenso"></a><strong>consenso</strong></td>
+<td>Que un conjunto de nodos se ponga de acuerdo en un valor y no cambie de opinión, tolerando caídas de una minoría. Es el cimiento de la elección de líder, de la pertenencia al clúster y del commit atómico; Raft y Paxos son las dos formulaciones de referencia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-elección-de-líder"></a><strong>elección de líder</strong></td>
+<td>Procedimiento por el que la mayoría acuerda quién ordena las escrituras durante un mandato. Que se necesite mayoría es lo que impide dos líderes simultáneos —el escenario de cerebro dividido— cuando la red se parte.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-commit-en-dos-fases"></a><strong>commit en dos fases</strong></td>
+<td>Protocolo para confirmar una transacción que abarca varios sistemas: primero se pregunta a todos si pueden, después se les ordena confirmar. Es correcto y es frágil: si el coordinador cae entre las dos fases, los participantes quedan bloqueados con los cerrojos tomados.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-saga"></a><strong>saga</strong></td>
+<td>Secuencia de transacciones locales, cada una con su compensación, que sustituye a una transacción distribuida. Renuncia al aislamiento —los estados intermedios se ven— a cambio de no bloquear recursos entre servicios.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-compensación"></a><strong>compensación</strong></td>
+<td>Operación de negocio que deshace el efecto de otra ya confirmada: reembolsar en vez de revertir, anular una reserva en vez de borrarla. No es un <code>ROLLBACK</code>, porque el estado intermedio existió y alguien pudo verlo.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Coordinar varios nodos cuando hace falta acuerdo: consenso para elegir líder y ordenar operaciones, y las tres formas de que una operación abarque varios sistemas.</p>

@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>recall@k</code> · <code>precisión@k</code> · <code>MRR</code> · <code>fragmentación</code> · <code>trazabilidad de la cita</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Medir la recuperación antes de mirar la generación, porque si el fragmento correcto no entra en el contexto ningún modelo de lenguaje podrá responder bien. Recall@k, precisión@k y MRR sobre un conjunto de evaluación propio, con la fragmentación como la decisión que más mueve la calidad y la que más se toma por defecto sin medirla.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 071&quot;]
     C --&gt; K1[&quot;recall@k&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="070.html">070</a></td>
+<td>Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</td>
+<td>BM25 · fusión de rangos · filtro previo · filtro posterior</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-recallk"></a><strong>recall@k</strong></td>
+<td>Qué proporción de los documentos relevantes aparece entre los K primeros resultados. Es la métrica que gobierna un sistema RAG: si el fragmento correcto no entra en el contexto, ningún modelo de lenguaje podrá responder bien.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-precisiónk"></a><strong>precisión@k</strong></td>
+<td>Qué proporción de los K devueltos era relevante. Importa porque el contexto es finito y caro: llenar la ventana de ruido desplaza a los fragmentos que sí servían.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-mrr"></a><strong>MRR</strong></td>
+<td>Rango recíproco medio: la media de 1 dividido por la posición del primer resultado relevante. Premia colocar arriba la respuesta correcta, que es justo lo que importa cuando solo se van a leer los tres primeros fragmentos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-fragmentación"></a><strong>fragmentación</strong></td>
+<td>Cómo se parte el documento antes de vectorizarlo: por tamaño, por párrafo, por sección, con o sin solape. Es la decisión que más mueve la calidad de un RAG y la que más se toma por defecto sin medirla.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-trazabilidad-de-la-cita"></a><strong>trazabilidad de la cita</strong></td>
+<td>Que cada afirmación de la respuesta pueda seguirse hasta el fragmento y el documento del que salió. Es lo que permite auditar el sistema y detectar la alucinación; sin ella no hay forma de distinguir una respuesta correcta de una convincente.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Construir un sistema de generación aumentada por recuperación cuya calidad se pueda medir. La parte de bases de datos —la recuperación— se evalúa por separado y <strong>antes</strong> que la generación.</p>

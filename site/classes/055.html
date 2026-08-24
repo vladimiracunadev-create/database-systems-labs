@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>partición de red</code> · <code>disponibilidad</code> · <code>latencia frente a consistencia</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>CAP dicho con precisión y despojado de la versión de póster. La disponibilidad del teorema es mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas. PACELC añade lo que CAP calla: el compromiso entre latencia y consistencia existe también los días en que no hay avería.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 055&quot;]
     C --&gt; K1[&quot;partición de red&quot;]
@@ -71,6 +74,57 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="053.html">053</a></td>
+<td>Réplica: líder único, multilíder y sin líder</td>
+<td>replicación sincrónica · retraso de réplica · quórum · lectura de tu propia escritura</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-partición-de-red"></a><strong>partición de red</strong></td>
+<td>Situación en la que dos grupos de nodos siguen vivos pero no pueden comunicarse. No es un fallo hipotético: es lo que ocurre con un cable, un cortafuegos mal aplicado o una latencia lo bastante alta como para que los tiempos de espera venzan.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-disponibilidad"></a><strong>disponibilidad</strong></td>
+<td>En el enunciado formal de CAP, que toda petición a un nodo no caído reciba respuesta. Es una definición mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas del teorema.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-latencia-frente-a-consistencia"></a><strong>latencia frente a consistencia</strong></td>
+<td>La mitad de PACELC que CAP ignora: incluso sin particiones hay que elegir entre responder rápido desde una réplica cercana o esperar la coordinación que garantiza el dato más reciente. Es el compromiso que se paga todos los días, no solo el día de la avería.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Enunciar CAP con precisión, entender por qué su lectura popular es engañosa y usar PACELC, que describe mejor el compromiso que se toma todos los días.</p>

@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>TTL</code> · <code>invalidación</code> · <code>estampida de caché</code> · <code>durabilidad configurable</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Qué se gana y qué se pierde exactamente al poner una caché delante. Trata el TTL como política de retención, la invalidación como el problema difícil que es, la estampida como fallo predecible, y la durabilidad configurable de Redis como una decisión de negocio que hay que escribir en segundos de pérdida aceptable.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 037&quot;]
     C --&gt; K1[&quot;TTL&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="034.html">034</a></td>
+<td>El agregado como unidad de consistencia</td>
+<td>agregado · frontera transaccional · entidad · actividad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-ttl"></a><strong>TTL</strong></td>
+<td>Tiempo de vida tras el cual la clave expira y desaparece. Es la política de retención más simple que existe y la que convierte a una caché en caché: sin TTL, un almacén clave-valor es solo una base de datos en memoria que crece hasta llenarla.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-invalidación"></a><strong>invalidación</strong></td>
+<td>Borrar o marcar como obsoleta una entrada de caché cuando cambia el dato de origen. Es el problema difícil de las cachés porque exige que quien escribe en la base sepa qué claves quedaron mentirosas —y normalmente no lo sabe.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-estampida-de-caché"></a><strong>estampida de caché</strong></td>
+<td>Cuando una clave muy consultada expira y miles de peticiones van a la vez a la base de datos a recalcularla. Se mitiga con expiraciones escalonadas, recálculo anticipado o un cerrojo que deja pasar a uno solo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-durabilidad-configurable"></a><strong>durabilidad configurable</strong></td>
+<td>Poder elegir cuánta pérdida se acepta a cambio de latencia: Redis ofrece desde ninguna persistencia hasta <code>appendfsync always</code>, pasando por instantáneas periódicas. La decisión es de negocio, y hay que escribirla: «se pueden perder hasta N segundos de escrituras».</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Usar un almacén clave-valor sabiendo exactamente qué se pierde y cuándo. Una caché mal diseñada no solo no acelera: sirve datos incorrectos y derriba el origen cuando expira.</p>

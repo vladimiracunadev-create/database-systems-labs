@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Fundamentos ·
 
 **En este caso se comparan 7 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El `SELECT` con su semántica exacta: el orden lógico de evaluación que explica por qué un alias del `SELECT` no vale en el `WHERE`, y la colación, que decide si `a` es igual a `A` y dónde va la `ñ`. Cierra con el determinismo de orden, que es la diferencia entre una consulta reproducible y una que cambia el día que cambia el plan.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 025"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [004](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) | Leer datos: SELECT, WHERE y ORDER BY | filtrado · proyección · orden · LIMIT · IS NULL |
+| [020](../../part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/README.md) | La relación como conjunto: tuplas, dominios y acceso por valor | relación · tupla · dominio · acceso por valor · cierre |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-predicado"></a>**predicado** | Expresión lógica que se evalúa a verdadero, falso o desconocido para cada fila. En SQL solo pasan el filtro las filas cuyo predicado es verdadero: `UNKNOWN` se descarta igual que `FALSE`, y ahí empiezan los resultados sorprendentes con nulos. | se introduce aquí |
+| <a id="v-orden-de-evaluación"></a>**orden de evaluación** | El orden lógico en que SQL procesa una consulta: `FROM`, `WHERE`, `GROUP BY`, `HAVING`, `SELECT`, `ORDER BY`, `LIMIT`. Explica por qué no se puede usar un alias del `SELECT` en el `WHERE` y por qué `HAVING` filtra grupos y `WHERE` filtra filas. | se introduce aquí |
+| <a id="v-colación"></a>**colación** | El conjunto de reglas que decide cómo se comparan y ordenan los textos: si `a` = `A`, dónde va la `ñ`, si los acentos cuentan. Cambia el resultado de `ORDER BY`, de `=` y de un `UNIQUE`, y es distinta por defecto en cada motor. | se introduce aquí |
+| <a id="v-determinismo-de-orden"></a>**determinismo de orden** | Que dos ejecuciones de la misma consulta devuelvan las filas en el mismo orden. Solo lo garantiza un `ORDER BY` cuyas columnas no empaten; con empates, el desempate lo decide el plan y puede cambiar mañana. | se introduce aquí |
 
 ---
 

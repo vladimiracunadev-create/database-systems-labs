@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>hash consistente</code> · <code>partición por rango</code> · <code>punto caliente</code> · <code>reequilibrio</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Repartir los datos entre nodos sin crear un cuello de botella. Compara hash consistente y partición por rango por lo que cada una permite y por el punto caliente que cada una genera, y explica por qué el rebalanceo se diseña fijando muchas más particiones que nodos desde el principio.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 054&quot;]
     C --&gt; K1[&quot;hash consistente&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="039.html">039</a></td>
+<td>Columnas anchas: modelar desde la consulta</td>
+<td>clave de partición · clave de agrupamiento · desnormalización por consulta</td>
+</tr>
+<tr>
+<td><a href="053.html">053</a></td>
+<td>Réplica: líder único, multilíder y sin líder</td>
+<td>replicación sincrónica · retraso de réplica · quórum · lectura de tu propia escritura</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-hash-consistente"></a><strong>hash consistente</strong></td>
+<td>Reparto de claves sobre un anillo de posiciones de modo que añadir o quitar un nodo mueva solo una fracción de los datos, y no obligue a redistribuirlo todo como haría un <code>hash mod N</code>. Es la base del rebalanceo en Dynamo y Cassandra.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-partición-por-rango"></a><strong>partición por rango</strong></td>
+<td>Repartir por intervalos ordenados de la clave. Permite consultas por rango eficientes, a costa de generar puntos calientes cuando las escrituras se concentran al final del rango —el caso típico de una clave temporal.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-punto-caliente"></a><strong>punto caliente</strong></td>
+<td>Partición que recibe una parte desproporcionada del tráfico: la celebridad con millones de seguidores, la fecha de hoy, el cliente que factura el 40 %. Ninguna cantidad de nodos ayuda mientras el reparto siga concentrando ahí.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-reequilibrio"></a><strong>reequilibrio</strong></td>
+<td>Mover particiones entre nodos al cambiar la capacidad del clúster. La práctica recomendada es fijar de antemano muchas más particiones que nodos y mover particiones enteras, en lugar de recalcular la asignación de cada clave.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Repartir los datos entre nodos para escalar la escritura, evitando los dos fallos que hacen inútil el reparto: las particiones calientes y el rebalanceo que mueve todo.</p>

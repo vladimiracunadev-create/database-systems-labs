@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>extensión</code> · <code>tipo compuesto</code> · <code>proceso por conexión</code> · <code>autovacuum</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>PostgreSQL como caso de estudio de motor extensible: tipos compuestos, arreglos, rangos y JSONB de fábrica, extensiones que añaden vectores o geometría sin tocar el núcleo, y un modelo de proceso por conexión que explica por qué el agrupador de conexiones deja de ser opcional. Incluye autovacuum, que reaparece en la parte 08.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 031&quot;]
     C --&gt; K1[&quot;extensión&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="012.html">012</a></td>
+<td>Arquitectura interna de un gestor, del cliente al disco</td>
+<td>analizador · planificador · ejecutor · gestor de almacenamiento · buffer pool</td>
+</tr>
+<tr>
+<td><a href="024.html">024</a></td>
+<td>DDL: el esquema como contrato ejecutable</td>
+<td>tipo de dato · restricción · valor por defecto · DDL transaccional</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-extensión"></a><strong>extensión</strong></td>
+<td>Módulo cargable que añade tipos, operadores, índices o funciones a PostgreSQL sin tocar su núcleo: <code>pgvector</code>, <code>PostGIS</code>, <code>pg_stat_statements</code>. Es el mecanismo por el que un motor relacional cubre familias enteras —vectores, geometría, series— sin dejar de ser el mismo motor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-tipo-compuesto"></a><strong>tipo compuesto</strong></td>
+<td>Tipo de dato definido por el usuario con varios campos, o los tipos estructurados que PostgreSQL trae de fábrica: arreglos, rangos, <code>JSONB</code>, tipos enumerados. Permiten modelar sin salir del relacional lo que en otros motores obligaría a una tabla más o a un documento.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-proceso-por-conexión"></a><strong>proceso por conexión</strong></td>
+<td>Modelo de PostgreSQL: cada conexión es un proceso del sistema operativo con su propia memoria. Es robusto —una caída no arrastra a las demás— y caro: por eso un agrupador de conexiones deja de ser un lujo a partir de unos cientos de clientes.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-autovacuum"></a><strong>autovacuum</strong></td>
+<td>Proceso que recupera el espacio de las versiones de fila muertas que deja MVCC y actualiza las estadísticas del planificador. Cuando se queda atrás, la tabla se hincha y los planes se degradan: dos síntomas que se ven antes en el monitor que en el error.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Conocer PostgreSQL lo suficiente para usarlo bien y para saber qué de él <strong>no</strong> es transferible a otros motores. Es el motor de referencia del programa por su cobertura de la norma y su documentación.</p>

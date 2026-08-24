@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>nodo</code> · <code>arista</code> · <code>recorrido de profundidad variable</code> · <code>reunión sin índice</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Los recorridos que SQL hace mal: profundidad variable, caminos y vecindarios. Explica la ventaja estructural del motor de grafos —la reunión sin índice, porque cada nodo guarda las direcciones de sus vecinos— y también cuándo una CTE recursiva sobre PostgreSQL es suficiente y no hace falta otro sistema.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 038&quot;]
     C --&gt; K1[&quot;nodo&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="026.html">026</a></td>
+<td>Reuniones: interna, externa, semi y anti</td>
+<td>reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas</td>
+</tr>
+<tr>
+<td><a href="028.html">028</a></td>
+<td>CTE, subconsultas y funciones de ventana</td>
+<td>CTE · recursión · subconsulta correlacionada · partición de ventana · marco</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-nodo"></a><strong>nodo</strong></td>
+<td>Vértice del grafo de propiedades: una cosa con etiquetas y con pares clave-valor propios. Equivale a una fila, con la diferencia de que sus conexiones son parte de la estructura y no se recomponen por reunión.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-arista"></a><strong>arista</strong></td>
+<td>Relación dirigida y con tipo entre dos nodos, que puede llevar sus propias propiedades. En un motor de grafos es un puntero real, no una clave foránea que haya que buscar en un índice, y de ahí viene su ventaja al recorrer.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-recorrido-de-profundidad-variable"></a><strong>recorrido de profundidad variable</strong></td>
+<td>Consulta del tipo «amigos de amigos hasta cinco saltos» o «cualquier camino entre A y B». En SQL exige una CTE recursiva y una reunión por nivel; en un motor de grafos el costo depende del subgrafo recorrido, no del tamaño total del grafo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-reunión-sin-índice"></a><strong>reunión sin índice</strong></td>
+<td>Propiedad de los motores de grafos nativos: cada nodo guarda las direcciones físicas de sus vecinos, así que pasar de uno a otro no consulta ningún índice. Es la razón técnica de que el recorrido profundo escale donde el <code>JOIN</code> repetido se degrada.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Reconocer las consultas para las que el modelo relacional paga un precio estructural —los recorridos de profundidad variable— y saber qué ofrece a cambio un motor de grafos.</p>

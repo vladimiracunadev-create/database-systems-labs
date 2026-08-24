@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>2PL</code> · <code>versión de fila</code> · <code>instantánea</code> · <code>interbloqueo</code> · <code>vacuum</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las dos formas de sostener el aislamiento: bloqueo en dos fases, que hace esperar, y control de versiones, que hace copias. Explica por qué con MVCC las lecturas no bloquean, y también su factura escondida: las versiones muertas que el vacuum tiene que recoger.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 045&quot;]
     C --&gt; K1[&quot;2PL&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="044.html">044</a></td>
+<td>Anomalías de aislamiento y la crítica a los niveles ANSI</td>
+<td>lectura sucia · lectura no repetible · fantasma · sesgo de escritura · snapshot isolation</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-2pl"></a><strong>2PL</strong></td>
+<td>Bloqueo en dos fases: una fase en la que la transacción solo adquiere cerrojos y otra en la que solo los libera. Es la técnica clásica que garantiza serializabilidad, al precio de que los lectores bloqueen a los escritores.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-versión-de-fila"></a><strong>versión de fila</strong></td>
+<td>Copia de una fila con el rango de transacciones para las que es visible. Con MVCC un <code>UPDATE</code> no sobrescribe: crea una versión nueva, de modo que quien está leyendo la anterior no se detiene. El precio es el espacio y el trabajo de limpiarlo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-instantánea"></a><strong>instantánea</strong></td>
+<td>El conjunto de versiones visibles para una transacción, fijado en un instante. Permite que las lecturas no bloqueen y que dos consultas de la misma transacción vean exactamente lo mismo aunque el mundo cambie alrededor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-interbloqueo"></a><strong>interbloqueo</strong></td>
+<td>Dos transacciones que se esperan mutuamente porque cada una tiene el cerrojo que la otra necesita. El motor lo detecta y aborta a una; la aplicación debe estar preparada para reintentar, y ordenar siempre los accesos igual reduce la frecuencia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-vacuum"></a><strong>vacuum</strong></td>
+<td>Proceso que recupera el espacio de las versiones de fila que ya nadie puede ver y actualiza los mapas de visibilidad. Sin él, MVCC crece sin límite: es el mantenimiento invisible que explica por qué una tabla ocupa el triple de lo que debería.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Conocer los dos mecanismos con que los motores implementan el aislamiento —bloqueo y versiones— porque determinan qué operaciones se estorban entre sí y cómo se resuelve un interbloqueo.</p>

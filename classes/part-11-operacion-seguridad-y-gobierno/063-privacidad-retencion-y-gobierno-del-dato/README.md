@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El dato personal como una obligación de diseño y no como un anexo legal. Minimización, limitación de finalidad, seudonimización y derecho de supresión, con el choque que hay que resolver antes de que llegue la solicitud: los respaldos, las réplicas y los registros de auditoría también contienen ese dato.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 063"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [058](../../part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md) | Respaldo y restauración: solo cuenta lo que se ha restaurado | RPO · RTO · recuperación a un punto en el tiempo · prueba de restauración |
+| [060](../../part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md) | Control de acceso: privilegio mínimo, roles y seguridad por fila | privilegio mínimo · rol · seguridad por fila · separación de funciones |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-minimización"></a>**minimización** | Recoger solo los datos personales necesarios para la finalidad declarada. Es la medida de protección más eficaz que existe, porque el dato que no se guarda no se filtra, no hay que cifrarlo ni hay que borrarlo después. | se introduce aquí |
+| <a id="v-limitación-de-finalidad"></a>**limitación de finalidad** | Los datos recogidos para un fin no pueden reutilizarse para otro incompatible sin nueva base legal. Es lo que impide que un correo pedido para la facturación acabe alimentando un modelo de recomendación. | se introduce aquí |
+| <a id="v-seudonimización"></a>**seudonimización** | Sustituir los identificadores directos por referencias, guardando por separado la tabla que permite revertirlo. Reduce el riesgo pero no convierte el dato en anónimo: mientras exista la clave, sigue siendo dato personal. | se introduce aquí |
+| <a id="v-derecho-de-supresión"></a>**derecho de supresión** | Obligación de borrar los datos de una persona cuando lo solicita y no hay base para conservarlos. Choca de frente con los respaldos, las réplicas y los registros de auditoría, y por eso hay que diseñar dónde vive el dato personal antes de que lo pidan. | se introduce aquí |
 
 ---
 

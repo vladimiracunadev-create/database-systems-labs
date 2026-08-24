@@ -26,7 +26,7 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 [![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
 [![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
-[![Pruebas](https://img.shields.io/badge/pruebas-127%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Pruebas](https://img.shields.io/badge/pruebas-143%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
 [![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
@@ -72,6 +72,9 @@ Cada clase es una carpeta con la misma anatomía:
 
 | | Sección | Qué aporta |
 |:---:|---|---|
+| 🧭 | **De qué trata esta clase** | Para qué está aquí y qué cambia al terminarla |
+| ⛳ | **Antes de empezar** | Qué se da por sabido, con enlace a la clase donde se explicó |
+| 🔤 | **Vocabulario de la clase** | Cada concepto definido antes de que el texto lo use |
 | 🎯 | **Propósito** | Qué problema resuelve la clase |
 | 📚 | **Resultados de aprendizaje** | Cinco capacidades comprobables |
 | 🧠 | **Fundamentos** | El mecanismo, no la receta |
@@ -213,15 +216,34 @@ flowchart LR
 | 🧠 | [13](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
 | 🏛️ | [14](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
 
-➡️ El índice completo está en [`classes/README.md`](classes/README.md) y el
-currículo canónico, en [`curriculum.yaml`](curriculum.yaml).
+Cada parte tiene su **portada**, y ahí es donde empieza el trabajo: de qué trata,
+qué hay que traer sabido, qué sabrás hacer al terminar, una ficha explicada por
+clase, los errores frecuentes que desmonta, su vocabulario y la bibliografía
+completa de la parte.
+
+➡️ El índice completo está en [`classes/README.md`](classes/README.md), los 306
+términos en el [glosario](GLOSARIO.md), y el currículo canónico —con el resumen y
+los prerrequisitos de cada clase— en [`curriculum.yaml`](curriculum.yaml).
 
 ## 🎓 Modelo pedagógico
 
+La pauta completa —en qué orden ir, cómo trabajar una clase, a qué ritmo y cómo
+comprobar que puedes seguir— está en la
+**[guía de estudio](docs/GUIA-DE-ESTUDIO.md)**. El material se lee en cuatro
+niveles y están pensados en este orden:
+
+| Nivel | Dónde | Qué te da |
+|---|---|---|
+| Programa | este README | Qué es esto y el mapa de las 15 partes |
+| Parte | [portada de cada parte](classes/README.md) | Introducción, prerrequisitos, resultados, una ficha por clase, errores frecuentes, vocabulario y bibliografía |
+| Clase | README de la clase | De qué trata, qué da por sabido, vocabulario, materia, comparación entre motores y fuentes |
+| Término | [glosario](GLOSARIO.md) | 306 definiciones, cada una con su clase y su fuente |
+
 Cada clase sigue la misma estructura, y la validación comprueba que están todas
-las secciones. A eso el generador añade el laboratorio, la rúbrica y la
-bibliografía de la clase. El criterio de aprobación es explícito: **un resultado
-correcto sin explicación no demuestra transferencia**.
+las secciones. A eso el generador añade los prerrequisitos, el vocabulario, el
+laboratorio, la rúbrica y la bibliografía de la clase. El criterio de aprobación
+es explícito: **un resultado correcto sin explicación no demuestra
+transferencia**.
 
 | | Se exige | Y no vale |
 |:---:|---|---|
@@ -250,6 +272,9 @@ flowchart LR
     class G,H extra
 ```
 
+0. **Lee la [guía de estudio](docs/GUIA-DE-ESTUDIO.md).** Diez minutos que
+   ordenan las 230 siguientes horas: el método por clase, los atajos legítimos y
+   lo que cuesta cada uno.
 1. **Sitúate antes de empezar.** El [diagnóstico inicial](assessments/diagnostic.md)
    no tiene nota: dice por qué parte entrar. Un programa de 230 horas empezado en
    el punto equivocado se abandona.
@@ -438,7 +463,7 @@ artefacto generado quedó desactualizado. **Nada llega a `main` en rojo.**
 
 | | Workflow | Qué cubre |
 |:---:|---|---|
-| 🧪 | [ci.yml](.github/workflows/ci.yml) | Validador del repositorio, generadores en modo `--check`, equivalencia entre motores, los siete laboratorios y 127 pruebas sobre Python 3.11, 3.12 y 3.13 |
+| 🧪 | [ci.yml](.github/workflows/ci.yml) | Validador del repositorio, generadores en modo `--check`, equivalencia entre motores, los siete laboratorios y 143 pruebas sobre Python 3.11, 3.12 y 3.13 |
 | 🚀 | [pages.yml](.github/workflows/pages.yml) | Regenera y despliega las 131 páginas del sitio a GitHub Pages |
 | 🔗 | [enlaces.yml](.github/workflows/enlaces.yml) | Comprueba en red las 120 fuentes y los 347 enlaces `doc:` de motores, en agenda propia para no teñir de rojo un `push` |
 | 🛡️ | [codeql.yml](.github/workflows/codeql.yml) | Análisis estático de los generadores, que producen HTML y podrían inyectar |
@@ -450,7 +475,7 @@ python scripts/validate_repository.py       # estructura, fuentes, motores, enla
 python scripts/build_classes.py --check     # ¿quedaron README de clase sin regenerar?
 python scripts/generate_site.py --check     # ¿quedó el sitio desactualizado?
 python scripts/verificar_equivalencia.py    # SQLite y DuckDB, sin servicios
-python -m pytest                            # 127 pruebas
+python -m pytest                            # 143 pruebas
 npx markdownlint-cli2 "**/*.md"             # estilo de Markdown
 ```
 

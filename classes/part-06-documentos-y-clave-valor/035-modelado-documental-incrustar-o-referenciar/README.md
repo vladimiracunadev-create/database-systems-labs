@@ -12,6 +12,10 @@ Parte 06 — Documentos y clave-valor · Intermedio ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La decisión central del modelado documental —incrustar o referenciar— con sus dos criterios: si el dato se lee siempre junto y si puede crecer sin techo. Presenta el crecimiento no acotado como el fallo característico del modelo documental y los patrones de extensión que lo evitan.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 035"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [034](../../part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/README.md) | El agregado como unidad de consistencia | agregado · frontera transaccional · entidad · actividad |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-incrustación"></a>**incrustación** | Guardar los datos relacionados dentro del propio documento. Una sola lectura devuelve todo y la escritura es atómica, a cambio de duplicar el dato si otro documento también lo necesita y de arriesgar un documento que crece sin techo. | se introduce aquí |
+| <a id="v-referencia"></a>**referencia** | Guardar el identificador del documento relacionado en lugar de su contenido. Evita la duplicación y el crecimiento no acotado, a cambio de una segunda consulta —o de un `$lookup`— que el motor no optimiza como un `JOIN` relacional. | se introduce aquí |
+| <a id="v-crecimiento-no-acotado"></a>**crecimiento no acotado** | Un arreglo incrustado que puede crecer indefinidamente —los comentarios de una publicación viral, el histórico de un sensor—. Acaba chocando con el límite de tamaño del documento y degrada cada lectura, aunque solo se quería un campo. Es la señal de que ese arreglo debía ser una colección aparte. | se introduce aquí |
+| <a id="v-patrón-de-extensión"></a>**patrón de extensión** | Familia de soluciones para el crecimiento no acotado: partir el arreglo en cubos de tamaño fijo, guardar solo los N últimos elementos incrustados y el resto en otra colección, o separar los campos grandes en un documento satélite. | se introduce aquí |
 
 ---
 

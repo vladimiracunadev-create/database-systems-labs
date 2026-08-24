@@ -12,6 +12,10 @@ Parte 12 — Analítica, integración y streaming · Avanzado ·
 
 **En este caso se comparan 8 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Mover datos entre sistemas sin perder cambios ni significado. Compara ETL y ELT por lo que cada uno hace auditable, presenta la captura de cambios leyendo el registro de transacciones, y desmonta la escritura dual: escribir a la vez en la base y en la cola no es atómico y tarde o temprano una recibe lo que la otra no.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 066"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [046](../../part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md) | Registro anticipado y recuperación: WAL y ARIES | WAL · punto de control · rehacer · deshacer · LSN |
+| [065](../../part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md) | Modelado dimensional: hechos, dimensiones y cambios lentos | tabla de hechos · dimensión · grano · dimensión de cambio lento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-etl"></a>**ETL** | Extraer, transformar y luego cargar: la transformación ocurre fuera del destino. Tiene sentido cuando el destino es caro o rígido, o cuando hay que limpiar datos personales antes de que entren. | se introduce aquí |
+| <a id="v-elt"></a>**ELT** | Cargar los datos en crudo y transformarlos dentro del almacén, con SQL versionado y probado. Es el enfoque dominante desde que el cómputo del almacén es barato, y su ventaja real es que la transformación queda auditable y se puede rehacer. | se introduce aquí |
+| <a id="v-cdc"></a>**CDC** | Captura de cambios: leer el registro de transacciones del origen para publicar cada `INSERT`, `UPDATE` y `DELETE` como un evento. Frente al muestreo periódico, no pierde cambios intermedios, no requiere columna de marca temporal y no carga el origen con consultas. | se introduce aquí |
+| <a id="v-escritura-dual"></a>**escritura dual** | Que la aplicación escriba a la vez en la base y en la cola. Parece la solución obvia y es un antipatrón: no hay atomicidad entre los dos destinos, así que tarde o temprano uno recibe lo que el otro no. La alternativa correcta es CDC o el patrón de bandeja de salida. | se introduce aquí |
+| <a id="v-idempotencia-de-carga"></a>**idempotencia de carga** | Que reprocesar el mismo lote no duplique ni corrompa el destino, gracias a una clave de negocio y a una operación de fusión. Es la condición para poder relanzar una carga fallida sin auditar a mano lo que había entrado. | se introduce aquí |
 
 ---
 

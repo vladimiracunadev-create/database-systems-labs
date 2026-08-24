@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 5 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>lectura sucia</code> · <code>lectura no repetible</code> · <code>fantasma</code> · <code>sesgo de escritura</code> · <code>snapshot isolation</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las anomalías reales —lectura sucia, no repetible, fantasma y sesgo de escritura— y la crítica de Berenson y otros que demuestra que los niveles de la norma no las definen sin ambigüedad. La consecuencia práctica es que el nivel por defecto de tu motor no es el que crees y hay que comprobarlo experimentalmente.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 044&quot;]
     C --&gt; K1[&quot;lectura sucia&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="043.html">043</a></td>
+<td>ACID: qué garantiza cada letra y quién la implementa</td>
+<td>atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-lectura-sucia"></a><strong>lectura sucia</strong></td>
+<td>Leer un dato que otra transacción escribió y todavía no confirmó —y que puede acabar deshaciéndose—. Solo la permite el nivel <code>READ UNCOMMITTED</code>, que casi ningún motor usa por defecto.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-lectura-no-repetible"></a><strong>lectura no repetible</strong></td>
+<td>Leer la misma fila dos veces dentro de una transacción y obtener valores distintos, porque otra confirmó un cambio en medio. Es lo que <code>READ COMMITTED</code> permite y <code>REPEATABLE READ</code> impide.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-fantasma"></a><strong>fantasma</strong></td>
+<td>Repetir una consulta por rango y encontrar filas nuevas que otra transacción insertó. No es un cambio de valor sino de pertenencia al conjunto, y por eso exige bloquear el rango —o usar instantáneas— y no solo las filas leídas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-sesgo-de-escritura"></a><strong>sesgo de escritura</strong></td>
+<td>Dos transacciones leen el mismo conjunto, cada una decide que puede escribir, y juntas rompen un invariante que ninguna rompía por separado —los dos médicos de guardia que se dan de baja a la vez—. Snapshot isolation lo permite; hace falta serializable o un bloqueo explícito.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-snapshot-isolation"></a><strong>snapshot isolation</strong></td>
+<td>Cada transacción ve una fotografía coherente de la base tomada al empezar. Elimina lecturas sucias, no repetibles y fantasmas, pero no el sesgo de escritura; es el nivel que PostgreSQL llama <code>REPEATABLE READ</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Reproducir las anomalías de concurrencia una por una y saber cuáles permite tu motor en su nivel por defecto. El nombre del nivel no basta: hay que comprobar el comportamiento.</p>

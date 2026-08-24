@@ -12,6 +12,10 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las anomalías reales —lectura sucia, no repetible, fantasma y sesgo de escritura— y la crítica de Berenson y otros que demuestra que los niveles de la norma no las definen sin ambigüedad. La consecuencia práctica es que el nivel por defecto de tu motor no es el que crees y hay que comprobarlo experimentalmente.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 044"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [043](../../part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/README.md) | ACID: qué garantiza cada letra y quién la implementa | atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-lectura-sucia"></a>**lectura sucia** | Leer un dato que otra transacción escribió y todavía no confirmó —y que puede acabar deshaciéndose—. Solo la permite el nivel `READ UNCOMMITTED`, que casi ningún motor usa por defecto. | se introduce aquí |
+| <a id="v-lectura-no-repetible"></a>**lectura no repetible** | Leer la misma fila dos veces dentro de una transacción y obtener valores distintos, porque otra confirmó un cambio en medio. Es lo que `READ COMMITTED` permite y `REPEATABLE READ` impide. | se introduce aquí |
+| <a id="v-fantasma"></a>**fantasma** | Repetir una consulta por rango y encontrar filas nuevas que otra transacción insertó. No es un cambio de valor sino de pertenencia al conjunto, y por eso exige bloquear el rango —o usar instantáneas— y no solo las filas leídas. | se introduce aquí |
+| <a id="v-sesgo-de-escritura"></a>**sesgo de escritura** | Dos transacciones leen el mismo conjunto, cada una decide que puede escribir, y juntas rompen un invariante que ninguna rompía por separado —los dos médicos de guardia que se dan de baja a la vez—. Snapshot isolation lo permite; hace falta serializable o un bloqueo explícito. | se introduce aquí |
+| <a id="v-snapshot-isolation"></a>**snapshot isolation** | Cada transacción ve una fotografía coherente de la base tomada al empezar. Elimina lecturas sucias, no repetibles y fantasmas, pero no el sesgo de escritura; es el nivel que PostgreSQL llama `REPEATABLE READ`. | se introduce aquí |
 
 ---
 

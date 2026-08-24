@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>entidad débil</code> · <code>cardinalidad</code> · <code>participación total</code> · <code>atributo de relación</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El modelo entidad-relación de Chen con las dos decisiones que más consecuencias tienen: la cardinalidad, que determina dónde va la clave foránea, y la participación, que determina si esa columna admite nulos. Introduce la entidad débil y el atributo que pertenece a la relación y no a ninguna de las dos entidades.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 016&quot;]
     C --&gt; K1[&quot;entidad débil&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="015.html">015</a></td>
+<td>De requisitos ambiguos a entidades defendibles</td>
+<td>regla de negocio · diccionario de datos · alcance · patrón de acceso</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-entidad-débil"></a><strong>entidad débil</strong></td>
+<td>Entidad que no puede identificarse sin la entidad de la que depende: una línea de pedido existe solo dentro de su pedido. Su clave incluye la del padre, y su ciclo de vida termina cuando termina el del padre.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cardinalidad"></a><strong>cardinalidad</strong></td>
+<td>Cuántas instancias de una entidad pueden relacionarse con cuántas de la otra: uno a uno, uno a muchos, muchos a muchos. Determina directamente dónde va la clave foránea y si hace falta una tabla intermedia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-participación-total"></a><strong>participación total</strong></td>
+<td>Cuando toda instancia de una entidad debe participar obligatoriamente en la relación —todo pedido tiene un cliente—. Se traduce en <code>NOT NULL</code> sobre la clave foránea; la participación parcial admite el nulo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-atributo-de-relación"></a><strong>atributo de relación</strong></td>
+<td>Dato que no pertenece a ninguna de las dos entidades sino al hecho de que estén relacionadas: la fecha de inscripción no es del estudiante ni del curso, es de la inscripción. Es la señal de que la tabla intermedia es una entidad de pleno derecho.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Representar el dominio con el modelo entidad-relación de Chen y, sobre todo, leer un diagrama con precisión: qué dice exactamente una cardinalidad y qué obliga una participación total.</p>

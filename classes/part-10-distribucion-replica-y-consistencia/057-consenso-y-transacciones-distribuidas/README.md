@@ -12,6 +12,10 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Cómo se ponen de acuerdo varios nodos y cómo se confirma algo que abarca varios sistemas. Raft para el consenso y la elección de líder, el commit en dos fases con su fragilidad conocida —el coordinador que cae dejando cerrojos tomados— y la saga con compensaciones como la alternativa que renuncia al aislamiento para no bloquear.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 057"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [055](../../part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md) | CAP, PACELC y lo que realmente se elige | partición de red · disponibilidad · latencia frente a consistencia |
+| [047](../../part-08-transacciones-concurrencia-y-recuperacion/047-concurrencia-en-la-aplicacion/README.md) | Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista | idempotencia · clave de idempotencia · bloqueo optimista · reintento con retroceso |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-consenso"></a>**consenso** | Que un conjunto de nodos se ponga de acuerdo en un valor y no cambie de opinión, tolerando caídas de una minoría. Es el cimiento de la elección de líder, de la pertenencia al clúster y del commit atómico; Raft y Paxos son las dos formulaciones de referencia. | se introduce aquí |
+| <a id="v-elección-de-líder"></a>**elección de líder** | Procedimiento por el que la mayoría acuerda quién ordena las escrituras durante un mandato. Que se necesite mayoría es lo que impide dos líderes simultáneos —el escenario de cerebro dividido— cuando la red se parte. | se introduce aquí |
+| <a id="v-commit-en-dos-fases"></a>**commit en dos fases** | Protocolo para confirmar una transacción que abarca varios sistemas: primero se pregunta a todos si pueden, después se les ordena confirmar. Es correcto y es frágil: si el coordinador cae entre las dos fases, los participantes quedan bloqueados con los cerrojos tomados. | se introduce aquí |
+| <a id="v-saga"></a>**saga** | Secuencia de transacciones locales, cada una con su compensación, que sustituye a una transacción distribuida. Renuncia al aislamiento —los estados intermedios se ven— a cambio de no bloquear recursos entre servicios. | se introduce aquí |
+| <a id="v-compensación"></a>**compensación** | Operación de negocio que deshace el efecto de otra ya confirmada: reembolsar en vez de revertir, anular una reserva en vez de borrarla. No es un `ROLLBACK`, porque el estado intermedio existió y alguien pudo verlo. | se introduce aquí |
 
 ---
 

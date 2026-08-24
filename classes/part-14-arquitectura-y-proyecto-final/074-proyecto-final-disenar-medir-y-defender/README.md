@@ -12,6 +12,10 @@ Parte 14 — Arquitectura y proyecto final · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El cierre del programa: diseñar un sistema, medirlo y defenderlo ante preguntas hostiles. Se evalúa como una revisión de arquitectura real —qué mediste, qué alternativa descartaste, con qué dato— y exige declarar los límites: qué no demuestra el trabajo y qué faltaría para llevarlo a producción.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 074"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [073](../../part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md) | Registro de decisiones de arquitectura y costo total | ADR · contexto · consecuencia · costo total de propiedad · reversibilidad |
+| [062](../../part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md) | Observabilidad, objetivos de servicio y capacidad | percentil · presupuesto de error · saturación · consulta lenta |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-defensa-técnica"></a>**defensa técnica** | Sostener una decisión ante preguntas hostiles: por qué este motor, qué mediste, qué alternativa descartaste y con qué dato. Es el formato de evaluación del proyecto final porque es el formato real de una revisión de arquitectura. | se introduce aquí |
+| <a id="v-evidencia-reproducible"></a>**evidencia reproducible** | Mediciones que otra persona puede repetir: comando, versión, datos, semilla y salida. Sin ellas, un número de rendimiento en una defensa es una afirmación, y se le puede oponer cualquier otra. | se introduce aquí |
+| <a id="v-límite-declarado"></a>**límite declarado** | Lo que el trabajo explícitamente no demuestra: escala no probada, fallos no simulados, supuestos del entorno. Declararlo aumenta la credibilidad en lugar de restarla, porque distingue lo medido de lo esperado. | se introduce aquí |
+| <a id="v-plan-de-evolución"></a>**plan de evolución** | Qué se haría al multiplicar por diez el volumen, y qué señal indicaría que ha llegado el momento. Convierte una arquitectura en una decisión con fecha de revisión en lugar de en una apuesta permanente. | se introduce aquí |
 
 ---
 

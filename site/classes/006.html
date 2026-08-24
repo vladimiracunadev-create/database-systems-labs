@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>tipo</code> · <code>decimal exacto</code> · <code>coma flotante</code> · <code>fecha ISO-8601</code> · <code>afinidad de tipos</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Por qué el tipo de una columna no es burocracia: decide qué comparaciones tienen sentido, qué ordenaciones son correctas y si el dinero se calcula bien. Distingue decimal exacto de coma flotante, fija el formato ISO-8601 para fechas y explica la afinidad de tipos de SQLite, que es la razón de que un dato inválido entre en un motor y sea rechazado en otro.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 006&quot;]
     C --&gt; K1[&quot;tipo&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-tipo"></a><strong>tipo</strong></td>
+<td>El conjunto de valores posibles de un campo más las operaciones válidas sobre ellos. Declarar el tipo correcto delega en el motor la mitad de las validaciones que, si no, hay que escribir a mano en cada aplicación.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-decimal-exacto"></a><strong>decimal exacto</strong></td>
+<td>Tipo numérico de precisión y escala fijas (<code>NUMERIC</code>, <code>DECIMAL</code>) que representa exactamente los valores decimales. Es el tipo del dinero: no arrastra el error de representación binaria de la coma flotante.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-coma-flotante"></a><strong>coma flotante</strong></td>
+<td>Representación binaria aproximada (<code>REAL</code>, <code>DOUBLE</code>) según IEEE 754. Rápida y adecuada para magnitudes físicas, ruinosa para dinero: <code>0.1 + 0.2</code> no da <code>0.3</code> y la diferencia se acumula fila a fila.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-fecha-iso-8601"></a><strong>fecha ISO-8601</strong></td>
+<td>El formato <code>AAAA-MM-DD</code> —y <code>AAAA-MM-DDTHH:MM:SSZ</code> con hora— que ordena alfabéticamente igual que cronológicamente y no es ambiguo entre día y mes. Guardar fechas como texto libre es la vía directa a datos que no se pueden comparar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-afinidad-de-tipos"></a><strong>afinidad de tipos</strong></td>
+<td>Regla de SQLite por la que la columna sugiere un tipo pero acepta valores de otro y los convierte cuando puede. Explica por qué en SQLite entra un texto en una columna <code>INTEGER</code> y por qué ese mismo dato es rechazado en PostgreSQL.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender por qué el tipo de un campo no es una formalidad. Elegirlo mal no

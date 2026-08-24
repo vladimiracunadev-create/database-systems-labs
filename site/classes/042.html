@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>almacenamiento columnar</code> · <code>compresión</code> · <code>ejecución vectorizada</code> · <code>poda de particiones</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>De dónde salen realmente los dos órdenes de magnitud de la analítica: leer solo las columnas necesarias, comprimirlas mejor porque los valores contiguos se parecen, procesarlas en lotes vectorizados y podar bloques enteros por sus estadísticas. La clase mide las cuatro contribuciones en lugar de atribuirlas al producto.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 042&quot;]
     C --&gt; K1[&quot;almacenamiento columnar&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="033.html">033</a></td>
+<td>SQLite y DuckDB: motores embebidos, transaccional frente a analítico</td>
+<td>motor embebido · tipado dinamico · almacenamiento columnar · vectorización</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-almacenamiento-columnar"></a><strong>almacenamiento columnar</strong></td>
+<td>Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí.</td>
+<td>se introdujo en la <a href="033.html">033</a></td>
+</tr>
+<tr>
+<td><a id="v-compresión"></a><strong>compresión</strong></td>
+<td>En un formato columnar, los valores contiguos se parecen, así que técnicas como el diccionario, la codificación por carrera o el delta reducen el tamaño en un orden de magnitud. Menos bytes leídos es menos entrada y salida, que es de donde sale casi toda la ventaja analítica.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-ejecución-vectorizada"></a><strong>ejecución vectorizada</strong></td>
+<td>El ejecutor procesa lotes de valores por operador en lugar de fila a fila. Reduce el costo por fila del intérprete y permite usar instrucciones SIMD; combinada con el formato columnar, es la explicación de las diferencias de dos órdenes de magnitud frente a un motor de filas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-poda-de-particiones"></a><strong>poda de particiones</strong></td>
+<td>Descartar ficheros o bloques enteros sin abrirlos, gracias a los mínimos y máximos guardados en sus metadatos. Es lo que hace que consultar un día concreto sobre un histórico de diez años cueste casi lo mismo que consultar ese día solo.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Explicar por qué un motor columnar responde en segundos lo que un motor por filas tarda minutos, y qué se paga a cambio. La respuesta está en el formato, la compresión y la forma de ejecutar.</p>

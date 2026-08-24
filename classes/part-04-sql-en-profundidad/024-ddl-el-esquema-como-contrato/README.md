@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Fundamentos ·
 
 **En este caso se comparan 8 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El DDL leído como un contrato ejecutable: cada tipo y cada restricción es una validación que ya no hay que escribir en ninguna aplicación. Incluye una divergencia que decide cómo se hacen las migraciones: si el DDL es transaccional en tu motor o si una migración a medias deja un estado sin retorno.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 024"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [006](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/README.md) | Tipos de datos: por qué un número no es un texto | tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos |
+| [023](../../part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md) | Integridad: restricciones, claves foraneas y acciones referenciales | integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-tipo-de-dato"></a>**tipo de dato** | La declaración que fija qué valores acepta una columna y qué operaciones tienen sentido sobre ella. Es la primera línea de defensa del esquema y la más barata: lo que el tipo rechaza no hay que validarlo en ningún lenguaje de aplicación. | se introduce aquí |
+| <a id="v-restricción"></a>**restricción** | Regla declarada en el esquema que el motor impone siempre: `NOT NULL`, `UNIQUE`, `CHECK`, `PRIMARY KEY`, `FOREIGN KEY`. Su ventaja sobre la validación en la aplicación es que no depende de que alguien se acuerde. | se introduce aquí |
+| <a id="v-valor-por-defecto"></a>**valor por defecto** | Valor que el motor asigna cuando el `INSERT` no menciona la columna. Bien usado evita nulos accidentales; mal usado enmascara datos que faltaban de verdad y que convenía detectar. | se introduce aquí |
+| <a id="v-ddl-transaccional"></a>**DDL transaccional** | Capacidad de ejecutar `CREATE`, `ALTER` o `DROP` dentro de una transacción y poder revertirlos. PostgreSQL y SQLite la tienen; MySQL histórico y Oracle confirman implícitamente, lo que convierte una migración fallida a mitad en un estado sin retorno. | se introduce aquí |
 
 ---
 

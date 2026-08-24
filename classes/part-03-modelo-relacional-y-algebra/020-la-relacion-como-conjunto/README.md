@@ -12,6 +12,10 @@ Parte 03 — Modelo relacional y álgebra · Fundamentos ·
 
 **En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La relación como conjunto de tuplas sobre dominios, con dos propiedades que SQL no respeta: no hay orden y no hay duplicados. Entender esa brecha explica de antemano la mitad de las sorpresas del lenguaje, del `DISTINCT` que hace falta al `ORDER BY` que no se puede dar por supuesto.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 020"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [001](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/README.md) | Qué es un dato, un registro y una tabla | dato · información · registro · campo · tabla |
+| [004](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) | Leer datos: SELECT, WHERE y ORDER BY | filtrado · proyección · orden · LIMIT · IS NULL |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-relación"></a>**relación** | En el modelo de Codd, un conjunto de tuplas sobre unos dominios dados. Al ser conjunto no tiene orden ni duplicados —dos propiedades que SQL no respeta, y de ahí nacen la mitad de las sorpresas del lenguaje. | se introduce aquí |
+| <a id="v-tupla"></a>**tupla** | Un elemento de la relación: una asignación de un valor a cada atributo. No es «una fila en una posición», porque en un conjunto no hay posiciones; se identifica por sus valores, no por dónde está. | se introduce aquí |
+| <a id="v-dominio"></a>**dominio** | El conjunto de valores admisibles de un atributo, con sus operaciones. Es el concepto del que los tipos de SQL son una aproximación pobre: SQL permite comparar un número de teléfono con un código postal si ambos son enteros. | se introduce aquí |
+| <a id="v-acceso-por-valor"></a>**acceso por valor** | En el modelo relacional se llega a un dato por lo que vale, nunca por un puntero o una posición física. Es lo que hace posible la independencia de datos: el motor puede reorganizar el almacenamiento sin invalidar ninguna referencia. | se introduce aquí |
+| <a id="v-cierre"></a>**cierre** | Propiedad por la que toda operación del álgebra relacional sobre relaciones devuelve una relación. Es lo que permite anidar y componer consultas indefinidamente, y lo que sostiene las vistas y las CTE. | se introduce aquí |
 
 ---
 

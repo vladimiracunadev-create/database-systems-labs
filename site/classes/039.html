@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>clave de partición</code> · <code>clave de agrupamiento</code> · <code>desnormalización por consulta</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El método de diseño invertido de las columnas anchas: primero se escribe la lista de consultas y después una tabla por consulta, aunque los mismos datos queden repetidos cinco veces. La clave de partición decide en qué nodo vive la fila y la de agrupamiento el orden dentro de ella; equivocarse en la primera es el error de diseño más caro de esta familia.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 039&quot;]
     C --&gt; K1[&quot;clave de partición&quot;]
@@ -71,6 +74,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="019.html">019</a></td>
+<td>Desnormalización deliberada y patrones de acceso</td>
+<td>redundancia controlada · costo de escritura · agregado · patrón de lectura</td>
+</tr>
+<tr>
+<td><a href="034.html">034</a></td>
+<td>El agregado como unidad de consistencia</td>
+<td>agregado · frontera transaccional · entidad · actividad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-clave-de-partición"></a><strong>clave de partición</strong></td>
+<td>La parte de la clave primaria que decide en qué nodo vive la fila. Toda consulta eficiente debe fijarla; una consulta sin ella obliga a preguntar a todo el anillo, y es el error de diseño número uno en columnas anchas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-de-agrupamiento"></a><strong>clave de agrupamiento</strong></td>
+<td>La parte de la clave primaria que ordena las filas dentro de una partición. Es lo que permite leer rangos —«los últimos 20 mensajes de este chat»— con una sola lectura secuencial, y por eso el orden se decide al crear la tabla, no al consultar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-desnormalización-por-consulta"></a><strong>desnormalización por consulta</strong></td>
+<td>Método de diseño de columnas anchas: se escribe primero la lista de consultas y luego una tabla por consulta, aunque los mismos datos queden repetidos en cinco tablas. La coherencia entre copias pasa a ser responsabilidad de la aplicación.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Modelar en un motor de columnas anchas, donde la regla se invierte: no se normaliza y luego se consulta, sino que se enumeran las consultas y se diseña una tabla por cada una.</p>

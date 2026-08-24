@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>clave candidata</code> · <code>clave primaria</code> · <code>clave sustituta</code> · <code>identidad estable</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El debate entre clave natural y clave sustituta resuelto por un criterio y no por preferencia: cuál de las dos mantiene la identidad estable cuando el mundo cambia. La conclusión práctica —usar sustituta y proteger además la natural con <code>UNIQUE</code>— se aplica al resto del programa.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 017&quot;]
     C --&gt; K1[&quot;clave candidata&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="007.html">007</a></td>
+<td>La clave primaria: cómo se distingue una fila de otra</td>
+<td>clave primaria · clave natural · clave sustituta · clave compuesta · UNIQUE</td>
+</tr>
+<tr>
+<td><a href="016.html">016</a></td>
+<td>Entidad-relación, cardinalidad y participación</td>
+<td>entidad débil · cardinalidad · participación total · atributo de relación</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-clave-candidata"></a><strong>clave candidata</strong></td>
+<td>Cualquier conjunto mínimo de atributos que identifica unívocamente una fila. Una tabla puede tener varias; elegir una como primaria no anula a las demás, que deben seguir protegidas con <code>UNIQUE</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-primaria"></a><strong>clave primaria</strong></td>
+<td>La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila.</td>
+<td>se introdujo en la <a href="007.html">007</a></td>
+</tr>
+<tr>
+<td><a id="v-clave-sustituta"></a><strong>clave sustituta</strong></td>
+<td>Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción <code>UNIQUE</code> sobre la clave natural real.</td>
+<td>se introdujo en la <a href="007.html">007</a></td>
+</tr>
+<tr>
+<td><a id="v-identidad-estable"></a><strong>identidad estable</strong></td>
+<td>La propiedad de que el identificador de una fila no cambie mientras la fila represente la misma cosa. Es el criterio real del debate entre clave natural y sustituta: no cuál es más elegante, sino cuál sobrevive a los cambios del mundo.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Decidir cómo se identifica una fila. Es la decisión de modelado más difícil de revertir: cambiar una clave primaria a los tres años obliga a tocar todas las tablas que la referencian y todos los sistemas que la almacenaron.</p>

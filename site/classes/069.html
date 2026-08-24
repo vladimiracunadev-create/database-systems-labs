@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>búsqueda aproximada</code> · <code>recall</code> · <code>HNSW</code> · <code>cuantización</code> · <code>latencia frente a exactitud</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Los índices que hacen viable la búsqueda vectorial renunciando a la exactitud. HNSW e IVF con sus parámetros, la cuantización que cambia memoria por precisión, y la disciplina que la clase impone: medir el recall contra una búsqueda exhaustiva antes de dar por buena una configuración, porque sin ese número «funciona» solo significa «devolvió algo».</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 069&quot;]
     C --&gt; K1[&quot;búsqueda aproximada&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="068.html">068</a></td>
+<td>Embeddings y métricas de distancia: qué significa parecido</td>
+<td>espacio vectorial · coseno · producto interno · normalización · dimensión</td>
+</tr>
+<tr>
+<td><a href="049.html">049</a></td>
+<td>B-Tree: estructura, orden de columnas y selectividad</td>
+<td>B-Tree · prefijo más a la izquierda · selectividad · índice cubriente</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-búsqueda-aproximada"></a><strong>búsqueda aproximada</strong></td>
+<td>Renunciar a encontrar con certeza los K vecinos más cercanos a cambio de responder en milisegundos en lugar de en minutos. La búsqueda exacta compara contra todos los vectores; la aproximada explora solo una parte del espacio y acepta perderse algunos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-recall"></a><strong>recall</strong></td>
+<td>Qué proporción de los verdaderos K vecinos devolvió el índice aproximado. Es la métrica que hay que medir contra una búsqueda exhaustiva antes de dar por buena una configuración; sin ese número, «funciona» significa «devolvió algo».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-hnsw"></a><strong>HNSW</strong></td>
+<td>Grafo navegable de mundo pequeño por capas: las capas altas dan saltos largos y las bajas afinan. Da el mejor compromiso entre recall y latencia de los índices actuales, a costa de un uso de memoria alto y una construcción lenta.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cuantización"></a><strong>cuantización</strong></td>
+<td>Comprimir los vectores usando menos bits por componente —escalar, binaria o por producto—. Reduce la memoria en un orden de magnitud a cambio de precisión, y suele combinarse con un reordenamiento final sobre los vectores completos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-latencia-frente-a-exactitud"></a><strong>latencia frente a exactitud</strong></td>
+<td>El compromiso que gobiernan los parámetros del índice (<code>ef_search</code>, <code>nprobe</code>): explorar más nodos sube el recall y el tiempo de respuesta. No hay valor correcto universal; se elige midiendo con los datos y las consultas reales.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Buscar entre millones de vectores en milisegundos aceptando no encontrar siempre el mejor resultado. El índice aproximado cambia exactitud por velocidad, y hay que saber cuánta.</p>

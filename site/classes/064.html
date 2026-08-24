@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>carga transaccional</code> · <code>carga analítica</code> · <code>contención</code> · <code>formato de almacenamiento</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Por qué la analítica acaba mudándose a otro sistema, con dos argumentos independientes: el formato de almacenamiento, que decide el orden de magnitud, y la contención, que es la razón operativa —el informe mensual compitiendo con las transacciones por el mismo buffer y el mismo disco.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 064&quot;]
     C --&gt; K1[&quot;carga transaccional&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="042.html">042</a></td>
+<td>Analítica columnar: por qué el formato cambia el orden de magnitud</td>
+<td>almacenamiento columnar · compresión · ejecución vectorizada · poda de particiones</td>
+</tr>
+<tr>
+<td><a href="048.html">048</a></td>
+<td>Páginas, filas y buffer: por qué la entrada y salida manda</td>
+<td>pagina · factor de bloque · buffer pool · localidad · lectura secuencial</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-carga-transaccional"></a><strong>carga transaccional</strong></td>
+<td>Muchas operaciones pequeñas que leen y escriben pocas filas por identificador, con latencia de milisegundos: OLTP. Favorece filas juntas, índices B-Tree y transacciones cortas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-carga-analítica"></a><strong>carga analítica</strong></td>
+<td>Pocas consultas que recorren millones de filas y agregan unas pocas columnas: OLAP. Favorece almacenamiento columnar, compresión y ejecución vectorizada, y tolera latencias de segundos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-contención"></a><strong>contención</strong></td>
+<td>Lo que ocurre cuando la consulta analítica y la transaccional compiten por el mismo buffer, los mismos cerrojos y el mismo disco. Es la razón operativa —antes que la teórica— por la que el informe mensual acaba mudándose a otro sistema.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-formato-de-almacenamiento"></a><strong>formato de almacenamiento</strong></td>
+<td>Cómo se disponen los bytes en disco: por filas o por columnas, comprimidos o no, con o sin estadísticas por bloque. Es la decisión que explica la mayor parte de la diferencia de rendimiento entre OLTP y OLAP, muy por encima del lenguaje de consulta.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Explicar por qué las cargas transaccionales y analíticas se separan, qué pasa cuando no se separan y cuándo esa separación es innecesaria.</p>

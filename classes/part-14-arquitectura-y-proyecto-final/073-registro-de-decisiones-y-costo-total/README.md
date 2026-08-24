@@ -12,6 +12,10 @@ Parte 14 — Arquitectura y proyecto final · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Dejar constancia de por qué se decidió lo que se decidió. El registro de decisión de arquitectura con su contexto, sus alternativas descartadas y sus consecuencias negativas aceptadas; el costo total de propiedad a varios años, que suele invertir el ranking; y la reversibilidad, que es el criterio para saber cuánto análisis merece cada decisión.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 073"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [072](../../part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md) | Persistencia políglota: decidir por evidencia y no por moda | carga de trabajo · criterio de selección · costo de operación · complejidad añadida |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-adr"></a>**ADR** | Registro de decisión de arquitectura: un documento corto y numerado con el contexto, la decisión, las alternativas descartadas y las consecuencias. Su valor aparece dos años después, cuando alguien pregunta por qué esto es así y nadie lo recuerda. | se introduce aquí |
+| <a id="v-contexto"></a>**contexto** | La sección del ADR que describe las fuerzas del momento: restricciones, plazos, volúmenes y lo que se sabía entonces. Es lo que permite juzgar la decisión con justicia después, y lo que indica cuándo dejó de ser válida. | se introduce aquí |
+| <a id="v-consecuencia"></a>**consecuencia** | Lo que la decisión hace más fácil y lo que hace más difícil, incluidas las consecuencias negativas aceptadas. Un ADR que solo lista ventajas no es un registro de decisión: es un anuncio. | se introduce aquí |
+| <a id="v-costo-total-de-propiedad"></a>**costo total de propiedad** | La suma a varios años de licencias, infraestructura, personas, formación y migración de salida. Comparar solo el precio por hora de cómputo suele invertir el orden del ranking en cuanto se añaden las horas de operación. | se introduce aquí |
+| <a id="v-reversibilidad"></a>**reversibilidad** | Cuánto cuesta deshacer la decisión si resulta equivocada. Es el criterio que decide cuánto análisis merece: una decisión barata de revertir se prueba, una cara se estudia antes. | se introduce aquí |
 
 ---
 

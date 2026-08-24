@@ -12,6 +12,10 @@ Parte 09 — Almacenamiento, índices y planes · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El B-Tree y las dos preguntas que responde en la práctica: en qué orden poner las columnas de un índice compuesto —la regla del prefijo más a la izquierda— y cuándo el índice no compensa, que es cuando la selectividad es baja. Introduce el índice cubriente, la optimización con mejor relación entre esfuerzo y resultado.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 049"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [048](../../part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md) | Páginas, filas y buffer: por qué la entrada y salida manda | pagina · factor de bloque · buffer pool · localidad · lectura secuencial |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-b-tree"></a>**B-Tree** | Árbol equilibrado de páginas ordenadas, con todos los datos en hojas enlazadas entre sí. Sirve para igualdad, para rangos y para devolver ya ordenado, con un número de accesos que crece logarítmicamente. Es la estructura por defecto de casi todos los motores relacionales. | se introduce aquí |
+| <a id="v-prefijo-más-a-la-izquierda"></a>**prefijo más a la izquierda** | Un índice sobre `(a, b, c)` solo sirve para filtros que fijan `a`, o `a` y `b`, o los tres —nunca para `b` solo—. Es la regla que decide el orden de las columnas de un índice compuesto y la que explica por qué «tengo el índice y no lo usa». | se introduce aquí |
+| <a id="v-selectividad"></a>**selectividad** | Qué fracción de la tabla devuelve un predicado. Un índice compensa cuando la selectividad es alta —pocas filas—; con predicados poco selectivos, el recorrido secuencial gana y el planificador lo elige a propósito. | se introduce aquí |
+| <a id="v-índice-cubriente"></a>**índice cubriente** | Índice que incluye todas las columnas que la consulta necesita, así que el motor responde sin volver a la tabla. En PostgreSQL se construye con `INCLUDE`; su costo es un índice más ancho y más caro de mantener en cada escritura. | se introduce aquí |
 
 ---
 

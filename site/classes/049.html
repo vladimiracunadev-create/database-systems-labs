@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>B-Tree</code> · <code>prefijo más a la izquierda</code> · <code>selectividad</code> · <code>índice cubriente</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El B-Tree y las dos preguntas que responde en la práctica: en qué orden poner las columnas de un índice compuesto —la regla del prefijo más a la izquierda— y cuándo el índice no compensa, que es cuando la selectividad es baja. Introduce el índice cubriente, la optimización con mejor relación entre esfuerzo y resultado.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 049&quot;]
     C --&gt; K1[&quot;B-Tree&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="048.html">048</a></td>
+<td>Páginas, filas y buffer: por qué la entrada y salida manda</td>
+<td>pagina · factor de bloque · buffer pool · localidad · lectura secuencial</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-b-tree"></a><strong>B-Tree</strong></td>
+<td>Árbol equilibrado de páginas ordenadas, con todos los datos en hojas enlazadas entre sí. Sirve para igualdad, para rangos y para devolver ya ordenado, con un número de accesos que crece logarítmicamente. Es la estructura por defecto de casi todos los motores relacionales.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-prefijo-más-a-la-izquierda"></a><strong>prefijo más a la izquierda</strong></td>
+<td>Un índice sobre <code>(a, b, c)</code> solo sirve para filtros que fijan <code>a</code>, o <code>a</code> y <code>b</code>, o los tres —nunca para <code>b</code> solo—. Es la regla que decide el orden de las columnas de un índice compuesto y la que explica por qué «tengo el índice y no lo usa».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-selectividad"></a><strong>selectividad</strong></td>
+<td>Qué fracción de la tabla devuelve un predicado. Un índice compensa cuando la selectividad es alta —pocas filas—; con predicados poco selectivos, el recorrido secuencial gana y el planificador lo elige a propósito.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-índice-cubriente"></a><strong>índice cubriente</strong></td>
+<td>Índice que incluye todas las columnas que la consulta necesita, así que el motor responde sin volver a la tabla. En PostgreSQL se construye con <code>INCLUDE</code>; su costo es un índice más ancho y más caro de mantener en cada escritura.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Dominar el índice B-Tree: cómo se recorre, por qué el orden de las columnas decide qué consultas sirve y cuándo el motor decide no usarlo.</p>

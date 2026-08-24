@@ -12,6 +12,10 @@ Parte 09 — Almacenamiento, índices y planes · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los índices que no son B-Tree y el caso concreto en que cada uno gana: hash para igualdad pura, GIN para contenido de arreglos y documentos, GiST para geometría y rangos, BRIN cuando el orden físico se correlaciona con la columna, más parciales, de expresión y cubrientes. Cierra con el costo de mantenimiento, que hace que un índice inútil no sea neutro sino una penalización permanente.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 051"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [049](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md) | B-Tree: estructura, orden de columnas y selectividad | B-Tree · prefijo más a la izquierda · selectividad · índice cubriente |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-índice-parcial"></a>**índice parcial** | Índice que solo cubre las filas que cumplen un predicado (`WHERE activo`). Ocupa una fracción del total y se mantiene más barato, y encaja perfectamente cuando las consultas siempre filtran por ese mismo estado. | se introduce aquí |
+| <a id="v-índice-de-expresión"></a>**índice de expresión** | Índice sobre el resultado de una función, como `lower(correo)`. Es lo que permite que una búsqueda insensible a mayúsculas use índice, siempre que la consulta escriba la expresión exactamente igual que el índice. | se introduce aquí |
+| <a id="v-gin"></a>**GIN** | Índice invertido generalizado de PostgreSQL: indexa los elementos de un valor compuesto —palabras de un texto, claves de un JSONB, elementos de un arreglo—. Es rápido buscando y caro escribiendo, y por eso admite una cola de actualizaciones diferida. | se introduce aquí |
+| <a id="v-brin"></a>**BRIN** | Índice de rangos por bloque: guarda el mínimo y el máximo de cada grupo de páginas. Diminuto y utilísimo cuando el orden físico se correlaciona con la columna —una tabla de eventos por fecha—, e inútil cuando no. | se introduce aquí |
+| <a id="v-costo-de-mantenimiento"></a>**costo de mantenimiento** | Lo que cada índice cobra en cada `INSERT`, `UPDATE` y `DELETE`, más el espacio que ocupa y el trabajo de reconstruirlo. Un índice que no usa ninguna consulta no es neutro: es una penalización permanente sobre todas las escrituras. | se introduce aquí |
 
 ---
 

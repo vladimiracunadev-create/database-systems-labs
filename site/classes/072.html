@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>carga de trabajo</code> · <code>criterio de selección</code> · <code>costo de operación</code> · <code>complejidad añadida</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La elección de motores hecha como decisión técnica: carga de trabajo cuantificada, criterio de comparación escrito antes de mirar los productos, y la complejidad añadida contada como lo que cuesta —otro modelo de fallo, otro respaldo, otra guardia. Es la clase que convierte las catorce partes anteriores en un método de decisión.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 072&quot;]
     C --&gt; K1[&quot;carga de trabajo&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="010.html">010</a></td>
+<td>El mapa de los motores: seis familias y un criterio</td>
+<td>familias de motores · modelo de agregado · patrón de acceso · multimodelo</td>
+</tr>
+<tr>
+<td><a href="064.html">064</a></td>
+<td>OLTP frente a OLAP: por qué se separan</td>
+<td>carga transaccional · carga analítica · contención · formato de almacenamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-carga-de-trabajo"></a><strong>carga de trabajo</strong></td>
+<td>La descripción cuantificada de lo que el sistema tendrá que aguantar: volumen, proporción de lecturas y escrituras, latencia objetivo, consultas dominantes, crecimiento previsto. Es lo que convierte la elección de motor en una decisión técnica y no en una preferencia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-criterio-de-selección"></a><strong>criterio de selección</strong></td>
+<td>La lista escrita de propiedades que se van a comparar entre candidatos, con su peso, fijada antes de mirar los productos. Escribirla después es escribir la justificación de lo que ya se había decidido.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-costo-de-operación"></a><strong>costo de operación</strong></td>
+<td>Todo lo que cuesta mantener vivo un motor después de instalarlo: respaldos probados, actualizaciones, monitorización, personas de guardia. Suele superar con creces el costo de licencia o de cómputo.</td>
+<td>se introdujo en la <a href="009.html">009</a></td>
+</tr>
+<tr>
+<td><a id="v-complejidad-añadida"></a><strong>complejidad añadida</strong></td>
+<td>Lo que cuesta cada sistema adicional: otro modelo de fallo, otro respaldo, otra guardia, otra consistencia que reconciliar. Es el argumento más fuerte a favor de un solo motor multimodelo mientras la carga lo permita.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Decidir cuántos almacenes de datos usar. Cada motor añadido resuelve un problema y crea varios permanentes; el criterio debe ser una medición, no una tendencia.</p>

@@ -12,6 +12,10 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las dos formas de sostener el aislamiento: bloqueo en dos fases, que hace esperar, y control de versiones, que hace copias. Explica por qué con MVCC las lecturas no bloquean, y también su factura escondida: las versiones muertas que el vacuum tiene que recoger.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 045"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [044](../../part-08-transacciones-concurrencia-y-recuperacion/044-anomalias-de-aislamiento-y-la-critica-ansi/README.md) | Anomalías de aislamiento y la crítica a los niveles ANSI | lectura sucia · lectura no repetible · fantasma · sesgo de escritura · snapshot isolation |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-2pl"></a>**2PL** | Bloqueo en dos fases: una fase en la que la transacción solo adquiere cerrojos y otra en la que solo los libera. Es la técnica clásica que garantiza serializabilidad, al precio de que los lectores bloqueen a los escritores. | se introduce aquí |
+| <a id="v-versión-de-fila"></a>**versión de fila** | Copia de una fila con el rango de transacciones para las que es visible. Con MVCC un `UPDATE` no sobrescribe: crea una versión nueva, de modo que quien está leyendo la anterior no se detiene. El precio es el espacio y el trabajo de limpiarlo. | se introduce aquí |
+| <a id="v-instantánea"></a>**instantánea** | El conjunto de versiones visibles para una transacción, fijado en un instante. Permite que las lecturas no bloqueen y que dos consultas de la misma transacción vean exactamente lo mismo aunque el mundo cambie alrededor. | se introduce aquí |
+| <a id="v-interbloqueo"></a>**interbloqueo** | Dos transacciones que se esperan mutuamente porque cada una tiene el cerrojo que la otra necesita. El motor lo detecta y aborta a una; la aplicación debe estar preparada para reintentar, y ordenar siempre los accesos igual reduce la frecuencia. | se introduce aquí |
+| <a id="v-vacuum"></a>**vacuum** | Proceso que recupera el espacio de las versiones de fila que ya nadie puede ver y actualiza los mapas de visibilidad. Sin él, MVCC crece sin límite: es el mantenimiento invisible que explica por qué una tabla ocupa el triple de lo que debería. | se introduce aquí |
 
 ---
 

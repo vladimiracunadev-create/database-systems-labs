@@ -12,6 +12,10 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Qué exige la norma ISO/IEC 9075 y qué añade cada producto por su cuenta. El resultado de la clase no es una opinión sobre portabilidad sino un artefacto: una matriz que registra, construcción por construcción, si es de norma y cómo la escribe cada motor del proyecto.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 030"]
@@ -21,6 +25,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [024](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) | DDL: el esquema como contrato ejecutable | tipo de dato · restricción · valor por defecto · DDL transaccional |
+| [029](../../part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/README.md) | Nulos y lógica de tres valores | UNKNOWN · IS DISTINCT FROM · NOT IN con nulos · agregados y nulos |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-norma-frente-a-producto"></a>**norma frente a producto** | La distinción entre lo que exige ISO/IEC 9075 y lo que cada motor añade por su cuenta. Ningún producto implementa la norma entera y todos la extienden; saber en qué lado está cada línea de tu código es lo que decide si una migración de motor cuesta un día o un trimestre. | se introduce aquí |
+| <a id="v-matriz-de-portabilidad"></a>**matriz de portabilidad** | Tabla que registra, para cada construcción usada, si es de norma y cómo la escribe cada motor del proyecto. Convierte la portabilidad en un artefacto revisable en lugar de en una intención declarada en la primera reunión. | se introduce aquí |
+| <a id="v-extensión-propietaria"></a>**extensión propietaria** | Sintaxis o función que solo existe en un motor: `LIMIT` frente a `FETCH FIRST`, `ON CONFLICT` frente a `MERGE`, tipos de arreglo, `RETURNING`. Usarlas es legítimo y a menudo correcto; lo que no lo es, es usarlas sin saber que se está atando el proyecto a ese producto. | se introduce aquí |
 
 ---
 

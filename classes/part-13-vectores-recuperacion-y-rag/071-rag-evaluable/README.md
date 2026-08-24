@@ -12,6 +12,10 @@ Parte 13 — Vectores, recuperación y RAG · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Medir la recuperación antes de mirar la generación, porque si el fragmento correcto no entra en el contexto ningún modelo de lenguaje podrá responder bien. Recall@k, precisión@k y MRR sobre un conjunto de evaluación propio, con la fragmentación como la decisión que más mueve la calidad y la que más se toma por defecto sin medirla.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 071"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [070](../../part-13-vectores-recuperacion-y-rag/070-busqueda-hibrida-y-filtrado/README.md) | Búsqueda híbrida: léxica más vectorial y filtrado por metadatos | BM25 · fusión de rangos · filtro previo · filtro posterior |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-recallk"></a>**recall@k** | Qué proporción de los documentos relevantes aparece entre los K primeros resultados. Es la métrica que gobierna un sistema RAG: si el fragmento correcto no entra en el contexto, ningún modelo de lenguaje podrá responder bien. | se introduce aquí |
+| <a id="v-precisiónk"></a>**precisión@k** | Qué proporción de los K devueltos era relevante. Importa porque el contexto es finito y caro: llenar la ventana de ruido desplaza a los fragmentos que sí servían. | se introduce aquí |
+| <a id="v-mrr"></a>**MRR** | Rango recíproco medio: la media de 1 dividido por la posición del primer resultado relevante. Premia colocar arriba la respuesta correcta, que es justo lo que importa cuando solo se van a leer los tres primeros fragmentos. | se introduce aquí |
+| <a id="v-fragmentación"></a>**fragmentación** | Cómo se parte el documento antes de vectorizarlo: por tamaño, por párrafo, por sección, con o sin solape. Es la decisión que más mueve la calidad de un RAG y la que más se toma por defecto sin medirla. | se introduce aquí |
+| <a id="v-trazabilidad-de-la-cita"></a>**trazabilidad de la cita** | Que cada afirmación de la respuesta pueda seguirse hasta el fragmento y el documento del que salió. Es lo que permite auditar el sistema y detectar la alucinación; sin ella no hay forma de distinguir una respuesta correcta de una convincente. | se introduce aquí |
 
 ---
 

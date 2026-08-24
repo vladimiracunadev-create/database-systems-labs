@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,26 @@
 <main class="content" id="principal">
 <h1>Parte 05 — Motores relacionales y dialectos</h1>
 <p class="lead">Que exige la norma, que añade cada producto y como se escribe código que sobrevive a un cambio de motor.</p>
-<p><strong>4 clases · 12 horas</strong></p>
+<p><strong>4 clases · 12 horas ·
+15 conceptos · 12 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>SQL no es un lenguaje, son varios que se parecen. Esta parte separa lo que exige la norma ISO/IEC 9075 de lo que cada producto añade por su cuenta, y produce un artefacto revisable en lugar de una intención: una matriz que registra, construcción por construcción, si es de norma y cómo la escribe cada motor del proyecto.</p>
+<p>Después de la matriz vienen tres estudios de caso elegidos por contraste. PostgreSQL, como ejemplo de motor extensible que absorbe familias enteras —vectores, geometría, series— sin dejar de ser relacional. El bloque MySQL, MariaDB, SQL Server y Oracle, centrado exclusivamente en las divergencias que rompen código: modo estricto, cadena vacía tratada como nulo, plegado de identificadores. Y los dos motores embebidos, SQLite y DuckDB, cuya comparación deja ver el efecto del formato de almacenamiento con la menor cantidad posible de ruido operativo.</p>
+<p>El objetivo no es ser portable a toda costa. Es saber, línea a línea, cuándo estás atando el proyecto a un producto —lo que muchas veces es la decisión correcta— y cuándo lo estás haciendo sin darte cuenta.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Distinguir qué construcciones de una consulta son de norma y cuáles son extensiones del producto.</li>
+<li>Mantener una matriz de portabilidad de las construcciones que el proyecto realmente usa.</li>
+<li>Explicar tres divergencias entre motores que rompen código y demostrar cada una con un ejemplo ejecutable.</li>
+<li>Elegir entre motor embebido y motor servidor, y entre orientación a filas y a columnas, con un argumento de carga de trabajo.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -61,6 +81,86 @@
 <tr><td><a href="032.html">032</a></td><td><a href="032.html">MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>4</td></tr>
 <tr><td><a href="033.html">033</a></td><td><a href="033.html">SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="030.html">030 — Portabilidad: qué exige la norma y qué añade cada motor</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      4 fuentes · requiere <a href="024.html">024</a>, <a href="029.html">029</a></p>
+    <p>Qué exige la norma ISO/IEC 9075 y qué añade cada producto por su cuenta. El resultado de la clase no es una opinión sobre portabilidad sino un artefacto: una matriz que registra, construcción por construcción, si es de norma y cómo la escribe cada motor del proyecto.</p>
+    <p><span class="tag">norma frente a producto</span> <span class="tag">matriz de portabilidad</span> <span class="tag">extensión propietaria</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="031.html">031 — PostgreSQL: tipos, extensiones y modelo de procesos</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="012.html">012</a>, <a href="024.html">024</a></p>
+    <p>PostgreSQL como caso de estudio de motor extensible: tipos compuestos, arreglos, rangos y JSONB de fábrica, extensiones que añaden vectores o geometría sin tocar el núcleo, y un modelo de proceso por conexión que explica por qué el agrupador de conexiones deja de ser opcional. Incluye autovacuum, que reaparece en la parte 08.</p>
+    <p><span class="tag">extensión</span> <span class="tag">tipo compuesto</span> <span class="tag">proceso por conexión</span> <span class="tag">autovacuum</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="032.html">032 — MySQL, MariaDB, SQL Server y Oracle: divergencias que rompen código</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      4 fuentes · requiere <a href="030.html">030</a></p>
+    <p>Las divergencias concretas que rompen código al cambiar de motor: el modo estricto de MySQL que convierte datos inválidos en silencio, la cadena vacía que Oracle trata como nulo, y el plegado de mayúsculas de los identificadores sin citar. Cada una se demuestra con el `INSERT` que en un motor falla y en otro «funciona».</p>
+    <p><span class="tag">colación</span> <span class="tag">modo estricto</span> <span class="tag">cadena vacia frente a nulo</span> <span class="tag">identificador citado</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="033.html">033 — SQLite y DuckDB: motores embebidos, transaccional frente a analítico</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="009.html">009</a>, <a href="031.html">031</a></p>
+    <p>Los dos motores embebidos del programa y por qué no compiten entre sí: SQLite es transaccional y por filas, DuckDB es analítico, columnar y vectorizado. La comparación deja ver, con la menor cantidad posible de ruido operativo, cómo el formato de almacenamiento decide el perfil de rendimiento.</p>
+    <p><span class="tag">motor embebido</span> <span class="tag">tipado dinamico</span> <span class="tag">almacenamiento columnar</span> <span class="tag">vectorización</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«SQL es SQL.» Paginación, concatenación, tipos de fecha, `UPSERT` y comillas de identificadores divergen en todos los motores relevantes.</li>
+<li>«Usar una extensión propietaria es mala práctica.» A menudo es la decisión correcta. Lo malo es usarla sin saber que se está usando.</li>
+<li>«SQLite es una base de datos de juguete.» Es una de las piezas de software más desplegadas del planeta; su límite es la concurrencia de escritura y el servicio en red, no la seriedad.</li>
+<li>«DuckDB es SQLite para datos grandes.» Son motores con propósitos distintos: uno transaccional y por filas, otro analítico y columnar.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 15 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#almacenamiento-columnar"><strong>almacenamiento columnar</strong></a></td><td>Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí.</td><td><a href="033.html">033</a></td></tr>
+<tr><td><a href="../glosario.html#autovacuum"><strong>autovacuum</strong></a></td><td>Proceso que recupera el espacio de las versiones de fila muertas que deja MVCC y actualiza las estadísticas del planificador. Cuando se queda atrás, la tabla se hincha y los planes se degradan: dos síntomas que se ven antes en el monitor que en el error.</td><td><a href="031.html">031</a></td></tr>
+<tr><td><a href="../glosario.html#cadena-vacia-frente-a-nulo"><strong>cadena vacia frente a nulo</strong></a></td><td>Divergencia que rompe código al migrar: Oracle trata la cadena vacía `''` como `NULL`, y el resto de motores la distingue. Una condición `= ''` cambia de significado según el producto, y un `NOT NULL` deja de proteger lo que se creía.</td><td><a href="032.html">032</a></td></tr>
+<tr><td><a href="../glosario.html#colación"><strong>colación</strong></a></td><td>El conjunto de reglas que decide cómo se comparan y ordenan los textos: si `a` = `A`, dónde va la `ñ`, si los acentos cuentan. Cambia el resultado de `ORDER BY`, de `=` y de un `UNIQUE`, y es distinta por defecto en cada motor.</td><td><a href="032.html">032</a></td></tr>
+<tr><td><a href="../glosario.html#extensión"><strong>extensión</strong></a></td><td>Módulo cargable que añade tipos, operadores, índices o funciones a PostgreSQL sin tocar su núcleo: `pgvector`, `PostGIS`, `pg_stat_statements`. Es el mecanismo por el que un motor relacional cubre familias enteras —vectores, geometría, series— sin dejar de ser el mismo motor.</td><td><a href="031.html">031</a></td></tr>
+<tr><td><a href="../glosario.html#extensión-propietaria"><strong>extensión propietaria</strong></a></td><td>Sintaxis o función que solo existe en un motor: `LIMIT` frente a `FETCH FIRST`, `ON CONFLICT` frente a `MERGE`, tipos de arreglo, `RETURNING`. Usarlas es legítimo y a menudo correcto; lo que no lo es, es usarlas sin saber que se está atando el proyecto a ese producto.</td><td><a href="030.html">030</a></td></tr>
+<tr><td><a href="../glosario.html#identificador-citado"><strong>identificador citado</strong></a></td><td>Nombre de objeto entre comillas dobles —o entre acentos graves en MySQL, entre corchetes en SQL Server—. Al citarlo se vuelve sensible a mayúsculas y se congela tal cual; sin citar, cada motor lo pliega a un caso distinto, y ahí nacen los «la tabla no existe» al cambiar de producto.</td><td><a href="032.html">032</a></td></tr>
+<tr><td><a href="../glosario.html#matriz-de-portabilidad"><strong>matriz de portabilidad</strong></a></td><td>Tabla que registra, para cada construcción usada, si es de norma y cómo la escribe cada motor del proyecto. Convierte la portabilidad en un artefacto revisable en lugar de en una intención declarada en la primera reunión.</td><td><a href="030.html">030</a></td></tr>
+<tr><td><a href="../glosario.html#modo-estricto"><strong>modo estricto</strong></a></td><td>Ajuste que decide si el motor rechaza un dato inválido o lo convierte en silencio. MySQL sin modo estricto trunca cadenas y transforma fechas imposibles en ceros; el mismo `INSERT` que en PostgreSQL falla, allí «funciona» y corrompe.</td><td><a href="032.html">032</a></td></tr>
+<tr><td><a href="../glosario.html#motor-embebido"><strong>motor embebido</strong></a></td><td>Base de datos que corre dentro del proceso de la aplicación, sin servidor ni puerto: SQLite, DuckDB. Elimina el costo de operación y la latencia de red, a cambio de no poder servir a varias máquinas.</td><td><a href="033.html">033</a></td></tr>
+<tr><td><a href="../glosario.html#norma-frente-a-producto"><strong>norma frente a producto</strong></a></td><td>La distinción entre lo que exige ISO/IEC 9075 y lo que cada motor añade por su cuenta. Ningún producto implementa la norma entera y todos la extienden; saber en qué lado está cada línea de tu código es lo que decide si una migración de motor cuesta un día o un trimestre.</td><td><a href="030.html">030</a></td></tr>
+<tr><td><a href="../glosario.html#proceso-por-conexión"><strong>proceso por conexión</strong></a></td><td>Modelo de PostgreSQL: cada conexión es un proceso del sistema operativo con su propia memoria. Es robusto —una caída no arrastra a las demás— y caro: por eso un agrupador de conexiones deja de ser un lujo a partir de unos cientos de clientes.</td><td><a href="031.html">031</a></td></tr>
+<tr><td><a href="../glosario.html#tipado-dinamico"><strong>tipado dinamico</strong></a></td><td>En SQLite el tipo pertenece al valor, no a la columna: la declaración es una sugerencia (afinidad) y no una barrera. Cómodo para prototipar, peligroso para datos que otro sistema leerá; desde la versión 3.37 existen las tablas `STRICT` para recuperar el rigor.</td><td><a href="033.html">033</a></td></tr>
+<tr><td><a href="../glosario.html#tipo-compuesto"><strong>tipo compuesto</strong></a></td><td>Tipo de dato definido por el usuario con varios campos, o los tipos estructurados que PostgreSQL trae de fábrica: arreglos, rangos, `JSONB`, tipos enumerados. Permiten modelar sin salir del relacional lo que en otros motores obligaría a una tabla más o a un documento.</td><td><a href="031.html">031</a></td></tr>
+<tr><td><a href="../glosario.html#vectorización"><strong>vectorización</strong></a></td><td>Procesar lotes de miles de valores por llamada en lugar de una fila cada vez. Amortiza el costo de interpretación del plan y aprovecha las instrucciones SIMD del procesador; es la segunda mitad —junto al formato columnar— de la ventaja analítica de DuckDB o ClickHouse.</td><td><a href="033.html">033</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>12 obras distintas sostienen lo que se afirma en estas
+4 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-hellerstein-architecture">Architecture of a Database System</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 031</span></li>
+<li><a href="../fuentes.html#src-docs-duckdb">DuckDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 033</span></li>
+<li><a href="../fuentes.html#src-iso-9075">ISO/IEC 9075: Information technology - Database languages - SQL</a> <span class="fuente-meta">(2023)</span> — <span class="fuente-meta">se cita en 030</span></li>
+<li><a href="../fuentes.html#src-docs-mariadb">MariaDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 032</span></li>
+<li><a href="../fuentes.html#src-docs-mysql">MySQL Reference Manual</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 030, 032</span></li>
+<li><a href="../fuentes.html#src-docs-oracle">Oracle Database Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 032</span></li>
+<li><a href="../fuentes.html#src-rogov-postgresql-internals">PostgreSQL 14 Internals</a> <span class="fuente-meta">(2022)</span> — <span class="fuente-meta">se cita en 031</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql">PostgreSQL Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 030, 031</span></li>
+<li><a href="../fuentes.html#src-molinaro-sql-cookbook">SQL Cookbook</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 030</span></li>
+<li><a href="../fuentes.html#src-docs-sqlserver">SQL Server Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 032</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite">SQLite Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 033</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite-optoverview">SQLite: Query Optimizer Overview</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 033</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La clase que pone nombre a las tres piezas de las que se habla el resto del programa. Separa el dato de la información que produce al interpretarlo, define el registro como un hecho completo y la tabla como el conjunto de filas que comparten forma. Casi todos los errores de diseño de las partes siguientes empiezan en una confusión de este nivel: un campo que guarda dos hechos, un número guardado como texto, una lista a la que se llama tabla.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 001"]
@@ -23,6 +27,26 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Ninguno. Esta es una clase de entrada: no supone nada anterior del programa más allá de saber abrir una terminal.
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-dato"></a>**dato** | Un valor registrado sin el contexto que lo interpreta: `38`, `Ada`, `2026-03-01`. Por sí solo no afirma nada, porque el mismo valor puede ser una edad, una temperatura o un número de camiseta. Toda base de datos existe para guardar el dato junto al contexto que lo convierte en información. | se introduce aquí |
+| <a id="v-información"></a>**información** | El dato más el contexto que fija su significado: de qué es, de cuándo y de quién. «38» es un dato; «la temperatura del sensor 3 a las 10:15 fue 38 °C» es información. Diseñar un esquema es, literalmente, decidir qué contexto se guarda y cuál se pierde para siempre. | se introduce aquí |
+| <a id="v-registro"></a>**registro** | Una fila: un hecho completo sobre una cosa, ni medio hecho ni dos. La regla práctica para detectar el error más común: si para leer un campo hay que partirlo por comas, ese registro esconde varios hechos y viola la primera forma normal. | se introduce aquí |
+| <a id="v-campo"></a>**campo** | Una columna: un dato con nombre, tipo y —a veces— una regla. El nombre dice qué significa, el tipo dice qué valores son posibles y la restricción dice cuáles son admisibles. | se introduce aquí |
+| <a id="v-tabla"></a>**tabla** | Un conjunto de registros con exactamente la misma forma: mismas columnas, mismos tipos, mismo significado por columna. Esa uniformidad es lo que permite consultar sin saber de antemano qué hay dentro. | se introduce aquí |
 
 ---
 

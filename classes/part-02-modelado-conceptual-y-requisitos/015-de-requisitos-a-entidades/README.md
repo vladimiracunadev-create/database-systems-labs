@@ -12,6 +12,10 @@ Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El paso del enunciado ambiguo a un conjunto de entidades que se puede defender. Trabaja tres herramientas: las reglas de negocio que acabarán siendo restricciones, el diccionario de datos que impide que dos equipos llamen igual a cosas distintas, y el alcance escrito de lo que el modelo decide no representar.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 015"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [001](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/README.md) | Qué es un dato, un registro y una tabla | dato · información · registro · campo · tabla |
+| [008](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) | Dos tablas y una relación: la clave foránea | clave foránea · tabla de relación · reunión · anomalías de repetición |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-regla-de-negocio"></a>**regla de negocio** | Una afirmación del dominio que el sistema debe respetar: «un estudiante no puede inscribirse dos veces en el mismo curso». Cada regla acaba en una restricción, en un índice único o en una prueba; la que no acaba en ninguna de las tres es solo una frase en un documento. | se introduce aquí |
+| <a id="v-diccionario-de-datos"></a>**diccionario de datos** | La lista de cada atributo con su significado exacto, su tipo, su unidad y su origen. Es lo que impide que «fecha» signifique alta para un equipo y último acceso para otro. | se introduce aquí |
+| <a id="v-alcance"></a>**alcance** | Lo que el modelo decide representar y lo que decide ignorar. Kent lo formula sin rodeos: ningún modelo captura el mundo, siempre hay un recorte, y ese recorte es una decisión humana que conviene escribir en lugar de sufrir después. | se introduce aquí |
+| <a id="v-patrón-de-acceso"></a>**patrón de acceso** | La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar. | se introdujo en la [010](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md) |
 
 ---
 

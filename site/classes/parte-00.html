@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,29 @@
 <main class="content" id="principal">
 <h1>Parte 00 — Primeros pasos: del archivo a la base de datos</h1>
 <p class="lead">La rampa de entrada. Qué es un dato, por qué una hoja de cálculo deja de servir, y las primeras órdenes de SQL —crear, insertar, leer, cambiar— hasta llegar a dos tablas relacionadas. Termina con las dos preguntas que hay que saber contestar antes de seguir: cuándo NO hace falta una base de datos y qué familias de motores existen.</p>
-<p><strong>10 clases · 20 horas</strong></p>
+<p><strong>10 clases · 20 horas ·
+46 conceptos · 14 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Ninguno. Es la puerta de entrada al programa y no supone nada anterior.</p>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Esta parte existe porque el resto del programa da por sabidas cosas que casi nadie aprendió de forma ordenada. Antes de discutir normalización, aislamiento o consenso hay que poder decir sin dudar qué es un dato, qué es una fila, qué garantiza una clave y por qué una hoja de cálculo deja de servir. Diez clases, veinte horas, y ninguna teoría que no se pueda ejecutar en la misma sesión en que se lee.</p>
+<p>El recorrido tiene una forma deliberada. Las tres primeras clases construyen el vocabulario y la primera base de datos real. Las tres siguientes enseñan a leer, a cambiar datos sin destruirlos y a elegir tipos que no mientan. Las dos siguientes introducen la identidad —la clave primaria— y la primera relación entre tablas, que es donde aparecen por primera vez las anomalías que justifican toda la parte 02. Las dos últimas cierran con las dos preguntas de criterio que un profesional debe saber contestar: cuándo NO hace falta una base de datos, y qué familias de motores existen.</p>
+<p>El motor de referencia es SQLite, porque no hay que instalar nada ni operar nada y así el ruido no compite con el concepto. Aun así cada clase muestra el mismo problema resuelto en varios motores, incluidos los que no lo resuelven y por qué, para que la costumbre de comparar se instale desde el primer día.</p>
+<p>Si ya sabes SQL y quieres ir más rápido, no te saltes las clases 006, 009 y 010: tipos, criterio de decisión y mapa de familias son las tres que más se dan por sabidas y menos se dominan.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Explicar la diferencia entre dato, información, registro, campo y tabla con un ejemplo propio.</li>
+<li>Crear una base de datos, poblarla y consultarla desde cero sin copiar instrucciones.</li>
+<li>Cambiar datos comprobando antes el alcance y usando la transacción como red de seguridad.</li>
+<li>Elegir el tipo correcto para dinero, fechas e identificadores, y decir qué se rompe con el tipo equivocado.</li>
+<li>Declarar claves primarias y foráneas, y justificar la elección entre clave natural y sustituta.</li>
+<li>Argumentar cuándo un archivo o un motor embebido es la respuesta correcta y cuándo no.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -67,6 +90,161 @@
 <tr><td><a href="009.html">009</a></td><td><a href="009.html">Cuándo NO necesitas una base de datos</a></td><td class="nivel-fundamentos">Fundamentos</td><td>2</td><td>3</td></tr>
 <tr><td><a href="010.html">010</a></td><td><a href="010.html">El mapa de los motores: seis familias y un criterio</a></td><td class="nivel-fundamentos">Fundamentos</td><td>2</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="001.html">001 — Qué es un dato, un registro y una tabla</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · sin prerrequisitos</p>
+    <p>La clase que pone nombre a las tres piezas de las que se habla el resto del programa. Separa el dato de la información que produce al interpretarlo, define el registro como un hecho completo y la tabla como el conjunto de filas que comparten forma. Casi todos los errores de diseño de las partes siguientes empiezan en una confusión de este nivel: un campo que guarda dos hechos, un número guardado como texto, una lista a la que se llama tabla.</p>
+    <p><span class="tag">dato</span> <span class="tag">información</span> <span class="tag">registro</span> <span class="tag">campo</span> <span class="tag">tabla</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="002.html">002 — Del archivo y la hoja de cálculo a la base de datos</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="001.html">001</a></p>
+    <p>Por qué llega un momento en que la hoja de cálculo deja de servir, expresado en cuatro capacidades que un archivo no tiene: integridad declarada, concurrencia, consulta declarativa y durabilidad. No es una clase contra las hojas de cálculo —siguen siendo la herramienta correcta muchas veces— sino el primer criterio explícito para saber de qué lado está tu problema.</p>
+    <p><span class="tag">integridad declarada</span> <span class="tag">concurrencia</span> <span class="tag">consulta declarativa</span> <span class="tag">durabilidad</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="003.html">003 — Tu primera base de datos: crear, insertar y leer</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="001.html">001</a>, <a href="002.html">002</a></p>
+    <p>La primera base de datos real, creada, poblada y consultada en la misma sesión. Introduce la separación entre definir estructuras y manipular contenido, y la primera aparición del nulo. A partir de aquí todo el programa se puede ejecutar, no solo leer.</p>
+    <p><span class="tag">CREATE TABLE</span> <span class="tag">INSERT</span> <span class="tag">SELECT</span> <span class="tag">definición frente a manipulación</span> <span class="tag">NULL</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="004.html">004 — Leer datos: SELECT, WHERE y ORDER BY</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="003.html">003</a></p>
+    <p>Leer con precisión: filtrar filas, elegir columnas y ordenar el resultado. La idea que más consecuencias tendrá después es que el resultado de una consulta no tiene orden hasta que lo declaras, así que `LIMIT` sin `ORDER BY` devuelve filas cualesquiera.</p>
+    <p><span class="tag">filtrado</span> <span class="tag">proyección</span> <span class="tag">orden</span> <span class="tag">LIMIT</span> <span class="tag">IS NULL</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="005.html">005 — Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="003.html">003</a>, <a href="004.html">004</a></p>
+    <p>Las tres órdenes que cambian datos y la disciplina que las hace seguras: comprobar el alcance con un `SELECT` antes de escribir, leer el número de filas afectadas y envolver el cambio en una transacción que se pueda deshacer. Es la clase que evita el `UPDATE` sin `WHERE` que todo el mundo cuenta haber hecho una vez.</p>
+    <p><span class="tag">UPDATE</span> <span class="tag">DELETE</span> <span class="tag">alcance del cambio</span> <span class="tag">filas afectadas</span> <span class="tag">transacción como red</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="006.html">006 — Tipos de datos: por qué un número no es un texto</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="003.html">003</a></p>
+    <p>Por qué el tipo de una columna no es burocracia: decide qué comparaciones tienen sentido, qué ordenaciones son correctas y si el dinero se calcula bien. Distingue decimal exacto de coma flotante, fija el formato ISO-8601 para fechas y explica la afinidad de tipos de SQLite, que es la razón de que un dato inválido entre en un motor y sea rechazado en otro.</p>
+    <p><span class="tag">tipo</span> <span class="tag">decimal exacto</span> <span class="tag">coma flotante</span> <span class="tag">fecha ISO-8601</span> <span class="tag">afinidad de tipos</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="007.html">007 — La clave primaria: cómo se distingue una fila de otra</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="003.html">003</a>, <a href="006.html">006</a></p>
+    <p>Cómo se distingue una fila de otra. Presenta la clave primaria y el debate entre clave natural y sustituta con su criterio real —cuál de las dos sobrevive a los cambios del mundo— y la clave compuesta, que reaparecerá al hablar de índices y de particionado.</p>
+    <p><span class="tag">clave primaria</span> <span class="tag">clave natural</span> <span class="tag">clave sustituta</span> <span class="tag">clave compuesta</span> <span class="tag">UNIQUE</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="008.html">008 — Dos tablas y una relación: la clave foránea</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="007.html">007</a></p>
+    <p>La segunda tabla y el momento en que aparece la relación. La clave foránea convierte una convención en una regla que el motor impone, la tabla intermedia resuelve el muchos-a-muchos y la reunión permite volver a ver el hecho completo. Aquí se ven por primera vez las anomalías que justifican toda la parte 02.</p>
+    <p><span class="tag">clave foránea</span> <span class="tag">tabla de relación</span> <span class="tag">reunión</span> <span class="tag">anomalías de repetición</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="009.html">009 — Cuándo NO necesitas una base de datos</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="002.html">002</a>, <a href="008.html">008</a></p>
+    <p>La clase que da permiso para no usar una base de datos. Enumera los casos en que un archivo, un Parquet o un motor embebido es la respuesta correcta, y pone precio a la alternativa: el costo de operación de un motor servidor no aparece en la factura de licencia sino en las guardias, los respaldos y las actualizaciones.</p>
+    <p><span class="tag">criterio de decisión</span> <span class="tag">motor embebido</span> <span class="tag">costo de operación</span> <span class="tag">alternativas</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="010.html">010 — El mapa de los motores: seis familias y un criterio</a></h3>
+    <p class="fuente-meta">Fundamentos · 2 h ·
+      3 fuentes · requiere <a href="009.html">009</a></p>
+    <p>El mapa que se usará durante todo el programa: seis familias de motores, qué patrón de acceso optimiza cada una y qué paga a cambio. Cierra la rampa de entrada con un criterio de elección en lugar de una lista de nombres de producto.</p>
+    <p><span class="tag">familias de motores</span> <span class="tag">modelo de agregado</span> <span class="tag">patrón de acceso</span> <span class="tag">multimodelo</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Una tabla es una lista.» No: una tabla exige que todas las filas tengan la misma forma. Una lista con filas de distinta estructura no se puede consultar sin saber de antemano qué hay dentro.</li>
+<li>«La clave primaria es un número autoincremental.» Ese es un mecanismo posible, no la definición. La clave primaria es la clave candidata elegida por ser única, no nula y estable.</li>
+<li>«Guardo las fechas como texto porque así las veo bien.» El texto libre no se compara ni se ordena de forma fiable. ISO-8601 ordena alfabéticamente igual que cronológicamente, y esa es toda la discusión.</li>
+<li>«Si usara una base de datos de verdad, esto iría más rápido.» Muchas veces no: un CSV leído entero en memoria le gana a cualquier motor para volúmenes pequeños. La base de datos se justifica por concurrencia, integridad y durabilidad antes que por velocidad.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 46 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#afinidad-de-tipos"><strong>afinidad de tipos</strong></a></td><td>Regla de SQLite por la que la columna sugiere un tipo pero acepta valores de otro y los convierte cuando puede. Explica por qué en SQLite entra un texto en una columna `INTEGER` y por qué ese mismo dato es rechazado en PostgreSQL.</td><td><a href="006.html">006</a></td></tr>
+<tr><td><a href="../glosario.html#alcance-del-cambio"><strong>alcance del cambio</strong></a></td><td>Cuántas filas toca realmente una orden de escritura. La disciplina es comprobarlo antes: escribir el `SELECT` con el mismo `WHERE`, contar, y solo entonces convertirlo en `UPDATE` o `DELETE`.</td><td><a href="005.html">005</a></td></tr>
+<tr><td><a href="../glosario.html#alternativas"><strong>alternativas</strong></a></td><td>Lo que se usa cuando una base de datos no está justificada: un CSV o un Parquet, un JSON versionado, una hoja de cálculo compartida, un fichero por proceso. Nombrarlas obliga a defender la elección de motor en lugar de darla por hecha.</td><td><a href="009.html">009</a></td></tr>
+<tr><td><a href="../glosario.html#anomalías-de-repetición"><strong>anomalías de repetición</strong></a></td><td>Los tres desastres de guardar el mismo hecho en varios sitios: al insertar hay que repetir datos, al actualizar se corrige una copia y no las otras, y al borrar se pierde información que solo vivía ahí. Son el argumento original de la normalización.</td><td><a href="008.html">008</a></td></tr>
+<tr><td><a href="../glosario.html#campo"><strong>campo</strong></a></td><td>Una columna: un dato con nombre, tipo y —a veces— una regla. El nombre dice qué significa, el tipo dice qué valores son posibles y la restricción dice cuáles son admisibles.</td><td><a href="001.html">001</a></td></tr>
+<tr><td><a href="../glosario.html#clave-compuesta"><strong>clave compuesta</strong></a></td><td>Clave primaria formada por dos o más columnas, típica de las tablas de relación: `(estudiante_id, curso_id)`. Fija además el orden de las columnas del índice que la sostiene, y ese orden decide qué consultas se aceleran.</td><td><a href="007.html">007</a></td></tr>
+<tr><td><a href="../glosario.html#clave-foránea"><strong>clave foránea</strong></a></td><td>Columna que referencia la clave primaria de otra tabla y a la que el gestor obliga a apuntar a una fila existente. Es la integridad referencial hecha declaración: sin ella, las relaciones son una convención que alguien acabará rompiendo.</td><td><a href="008.html">008</a></td></tr>
+<tr><td><a href="../glosario.html#clave-natural"><strong>clave natural</strong></a></td><td>Identificador que ya existe en el dominio —RUT, ISBN, matrícula—. Ventaja: significa algo. Riesgo: el mundo la cambia —una persona corrige su documento, un organismo reasigna códigos— y el cambio arrastra a todas las filas que la referencian.</td><td><a href="007.html">007</a></td></tr>
+<tr><td><a href="../glosario.html#clave-primaria"><strong>clave primaria</strong></a></td><td>La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila.</td><td><a href="007.html">007</a></td></tr>
+<tr><td><a href="../glosario.html#clave-sustituta"><strong>clave sustituta</strong></a></td><td>Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción `UNIQUE` sobre la clave natural real.</td><td><a href="007.html">007</a></td></tr>
+<tr><td><a href="../glosario.html#coma-flotante"><strong>coma flotante</strong></a></td><td>Representación binaria aproximada (`REAL`, `DOUBLE`) según IEEE 754. Rápida y adecuada para magnitudes físicas, ruinosa para dinero: `0.1 + 0.2` no da `0.3` y la diferencia se acumula fila a fila.</td><td><a href="006.html">006</a></td></tr>
+<tr><td><a href="../glosario.html#concurrencia"><strong>concurrencia</strong></a></td><td>Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones.</td><td><a href="002.html">002</a></td></tr>
+<tr><td><a href="../glosario.html#consulta-declarativa"><strong>consulta declarativa</strong></a></td><td>Se declara *qué* resultado se quiere y el motor decide *cómo* obtenerlo. Quien consulta no escribe recorridos ni bucles; el optimizador elige el plan y puede cambiarlo cuando cambian los datos, sin que nadie reescriba la consulta.</td><td><a href="002.html">002</a></td></tr>
+<tr><td><a href="../glosario.html#costo-de-operación"><strong>costo de operación</strong></a></td><td>Todo lo que cuesta mantener vivo un motor después de instalarlo: respaldos probados, actualizaciones, monitorización, personas de guardia. Suele superar con creces el costo de licencia o de cómputo.</td><td><a href="009.html">009</a></td></tr>
+<tr><td><a href="../glosario.html#create-table"><strong>CREATE TABLE</strong></a></td><td>La orden que declara una tabla: columnas, tipos y restricciones. Es el contrato; a partir de ahí el motor rechaza todo lo que no lo cumpla, venga de donde venga.</td><td><a href="003.html">003</a></td></tr>
+<tr><td><a href="../glosario.html#criterio-de-decisión"><strong>criterio de decisión</strong></a></td><td>La regla explícita por la que se elige —o se descarta— una tecnología: volumen, concurrencia, garantías necesarias y costo de operación. Sin criterio escrito, la elección se justifica a posteriori y ya no se puede revisar.</td><td><a href="009.html">009</a></td></tr>
+<tr><td><a href="../glosario.html#dato"><strong>dato</strong></a></td><td>Un valor registrado sin el contexto que lo interpreta: `38`, `Ada`, `2026-03-01`. Por sí solo no afirma nada, porque el mismo valor puede ser una edad, una temperatura o un número de camiseta. Toda base de datos existe para guardar el dato junto al contexto que lo convierte en información.</td><td><a href="001.html">001</a></td></tr>
+<tr><td><a href="../glosario.html#decimal-exacto"><strong>decimal exacto</strong></a></td><td>Tipo numérico de precisión y escala fijas (`NUMERIC`, `DECIMAL`) que representa exactamente los valores decimales. Es el tipo del dinero: no arrastra el error de representación binaria de la coma flotante.</td><td><a href="006.html">006</a></td></tr>
+<tr><td><a href="../glosario.html#definición-frente-a-manipulación"><strong>definición frente a manipulación</strong></a></td><td>SQL se separa en DDL, que define y cambia estructuras (`CREATE`, `ALTER`, `DROP`), y DML, que consulta y cambia contenido (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). La distinción importa porque no todos los motores dan al DDL las mismas garantías transaccionales.</td><td><a href="003.html">003</a></td></tr>
+<tr><td><a href="../glosario.html#delete"><strong>DELETE</strong></a></td><td>Borra las filas que cumplen el `WHERE`. Igual que `UPDATE`, sin `WHERE` alcanza a toda la tabla; a diferencia de `DROP`, deja la estructura en pie.</td><td><a href="005.html">005</a></td></tr>
+<tr><td><a href="../glosario.html#durabilidad"><strong>durabilidad</strong></a></td><td>Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho».</td><td><a href="002.html">002</a></td></tr>
+<tr><td><a href="../glosario.html#familias-de-motores"><strong>familias de motores</strong></a></td><td>Las formas de organizar datos que estructuran este programa: relacional, documental, clave-valor, grafo, columnas anchas y series temporales, más los índices de búsqueda y los vectoriales como casos especializados. Cada familia optimiza un patrón de acceso y paga en los demás.</td><td><a href="010.html">010</a></td></tr>
+<tr><td><a href="../glosario.html#fecha-iso-8601"><strong>fecha ISO-8601</strong></a></td><td>El formato `AAAA-MM-DD` —y `AAAA-MM-DDTHH:MM:SSZ` con hora— que ordena alfabéticamente igual que cronológicamente y no es ambiguo entre día y mes. Guardar fechas como texto libre es la vía directa a datos que no se pueden comparar.</td><td><a href="006.html">006</a></td></tr>
+<tr><td><a href="../glosario.html#filas-afectadas"><strong>filas afectadas</strong></a></td><td>El número que el motor devuelve tras una escritura. Es la evidencia de que el cambio alcanzó lo previsto: si esperabas una fila y salieron cuatro mil, el `WHERE` estaba mal.</td><td><a href="005.html">005</a></td></tr>
+<tr><td><a href="../glosario.html#filtrado"><strong>filtrado</strong></a></td><td>Quedarse con las filas que cumplen un predicado (`WHERE`). En álgebra relacional es la selección: reduce el número de filas, nunca el de columnas.</td><td><a href="004.html">004</a></td></tr>
+<tr><td><a href="../glosario.html#información"><strong>información</strong></a></td><td>El dato más el contexto que fija su significado: de qué es, de cuándo y de quién. «38» es un dato; «la temperatura del sensor 3 a las 10:15 fue 38 °C» es información. Diseñar un esquema es, literalmente, decidir qué contexto se guarda y cuál se pierde para siempre.</td><td><a href="001.html">001</a></td></tr>
+<tr><td><a href="../glosario.html#insert"><strong>INSERT</strong></a></td><td>La orden que añade filas. Falla —y debe fallar— si la fila viola una restricción declarada: es el momento en que la integridad declarada demuestra que sirve para algo.</td><td><a href="003.html">003</a></td></tr>
+<tr><td><a href="../glosario.html#integridad-declarada"><strong>integridad declarada</strong></a></td><td>Las reglas del dominio escritas en el esquema —`NOT NULL`, `UNIQUE`, `CHECK`, clave foránea— para que el gestor las imponga a toda aplicación que escriba, no solo a la que recordó comprobarlas. Es la diferencia entre una regla y una esperanza.</td><td><a href="002.html">002</a></td></tr>
+<tr><td><a href="../glosario.html#is-null"><strong>IS NULL</strong></a></td><td>El único predicado que comprueba ausencia de valor. `= NULL` nunca es cierto —da `UNKNOWN`— porque nada, ni siquiera otro nulo, es igual a lo desconocido.</td><td><a href="004.html">004</a></td></tr>
+<tr><td><a href="../glosario.html#limit"><strong>LIMIT</strong></a></td><td>Corta el resultado a las primeras N filas. Sin `ORDER BY` no significa nada estable: «las primeras N» sin criterio de orden es «N cualesquiera».</td><td><a href="004.html">004</a></td></tr>
+<tr><td><a href="../glosario.html#modelo-de-agregado"><strong>modelo de agregado</strong></a></td><td>Cómo agrupa el motor los datos que lee y escribe de una vez. El relacional trabaja con filas que se recomponen por reunión; los motores de agregado guardan la unidad completa junta y evitan la reunión, a cambio de duplicar.</td><td><a href="010.html">010</a></td></tr>
+<tr><td><a href="../glosario.html#motor-embebido"><strong>motor embebido</strong></a></td><td>Base de datos que corre dentro del proceso de la aplicación, sin servidor ni puerto: SQLite, DuckDB. Elimina el costo de operación y la latencia de red, a cambio de no poder servir a varias máquinas.</td><td><a href="009.html">009</a></td></tr>
+<tr><td><a href="../glosario.html#multimodelo"><strong>multimodelo</strong></a></td><td>Motor que soporta varias familias a la vez —PostgreSQL con JSONB, vectores y búsqueda de texto—. Reduce el número de sistemas que hay que operar; el riesgo es dar por hecho que hacer varias cosas equivale a hacerlas todas bien.</td><td><a href="010.html">010</a></td></tr>
+<tr><td><a href="../glosario.html#null"><strong>NULL</strong></a></td><td>Marca de ausencia de valor: no es cero, ni cadena vacía, ni «desconocido» codificado a mano. Introduce una lógica de tres valores que cambia el resultado de comparaciones, agregados y `NOT IN`.</td><td><a href="003.html">003</a></td></tr>
+<tr><td><a href="../glosario.html#orden"><strong>orden</strong></a></td><td>El resultado de una consulta es un conjunto: no tiene orden hasta que se declara `ORDER BY`. Confiar en el orden «que salió» es un error que sobrevive en pruebas y falla en producción el día que cambia el plan.</td><td><a href="004.html">004</a></td></tr>
+<tr><td><a href="../glosario.html#patrón-de-acceso"><strong>patrón de acceso</strong></a></td><td>La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar.</td><td><a href="010.html">010</a></td></tr>
+<tr><td><a href="../glosario.html#proyección"><strong>proyección</strong></a></td><td>Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con `DISTINCT`, cosa que SQL no hace por defecto y el álgebra sí.</td><td><a href="004.html">004</a></td></tr>
+<tr><td><a href="../glosario.html#registro"><strong>registro</strong></a></td><td>Una fila: un hecho completo sobre una cosa, ni medio hecho ni dos. La regla práctica para detectar el error más común: si para leer un campo hay que partirlo por comas, ese registro esconde varios hechos y viola la primera forma normal.</td><td><a href="001.html">001</a></td></tr>
+<tr><td><a href="../glosario.html#reunión"><strong>reunión</strong></a></td><td>Combinar filas de dos tablas emparejándolas por un valor común, normalmente clave foránea contra clave primaria. Es la operación que permite normalizar sin perder la capacidad de ver el hecho completo.</td><td><a href="008.html">008</a></td></tr>
+<tr><td><a href="../glosario.html#select"><strong>SELECT</strong></a></td><td>La orden de lectura. Nunca modifica datos; describe el conjunto que se quiere y deja al motor la estrategia para producirlo.</td><td><a href="003.html">003</a></td></tr>
+<tr><td><a href="../glosario.html#tabla"><strong>tabla</strong></a></td><td>Un conjunto de registros con exactamente la misma forma: mismas columnas, mismos tipos, mismo significado por columna. Esa uniformidad es lo que permite consultar sin saber de antemano qué hay dentro.</td><td><a href="001.html">001</a></td></tr>
+<tr><td><a href="../glosario.html#tabla-de-relación"><strong>tabla de relación</strong></a></td><td>Tabla intermedia que resuelve una relación muchos-a-muchos guardando pares de claves foráneas. Deja de ser «solo técnica» en cuanto la relación tiene atributos propios —fecha de inscripción, nota— y pasa a ser una entidad de pleno derecho.</td><td><a href="008.html">008</a></td></tr>
+<tr><td><a href="../glosario.html#tipo"><strong>tipo</strong></a></td><td>El conjunto de valores posibles de un campo más las operaciones válidas sobre ellos. Declarar el tipo correcto delega en el motor la mitad de las validaciones que, si no, hay que escribir a mano en cada aplicación.</td><td><a href="006.html">006</a></td></tr>
+<tr><td><a href="../glosario.html#transacción-como-red"><strong>transacción como red</strong></a></td><td>Envolver un cambio en `BEGIN` … `ROLLBACK` permite ver su efecto y deshacerlo. Es la red de seguridad más barata que existe y la razón práctica de que un `UPDATE` sin transacción sea una apuesta.</td><td><a href="005.html">005</a></td></tr>
+<tr><td><a href="../glosario.html#unique"><strong>UNIQUE</strong></a></td><td>Restricción que prohíbe valores repetidos en una columna o combinación de columnas. A diferencia de la clave primaria admite nulos —y cuántos admite depende del motor, que es una de las divergencias clásicas entre dialectos.</td><td><a href="007.html">007</a></td></tr>
+<tr><td><a href="../glosario.html#update"><strong>UPDATE</strong></a></td><td>Cambia valores de las filas que cumplen el `WHERE`. Sin `WHERE` cambia todas: es la orden que más datos ha destruido en la historia de las bases de datos.</td><td><a href="005.html">005</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>14 obras distintas sostienen lo que se afirma en estas
+10 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-db-engines-ranking">DB-Engines Ranking</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 010</span></li>
+<li><a href="../fuentes.html#src-kent-data-and-reality">Data and Reality</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 001</span></li>
+<li><a href="../fuentes.html#src-hernandez-mere-mortals">Database Design for Mere Mortals</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 001, 002, 007, 008</span></li>
+<li><a href="../fuentes.html#src-silberschatz-dsc7">Database System Concepts</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 002</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 009, 010</span></li>
+<li><a href="../fuentes.html#src-docs-duckdb">DuckDB Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 009</span></li>
+<li><a href="../fuentes.html#src-elmasri-navathe7">Fundamentals of Database Systems</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 001, 008</span></li>
+<li><a href="../fuentes.html#src-iso-9075">ISO/IEC 9075: Information technology - Database languages - SQL</a> <span class="fuente-meta">(2023)</span> — <span class="fuente-meta">se cita en 003, 004, 005</span></li>
+<li><a href="../fuentes.html#src-sadalage-fowler-nosql">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 010</span></li>
+<li><a href="../fuentes.html#src-docs-python-sqlite3">Python: sqlite3</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 003</span></li>
+<li><a href="../fuentes.html#src-karwin-sql-antipatterns">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a> <span class="fuente-meta">(2010)</span> — <span class="fuente-meta">se cita en 005, 006, 007</span></li>
+<li><a href="../fuentes.html#src-date-sql-relational-theory">SQL and Relational Theory: How to Write Accurate SQL Code</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 004, 006, 007</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite">SQLite Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 002, 003, 004, 005, 006, 009</span></li>
+<li><a href="../fuentes.html#src-chen-1976">The Entity-Relationship Model - Toward a Unified View of Data</a> <span class="fuente-meta">(1976)</span> — <span class="fuente-meta">se cita en 008</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li>

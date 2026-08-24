@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>analizador</code> · <code>planificador</code> · <code>ejecutor</code> · <code>gestor de almacenamiento</code> · <code>buffer pool</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El recorrido completo de una consulta desde el cliente hasta el disco: analizador, planificador, ejecutor, gestor de almacenamiento y buffer. Es el mapa mental que después permite leer un plan de ejecución sin adivinar, y saber en qué componente vive cada problema de rendimiento.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 012&quot;]
     C --&gt; K1[&quot;analizador&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="011.html">011</a></td>
+<td>Qué resuelve un sistema de bases de datos y qué no</td>
+<td>persistencia · concurrencia · integridad · recuperación · independencia de datos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-analizador"></a><strong>analizador</strong></td>
+<td>Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.)</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-planificador"></a><strong>planificador</strong></td>
+<td>Decide <em>cómo</em> ejecutar la consulta: qué índice usar, en qué orden reunir las tablas, con qué algoritmo. Elige por costo estimado a partir de estadísticas, no por el orden en que está escrita la consulta.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-ejecutor"></a><strong>ejecutor</strong></td>
+<td>Recorre el plan elegido operador a operador y produce las filas. Es donde <code>EXPLAIN ANALYZE</code> muestra los tiempos reales frente a los que el planificador había estimado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-gestor-de-almacenamiento"></a><strong>gestor de almacenamiento</strong></td>
+<td>La capa que traduce filas a páginas en disco y de vuelta, y que sostiene el registro, el buffer y las estructuras de índice. Es donde se decide si el motor es B-Tree o LSM, y con ello su perfil de lectura y escritura.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-buffer-pool"></a><strong>buffer pool</strong></td>
+<td>La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Abrir la caja negra. Saber qué le ocurre a una consulta desde que sale del cliente hasta que vuelve con filas permite razonar sobre rendimiento, bloqueos y fallos en lugar de adivinar.</p>

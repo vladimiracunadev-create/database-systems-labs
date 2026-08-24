@@ -12,6 +12,10 @@ Parte 06 — Documentos y clave-valor · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Cómo se consulta e indexa lo que se modeló en la clase anterior: índices compuestos y multiclave, cobertura, y la canalización de agregación con la regla que más rendimiento decide —poner `$match` al principio para que el índice sirva, no después.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 036"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [035](../../part-06-documentos-y-clave-valor/035-modelado-documental-incrustar-o-referenciar/README.md) | Modelado documental: incrustar o referenciar | incrustación · referencia · crecimiento no acotado · patrón de extensión |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-índice-compuesto"></a>**índice compuesto** | Índice sobre varias claves en un orden concreto. Sirve para las consultas que filtran por un prefijo de esa lista, no para cualquier subconjunto: `(a, b, c)` acelera filtrar por `a` o por `a, b`, pero no por `b` a secas. | se introduce aquí |
+| <a id="v-canalización-de-agregación"></a>**canalización de agregación** | Secuencia de etapas (`$match`, `$group`, `$sort`, `$lookup`) por las que pasan los documentos en MongoDB. El orden importa de verdad: poner `$match` al principio permite usar el índice, ponerlo después obliga a recorrer la colección entera. | se introduce aquí |
+| <a id="v-índice-multiclave"></a>**índice multiclave** | Índice sobre un campo que contiene un arreglo: MongoDB crea una entrada por elemento. Permite buscar dentro del arreglo, y explica por qué el índice de una colección puede tener muchas más entradas que documentos. | se introduce aquí |
+| <a id="v-cobertura"></a>**cobertura** | Que el índice contenga todas las columnas que la consulta necesita, de modo que el motor responda sin tocar la tabla. Es la diferencia entre una lectura y dos, y suele ser la optimización con mejor relación entre esfuerzo y resultado. | se introduce aquí |
 
 ---
 

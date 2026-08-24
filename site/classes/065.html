@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>tabla de hechos</code> · <code>dimensión</code> · <code>grano</code> · <code>dimensión de cambio lento</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El modelo dimensional de Kimball, con el grano como primera decisión y la que no se corrige después sin rehacerlo todo. Trata las dimensiones de cambio lento como lo que realmente deciden: si el informe del año pasado sigue diciendo lo que decía entonces.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 065&quot;]
     C --&gt; K1[&quot;tabla de hechos&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="018.html">018</a></td>
+<td>Normalización de 1FN a BCFN con dependencias funcionales</td>
+<td>dependencia funcional · anomalía de actualización · BCFN · descomposición sin pérdida</td>
+</tr>
+<tr>
+<td><a href="064.html">064</a></td>
+<td>OLTP frente a OLAP: por qué se separan</td>
+<td>carga transaccional · carga analítica · contención · formato de almacenamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-tabla-de-hechos"></a><strong>tabla de hechos</strong></td>
+<td>Tabla central del modelo dimensional: una fila por evento medible, con sus métricas numéricas y sus claves a las dimensiones. Crece indefinidamente y se consulta siempre agregando.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-dimensión"></a><strong>dimensión</strong></td>
+<td>Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.)</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-grano"></a><strong>grano</strong></td>
+<td>Qué representa exactamente una fila de la tabla de hechos: ¿una venta, una línea de venta, un resumen diario? Es la primera decisión del modelo dimensional y la que no se puede corregir después sin rehacerlo todo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-dimensión-de-cambio-lento"></a><strong>dimensión de cambio lento</strong></td>
+<td>Técnica para tratar los atributos que cambian con el tiempo: sobrescribir y perder la historia (tipo 1), o añadir una fila nueva con vigencia y conservarla (tipo 2). Determina si un informe del año pasado sigue diciendo lo que decía entonces.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Modelar para el análisis. El modelo dimensional optimiza una cosa —responder preguntas de negocio sobre grandes volúmenes— y renuncia deliberadamente a otras.</p>

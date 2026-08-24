@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html" aria-current="page">Documentación</a>
@@ -58,12 +59,13 @@ ella. La alternativa —mantener a mano el currículo, los índices, los README 
 sitio— produce la incoherencia clásica: el índice dice 60 clases, el README dice
 58 y el sitio publica 55.</p>
 <pre><code class="language-mermaid">flowchart TD
-    CY[&quot;curriculum.yaml&lt;br/&gt;partes · clases · horas · fuentes&quot;] --&gt; BC[&quot;scripts/build_classes.py&quot;]
+    CY[&quot;curriculum.yaml&lt;br/&gt;partes · clases · horas · fuentes&lt;br/&gt;resumen · prerrequisitos · pauta&quot;] --&gt; BC[&quot;scripts/build_classes.py&quot;]
     LM[&quot;classes/**/lesson.md&lt;br/&gt;la materia, escrita a mano&quot;] --&gt; BC
     MY[&quot;classes/**/motores.yaml&lt;br/&gt;el caso y la matriz de motores&quot;] --&gt; BC
     IM[&quot;classes/**/implementaciones/&lt;br/&gt;el código real, uno por motor&quot;] --&gt; BC
     SJ[&quot;catalog/sources.json&lt;br/&gt;120 fuentes&quot;] --&gt; BC
-    BC --&gt; CR[&quot;classes/**/README.md&lt;br/&gt;+ índices de parte&lt;br/&gt;(generados)&quot;]
+    GJ[&quot;catalog/glosario.json&lt;br/&gt;306 términos&quot;] --&gt; BC
+    BC --&gt; CR[&quot;classes/**/README.md&lt;br/&gt;+ portadas de parte&lt;br/&gt;+ GLOSARIO.md&lt;br/&gt;(generados)&quot;]
 
     MY --&gt; VE[&quot;scripts/verificar_equivalencia.py&quot;]
     IM --&gt; VE
@@ -72,11 +74,13 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
     CY --&gt; GS[&quot;scripts/generate_site.py&quot;]
     CR --&gt; GS
     SJ --&gt; GS
+    GJ --&gt; GS
     DJ[&quot;catalog/databases.json&lt;br/&gt;27 motores&quot;] --&gt; GS
     GS --&gt; ST[&quot;site/&lt;br/&gt;una página por clase + busqueda.json&lt;br/&gt;(generado)&quot;]
 
     CY --&gt; VR[&quot;scripts/validate_repository.py&quot;]
     SJ --&gt; VR
+    GJ --&gt; VR
     DJ --&gt; VR
     LM --&gt; VR
     MY --&gt; VR
@@ -129,6 +133,11 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
 <td>No</td>
 </tr>
 <tr>
+<td><code>GLOSARIO.md</code></td>
+<td>Artefacto</td>
+<td>No</td>
+</tr>
+<tr>
 <td><code>classes/README.md</code> y <code>classes/part-*/README.md</code></td>
 <td>Artefacto</td>
 <td>No</td>
@@ -146,8 +155,22 @@ repositorio digan cosas distintas.</p>
 <h2 id="los-componentes">Los componentes</h2>
 <h3 id="curriculumyaml"><code>curriculum.yaml</code></h3>
 <p>Metadatos de las 74 clases: identificador, <code>slug</code>, título, horas, nivel,
-conceptos, motores, laboratorio y <strong>fuentes</strong>. También las rutas por objetivo y
-los pesos de evaluación. Nada de lo que aquí se declara se repite en otro sitio.</p>
+conceptos, motores, laboratorio y <strong>fuentes</strong>. Lleva además la
+<strong>pauta pedagógica</strong>: el <code>resumen</code> y los <code>prerrequisitos</code> de cada clase, y por
+cada parte su <code>introduccion</code>, sus <code>resultados</code> y sus <code>errores</code> frecuentes. De ahí
+salen la portada de cada parte y el índice general. También contiene las rutas
+por objetivo y los pesos de evaluación. Nada de lo que aquí se declara se repite
+en otro sitio.</p>
+<h3 id="catalogglosariojson"><code>catalog/glosario.json</code></h3>
+<p>Los 306 conceptos que declaran las clases, definidos una sola vez. Cada entrada
+lleva la definición, la clase donde el término se introduce, la fuente que la
+respalda y los términos relacionados. De aquí salen tres cosas: el vocabulario
+que abre cada clase, el vocabulario de cada portada de parte y el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md"><code>GLOSARIO.md</code></a> del programa.</p>
+<p>El validador exige cobertura <strong>exacta en los dos sentidos</strong>: ningún concepto del
+currículo sin definición, y ninguna definición que ninguna clase declare. La
+primera regla evita que el lector tenga que deducir del contexto; la segunda
+evita que el registro acumule entradas que nadie revisa.</p>
 <h3 id="catalogsourcesjson"><code>catalog/sources.json</code></h3>
 <p>Registro único de la bibliografía. Cada entrada lleva tipo, autoría, año, URL y
 una nota que explica para qué sirve en este programa; los libros llevan ISBN y
@@ -269,6 +292,26 @@ catálogo de motores.</p>
 <td>Clases perdidas al reordenar</td>
 </tr>
 <tr>
+<td>Cobertura exacta del glosario en los dos sentidos</td>
+<td>Términos usados sin definir y definiciones huérfanas</td>
+</tr>
+<tr>
+<td>Remisiones del glosario resueltas</td>
+<td>«Ver también» que lleva a la nada</td>
+</tr>
+<tr>
+<td>Resumen y prerrequisitos en toda clase</td>
+<td>Clases que aparecen sin explicar por qué están ahí</td>
+</tr>
+<tr>
+<td>Prerrequisitos siempre anteriores</td>
+<td>Dependencias circulares en el orden de estudio</td>
+</tr>
+<tr>
+<td>Introducción, resultados y errores en toda parte</td>
+<td>Portadas de parte que son solo una tabla</td>
+</tr>
+<tr>
 <td>Todo motor con su <code>porque_no</code></td>
 <td>Comparativas de folleto, con solo ventajas</td>
 </tr>
@@ -323,6 +366,16 @@ catálogo de motores.</p>
   se publica, y GitHub Pages no necesita construir nada.</li>
 <li><strong>Los <code>slug</code> en ASCII.</strong> Son rutas de carpeta y de URL; los acentos ahí causan
   problemas entre sistemas de archivos.</li>
+<li><strong>El glosario en JSON y no en Markdown.</strong> Permite comprobar la cobertura
+  contra el currículo y generar el mismo término en tres sitios —clase, parte y
+  glosario— sin tres copias que se desincronizan.</li>
+<li><strong>La pauta pedagógica en <code>curriculum.yaml</code> y no en cada <code>lesson.md</code>.</strong> El
+  resumen de una clase se lee en su propio README, en la portada de su parte y
+  en el índice general. Escrito una sola vez, los tres dicen lo mismo por
+  construcción.</li>
+<li><strong>Los prerrequisitos declarados y validados hacia atrás.</strong> Un prerrequisito
+  que apunta hacia delante es una dependencia circular, y el validador la
+  rechaza. Es lo que garantiza que seguir la numeración nunca deje un hueco.</li>
 <li><strong>La validación falla, no avisa.</strong> Un aviso que nadie lee es una regla que no
   existe.</li>
 </ul>

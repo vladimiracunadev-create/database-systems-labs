@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>agrupación</code> · <code>agregado</code> · <code>HAVING</code> · <code>doble conteo</code> · <code>dependencia funcional en GROUP BY</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Agregar sin mentir. Explica por qué <code>WHERE</code> y <code>HAVING</code> no son intercambiables, cómo una reunión previa multiplica filas y produce totales inflados, y cómo se corrige agregando en una CTE antes de reunir. Incluye la divergencia entre motores sobre qué columnas se pueden seleccionar sin agrupar.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 027&quot;]
     C --&gt; K1[&quot;agrupación&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="026.html">026</a></td>
+<td>Reuniones: interna, externa, semi y anti</td>
+<td>reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-agrupación"></a><strong>agrupación</strong></td>
+<td>Partir las filas en grupos por los valores de unas columnas (<code>GROUP BY</code>) y producir una fila de resultado por grupo. Todo lo que aparezca en el <code>SELECT</code> debe ser o columna de agrupación o resultado de una función de agregado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-agregado"></a><strong>agregado</strong></td>
+<td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como <code>SUM</code> o <code>COUNT</code>.)</td>
+<td>se introdujo en la <a href="019.html">019</a></td>
+</tr>
+<tr>
+<td><a id="v-having"></a><strong>HAVING</strong></td>
+<td>Filtro que se aplica a los grupos ya formados, después de agregar. <code>WHERE</code> descarta filas antes de agrupar y por eso es más barato: la regla es filtrar en <code>WHERE</code> todo lo que no dependa del agregado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-doble-conteo"></a><strong>doble conteo</strong></td>
+<td>Sumar o contar sobre un resultado que una reunión ya había multiplicado. El síntoma es un total que crece al añadir un <code>JOIN</code> que «solo traía un dato más»; la cura es agregar en una subconsulta o CTE antes de reunir.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-dependencia-funcional-en-group-by"></a><strong>dependencia funcional en GROUP BY</strong></td>
+<td>Regla que permite seleccionar una columna no agrupada si depende funcionalmente de la clave de agrupación —agrupar por <code>id</code> y seleccionar <code>nombre</code>—. PostgreSQL la reconoce; otros motores exigen listar todo, y MySQL en modo laxo devuelve un valor arbitrario sin avisar.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Agregar sin perder ni inventar información. La agregación resume, y todo resumen descarta datos: hay que saber exactamente cuáles.</p>

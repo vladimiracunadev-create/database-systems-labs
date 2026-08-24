@@ -12,6 +12,10 @@ Parte 05 — Motores relacionales y dialectos · Intermedio ·
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+PostgreSQL como caso de estudio de motor extensible: tipos compuestos, arreglos, rangos y JSONB de fábrica, extensiones que añaden vectores o geometría sin tocar el núcleo, y un modelo de proceso por conexión que explica por qué el agrupador de conexiones deja de ser opcional. Incluye autovacuum, que reaparece en la parte 08.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 031"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [012](../../part-01-fundamentos-datos-sistemas-y-metodo/012-arquitectura-interna-de-un-gestor/README.md) | Arquitectura interna de un gestor, del cliente al disco | analizador · planificador · ejecutor · gestor de almacenamiento · buffer pool |
+| [024](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) | DDL: el esquema como contrato ejecutable | tipo de dato · restricción · valor por defecto · DDL transaccional |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-extensión"></a>**extensión** | Módulo cargable que añade tipos, operadores, índices o funciones a PostgreSQL sin tocar su núcleo: `pgvector`, `PostGIS`, `pg_stat_statements`. Es el mecanismo por el que un motor relacional cubre familias enteras —vectores, geometría, series— sin dejar de ser el mismo motor. | se introduce aquí |
+| <a id="v-tipo-compuesto"></a>**tipo compuesto** | Tipo de dato definido por el usuario con varios campos, o los tipos estructurados que PostgreSQL trae de fábrica: arreglos, rangos, `JSONB`, tipos enumerados. Permiten modelar sin salir del relacional lo que en otros motores obligaría a una tabla más o a un documento. | se introduce aquí |
+| <a id="v-proceso-por-conexión"></a>**proceso por conexión** | Modelo de PostgreSQL: cada conexión es un proceso del sistema operativo con su propia memoria. Es robusto —una caída no arrastra a las demás— y caro: por eso un agrupador de conexiones deja de ser un lujo a partir de unos cientos de clientes. | se introduce aquí |
+| <a id="v-autovacuum"></a>**autovacuum** | Proceso que recupera el espacio de las versiones de fila muertas que deja MVCC y actualiza las estadísticas del planificador. Cuando se queda atrás, la tabla se hincha y los planes se degradan: dos síntomas que se ven antes en el monitor que en el error. | se introduce aquí |
 
 ---
 

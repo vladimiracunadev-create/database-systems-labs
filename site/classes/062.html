@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>percentil</code> · <code>presupuesto de error</code> · <code>saturación</code> · <code>consulta lenta</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Medir lo que los usuarios notan. La media oculta y el p99 enseña; con veinte consultas por petición, casi todo el mundo toca la cola lenta. Une objetivos de servicio, presupuesto de error, saturación como señal anticipada y el registro de consultas lentas ordenado por tiempo total, no por la peor.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 062&quot;]
     C --&gt; K1[&quot;percentil&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="052.html">052</a></td>
+<td>Planes de ejecución: leer EXPLAIN y refutar una hipótesis</td>
+<td>optimizador por costos · estadística · estimación de cardinalidad · costo frente a tiempo</td>
+</tr>
+<tr>
+<td><a href="058.html">058</a></td>
+<td>Respaldo y restauración: solo cuenta lo que se ha restaurado</td>
+<td>RPO · RTO · recuperación a un punto en el tiempo · prueba de restauración</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-percentil"></a><strong>percentil</strong></td>
+<td>El valor por debajo del cual queda un porcentaje de las observaciones. La media oculta el problema; el p99 lo enseña. Y si una petición de usuario abre veinte consultas, casi todos los usuarios tocarán al menos una de la cola lenta.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-presupuesto-de-error"></a><strong>presupuesto de error</strong></td>
+<td>Lo que resta entre el objetivo de servicio y el 100 %: con un SLO de 99,9 % se dispone de unos 43 minutos de fallo al mes. Convierte la fiabilidad en una cantidad que se gasta, y da una regla objetiva para decidir si se despliega o se estabiliza.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-saturación"></a><strong>saturación</strong></td>
+<td>Cuán lleno está el recurso más escaso: conexiones, entrada y salida, memoria, CPU. Es la señal que anticipa el incidente, porque la latencia se dispara de forma no lineal justo antes de que el recurso se agote.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-consulta-lenta"></a><strong>consulta lenta</strong></td>
+<td>Registro de las consultas que superan un umbral, agrupadas por forma —<code>pg_stat_statements</code> y equivalentes—. Lo que importa no es la más lenta, sino la que multiplica tiempo por frecuencia: mil consultas de 50 ms pesan más que una de 5 s.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Saber cómo está la base antes de que alguien se queje, y expresar «está bien» como un número acordado en lugar de una impresión.</p>

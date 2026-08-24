@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 13 — Vectores, recuperación y RAG</h1>
 <p class="lead">La base de datos como componente de un sistema de inteligencia artificial: distancias, indices aproximados y recuperación medida.</p>
-<p><strong>4 clases · 13 horas</strong></p>
+<p><strong>4 clases · 13 horas ·
+19 conceptos · 9 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-07.html">Parte 07 — Grafos, columnas, tiempo y búsqueda</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>La base de datos como componente de un sistema de inteligencia artificial, tratada con el mismo rigor que el resto del programa: nada se da por bueno sin medirlo. Es la parte más nueva en fecha y la más expuesta a afirmaciones sin evidencia, así que es donde más se insiste en el conjunto de evaluación propio.</p>
+<p>Primero qué significa parecido cuando lo decide un modelo: espacio vectorial, coseno, producto interno y normalización, con la advertencia que ordena toda la parte —el parecido es el que aprendió ese modelo concreto, así que cambiar de modelo cambia el significado de cerca—. Después los índices aproximados, HNSW e IVF, con la disciplina de medir el recall contra una búsqueda exhaustiva antes de dar por buena una configuración. Luego la búsqueda híbrida, porque lo léxico y lo vectorial se complementan: uno acierta con el término exacto y el otro con el significado. Y al final la evaluación de la recuperación, antes de mirar la generación.</p>
+<p>La conexión con la parte 07 es directa: BM25 vuelve como componente léxico, y precisión y exhaustividad vuelven convertidas en recall@k y precisión@k.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Elegir la métrica de distancia adecuada y explicar el papel de la normalización.</li>
+<li>Configurar un índice aproximado y medir su recall contra una búsqueda exhaustiva.</li>
+<li>Combinar búsqueda léxica y vectorial con fusión de rangos y filtrado por metadatos.</li>
+<li>Evaluar la recuperación de un sistema RAG con recall@k, precisión@k y MRR sobre un conjunto propio.</li>
+<li>Justificar una estrategia de fragmentación con una medición y no con el valor por defecto.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -61,6 +82,87 @@
 <tr><td><a href="070.html">070</a></td><td><a href="070.html">Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>4</td></tr>
 <tr><td><a href="071.html">071</a></td><td><a href="071.html">RAG evaluable: medir la recuperación antes que la generación</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="068.html">068 — Embeddings y métricas de distancia: qué significa parecido</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="041.html">041</a></p>
+    <p>Qué significa «parecido» cuando lo decide un modelo. Presenta el espacio vectorial, las métricas de coseno y producto interno, y la normalización que las vuelve equivalentes. La advertencia que ordena toda la parte: el parecido es el que aprendió ese modelo concreto, así que cambiar de modelo cambia el significado de cerca.</p>
+    <p><span class="tag">espacio vectorial</span> <span class="tag">coseno</span> <span class="tag">producto interno</span> <span class="tag">normalización</span> <span class="tag">dimensión</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="069.html">069 — Índices vectoriales aproximados: HNSW, IVF y el recall</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      4 fuentes · requiere <a href="068.html">068</a>, <a href="049.html">049</a></p>
+    <p>Los índices que hacen viable la búsqueda vectorial renunciando a la exactitud. HNSW e IVF con sus parámetros, la cuantización que cambia memoria por precisión, y la disciplina que la clase impone: medir el recall contra una búsqueda exhaustiva antes de dar por buena una configuración, porque sin ese número «funciona» solo significa «devolvió algo».</p>
+    <p><span class="tag">búsqueda aproximada</span> <span class="tag">recall</span> <span class="tag">HNSW</span> <span class="tag">cuantización</span> <span class="tag">latencia frente a exactitud</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="070.html">070 — Búsqueda híbrida: léxica más vectorial y filtrado por metadatos</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      4 fuentes · requiere <a href="041.html">041</a>, <a href="069.html">069</a></p>
+    <p>Por qué lo léxico y lo vectorial se combinan en lugar de competir: uno acierta con el término exacto, el otro con el significado. La fusión recíproca de rangos los une sin exigir que sus puntuaciones sean comparables, y el filtrado por metadatos plantea la decisión entre filtro previo y posterior, cada uno con su fallo característico.</p>
+    <p><span class="tag">BM25</span> <span class="tag">fusión de rangos</span> <span class="tag">filtro previo</span> <span class="tag">filtro posterior</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="071.html">071 — RAG evaluable: medir la recuperación antes que la generación</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="070.html">070</a></p>
+    <p>Medir la recuperación antes de mirar la generación, porque si el fragmento correcto no entra en el contexto ningún modelo de lenguaje podrá responder bien. Recall@k, precisión@k y MRR sobre un conjunto de evaluación propio, con la fragmentación como la decisión que más mueve la calidad y la que más se toma por defecto sin medirla.</p>
+    <p><span class="tag">recall@k</span> <span class="tag">precisión@k</span> <span class="tag">MRR</span> <span class="tag">fragmentación</span> <span class="tag">trazabilidad de la cita</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«La búsqueda vectorial sustituye a la de texto.» Falla justo con los términos exactos —códigos, nombres propios, referencias—, que es donde la léxica es imbatible.</li>
+<li>«Uso HNSW y ya es rápido y bueno.» Sin medir el recall no sabes qué estás perdiendo; «funciona» solo significa «devolvió algo».</li>
+<li>«Fragmento en trozos de 512 y listo.» La fragmentación es la decisión que más mueve la calidad de un RAG y la que más se toma sin medir.</li>
+<li>«El modelo alucinó.» A menudo el modelo no recibió el fragmento correcto: el fallo estaba en la recuperación, que es medible.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 19 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#bm25"><strong>BM25</strong></a></td><td>Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros `k1` y `b`. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales.</td><td><a href="070.html">070</a></td></tr>
+<tr><td><a href="../glosario.html#búsqueda-aproximada"><strong>búsqueda aproximada</strong></a></td><td>Renunciar a encontrar con certeza los K vecinos más cercanos a cambio de responder en milisegundos en lugar de en minutos. La búsqueda exacta compara contra todos los vectores; la aproximada explora solo una parte del espacio y acepta perderse algunos.</td><td><a href="069.html">069</a></td></tr>
+<tr><td><a href="../glosario.html#coseno"><strong>coseno</strong></a></td><td>Medida de similitud basada en el ángulo entre dos vectores, que ignora su magnitud. Es la métrica habitual con embeddings de texto, donde importa la dirección del significado y no la longitud del documento.</td><td><a href="068.html">068</a></td></tr>
+<tr><td><a href="../glosario.html#cuantización"><strong>cuantización</strong></a></td><td>Comprimir los vectores usando menos bits por componente —escalar, binaria o por producto—. Reduce la memoria en un orden de magnitud a cambio de precisión, y suele combinarse con un reordenamiento final sobre los vectores completos.</td><td><a href="069.html">069</a></td></tr>
+<tr><td><a href="../glosario.html#dimensión"><strong>dimensión</strong></a></td><td>Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.)</td><td><a href="068.html">068</a></td></tr>
+<tr><td><a href="../glosario.html#espacio-vectorial"><strong>espacio vectorial</strong></a></td><td>Representación de un texto, una imagen o un usuario como un punto de N coordenadas, colocado por un modelo de forma que la cercanía refleje parecido semántico. El parecido es el que aprendió ese modelo concreto: cambiar de modelo cambia el significado de «cerca».</td><td><a href="068.html">068</a></td></tr>
+<tr><td><a href="../glosario.html#filtro-posterior"><strong>filtro posterior</strong></a></td><td>Buscar primero y filtrar después. Es simple y tiene un fallo característico: si de los K vecinos ninguno cumple el filtro, la respuesta llega vacía aunque existieran resultados válidos algo más lejos.</td><td><a href="070.html">070</a></td></tr>
+<tr><td><a href="../glosario.html#filtro-previo"><strong>filtro previo</strong></a></td><td>Aplicar el filtro de metadatos antes de la búsqueda vectorial, de modo que solo se exploren los candidatos admisibles. Conserva el número de resultados pedido, pero puede degradar la navegación del grafo si el filtro es muy selectivo.</td><td><a href="070.html">070</a></td></tr>
+<tr><td><a href="../glosario.html#fragmentación"><strong>fragmentación</strong></a></td><td>Cómo se parte el documento antes de vectorizarlo: por tamaño, por párrafo, por sección, con o sin solape. Es la decisión que más mueve la calidad de un RAG y la que más se toma por defecto sin medirla.</td><td><a href="071.html">071</a></td></tr>
+<tr><td><a href="../glosario.html#fusión-de-rangos"><strong>fusión de rangos</strong></a></td><td>Combinar dos listas ordenadas —la léxica y la vectorial— en una sola. La fusión recíproca de rangos suma el inverso de la posición en cada lista, y funciona bien precisamente porque no exige que las puntuaciones de ambos sistemas sean comparables entre sí.</td><td><a href="070.html">070</a></td></tr>
+<tr><td><a href="../glosario.html#hnsw"><strong>HNSW</strong></a></td><td>Grafo navegable de mundo pequeño por capas: las capas altas dan saltos largos y las bajas afinan. Da el mejor compromiso entre recall y latencia de los índices actuales, a costa de un uso de memoria alto y una construcción lenta.</td><td><a href="069.html">069</a></td></tr>
+<tr><td><a href="../glosario.html#latencia-frente-a-exactitud"><strong>latencia frente a exactitud</strong></a></td><td>El compromiso que gobiernan los parámetros del índice (`ef_search`, `nprobe`): explorar más nodos sube el recall y el tiempo de respuesta. No hay valor correcto universal; se elige midiendo con los datos y las consultas reales.</td><td><a href="069.html">069</a></td></tr>
+<tr><td><a href="../glosario.html#mrr"><strong>MRR</strong></a></td><td>Rango recíproco medio: la media de 1 dividido por la posición del primer resultado relevante. Premia colocar arriba la respuesta correcta, que es justo lo que importa cuando solo se van a leer los tres primeros fragmentos.</td><td><a href="071.html">071</a></td></tr>
+<tr><td><a href="../glosario.html#normalización"><strong>normalización</strong></a></td><td>Escalar cada vector a longitud 1. Hace equivalentes coseno y producto interno y permite usar el índice más rápido sin cambiar el orden de los resultados; es un paso rutinario que conviene declarar, porque mezclar vectores normalizados y sin normalizar arruina la búsqueda.</td><td><a href="068.html">068</a></td></tr>
+<tr><td><a href="../glosario.html#precisiónk"><strong>precisión@k</strong></a></td><td>Qué proporción de los K devueltos era relevante. Importa porque el contexto es finito y caro: llenar la ventana de ruido desplaza a los fragmentos que sí servían.</td><td><a href="071.html">071</a></td></tr>
+<tr><td><a href="../glosario.html#producto-interno"><strong>producto interno</strong></a></td><td>Métrica que sí tiene en cuenta la magnitud, útil cuando el modelo codifica intensidad en la norma del vector. Sobre vectores normalizados es equivalente al coseno, y de ahí que normalizar simplifique la elección.</td><td><a href="068.html">068</a></td></tr>
+<tr><td><a href="../glosario.html#recall"><strong>recall</strong></a></td><td>Qué proporción de los verdaderos K vecinos devolvió el índice aproximado. Es la métrica que hay que medir contra una búsqueda exhaustiva antes de dar por buena una configuración; sin ese número, «funciona» significa «devolvió algo».</td><td><a href="069.html">069</a></td></tr>
+<tr><td><a href="../glosario.html#recallk"><strong>recall@k</strong></a></td><td>Qué proporción de los documentos relevantes aparece entre los K primeros resultados. Es la métrica que gobierna un sistema RAG: si el fragmento correcto no entra en el contexto, ningún modelo de lenguaje podrá responder bien.</td><td><a href="071.html">071</a></td></tr>
+<tr><td><a href="../glosario.html#trazabilidad-de-la-cita"><strong>trazabilidad de la cita</strong></a></td><td>Que cada afirmación de la respuesta pueda seguirse hasta el fragmento y el documento del que salió. Es lo que permite auditar el sistema y detectar la alucinación; sin ella no hay forma de distinguir una respuesta correcta de una convincente.</td><td><a href="071.html">071</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>9 obras distintas sostienen lo que se afirma en estas
+4 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-johnson-faiss-2019">Billion-scale Similarity Search with GPUs</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 068, 069</span></li>
+<li><a href="../fuentes.html#src-karpukhin-dpr-2020">Dense Passage Retrieval for Open-Domain Question Answering</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 068, 071</span></li>
+<li><a href="../fuentes.html#src-malkov-hnsw-2018">Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 069</span></li>
+<li><a href="../fuentes.html#src-docs-milvus">Milvus Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 069</span></li>
+<li><a href="../fuentes.html#src-docs-opensearch">OpenSearch Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 070</span></li>
+<li><a href="../fuentes.html#src-docs-qdrant">Qdrant Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 069, 070</span></li>
+<li><a href="../fuentes.html#src-lewis-rag-2020">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 071</span></li>
+<li><a href="../fuentes.html#src-robertson-bm25-2009">The Probabilistic Relevance Framework: BM25 and Beyond</a> <span class="fuente-meta">(2009)</span> — <span class="fuente-meta">se cita en 070, 071</span></li>
+<li><a href="../fuentes.html#src-docs-pgvector">pgvector</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 068, 070</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

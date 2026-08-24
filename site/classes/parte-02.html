@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 02 — Modelado conceptual y requisitos</h1>
 <p class="lead">Del enunciado ambiguo al esquema defendible: entidades, claves, dependencias funcionales y la decisión consciente de desnormalizar.</p>
-<p><strong>5 clases · 16 horas</strong></p>
+<p><strong>5 clases · 16 horas ·
+20 conceptos · 12 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li><li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Aquí empieza el trabajo de diseño. El material de entrada es lo que suele haber en la realidad: un enunciado ambiguo escrito por alguien que no piensa en tablas. El material de salida es un esquema que se puede defender frente a preguntas, no solo dibujar.</p>
+<p>Las cinco clases forman una secuencia que va de lo blando a lo formal y vuelve. Primero se extraen entidades, reglas de negocio y un alcance escrito de lo que el modelo decide no representar. Después el modelo entidad-relación fija cardinalidad y participación, que son las dos decisiones que determinan dónde va cada clave foránea y si admite nulos. La tercera clase resuelve el debate de las claves con un criterio y no con preferencias. La cuarta introduce el aparato formal —dependencias funcionales, formas normales, descomposición sin pérdida— que convierte «esto está mal modelado» en una demostración. Y la quinta cierra el círculo dando permiso para desnormalizar, pero solo con un patrón de lectura medido y el costo de escritura aceptado por escrito.</p>
+<p>La tensión entre las clases 018 y 019 es intencionada y no se resuelve a favor de ninguna: normalizar es la posición por defecto, desnormalizar es una decisión que hay que ganarse con datos.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Convertir un enunciado ambiguo en entidades, atributos y reglas de negocio explícitas.</li>
+<li>Dibujar un modelo entidad-relación con cardinalidad y participación justificadas.</li>
+<li>Elegir entre clave natural y sustituta argumentando desde la estabilidad de la identidad.</li>
+<li>Demostrar con dependencias funcionales que un esquema alcanza la forma normal de Boyce-Codd.</li>
+<li>Justificar una desnormalización con un patrón de lectura medido y un mecanismo de sincronización declarado.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -62,6 +83,98 @@
 <tr><td><a href="018.html">018</a></td><td><a href="018.html">Normalización de 1FN a BCFN con dependencias funcionales</a></td><td class="nivel-intermedio">Intermedio</td><td>4</td><td>4</td></tr>
 <tr><td><a href="019.html">019</a></td><td><a href="019.html">Desnormalización deliberada y patrones de acceso</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="015.html">015 — De requisitos ambiguos a entidades defendibles</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="001.html">001</a>, <a href="008.html">008</a></p>
+    <p>El paso del enunciado ambiguo a un conjunto de entidades que se puede defender. Trabaja tres herramientas: las reglas de negocio que acabarán siendo restricciones, el diccionario de datos que impide que dos equipos llamen igual a cosas distintas, y el alcance escrito de lo que el modelo decide no representar.</p>
+    <p><span class="tag">regla de negocio</span> <span class="tag">diccionario de datos</span> <span class="tag">alcance</span> <span class="tag">patrón de acceso</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="016.html">016 — Entidad-relación, cardinalidad y participación</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="015.html">015</a></p>
+    <p>El modelo entidad-relación de Chen con las dos decisiones que más consecuencias tienen: la cardinalidad, que determina dónde va la clave foránea, y la participación, que determina si esa columna admite nulos. Introduce la entidad débil y el atributo que pertenece a la relación y no a ninguna de las dos entidades.</p>
+    <p><span class="tag">entidad débil</span> <span class="tag">cardinalidad</span> <span class="tag">participación total</span> <span class="tag">atributo de relación</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="017.html">017 — Claves, identidad y el debate natural frente a sustituta</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="007.html">007</a>, <a href="016.html">016</a></p>
+    <p>El debate entre clave natural y clave sustituta resuelto por un criterio y no por preferencia: cuál de las dos mantiene la identidad estable cuando el mundo cambia. La conclusión práctica —usar sustituta y proteger además la natural con `UNIQUE`— se aplica al resto del programa.</p>
+    <p><span class="tag">clave candidata</span> <span class="tag">clave primaria</span> <span class="tag">clave sustituta</span> <span class="tag">identidad estable</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="018.html">018 — Normalización de 1FN a BCFN con dependencias funcionales</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      4 fuentes · requiere <a href="008.html">008</a>, <a href="016.html">016</a></p>
+    <p>La normalización explicada como lo que es: una demostración a partir de dependencias funcionales, no una intuición sobre qué pertenece a qué. Recorre de la primera forma normal a la de Boyce-Codd y exige que cada descomposición sea sin pérdida, es decir, que reunir las tablas devuelva exactamente la original.</p>
+    <p><span class="tag">dependencia funcional</span> <span class="tag">anomalía de actualización</span> <span class="tag">BCFN</span> <span class="tag">descomposición sin pérdida</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="019.html">019 — Desnormalización deliberada y patrones de acceso</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="018.html">018</a></p>
+    <p>El contrapeso de la clase anterior: cuándo duplicar a propósito. Exige tres cosas antes de desnormalizar —un patrón de lectura medido, un mecanismo declarado que mantenga las copias al día y el costo de escritura aceptado por escrito—, y así separa la redundancia controlada de la accidental.</p>
+    <p><span class="tag">redundancia controlada</span> <span class="tag">costo de escritura</span> <span class="tag">agregado</span> <span class="tag">patrón de lectura</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Normalizar hasta la tercera forma normal y ya está.» La tercera forma normal deja pasar anomalías que BCFN elimina; el listón práctico de este programa es BCFN.</li>
+<li>«La normalización hace las consultas lentas.» La normalización cambia dónde está el costo. Sin medir el patrón de lectura, esa frase es una creencia.</li>
+<li>«El diagrama entidad-relación es documentación bonita.» Es donde se deciden cardinalidad y participación, que se traducen directamente en columnas, claves y nulos.</li>
+<li>«Uso UUID como clave primaria, así no hay debate.» Sigue habiendo debate: falta el `UNIQUE` sobre la clave natural, sin el cual el sistema admitirá duplicados del mundo real.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 20 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#agregado"><strong>agregado</strong></a></td><td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.)</td><td><a href="019.html">019</a></td></tr>
+<tr><td><a href="../glosario.html#alcance"><strong>alcance</strong></a></td><td>Lo que el modelo decide representar y lo que decide ignorar. Kent lo formula sin rodeos: ningún modelo captura el mundo, siempre hay un recorte, y ese recorte es una decisión humana que conviene escribir en lugar de sufrir después.</td><td><a href="015.html">015</a></td></tr>
+<tr><td><a href="../glosario.html#anomalía-de-actualización"><strong>anomalía de actualización</strong></a></td><td>Consecuencia de guardar un hecho en varias filas: corregirlo exige tocarlas todas, y la que se olvida deja la base contradiciéndose a sí misma. Junto con las anomalías de inserción y borrado, es lo que la normalización elimina.</td><td><a href="018.html">018</a></td></tr>
+<tr><td><a href="../glosario.html#atributo-de-relación"><strong>atributo de relación</strong></a></td><td>Dato que no pertenece a ninguna de las dos entidades sino al hecho de que estén relacionadas: la fecha de inscripción no es del estudiante ni del curso, es de la inscripción. Es la señal de que la tabla intermedia es una entidad de pleno derecho.</td><td><a href="016.html">016</a></td></tr>
+<tr><td><a href="../glosario.html#bcfn"><strong>BCFN</strong></a></td><td>Forma normal de Boyce-Codd: toda dependencia funcional no trivial tiene como determinante una clave candidata. Es más estricta que la tercera forma normal y es el listón práctico de este programa para un esquema transaccional.</td><td><a href="018.html">018</a></td></tr>
+<tr><td><a href="../glosario.html#cardinalidad"><strong>cardinalidad</strong></a></td><td>Cuántas instancias de una entidad pueden relacionarse con cuántas de la otra: uno a uno, uno a muchos, muchos a muchos. Determina directamente dónde va la clave foránea y si hace falta una tabla intermedia.</td><td><a href="016.html">016</a></td></tr>
+<tr><td><a href="../glosario.html#clave-candidata"><strong>clave candidata</strong></a></td><td>Cualquier conjunto mínimo de atributos que identifica unívocamente una fila. Una tabla puede tener varias; elegir una como primaria no anula a las demás, que deben seguir protegidas con `UNIQUE`.</td><td><a href="017.html">017</a></td></tr>
+<tr><td><a href="../glosario.html#clave-primaria"><strong>clave primaria</strong></a></td><td>La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila.</td><td><a href="017.html">017</a></td></tr>
+<tr><td><a href="../glosario.html#clave-sustituta"><strong>clave sustituta</strong></a></td><td>Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción `UNIQUE` sobre la clave natural real.</td><td><a href="017.html">017</a></td></tr>
+<tr><td><a href="../glosario.html#costo-de-escritura"><strong>costo de escritura</strong></a></td><td>Lo que se paga en cada `INSERT` o `UPDATE` por las copias, los índices y los agregados que hay que mantener coherentes. Toda aceleración de lectura por duplicación se cobra aquí; el diseño consiste en decidir de qué lado se quiere el dolor.</td><td><a href="019.html">019</a></td></tr>
+<tr><td><a href="../glosario.html#dependencia-funcional"><strong>dependencia funcional</strong></a></td><td>Relación `X → Y`: conocido el valor de X queda determinado el de Y. Es la herramienta formal con la que se demuestra que una tabla está mal descompuesta, y no una intuición sobre qué «pertenece» a qué.</td><td><a href="018.html">018</a></td></tr>
+<tr><td><a href="../glosario.html#descomposición-sin-pérdida"><strong>descomposición sin pérdida</strong></a></td><td>Partir una tabla en dos de modo que reunirlas devuelva exactamente la original, ni una fila más ni una menos. Se garantiza cuando el atributo común es clave en al menos una de las dos; sin esa condición la normalización inventa datos.</td><td><a href="018.html">018</a></td></tr>
+<tr><td><a href="../glosario.html#diccionario-de-datos"><strong>diccionario de datos</strong></a></td><td>La lista de cada atributo con su significado exacto, su tipo, su unidad y su origen. Es lo que impide que «fecha» signifique alta para un equipo y último acceso para otro.</td><td><a href="015.html">015</a></td></tr>
+<tr><td><a href="../glosario.html#entidad-débil"><strong>entidad débil</strong></a></td><td>Entidad que no puede identificarse sin la entidad de la que depende: una línea de pedido existe solo dentro de su pedido. Su clave incluye la del padre, y su ciclo de vida termina cuando termina el del padre.</td><td><a href="016.html">016</a></td></tr>
+<tr><td><a href="../glosario.html#identidad-estable"><strong>identidad estable</strong></a></td><td>La propiedad de que el identificador de una fila no cambie mientras la fila represente la misma cosa. Es el criterio real del debate entre clave natural y sustituta: no cuál es más elegante, sino cuál sobrevive a los cambios del mundo.</td><td><a href="017.html">017</a></td></tr>
+<tr><td><a href="../glosario.html#participación-total"><strong>participación total</strong></a></td><td>Cuando toda instancia de una entidad debe participar obligatoriamente en la relación —todo pedido tiene un cliente—. Se traduce en `NOT NULL` sobre la clave foránea; la participación parcial admite el nulo.</td><td><a href="016.html">016</a></td></tr>
+<tr><td><a href="../glosario.html#patrón-de-acceso"><strong>patrón de acceso</strong></a></td><td>La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar.</td><td><a href="015.html">015</a></td></tr>
+<tr><td><a href="../glosario.html#patrón-de-lectura"><strong>patrón de lectura</strong></a></td><td>Qué se consulta, con qué filtros y con qué frecuencia. Es el argumento que justifica desnormalizar: sin una lectura dominante medida, duplicar datos es solo asumir el costo sin cobrar el beneficio.</td><td><a href="019.html">019</a></td></tr>
+<tr><td><a href="../glosario.html#redundancia-controlada"><strong>redundancia controlada</strong></a></td><td>Duplicar un dato a propósito, sabiendo dónde está la copia y quién la mantiene al día. Se distingue de la redundancia accidental en que existe un mecanismo declarado de sincronización y un costo de escritura aceptado.</td><td><a href="019.html">019</a></td></tr>
+<tr><td><a href="../glosario.html#regla-de-negocio"><strong>regla de negocio</strong></a></td><td>Una afirmación del dominio que el sistema debe respetar: «un estudiante no puede inscribirse dos veces en el mismo curso». Cada regla acaba en una restricción, en un índice único o en una prueba; la que no acaba en ninguna de las tres es solo una frase en un documento.</td><td><a href="015.html">015</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>12 obras distintas sostienen lo que se afirma en estas
+5 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-codd-1970">A Relational Model of Data for Large Shared Data Banks</a> <span class="fuente-meta">(1970)</span> — <span class="fuente-meta">se cita en 018</span></li>
+<li><a href="../fuentes.html#src-kent-data-and-reality">Data and Reality</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 015</span></li>
+<li><a href="../fuentes.html#src-hernandez-mere-mortals">Database Design for Mere Mortals</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 015</span></li>
+<li><a href="../fuentes.html#src-ramakrishnan-gehrke3">Database Management Systems</a> <span class="fuente-meta">(2002)</span> — <span class="fuente-meta">se cita en 018</span></li>
+<li><a href="../fuentes.html#src-silberschatz-dsc7">Database System Concepts</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 016, 017, 018</span></li>
+<li><a href="../fuentes.html#src-gmuw-complete-book">Database Systems: The Complete Book</a> <span class="fuente-meta">(2008)</span> — <span class="fuente-meta">se cita en 018</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 019</span></li>
+<li><a href="../fuentes.html#src-elmasri-navathe7">Fundamentals of Database Systems</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 015, 016</span></li>
+<li><a href="../fuentes.html#src-sadalage-fowler-nosql">NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 019</span></li>
+<li><a href="../fuentes.html#src-karwin-sql-antipatterns">SQL Antipatterns: Avoiding the Pitfalls of Database Programming</a> <span class="fuente-meta">(2010)</span> — <span class="fuente-meta">se cita en 017, 019</span></li>
+<li><a href="../fuentes.html#src-date-sql-relational-theory">SQL and Relational Theory: How to Write Accurate SQL Code</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 017</span></li>
+<li><a href="../fuentes.html#src-chen-1976">The Entity-Relationship Model - Toward a Unified View of Data</a> <span class="fuente-meta">(1976)</span> — <span class="fuente-meta">se cita en 016</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

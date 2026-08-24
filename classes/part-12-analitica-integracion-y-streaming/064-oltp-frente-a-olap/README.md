@@ -12,6 +12,10 @@ Parte 12 — Analítica, integración y streaming · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué la analítica acaba mudándose a otro sistema, con dos argumentos independientes: el formato de almacenamiento, que decide el orden de magnitud, y la contención, que es la razón operativa —el informe mensual compitiendo con las transacciones por el mismo buffer y el mismo disco.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 064"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [042](../../part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md) | Analítica columnar: por qué el formato cambia el orden de magnitud | almacenamiento columnar · compresión · ejecución vectorizada · poda de particiones |
+| [048](../../part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md) | Páginas, filas y buffer: por qué la entrada y salida manda | pagina · factor de bloque · buffer pool · localidad · lectura secuencial |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-carga-transaccional"></a>**carga transaccional** | Muchas operaciones pequeñas que leen y escriben pocas filas por identificador, con latencia de milisegundos: OLTP. Favorece filas juntas, índices B-Tree y transacciones cortas. | se introduce aquí |
+| <a id="v-carga-analítica"></a>**carga analítica** | Pocas consultas que recorren millones de filas y agregan unas pocas columnas: OLAP. Favorece almacenamiento columnar, compresión y ejecución vectorizada, y tolera latencias de segundos. | se introduce aquí |
+| <a id="v-contención"></a>**contención** | Lo que ocurre cuando la consulta analítica y la transaccional compiten por el mismo buffer, los mismos cerrojos y el mismo disco. Es la razón operativa —antes que la teórica— por la que el informe mensual acaba mudándose a otro sistema. | se introduce aquí |
+| <a id="v-formato-de-almacenamiento"></a>**formato de almacenamiento** | Cómo se disponen los bytes en disco: por filas o por columnas, comprimidos o no, con o sin estadísticas por bloque. Es la decisión que explica la mayor parte de la diferencia de rendimiento entre OLTP y OLAP, muy por encima del lenguaje de consulta. | se introduce aquí |
 
 ---
 

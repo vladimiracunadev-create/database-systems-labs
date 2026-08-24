@@ -12,6 +12,10 @@ Parte 03 — Modelo relacional y álgebra · Fundamentos ·
 
 **En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los operadores del álgebra relacional —selección, proyección, producto, reunión y división— como el lenguaje en el que el optimizador piensa. Ver una consulta como una expresión algebraica es lo que después permite entender por qué el motor la reordena y por qué eso es legítimo.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 021"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [020](../../part-03-modelo-relacional-y-algebra/020-la-relacion-como-conjunto/README.md) | La relación como conjunto: tuplas, dominios y acceso por valor | relación · tupla · dominio · acceso por valor · cierre |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-selección"></a>**selección** | Operador σ del álgebra: se queda con las tuplas que cumplen un predicado. Es el `WHERE` de SQL y el primero que el optimizador intenta empujar hacia abajo en el plan, para descartar filas antes de reunirlas. | se introduce aquí |
+| <a id="v-proyección"></a>**proyección** | Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con `DISTINCT`, cosa que SQL no hace por defecto y el álgebra sí. | se introdujo en la [004](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) |
+| <a id="v-producto-cartesiano"></a>**producto cartesiano** | Operador × que combina cada tupla de una relación con todas las de otra. Casi nunca se quiere: aparecer en un plan de ejecución suele indicar una condición de reunión olvidada y una explosión de filas. | se introduce aquí |
+| <a id="v-reunión-natural"></a>**reunión natural** | Reunión que empareja por todos los atributos con el mismo nombre y deja una sola copia de cada uno. Elegante en el álgebra y peligrosa en SQL: si alguien añade una columna homónima, la consulta cambia de significado sin avisar. | se introduce aquí |
+| <a id="v-división"></a>**división** | Operador que responde a las preguntas de tipo «para todos»: qué estudiantes están inscritos en *todos* los cursos obligatorios. SQL no tiene un operador equivalente y se resuelve con doble negación (`NOT EXISTS` anidado) o contando. | se introduce aquí |
 
 ---
 

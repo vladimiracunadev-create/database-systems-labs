@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>cardinalidad de etiquetas</code> · <code>submuestreo</code> · <code>retención</code> · <code>agregado continuo</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las series temporales y sus tres restricciones propias: la cardinalidad de etiquetas, que explota si se usa un identificador como etiqueta; la retención, que hay que decidir antes de acumular; y el submuestreo con agregados continuos, que es cómo se sostiene un histórico largo sin crecimiento lineal.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 040&quot;]
     C --&gt; K1[&quot;cardinalidad de etiquetas&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="006.html">006</a></td>
+<td>Tipos de datos: por qué un número no es un texto</td>
+<td>tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos</td>
+</tr>
+<tr>
+<td><a href="019.html">019</a></td>
+<td>Desnormalización deliberada y patrones de acceso</td>
+<td>redundancia controlada · costo de escritura · agregado · patrón de lectura</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-cardinalidad-de-etiquetas"></a><strong>cardinalidad de etiquetas</strong></td>
+<td>Número de combinaciones distintas de etiquetas en una base de series temporales; cada combinación es una serie con su índice y su memoria. Meter un identificador de usuario o de petición como etiqueta produce una explosión de cardinalidad que tumba el motor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-submuestreo"></a><strong>submuestreo</strong></td>
+<td>Reducir la resolución de los datos antiguos: guardar cada segundo la última hora, cada minuto la última semana, cada hora el último año. Es cómo se sostiene un histórico largo sin que el tamaño crezca de forma lineal para siempre.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-retención"></a><strong>retención</strong></td>
+<td>Cuánto tiempo se conservan los datos antes de borrarlos automáticamente. En series temporales es una decisión de capacidad; en datos personales es además una obligación legal, y las dos deben coincidir en la misma política escrita.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-agregado-continuo"></a><strong>agregado continuo</strong></td>
+<td>Vista materializada que se actualiza de forma incremental según llegan datos nuevos, típicamente con medias u otros resúmenes por intervalo. Permite responder «el promedio por hora del último año» sin recorrer mil millones de puntos en cada consulta.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Diseñar almacenamiento para datos que llegan continuamente y se consultan por ventanas de tiempo, sin que la cardinalidad de las etiquetas destruya el sistema.</p>

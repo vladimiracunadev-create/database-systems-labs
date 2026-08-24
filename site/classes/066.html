@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>ETL</code> · <code>ELT</code> · <code>CDC</code> · <code>escritura dual</code> · <code>idempotencia de carga</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Mover datos entre sistemas sin perder cambios ni significado. Compara ETL y ELT por lo que cada uno hace auditable, presenta la captura de cambios leyendo el registro de transacciones, y desmonta la escritura dual: escribir a la vez en la base y en la cola no es atómico y tarde o temprano una recibe lo que la otra no.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 066&quot;]
     C --&gt; K1[&quot;ETL&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="046.html">046</a></td>
+<td>Registro anticipado y recuperación: WAL y ARIES</td>
+<td>WAL · punto de control · rehacer · deshacer · LSN</td>
+</tr>
+<tr>
+<td><a href="065.html">065</a></td>
+<td>Modelado dimensional: hechos, dimensiones y cambios lentos</td>
+<td>tabla de hechos · dimensión · grano · dimensión de cambio lento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-etl"></a><strong>ETL</strong></td>
+<td>Extraer, transformar y luego cargar: la transformación ocurre fuera del destino. Tiene sentido cuando el destino es caro o rígido, o cuando hay que limpiar datos personales antes de que entren.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-elt"></a><strong>ELT</strong></td>
+<td>Cargar los datos en crudo y transformarlos dentro del almacén, con SQL versionado y probado. Es el enfoque dominante desde que el cómputo del almacén es barato, y su ventaja real es que la transformación queda auditable y se puede rehacer.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cdc"></a><strong>CDC</strong></td>
+<td>Captura de cambios: leer el registro de transacciones del origen para publicar cada <code>INSERT</code>, <code>UPDATE</code> y <code>DELETE</code> como un evento. Frente al muestreo periódico, no pierde cambios intermedios, no requiere columna de marca temporal y no carga el origen con consultas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-escritura-dual"></a><strong>escritura dual</strong></td>
+<td>Que la aplicación escriba a la vez en la base y en la cola. Parece la solución obvia y es un antipatrón: no hay atomicidad entre los dos destinos, así que tarde o temprano uno recibe lo que el otro no. La alternativa correcta es CDC o el patrón de bandeja de salida.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-idempotencia-de-carga"></a><strong>idempotencia de carga</strong></td>
+<td>Que reprocesar el mismo lote no duplique ni corrompa el destino, gracias a una clave de negocio y a una operación de fusión. Es la condición para poder relanzar una carga fallida sin auditar a mano lo que había entrado.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Mover datos entre sistemas sin perderlos, sin duplicarlos y sin perder su significado. El registro de transacciones resulta ser la pieza que unifica replicación, integración y streaming.</p>

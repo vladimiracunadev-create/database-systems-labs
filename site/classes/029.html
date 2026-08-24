@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>UNKNOWN</code> · <code>IS DISTINCT FROM</code> · <code>NOT IN con nulos</code> · <code>agregados y nulos</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La lógica de tres valores y sus consecuencias prácticas: <code>NOT IN</code> que devuelve vacío por un solo nulo, agregados que ignoran ausencias y comparaciones que nunca son ciertas. Presenta <code>IS DISTINCT FROM</code> como la forma correcta de comparar columnas opcionales, que reaparece al detectar cambios en una migración.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 029&quot;]
     C --&gt; K1[&quot;UNKNOWN&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+<tr>
+<td><a href="025.html">025</a></td>
+<td>SELECT: filtrado, proyección y orden con semántica precisa</td>
+<td>predicado · orden de evaluación · colación · determinismo de orden</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-unknown"></a><strong>UNKNOWN</strong></td>
+<td>El tercer valor de verdad de SQL, resultado de comparar con un nulo. No es verdadero ni falso: <code>NOT UNKNOWN</code> sigue siendo <code>UNKNOWN</code>, y un <code>WHERE</code> que se evalúa a <code>UNKNOWN</code> descarta la fila igual que si fuera falso.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-is-distinct-from"></a><strong>IS DISTINCT FROM</strong></td>
+<td>Comparación que trata el nulo como un valor más: dos nulos son iguales y un nulo es distinto de cualquier valor, sin producir <code>UNKNOWN</code>. Es la forma correcta de comparar columnas opcionales, por ejemplo al detectar cambios en una migración.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-not-in-con-nulos"></a><strong>NOT IN con nulos</strong></td>
+<td>Trampa clásica: si la lista o la subconsulta de un <code>NOT IN</code> contiene un solo nulo, el predicado nunca es verdadero y el resultado es vacío. <code>NOT EXISTS</code> no tiene ese problema y es la sustitución recomendada.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-agregados-y-nulos"></a><strong>agregados y nulos</strong></td>
+<td>Las funciones de agregado ignoran los nulos, salvo <code>COUNT(*)</code> que cuenta filas. Por eso <code>COUNT(columna)</code> y <code>COUNT(*)</code> difieren, y por eso un <code>AVG</code> sobre una columna con huecos es la media de los presentes, no del total.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Manejar la ausencia de información sin que produzca resultados falsos. El nulo de SQL no es un valor: es una marca, y la lógica que lo gobierna tiene tres estados, no dos.</p>

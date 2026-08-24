@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Agregar sin mentir. Explica por qué `WHERE` y `HAVING` no son intercambiables, cómo una reunión previa multiplica filas y produce totales inflados, y cómo se corrige agregando en una CTE antes de reunir. Incluye la divergencia entre motores sobre qué columnas se pueden seleccionar sin agrupar.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 027"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [026](../../part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md) | Reuniones: interna, externa, semi y anti | reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-agrupación"></a>**agrupación** | Partir las filas en grupos por los valores de unas columnas (`GROUP BY`) y producir una fila de resultado por grupo. Todo lo que aparezca en el `SELECT` debe ser o columna de agrupación o resultado de una función de agregado. | se introduce aquí |
+| <a id="v-agregado"></a>**agregado** | Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.) | se introdujo en la [019](../../part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md) |
+| <a id="v-having"></a>**HAVING** | Filtro que se aplica a los grupos ya formados, después de agregar. `WHERE` descarta filas antes de agrupar y por eso es más barato: la regla es filtrar en `WHERE` todo lo que no dependa del agregado. | se introduce aquí |
+| <a id="v-doble-conteo"></a>**doble conteo** | Sumar o contar sobre un resultado que una reunión ya había multiplicado. El síntoma es un total que crece al añadir un `JOIN` que «solo traía un dato más»; la cura es agregar en una subconsulta o CTE antes de reunir. | se introduce aquí |
+| <a id="v-dependencia-funcional-en-group-by"></a>**dependencia funcional en GROUP BY** | Regla que permite seleccionar una columna no agrupada si depende funcionalmente de la clave de agrupación —agrupar por `id` y seleccionar `nombre`—. PostgreSQL la reconoce; otros motores exigen listar todo, y MySQL en modo laxo devuelve un valor arbitrario sin avisar. | se introduce aquí |
 
 ---
 

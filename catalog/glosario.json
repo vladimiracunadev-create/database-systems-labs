@@ -1,0 +1,3375 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-08-24",
+  "policy": "Cada concepto declarado en curriculum.yaml tiene aqui una definicion, la clase donde se introduce y la fuente que la respalda. scripts/validate_repository.py bloquea el concepto sin definicion y la definicion sin concepto.",
+  "campos": {
+    "termino": "El concepto, escrito igual que en curriculum.yaml.",
+    "definicion": "Que es, y por que importa. Entre una y cuatro frases.",
+    "clase": "Clase donde el termino se introduce y se trabaja.",
+    "fuente": "Identificador de catalog/sources.json que respalda la definicion.",
+    "ver_tambien": "Terminos relacionados, todos presentes en este mismo registro."
+  },
+  "terms": [
+    {
+      "termino": "campo",
+      "clase": "001",
+      "fuente": "hernandez-mere-mortals",
+      "definicion": "Una columna: un dato con nombre, tipo y —a veces— una regla. El nombre dice qué significa, el tipo dice qué valores son posibles y la restricción dice cuáles son admisibles.",
+      "ver_tambien": [
+        "tipo",
+        "restricción",
+        "dato"
+      ]
+    },
+    {
+      "termino": "dato",
+      "clase": "001",
+      "fuente": "kent-data-and-reality",
+      "definicion": "Un valor registrado sin el contexto que lo interpreta: `38`, `Ada`, `2026-03-01`. Por sí solo no afirma nada, porque el mismo valor puede ser una edad, una temperatura o un número de camiseta. Toda base de datos existe para guardar el dato junto al contexto que lo convierte en información.",
+      "ver_tambien": [
+        "información",
+        "campo",
+        "tipo"
+      ]
+    },
+    {
+      "termino": "información",
+      "clase": "001",
+      "fuente": "kent-data-and-reality",
+      "definicion": "El dato más el contexto que fija su significado: de qué es, de cuándo y de quién. «38» es un dato; «la temperatura del sensor 3 a las 10:15 fue 38 °C» es información. Diseñar un esquema es, literalmente, decidir qué contexto se guarda y cuál se pierde para siempre.",
+      "ver_tambien": [
+        "dato",
+        "esquema conceptual",
+        "alcance"
+      ]
+    },
+    {
+      "termino": "registro",
+      "clase": "001",
+      "fuente": "hernandez-mere-mortals",
+      "definicion": "Una fila: un hecho completo sobre una cosa, ni medio hecho ni dos. La regla práctica para detectar el error más común: si para leer un campo hay que partirlo por comas, ese registro esconde varios hechos y viola la primera forma normal.",
+      "ver_tambien": [
+        "campo",
+        "tabla",
+        "dependencia funcional"
+      ]
+    },
+    {
+      "termino": "tabla",
+      "clase": "001",
+      "fuente": "elmasri-navathe7",
+      "definicion": "Un conjunto de registros con exactamente la misma forma: mismas columnas, mismos tipos, mismo significado por columna. Esa uniformidad es lo que permite consultar sin saber de antemano qué hay dentro.",
+      "ver_tambien": [
+        "relación",
+        "registro",
+        "esquema conceptual"
+      ]
+    },
+    {
+      "termino": "concurrencia",
+      "clase": "002",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones.",
+      "ver_tambien": [
+        "aislamiento",
+        "2PL",
+        "versión de fila"
+      ]
+    },
+    {
+      "termino": "consulta declarativa",
+      "clase": "002",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Se declara *qué* resultado se quiere y el motor decide *cómo* obtenerlo. Quien consulta no escribe recorridos ni bucles; el optimizador elige el plan y puede cambiarlo cuando cambian los datos, sin que nadie reescriba la consulta.",
+      "ver_tambien": [
+        "declaratividad",
+        "optimizador por costos",
+        "cálculo de tuplas"
+      ]
+    },
+    {
+      "termino": "durabilidad",
+      "clase": "002",
+      "fuente": "docs-sqlite",
+      "definicion": "Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho».",
+      "ver_tambien": [
+        "WAL",
+        "atomicidad",
+        "punto de control"
+      ]
+    },
+    {
+      "termino": "integridad declarada",
+      "clase": "002",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Las reglas del dominio escritas en el esquema —`NOT NULL`, `UNIQUE`, `CHECK`, clave foránea— para que el gestor las imponga a toda aplicación que escriba, no solo a la que recordó comprobarlas. Es la diferencia entre una regla y una esperanza.",
+      "ver_tambien": [
+        "restricción",
+        "integridad referencial",
+        "CHECK"
+      ]
+    },
+    {
+      "termino": "CREATE TABLE",
+      "clase": "003",
+      "fuente": "docs-sqlite",
+      "definicion": "La orden que declara una tabla: columnas, tipos y restricciones. Es el contrato; a partir de ahí el motor rechaza todo lo que no lo cumpla, venga de donde venga.",
+      "ver_tambien": [
+        "definición frente a manipulación",
+        "tipo de dato",
+        "restricción"
+      ]
+    },
+    {
+      "termino": "definición frente a manipulación",
+      "clase": "003",
+      "fuente": "iso-9075",
+      "definicion": "SQL se separa en DDL, que define y cambia estructuras (`CREATE`, `ALTER`, `DROP`), y DML, que consulta y cambia contenido (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). La distinción importa porque no todos los motores dan al DDL las mismas garantías transaccionales.",
+      "ver_tambien": [
+        "DDL transaccional",
+        "CREATE TABLE",
+        "INSERT"
+      ]
+    },
+    {
+      "termino": "INSERT",
+      "clase": "003",
+      "fuente": "iso-9075",
+      "definicion": "La orden que añade filas. Falla —y debe fallar— si la fila viola una restricción declarada: es el momento en que la integridad declarada demuestra que sirve para algo.",
+      "ver_tambien": [
+        "UPDATE",
+        "DELETE",
+        "integridad declarada"
+      ]
+    },
+    {
+      "termino": "NULL",
+      "clase": "003",
+      "fuente": "codd-1979",
+      "definicion": "Marca de ausencia de valor: no es cero, ni cadena vacía, ni «desconocido» codificado a mano. Introduce una lógica de tres valores que cambia el resultado de comparaciones, agregados y `NOT IN`.",
+      "ver_tambien": [
+        "UNKNOWN",
+        "IS NULL",
+        "IS DISTINCT FROM"
+      ]
+    },
+    {
+      "termino": "SELECT",
+      "clase": "003",
+      "fuente": "iso-9075",
+      "definicion": "La orden de lectura. Nunca modifica datos; describe el conjunto que se quiere y deja al motor la estrategia para producirlo.",
+      "ver_tambien": [
+        "filtrado",
+        "proyección",
+        "consulta declarativa"
+      ]
+    },
+    {
+      "termino": "filtrado",
+      "clase": "004",
+      "fuente": "iso-9075",
+      "definicion": "Quedarse con las filas que cumplen un predicado (`WHERE`). En álgebra relacional es la selección: reduce el número de filas, nunca el de columnas.",
+      "ver_tambien": [
+        "selección",
+        "predicado",
+        "proyección"
+      ]
+    },
+    {
+      "termino": "IS NULL",
+      "clase": "004",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "El único predicado que comprueba ausencia de valor. `= NULL` nunca es cierto —da `UNKNOWN`— porque nada, ni siquiera otro nulo, es igual a lo desconocido.",
+      "ver_tambien": [
+        "NULL",
+        "UNKNOWN",
+        "IS DISTINCT FROM"
+      ]
+    },
+    {
+      "termino": "LIMIT",
+      "clase": "004",
+      "fuente": "docs-sqlite",
+      "definicion": "Corta el resultado a las primeras N filas. Sin `ORDER BY` no significa nada estable: «las primeras N» sin criterio de orden es «N cualesquiera».",
+      "ver_tambien": [
+        "orden",
+        "determinismo de orden"
+      ]
+    },
+    {
+      "termino": "orden",
+      "clase": "004",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "El resultado de una consulta es un conjunto: no tiene orden hasta que se declara `ORDER BY`. Confiar en el orden «que salió» es un error que sobrevive en pruebas y falla en producción el día que cambia el plan.",
+      "ver_tambien": [
+        "determinismo de orden",
+        "colación",
+        "LIMIT"
+      ]
+    },
+    {
+      "termino": "proyección",
+      "clase": "004",
+      "fuente": "iso-9075",
+      "definicion": "Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con `DISTINCT`, cosa que SQL no hace por defecto y el álgebra sí.",
+      "ver_tambien": [
+        "selección",
+        "relación",
+        "cierre"
+      ]
+    },
+    {
+      "termino": "alcance del cambio",
+      "clase": "005",
+      "fuente": "karwin-sql-antipatterns",
+      "definicion": "Cuántas filas toca realmente una orden de escritura. La disciplina es comprobarlo antes: escribir el `SELECT` con el mismo `WHERE`, contar, y solo entonces convertirlo en `UPDATE` o `DELETE`.",
+      "ver_tambien": [
+        "filas afectadas",
+        "UPDATE",
+        "DELETE"
+      ]
+    },
+    {
+      "termino": "DELETE",
+      "clase": "005",
+      "fuente": "iso-9075",
+      "definicion": "Borra las filas que cumplen el `WHERE`. Igual que `UPDATE`, sin `WHERE` alcanza a toda la tabla; a diferencia de `DROP`, deja la estructura en pie.",
+      "ver_tambien": [
+        "alcance del cambio",
+        "ON DELETE",
+        "transacción como red"
+      ]
+    },
+    {
+      "termino": "filas afectadas",
+      "clase": "005",
+      "fuente": "docs-sqlite",
+      "definicion": "El número que el motor devuelve tras una escritura. Es la evidencia de que el cambio alcanzó lo previsto: si esperabas una fila y salieron cuatro mil, el `WHERE` estaba mal.",
+      "ver_tambien": [
+        "alcance del cambio",
+        "evidencia"
+      ]
+    },
+    {
+      "termino": "transacción como red",
+      "clase": "005",
+      "fuente": "docs-sqlite",
+      "definicion": "Envolver un cambio en `BEGIN` … `ROLLBACK` permite ver su efecto y deshacerlo. Es la red de seguridad más barata que existe y la razón práctica de que un `UPDATE` sin transacción sea una apuesta.",
+      "ver_tambien": [
+        "atomicidad",
+        "unidad de recuperación",
+        "deshacer"
+      ]
+    },
+    {
+      "termino": "UPDATE",
+      "clase": "005",
+      "fuente": "iso-9075",
+      "definicion": "Cambia valores de las filas que cumplen el `WHERE`. Sin `WHERE` cambia todas: es la orden que más datos ha destruido en la historia de las bases de datos.",
+      "ver_tambien": [
+        "alcance del cambio",
+        "filas afectadas",
+        "transacción como red"
+      ]
+    },
+    {
+      "termino": "afinidad de tipos",
+      "clase": "006",
+      "fuente": "docs-sqlite",
+      "definicion": "Regla de SQLite por la que la columna sugiere un tipo pero acepta valores de otro y los convierte cuando puede. Explica por qué en SQLite entra un texto en una columna `INTEGER` y por qué ese mismo dato es rechazado en PostgreSQL.",
+      "ver_tambien": [
+        "tipado dinamico",
+        "tipo",
+        "modo estricto"
+      ]
+    },
+    {
+      "termino": "coma flotante",
+      "clase": "006",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Representación binaria aproximada (`REAL`, `DOUBLE`) según IEEE 754. Rápida y adecuada para magnitudes físicas, ruinosa para dinero: `0.1 + 0.2` no da `0.3` y la diferencia se acumula fila a fila.",
+      "ver_tambien": [
+        "decimal exacto",
+        "tipo de dato"
+      ]
+    },
+    {
+      "termino": "decimal exacto",
+      "clase": "006",
+      "fuente": "docs-postgresql",
+      "definicion": "Tipo numérico de precisión y escala fijas (`NUMERIC`, `DECIMAL`) que representa exactamente los valores decimales. Es el tipo del dinero: no arrastra el error de representación binaria de la coma flotante.",
+      "ver_tambien": [
+        "coma flotante",
+        "tipo de dato"
+      ]
+    },
+    {
+      "termino": "fecha ISO-8601",
+      "clase": "006",
+      "fuente": "iso-9075",
+      "definicion": "El formato `AAAA-MM-DD` —y `AAAA-MM-DDTHH:MM:SSZ` con hora— que ordena alfabéticamente igual que cronológicamente y no es ambiguo entre día y mes. Guardar fechas como texto libre es la vía directa a datos que no se pueden comparar.",
+      "ver_tambien": [
+        "tipo de dato",
+        "tiempo de evento"
+      ]
+    },
+    {
+      "termino": "tipo",
+      "clase": "006",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "El conjunto de valores posibles de un campo más las operaciones válidas sobre ellos. Declarar el tipo correcto delega en el motor la mitad de las validaciones que, si no, hay que escribir a mano en cada aplicación.",
+      "ver_tambien": [
+        "dominio",
+        "tipo de dato",
+        "afinidad de tipos"
+      ]
+    },
+    {
+      "termino": "clave compuesta",
+      "clase": "007",
+      "fuente": "elmasri-navathe7",
+      "definicion": "Clave primaria formada por dos o más columnas, típica de las tablas de relación: `(estudiante_id, curso_id)`. Fija además el orden de las columnas del índice que la sostiene, y ese orden decide qué consultas se aceleran.",
+      "ver_tambien": [
+        "tabla de relación",
+        "prefijo más a la izquierda",
+        "clave primaria"
+      ]
+    },
+    {
+      "termino": "clave natural",
+      "clase": "007",
+      "fuente": "hernandez-mere-mortals",
+      "definicion": "Identificador que ya existe en el dominio —RUT, ISBN, matrícula—. Ventaja: significa algo. Riesgo: el mundo la cambia —una persona corrige su documento, un organismo reasigna códigos— y el cambio arrastra a todas las filas que la referencian.",
+      "ver_tambien": [
+        "clave sustituta",
+        "identidad estable",
+        "clave primaria"
+      ]
+    },
+    {
+      "termino": "clave primaria",
+      "clase": "007",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila.",
+      "ver_tambien": [
+        "clave candidata",
+        "clave natural",
+        "clave sustituta",
+        "UNIQUE"
+      ]
+    },
+    {
+      "termino": "clave sustituta",
+      "clase": "007",
+      "fuente": "karwin-sql-antipatterns",
+      "definicion": "Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción `UNIQUE` sobre la clave natural real.",
+      "ver_tambien": [
+        "clave natural",
+        "identidad estable",
+        "UNIQUE"
+      ]
+    },
+    {
+      "termino": "UNIQUE",
+      "clase": "007",
+      "fuente": "iso-9075",
+      "definicion": "Restricción que prohíbe valores repetidos en una columna o combinación de columnas. A diferencia de la clave primaria admite nulos —y cuántos admite depende del motor, que es una de las divergencias clásicas entre dialectos.",
+      "ver_tambien": [
+        "restricción",
+        "clave candidata",
+        "integridad declarada"
+      ]
+    },
+    {
+      "termino": "anomalías de repetición",
+      "clase": "008",
+      "fuente": "codd-1970",
+      "definicion": "Los tres desastres de guardar el mismo hecho en varios sitios: al insertar hay que repetir datos, al actualizar se corrige una copia y no las otras, y al borrar se pierde información que solo vivía ahí. Son el argumento original de la normalización.",
+      "ver_tambien": [
+        "anomalía de actualización",
+        "dependencia funcional",
+        "redundancia controlada"
+      ]
+    },
+    {
+      "termino": "clave foránea",
+      "clase": "008",
+      "fuente": "chen-1976",
+      "definicion": "Columna que referencia la clave primaria de otra tabla y a la que el gestor obliga a apuntar a una fila existente. Es la integridad referencial hecha declaración: sin ella, las relaciones son una convención que alguien acabará rompiendo.",
+      "ver_tambien": [
+        "integridad referencial",
+        "ON DELETE",
+        "tabla de relación"
+      ]
+    },
+    {
+      "termino": "reunión",
+      "clase": "008",
+      "fuente": "ramakrishnan-gehrke3",
+      "definicion": "Combinar filas de dos tablas emparejándolas por un valor común, normalmente clave foránea contra clave primaria. Es la operación que permite normalizar sin perder la capacidad de ver el hecho completo.",
+      "ver_tambien": [
+        "reunión interna",
+        "reunión natural",
+        "clave foránea"
+      ]
+    },
+    {
+      "termino": "tabla de relación",
+      "clase": "008",
+      "fuente": "elmasri-navathe7",
+      "definicion": "Tabla intermedia que resuelve una relación muchos-a-muchos guardando pares de claves foráneas. Deja de ser «solo técnica» en cuanto la relación tiene atributos propios —fecha de inscripción, nota— y pasa a ser una entidad de pleno derecho.",
+      "ver_tambien": [
+        "clave compuesta",
+        "atributo de relación",
+        "cardinalidad"
+      ]
+    },
+    {
+      "termino": "alternativas",
+      "clase": "009",
+      "fuente": "docs-duckdb",
+      "definicion": "Lo que se usa cuando una base de datos no está justificada: un CSV o un Parquet, un JSON versionado, una hoja de cálculo compartida, un fichero por proceso. Nombrarlas obliga a defender la elección de motor en lugar de darla por hecha.",
+      "ver_tambien": [
+        "criterio de decisión",
+        "motor embebido"
+      ]
+    },
+    {
+      "termino": "costo de operación",
+      "clase": "009",
+      "fuente": "campbell-majors-dbre",
+      "definicion": "Todo lo que cuesta mantener vivo un motor después de instalarlo: respaldos probados, actualizaciones, monitorización, personas de guardia. Suele superar con creces el costo de licencia o de cómputo.",
+      "ver_tambien": [
+        "costo total de propiedad",
+        "complejidad añadida",
+        "prueba de restauración"
+      ]
+    },
+    {
+      "termino": "criterio de decisión",
+      "clase": "009",
+      "fuente": "kleppmann-ddia",
+      "definicion": "La regla explícita por la que se elige —o se descarta— una tecnología: volumen, concurrencia, garantías necesarias y costo de operación. Sin criterio escrito, la elección se justifica a posteriori y ya no se puede revisar.",
+      "ver_tambien": [
+        "carga de trabajo",
+        "costo de operación",
+        "complejidad añadida"
+      ]
+    },
+    {
+      "termino": "motor embebido",
+      "clase": "009",
+      "fuente": "docs-sqlite",
+      "definicion": "Base de datos que corre dentro del proceso de la aplicación, sin servidor ni puerto: SQLite, DuckDB. Elimina el costo de operación y la latencia de red, a cambio de no poder servir a varias máquinas.",
+      "ver_tambien": [
+        "costo de operación",
+        "tipado dinamico",
+        "almacenamiento columnar"
+      ]
+    },
+    {
+      "termino": "familias de motores",
+      "clase": "010",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "Las formas de organizar datos que estructuran este programa: relacional, documental, clave-valor, grafo, columnas anchas y series temporales, más los índices de búsqueda y los vectoriales como casos especializados. Cada familia optimiza un patrón de acceso y paga en los demás.",
+      "ver_tambien": [
+        "modelo de agregado",
+        "patrón de acceso",
+        "multimodelo"
+      ]
+    },
+    {
+      "termino": "modelo de agregado",
+      "clase": "010",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "Cómo agrupa el motor los datos que lee y escribe de una vez. El relacional trabaja con filas que se recomponen por reunión; los motores de agregado guardan la unidad completa junta y evitan la reunión, a cambio de duplicar.",
+      "ver_tambien": [
+        "agregado",
+        "frontera transaccional",
+        "incrustación"
+      ]
+    },
+    {
+      "termino": "multimodelo",
+      "clase": "010",
+      "fuente": "db-engines-ranking",
+      "definicion": "Motor que soporta varias familias a la vez —PostgreSQL con JSONB, vectores y búsqueda de texto—. Reduce el número de sistemas que hay que operar; el riesgo es dar por hecho que hacer varias cosas equivale a hacerlas todas bien.",
+      "ver_tambien": [
+        "familias de motores",
+        "complejidad añadida"
+      ]
+    },
+    {
+      "termino": "patrón de acceso",
+      "clase": "010",
+      "fuente": "kleppmann-ddia",
+      "definicion": "La lista concreta de consultas y escrituras que el sistema tendrá que servir, con su frecuencia y su latencia aceptable. Es el dato de entrada del diseño: sin él, elegir modelo o índice es adivinar.",
+      "ver_tambien": [
+        "carga de trabajo",
+        "patrón de lectura",
+        "desnormalización por consulta"
+      ]
+    },
+    {
+      "termino": "independencia de datos",
+      "clase": "011",
+      "fuente": "codd-1970",
+      "definicion": "Poder cambiar cómo se guardan los datos sin reescribir las aplicaciones que los consultan. Es la idea central del artículo de Codd de 1970 y la razón de que exista un nivel lógico separado del físico.",
+      "ver_tambien": [
+        "independencia lógica",
+        "esquema físico",
+        "vista externa"
+      ]
+    },
+    {
+      "termino": "integridad",
+      "clase": "011",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Que los datos cumplan siempre las reglas del dominio, incluidas las que ninguna aplicación recordó comprobar. El gestor la sostiene con restricciones declaradas y con transacciones.",
+      "ver_tambien": [
+        "integridad declarada",
+        "invariante",
+        "consistencia"
+      ]
+    },
+    {
+      "termino": "persistencia",
+      "clase": "011",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Que el dato siga existiendo cuando el proceso que lo escribió ya no está. Es el requisito mínimo de una base de datos y la única de sus funciones que un archivo también cumple.",
+      "ver_tambien": [
+        "durabilidad",
+        "WAL"
+      ]
+    },
+    {
+      "termino": "recuperación",
+      "clase": "011",
+      "fuente": "gray-reuter-tp",
+      "definicion": "Volver a un estado correcto después de una caída, descartando lo no confirmado y rehaciendo lo confirmado. Es lo que distingue una base de datos de un archivo que se corrompió a medio escribir.",
+      "ver_tambien": [
+        "WAL",
+        "rehacer",
+        "deshacer",
+        "punto de control"
+      ]
+    },
+    {
+      "termino": "analizador",
+      "clase": "012",
+      "fuente": "hellerstein-architecture",
+      "definicion": "Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.)",
+      "ver_tambien": [
+        "planificador",
+        "ejecutor",
+        "optimizador por costos",
+        "índice invertido"
+      ]
+    },
+    {
+      "termino": "buffer pool",
+      "clase": "012",
+      "fuente": "rogov-postgresql-internals",
+      "definicion": "La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms.",
+      "ver_tambien": [
+        "pagina",
+        "localidad",
+        "lectura secuencial"
+      ]
+    },
+    {
+      "termino": "ejecutor",
+      "clase": "012",
+      "fuente": "hellerstein-architecture",
+      "definicion": "Recorre el plan elegido operador a operador y produce las filas. Es donde `EXPLAIN ANALYZE` muestra los tiempos reales frente a los que el planificador había estimado.",
+      "ver_tambien": [
+        "planificador",
+        "costo frente a tiempo",
+        "ejecución vectorizada"
+      ]
+    },
+    {
+      "termino": "gestor de almacenamiento",
+      "clase": "012",
+      "fuente": "petrov-database-internals",
+      "definicion": "La capa que traduce filas a páginas en disco y de vuelta, y que sostiene el registro, el buffer y las estructuras de índice. Es donde se decide si el motor es B-Tree o LSM, y con ello su perfil de lectura y escritura.",
+      "ver_tambien": [
+        "pagina",
+        "buffer pool",
+        "B-Tree",
+        "memtable"
+      ]
+    },
+    {
+      "termino": "planificador",
+      "clase": "012",
+      "fuente": "selinger-1979",
+      "definicion": "Decide *cómo* ejecutar la consulta: qué índice usar, en qué orden reunir las tablas, con qué algoritmo. Elige por costo estimado a partir de estadísticas, no por el orden en que está escrita la consulta.",
+      "ver_tambien": [
+        "optimizador por costos",
+        "estadística",
+        "estimación de cardinalidad"
+      ]
+    },
+    {
+      "termino": "esquema conceptual",
+      "clase": "013",
+      "fuente": "codd-1970",
+      "definicion": "La descripción del qué: entidades, atributos y relaciones del dominio, sin decir cómo se guardan. Es el nivel en el que se discute con quien conoce el negocio.",
+      "ver_tambien": [
+        "esquema físico",
+        "vista externa",
+        "entidad"
+      ]
+    },
+    {
+      "termino": "esquema físico",
+      "clase": "013",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Cómo se materializan realmente los datos: ficheros, páginas, índices, particiones, compresión. Debe poder cambiar —añadir un índice, particionar una tabla— sin que ninguna consulta se reescriba.",
+      "ver_tambien": [
+        "independencia de datos",
+        "pagina",
+        "índice cubriente"
+      ]
+    },
+    {
+      "termino": "independencia lógica",
+      "clase": "013",
+      "fuente": "codd-1970",
+      "definicion": "Poder cambiar el esquema conceptual —dividir una tabla, renombrar una columna— sin romper las aplicaciones, apoyándose en vistas que preservan el contrato anterior. Es más difícil de lograr que la independencia física y es la base técnica de las migraciones sin caída.",
+      "ver_tambien": [
+        "independencia de datos",
+        "expandir y contraer",
+        "vista externa"
+      ]
+    },
+    {
+      "termino": "vista externa",
+      "clase": "013",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "La porción del esquema que ve cada aplicación o cada rol, normalmente mediante vistas. Permite dar acceso a lo necesario y solo a eso, y absorber cambios del esquema sin romper a quien consulta.",
+      "ver_tambien": [
+        "independencia lógica",
+        "seguridad por fila",
+        "privilegio mínimo"
+      ]
+    },
+    {
+      "termino": "contenedor",
+      "clase": "014",
+      "fuente": "docs-docker-compose",
+      "definicion": "Entorno de ejecución aislado con el motor y su versión congelados. Elimina el «en mi máquina funciona» y convierte la versión del motor en parte de la evidencia, no en un detalle olvidado.",
+      "ver_tambien": [
+        "reproducibilidad",
+        "costo de operación"
+      ]
+    },
+    {
+      "termino": "evidencia",
+      "clase": "014",
+      "fuente": "google-sre-book",
+      "definicion": "La salida real de un comando, con su versión y sus parámetros, que respalda una afirmación. Una captura sin comando no es evidencia, porque no se puede repetir.",
+      "ver_tambien": [
+        "reproducibilidad",
+        "semilla",
+        "prueba de restauración"
+      ]
+    },
+    {
+      "termino": "invariante",
+      "clase": "014",
+      "fuente": "google-sre-book",
+      "definicion": "Algo que tiene que ser verdad siempre en el sistema: «ningún pedido sin cliente», «el saldo nunca es negativo». Un invariante que no está comprobado por una restricción o una prueba es un deseo.",
+      "ver_tambien": [
+        "integridad declarada",
+        "CHECK",
+        "evidencia"
+      ]
+    },
+    {
+      "termino": "reproducibilidad",
+      "clase": "014",
+      "fuente": "google-sre-book",
+      "definicion": "Que otra persona, en otra máquina, obtenga el mismo resultado con las instrucciones dadas. Exige fijar versión del motor, datos de partida y semilla; sin eso, una medición es una anécdota.",
+      "ver_tambien": [
+        "semilla",
+        "contenedor",
+        "evidencia"
+      ]
+    },
+    {
+      "termino": "semilla",
+      "clase": "014",
+      "fuente": "docs-python-sqlite3",
+      "definicion": "El número que fija la secuencia de un generador pseudoaleatorio. Declararla convierte un conjunto de datos «aleatorio» en uno reproducible, que es la condición para poder comparar dos ejecuciones.",
+      "ver_tambien": [
+        "reproducibilidad",
+        "evidencia"
+      ]
+    },
+    {
+      "termino": "alcance",
+      "clase": "015",
+      "fuente": "kent-data-and-reality",
+      "definicion": "Lo que el modelo decide representar y lo que decide ignorar. Kent lo formula sin rodeos: ningún modelo captura el mundo, siempre hay un recorte, y ese recorte es una decisión humana que conviene escribir en lugar de sufrir después.",
+      "ver_tambien": [
+        "información",
+        "esquema conceptual",
+        "límite declarado"
+      ]
+    },
+    {
+      "termino": "diccionario de datos",
+      "clase": "015",
+      "fuente": "hernandez-mere-mortals",
+      "definicion": "La lista de cada atributo con su significado exacto, su tipo, su unidad y su origen. Es lo que impide que «fecha» signifique alta para un equipo y último acceso para otro.",
+      "ver_tambien": [
+        "campo",
+        "alcance",
+        "información"
+      ]
+    },
+    {
+      "termino": "regla de negocio",
+      "clase": "015",
+      "fuente": "hernandez-mere-mortals",
+      "definicion": "Una afirmación del dominio que el sistema debe respetar: «un estudiante no puede inscribirse dos veces en el mismo curso». Cada regla acaba en una restricción, en un índice único o en una prueba; la que no acaba en ninguna de las tres es solo una frase en un documento.",
+      "ver_tambien": [
+        "invariante",
+        "integridad declarada",
+        "diccionario de datos"
+      ]
+    },
+    {
+      "termino": "atributo de relación",
+      "clase": "016",
+      "fuente": "chen-1976",
+      "definicion": "Dato que no pertenece a ninguna de las dos entidades sino al hecho de que estén relacionadas: la fecha de inscripción no es del estudiante ni del curso, es de la inscripción. Es la señal de que la tabla intermedia es una entidad de pleno derecho.",
+      "ver_tambien": [
+        "tabla de relación",
+        "entidad",
+        "cardinalidad"
+      ]
+    },
+    {
+      "termino": "cardinalidad",
+      "clase": "016",
+      "fuente": "chen-1976",
+      "definicion": "Cuántas instancias de una entidad pueden relacionarse con cuántas de la otra: uno a uno, uno a muchos, muchos a muchos. Determina directamente dónde va la clave foránea y si hace falta una tabla intermedia.",
+      "ver_tambien": [
+        "participación total",
+        "tabla de relación",
+        "clave foránea"
+      ]
+    },
+    {
+      "termino": "entidad débil",
+      "clase": "016",
+      "fuente": "chen-1976",
+      "definicion": "Entidad que no puede identificarse sin la entidad de la que depende: una línea de pedido existe solo dentro de su pedido. Su clave incluye la del padre, y su ciclo de vida termina cuando termina el del padre.",
+      "ver_tambien": [
+        "clave compuesta",
+        "participación total",
+        "ON DELETE"
+      ]
+    },
+    {
+      "termino": "participación total",
+      "clase": "016",
+      "fuente": "elmasri-navathe7",
+      "definicion": "Cuando toda instancia de una entidad debe participar obligatoriamente en la relación —todo pedido tiene un cliente—. Se traduce en `NOT NULL` sobre la clave foránea; la participación parcial admite el nulo.",
+      "ver_tambien": [
+        "cardinalidad",
+        "NULL",
+        "integridad referencial"
+      ]
+    },
+    {
+      "termino": "clave candidata",
+      "clase": "017",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Cualquier conjunto mínimo de atributos que identifica unívocamente una fila. Una tabla puede tener varias; elegir una como primaria no anula a las demás, que deben seguir protegidas con `UNIQUE`.",
+      "ver_tambien": [
+        "clave primaria",
+        "clave natural",
+        "UNIQUE"
+      ]
+    },
+    {
+      "termino": "identidad estable",
+      "clase": "017",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "La propiedad de que el identificador de una fila no cambie mientras la fila represente la misma cosa. Es el criterio real del debate entre clave natural y sustituta: no cuál es más elegante, sino cuál sobrevive a los cambios del mundo.",
+      "ver_tambien": [
+        "clave natural",
+        "clave sustituta",
+        "reversibilidad"
+      ]
+    },
+    {
+      "termino": "anomalía de actualización",
+      "clase": "018",
+      "fuente": "codd-1970",
+      "definicion": "Consecuencia de guardar un hecho en varias filas: corregirlo exige tocarlas todas, y la que se olvida deja la base contradiciéndose a sí misma. Junto con las anomalías de inserción y borrado, es lo que la normalización elimina.",
+      "ver_tambien": [
+        "anomalías de repetición",
+        "redundancia controlada",
+        "dependencia funcional"
+      ]
+    },
+    {
+      "termino": "BCFN",
+      "clase": "018",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Forma normal de Boyce-Codd: toda dependencia funcional no trivial tiene como determinante una clave candidata. Es más estricta que la tercera forma normal y es el listón práctico de este programa para un esquema transaccional.",
+      "ver_tambien": [
+        "dependencia funcional",
+        "descomposición sin pérdida",
+        "clave candidata"
+      ]
+    },
+    {
+      "termino": "dependencia funcional",
+      "clase": "018",
+      "fuente": "codd-1970",
+      "definicion": "Relación `X → Y`: conocido el valor de X queda determinado el de Y. Es la herramienta formal con la que se demuestra que una tabla está mal descompuesta, y no una intuición sobre qué «pertenece» a qué.",
+      "ver_tambien": [
+        "BCFN",
+        "descomposición sin pérdida",
+        "anomalía de actualización"
+      ]
+    },
+    {
+      "termino": "descomposición sin pérdida",
+      "clase": "018",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Partir una tabla en dos de modo que reunirlas devuelva exactamente la original, ni una fila más ni una menos. Se garantiza cuando el atributo común es clave en al menos una de las dos; sin esa condición la normalización inventa datos.",
+      "ver_tambien": [
+        "dependencia funcional",
+        "reunión natural",
+        "BCFN"
+      ]
+    },
+    {
+      "termino": "agregado",
+      "clase": "019",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.)",
+      "ver_tambien": [
+        "frontera transaccional",
+        "modelo de agregado",
+        "incrustación",
+        "agrupación"
+      ]
+    },
+    {
+      "termino": "costo de escritura",
+      "clase": "019",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Lo que se paga en cada `INSERT` o `UPDATE` por las copias, los índices y los agregados que hay que mantener coherentes. Toda aceleración de lectura por duplicación se cobra aquí; el diseño consiste en decidir de qué lado se quiere el dolor.",
+      "ver_tambien": [
+        "redundancia controlada",
+        "costo de mantenimiento",
+        "amplificación de escritura"
+      ]
+    },
+    {
+      "termino": "patrón de lectura",
+      "clase": "019",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Qué se consulta, con qué filtros y con qué frecuencia. Es el argumento que justifica desnormalizar: sin una lectura dominante medida, duplicar datos es solo asumir el costo sin cobrar el beneficio.",
+      "ver_tambien": [
+        "patrón de acceso",
+        "desnormalización por consulta",
+        "redundancia controlada"
+      ]
+    },
+    {
+      "termino": "redundancia controlada",
+      "clase": "019",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "Duplicar un dato a propósito, sabiendo dónde está la copia y quién la mantiene al día. Se distingue de la redundancia accidental en que existe un mecanismo declarado de sincronización y un costo de escritura aceptado.",
+      "ver_tambien": [
+        "costo de escritura",
+        "desnormalización por consulta",
+        "anomalía de actualización"
+      ]
+    },
+    {
+      "termino": "acceso por valor",
+      "clase": "020",
+      "fuente": "codd-1970",
+      "definicion": "En el modelo relacional se llega a un dato por lo que vale, nunca por un puntero o una posición física. Es lo que hace posible la independencia de datos: el motor puede reorganizar el almacenamiento sin invalidar ninguna referencia.",
+      "ver_tambien": [
+        "independencia de datos",
+        "clave primaria",
+        "tupla"
+      ]
+    },
+    {
+      "termino": "cierre",
+      "clase": "020",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Propiedad por la que toda operación del álgebra relacional sobre relaciones devuelve una relación. Es lo que permite anidar y componer consultas indefinidamente, y lo que sostiene las vistas y las CTE.",
+      "ver_tambien": [
+        "relación",
+        "CTE",
+        "selección"
+      ]
+    },
+    {
+      "termino": "dominio",
+      "clase": "020",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "El conjunto de valores admisibles de un atributo, con sus operaciones. Es el concepto del que los tipos de SQL son una aproximación pobre: SQL permite comparar un número de teléfono con un código postal si ambos son enteros.",
+      "ver_tambien": [
+        "tipo",
+        "tipo de dato",
+        "CHECK"
+      ]
+    },
+    {
+      "termino": "relación",
+      "clase": "020",
+      "fuente": "codd-1970",
+      "definicion": "En el modelo de Codd, un conjunto de tuplas sobre unos dominios dados. Al ser conjunto no tiene orden ni duplicados —dos propiedades que SQL no respeta, y de ahí nacen la mitad de las sorpresas del lenguaje.",
+      "ver_tambien": [
+        "tupla",
+        "dominio",
+        "cierre"
+      ]
+    },
+    {
+      "termino": "tupla",
+      "clase": "020",
+      "fuente": "codd-1970",
+      "definicion": "Un elemento de la relación: una asignación de un valor a cada atributo. No es «una fila en una posición», porque en un conjunto no hay posiciones; se identifica por sus valores, no por dónde está.",
+      "ver_tambien": [
+        "relación",
+        "acceso por valor",
+        "registro"
+      ]
+    },
+    {
+      "termino": "división",
+      "clase": "021",
+      "fuente": "silberschatz-dsc7",
+      "definicion": "Operador que responde a las preguntas de tipo «para todos»: qué estudiantes están inscritos en *todos* los cursos obligatorios. SQL no tiene un operador equivalente y se resuelve con doble negación (`NOT EXISTS` anidado) o contando.",
+      "ver_tambien": [
+        "antirreunion",
+        "cálculo de tuplas",
+        "agrupación"
+      ]
+    },
+    {
+      "termino": "producto cartesiano",
+      "clase": "021",
+      "fuente": "ramakrishnan-gehrke3",
+      "definicion": "Operador × que combina cada tupla de una relación con todas las de otra. Casi nunca se quiere: aparecer en un plan de ejecución suele indicar una condición de reunión olvidada y una explosión de filas.",
+      "ver_tambien": [
+        "reunión natural",
+        "multiplicación de filas",
+        "reunión interna"
+      ]
+    },
+    {
+      "termino": "reunión natural",
+      "clase": "021",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Reunión que empareja por todos los atributos con el mismo nombre y deja una sola copia de cada uno. Elegante en el álgebra y peligrosa en SQL: si alguien añade una columna homónima, la consulta cambia de significado sin avisar.",
+      "ver_tambien": [
+        "reunión interna",
+        "producto cartesiano",
+        "descomposición sin pérdida"
+      ]
+    },
+    {
+      "termino": "selección",
+      "clase": "021",
+      "fuente": "ramakrishnan-gehrke3",
+      "definicion": "Operador σ del álgebra: se queda con las tuplas que cumplen un predicado. Es el `WHERE` de SQL y el primero que el optimizador intenta empujar hacia abajo en el plan, para descartar filas antes de reunirlas.",
+      "ver_tambien": [
+        "filtrado",
+        "proyección",
+        "predicado"
+      ]
+    },
+    {
+      "termino": "cálculo de tuplas",
+      "clase": "022",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Formalismo que describe el resultado con una fórmula lógica —«las tuplas t tales que…»— en lugar de con una secuencia de operadores. Es el antepasado directo de SQL y la razón formal de que SQL sea declarativo.",
+      "ver_tambien": [
+        "declaratividad",
+        "equivalencia",
+        "seguridad de expresión"
+      ]
+    },
+    {
+      "termino": "declaratividad",
+      "clase": "022",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Decir qué se quiere, no cómo obtenerlo. Su valor práctico es que el motor puede cambiar de estrategia —de recorrido completo a índice, de reunión anidada a hash— cuando cambian los datos, sin que nadie toque el código.",
+      "ver_tambien": [
+        "consulta declarativa",
+        "equivalencia",
+        "optimizador por costos"
+      ]
+    },
+    {
+      "termino": "equivalencia",
+      "clase": "022",
+      "fuente": "ramakrishnan-gehrke3",
+      "definicion": "Dos expresiones son equivalentes si devuelven la misma relación para toda base de datos posible. Codd demostró que álgebra y cálculo tienen el mismo poder expresivo; sobre ese teorema descansa la libertad del optimizador para reescribir consultas.",
+      "ver_tambien": [
+        "cálculo de tuplas",
+        "optimizador por costos",
+        "declaratividad"
+      ]
+    },
+    {
+      "termino": "seguridad de expresión",
+      "clase": "022",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Condición que garantiza que una fórmula del cálculo devuelve un resultado finito. `{t | ¬P(t)}` no es segura: «todo lo que no cumple P» incluye el universo entero. Es la razón de que SQL obligue a nombrar siempre un `FROM`.",
+      "ver_tambien": [
+        "cálculo de tuplas",
+        "dominio"
+      ]
+    },
+    {
+      "termino": "aplazamiento",
+      "clase": "023",
+      "fuente": "docs-postgresql",
+      "definicion": "Postergar la comprobación de una restricción hasta el `COMMIT` (`DEFERRABLE INITIALLY DEFERRED`). Permite estados intermedios inválidos dentro de la transacción —como insertar dos filas que se referencian mutuamente— sin renunciar a la garantía final.",
+      "ver_tambien": [
+        "integridad referencial",
+        "atomicidad",
+        "frontera transaccional"
+      ]
+    },
+    {
+      "termino": "CHECK",
+      "clase": "023",
+      "fuente": "docs-postgresql",
+      "definicion": "Restricción que exige que una expresión sea verdadera en cada fila: `CHECK (precio >= 0)`. Convierte una regla de negocio en algo que el motor impone; cuidado con los nulos, porque `UNKNOWN` no viola un `CHECK`.",
+      "ver_tambien": [
+        "restricción",
+        "invariante",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "termino": "integridad de entidad",
+      "clase": "023",
+      "fuente": "codd-1970",
+      "definicion": "Regla que exige que ninguna columna de la clave primaria sea nula. Su fundamento no es estético: un identificador desconocido no identifica, y la fila deja de ser referenciable.",
+      "ver_tambien": [
+        "clave primaria",
+        "NULL",
+        "integridad referencial"
+      ]
+    },
+    {
+      "termino": "integridad referencial",
+      "clase": "023",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Regla que exige que todo valor de clave foránea apunte a una fila existente o sea nulo. El gestor la comprueba en cada escritura, lo que la hace inmune a la aplicación que se olvidó de validar.",
+      "ver_tambien": [
+        "clave foránea",
+        "ON DELETE",
+        "aplazamiento"
+      ]
+    },
+    {
+      "termino": "ON DELETE",
+      "clase": "023",
+      "fuente": "iso-9075",
+      "definicion": "Acción referencial que declara qué pasa con las filas hijas cuando se borra la padre: `RESTRICT` lo impide, `CASCADE` las borra, `SET NULL` las desvincula. Es una decisión de dominio, no técnica: `CASCADE` sobre datos contables borra historia.",
+      "ver_tambien": [
+        "clave foránea",
+        "integridad referencial",
+        "entidad débil"
+      ]
+    },
+    {
+      "termino": "DDL transaccional",
+      "clase": "024",
+      "fuente": "docs-postgresql",
+      "definicion": "Capacidad de ejecutar `CREATE`, `ALTER` o `DROP` dentro de una transacción y poder revertirlos. PostgreSQL y SQLite la tienen; MySQL histórico y Oracle confirman implícitamente, lo que convierte una migración fallida a mitad en un estado sin retorno.",
+      "ver_tambien": [
+        "definición frente a manipulación",
+        "atomicidad",
+        "expandir y contraer"
+      ]
+    },
+    {
+      "termino": "restricción",
+      "clase": "024",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Regla declarada en el esquema que el motor impone siempre: `NOT NULL`, `UNIQUE`, `CHECK`, `PRIMARY KEY`, `FOREIGN KEY`. Su ventaja sobre la validación en la aplicación es que no depende de que alguien se acuerde.",
+      "ver_tambien": [
+        "integridad declarada",
+        "CHECK",
+        "invariante"
+      ]
+    },
+    {
+      "termino": "tipo de dato",
+      "clase": "024",
+      "fuente": "iso-9075",
+      "definicion": "La declaración que fija qué valores acepta una columna y qué operaciones tienen sentido sobre ella. Es la primera línea de defensa del esquema y la más barata: lo que el tipo rechaza no hay que validarlo en ningún lenguaje de aplicación.",
+      "ver_tambien": [
+        "tipo",
+        "dominio",
+        "restricción"
+      ]
+    },
+    {
+      "termino": "valor por defecto",
+      "clase": "024",
+      "fuente": "docs-postgresql",
+      "definicion": "Valor que el motor asigna cuando el `INSERT` no menciona la columna. Bien usado evita nulos accidentales; mal usado enmascara datos que faltaban de verdad y que convenía detectar.",
+      "ver_tambien": [
+        "NULL",
+        "restricción",
+        "tipo de dato"
+      ]
+    },
+    {
+      "termino": "colación",
+      "clase": "025",
+      "fuente": "iso-9075",
+      "definicion": "El conjunto de reglas que decide cómo se comparan y ordenan los textos: si `a` = `A`, dónde va la `ñ`, si los acentos cuentan. Cambia el resultado de `ORDER BY`, de `=` y de un `UNIQUE`, y es distinta por defecto en cada motor.",
+      "ver_tambien": [
+        "determinismo de orden",
+        "modo estricto",
+        "orden"
+      ]
+    },
+    {
+      "termino": "determinismo de orden",
+      "clase": "025",
+      "fuente": "molinaro-sql-cookbook",
+      "definicion": "Que dos ejecuciones de la misma consulta devuelvan las filas en el mismo orden. Solo lo garantiza un `ORDER BY` cuyas columnas no empaten; con empates, el desempate lo decide el plan y puede cambiar mañana.",
+      "ver_tambien": [
+        "orden",
+        "LIMIT",
+        "colación"
+      ]
+    },
+    {
+      "termino": "orden de evaluación",
+      "clase": "025",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "El orden lógico en que SQL procesa una consulta: `FROM`, `WHERE`, `GROUP BY`, `HAVING`, `SELECT`, `ORDER BY`, `LIMIT`. Explica por qué no se puede usar un alias del `SELECT` en el `WHERE` y por qué `HAVING` filtra grupos y `WHERE` filtra filas.",
+      "ver_tambien": [
+        "HAVING",
+        "agrupación",
+        "predicado"
+      ]
+    },
+    {
+      "termino": "predicado",
+      "clase": "025",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Expresión lógica que se evalúa a verdadero, falso o desconocido para cada fila. En SQL solo pasan el filtro las filas cuyo predicado es verdadero: `UNKNOWN` se descarta igual que `FALSE`, y ahí empiezan los resultados sorprendentes con nulos.",
+      "ver_tambien": [
+        "UNKNOWN",
+        "filtrado",
+        "selección"
+      ]
+    },
+    {
+      "termino": "antirreunion",
+      "clase": "026",
+      "fuente": "molinaro-sql-cookbook",
+      "definicion": "Quedarse con las filas que *no* tienen pareja: `NOT EXISTS`, o `LEFT JOIN … WHERE clave IS NULL`. `NOT IN` parece equivalente y no lo es: basta un nulo en la subconsulta para que devuelva el conjunto vacío.",
+      "ver_tambien": [
+        "NOT IN con nulos",
+        "semirreunion",
+        "reunión externa"
+      ]
+    },
+    {
+      "termino": "multiplicación de filas",
+      "clase": "026",
+      "fuente": "winand-sql-performance",
+      "definicion": "Efecto de reunir con una tabla que tiene varias filas por clave: cada fila del lado uno aparece repetida. Es la causa del doble conteo cuando después se suma, y la razón de que agregar antes de reunir sea a menudo la corrección.",
+      "ver_tambien": [
+        "doble conteo",
+        "semirreunion",
+        "agrupación"
+      ]
+    },
+    {
+      "termino": "reunión externa",
+      "clase": "026",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "`LEFT`, `RIGHT` o `FULL OUTER JOIN`: conserva las filas sin pareja y rellena con nulos. Cuidado con poner en el `WHERE` una condición sobre la tabla externa: la convierte de nuevo en interna.",
+      "ver_tambien": [
+        "reunión interna",
+        "NULL",
+        "antirreunion"
+      ]
+    },
+    {
+      "termino": "reunión interna",
+      "clase": "026",
+      "fuente": "winand-sql-performance",
+      "definicion": "`INNER JOIN`: devuelve solo los pares que casan. Las filas sin pareja desaparecen, y ese descarte silencioso es la causa más frecuente de informes con menos filas de las esperadas.",
+      "ver_tambien": [
+        "reunión externa",
+        "reunión",
+        "multiplicación de filas"
+      ]
+    },
+    {
+      "termino": "semirreunion",
+      "clase": "026",
+      "fuente": "molinaro-sql-cookbook",
+      "definicion": "Filtrar una tabla por la existencia de una pareja, sin traer columnas de la otra ni multiplicar filas: `WHERE EXISTS (…)` o `IN (…)`. Es lo que casi siempre se quería cuando se escribió un `JOIN` seguido de `DISTINCT`.",
+      "ver_tambien": [
+        "antirreunion",
+        "multiplicación de filas",
+        "reunión interna"
+      ]
+    },
+    {
+      "termino": "agrupación",
+      "clase": "027",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Partir las filas en grupos por los valores de unas columnas (`GROUP BY`) y producir una fila de resultado por grupo. Todo lo que aparezca en el `SELECT` debe ser o columna de agrupación o resultado de una función de agregado.",
+      "ver_tambien": [
+        "HAVING",
+        "dependencia funcional en GROUP BY",
+        "orden de evaluación"
+      ]
+    },
+    {
+      "termino": "dependencia funcional en GROUP BY",
+      "clase": "027",
+      "fuente": "gmuw-complete-book",
+      "definicion": "Regla que permite seleccionar una columna no agrupada si depende funcionalmente de la clave de agrupación —agrupar por `id` y seleccionar `nombre`—. PostgreSQL la reconoce; otros motores exigen listar todo, y MySQL en modo laxo devuelve un valor arbitrario sin avisar.",
+      "ver_tambien": [
+        "dependencia funcional",
+        "agrupación",
+        "modo estricto"
+      ]
+    },
+    {
+      "termino": "doble conteo",
+      "clase": "027",
+      "fuente": "celko-smarties",
+      "definicion": "Sumar o contar sobre un resultado que una reunión ya había multiplicado. El síntoma es un total que crece al añadir un `JOIN` que «solo traía un dato más»; la cura es agregar en una subconsulta o CTE antes de reunir.",
+      "ver_tambien": [
+        "multiplicación de filas",
+        "agrupación",
+        "CTE"
+      ]
+    },
+    {
+      "termino": "HAVING",
+      "clase": "027",
+      "fuente": "celko-smarties",
+      "definicion": "Filtro que se aplica a los grupos ya formados, después de agregar. `WHERE` descarta filas antes de agrupar y por eso es más barato: la regla es filtrar en `WHERE` todo lo que no dependa del agregado.",
+      "ver_tambien": [
+        "agrupación",
+        "orden de evaluación",
+        "predicado"
+      ]
+    },
+    {
+      "termino": "CTE",
+      "clase": "028",
+      "fuente": "iso-9075",
+      "definicion": "Expresión de tabla común (`WITH … AS`): un resultado con nombre, visible en la consulta que la sigue. Sirve para nombrar pasos intermedios y hacer legible una consulta larga; en algunos motores es además una barrera de optimización, y eso puede ayudar o estorbar.",
+      "ver_tambien": [
+        "subconsulta correlacionada",
+        "recursión",
+        "cierre"
+      ]
+    },
+    {
+      "termino": "marco",
+      "clase": "028",
+      "fuente": "iso-9075",
+      "definicion": "El `ROWS`/`RANGE BETWEEN` que define qué filas de la partición entran en el cálculo de cada fila. Su valor por defecto no es «toda la partición» cuando hay `ORDER BY`, y esa sutileza cambia el resultado de una suma acumulada.",
+      "ver_tambien": [
+        "partición de ventana",
+        "determinismo de orden"
+      ]
+    },
+    {
+      "termino": "partición de ventana",
+      "clase": "028",
+      "fuente": "docs-postgresql",
+      "definicion": "El `PARTITION BY` de una función de ventana: divide las filas en grupos para calcular el agregado dentro de cada uno, pero sin colapsarlas. Es la diferencia esencial con `GROUP BY`: la ventana conserva el detalle y añade el cálculo al lado.",
+      "ver_tambien": [
+        "marco",
+        "agrupación",
+        "CTE"
+      ]
+    },
+    {
+      "termino": "recursión",
+      "clase": "028",
+      "fuente": "celko-smarties",
+      "definicion": "`WITH RECURSIVE`: una CTE que se referencia a sí misma para recorrer jerarquías y grafos —organigramas, listas de materiales, caminos—. Necesita siempre una condición de parada; sin ella el motor recorre hasta agotar la memoria.",
+      "ver_tambien": [
+        "CTE",
+        "recorrido de profundidad variable",
+        "división"
+      ]
+    },
+    {
+      "termino": "subconsulta correlacionada",
+      "clase": "028",
+      "fuente": "molinaro-sql-cookbook",
+      "definicion": "Subconsulta que referencia una columna de la consulta externa y por tanto se evalúa en función de cada fila. Conceptualmente es un bucle; los optimizadores modernos suelen convertirla en una reunión, pero conviene comprobarlo en el plan y no suponerlo.",
+      "ver_tambien": [
+        "CTE",
+        "semirreunion",
+        "optimizador por costos"
+      ]
+    },
+    {
+      "termino": "agregados y nulos",
+      "clase": "029",
+      "fuente": "iso-9075",
+      "definicion": "Las funciones de agregado ignoran los nulos, salvo `COUNT(*)` que cuenta filas. Por eso `COUNT(columna)` y `COUNT(*)` difieren, y por eso un `AVG` sobre una columna con huecos es la media de los presentes, no del total.",
+      "ver_tambien": [
+        "NULL",
+        "agrupación",
+        "doble conteo"
+      ]
+    },
+    {
+      "termino": "IS DISTINCT FROM",
+      "clase": "029",
+      "fuente": "docs-postgresql",
+      "definicion": "Comparación que trata el nulo como un valor más: dos nulos son iguales y un nulo es distinto de cualquier valor, sin producir `UNKNOWN`. Es la forma correcta de comparar columnas opcionales, por ejemplo al detectar cambios en una migración.",
+      "ver_tambien": [
+        "UNKNOWN",
+        "NULL",
+        "IS NULL"
+      ]
+    },
+    {
+      "termino": "NOT IN con nulos",
+      "clase": "029",
+      "fuente": "date-sql-relational-theory",
+      "definicion": "Trampa clásica: si la lista o la subconsulta de un `NOT IN` contiene un solo nulo, el predicado nunca es verdadero y el resultado es vacío. `NOT EXISTS` no tiene ese problema y es la sustitución recomendada.",
+      "ver_tambien": [
+        "antirreunion",
+        "UNKNOWN",
+        "NULL"
+      ]
+    },
+    {
+      "termino": "UNKNOWN",
+      "clase": "029",
+      "fuente": "codd-1979",
+      "definicion": "El tercer valor de verdad de SQL, resultado de comparar con un nulo. No es verdadero ni falso: `NOT UNKNOWN` sigue siendo `UNKNOWN`, y un `WHERE` que se evalúa a `UNKNOWN` descarta la fila igual que si fuera falso.",
+      "ver_tambien": [
+        "NULL",
+        "predicado",
+        "IS DISTINCT FROM"
+      ]
+    },
+    {
+      "termino": "extensión propietaria",
+      "clase": "030",
+      "fuente": "docs-postgresql",
+      "definicion": "Sintaxis o función que solo existe en un motor: `LIMIT` frente a `FETCH FIRST`, `ON CONFLICT` frente a `MERGE`, tipos de arreglo, `RETURNING`. Usarlas es legítimo y a menudo correcto; lo que no lo es, es usarlas sin saber que se está atando el proyecto a ese producto.",
+      "ver_tambien": [
+        "norma frente a producto",
+        "extensión",
+        "matriz de portabilidad"
+      ]
+    },
+    {
+      "termino": "matriz de portabilidad",
+      "clase": "030",
+      "fuente": "molinaro-sql-cookbook",
+      "definicion": "Tabla que registra, para cada construcción usada, si es de norma y cómo la escribe cada motor del proyecto. Convierte la portabilidad en un artefacto revisable en lugar de en una intención declarada en la primera reunión.",
+      "ver_tambien": [
+        "norma frente a producto",
+        "extensión propietaria",
+        "identificador citado"
+      ]
+    },
+    {
+      "termino": "norma frente a producto",
+      "clase": "030",
+      "fuente": "iso-9075",
+      "definicion": "La distinción entre lo que exige ISO/IEC 9075 y lo que cada motor añade por su cuenta. Ningún producto implementa la norma entera y todos la extienden; saber en qué lado está cada línea de tu código es lo que decide si una migración de motor cuesta un día o un trimestre.",
+      "ver_tambien": [
+        "matriz de portabilidad",
+        "extensión propietaria"
+      ]
+    },
+    {
+      "termino": "autovacuum",
+      "clase": "031",
+      "fuente": "rogov-postgresql-internals",
+      "definicion": "Proceso que recupera el espacio de las versiones de fila muertas que deja MVCC y actualiza las estadísticas del planificador. Cuando se queda atrás, la tabla se hincha y los planes se degradan: dos síntomas que se ven antes en el monitor que en el error.",
+      "ver_tambien": [
+        "vacuum",
+        "versión de fila",
+        "estadística"
+      ]
+    },
+    {
+      "termino": "extensión",
+      "clase": "031",
+      "fuente": "docs-postgresql",
+      "definicion": "Módulo cargable que añade tipos, operadores, índices o funciones a PostgreSQL sin tocar su núcleo: `pgvector`, `PostGIS`, `pg_stat_statements`. Es el mecanismo por el que un motor relacional cubre familias enteras —vectores, geometría, series— sin dejar de ser el mismo motor.",
+      "ver_tambien": [
+        "multimodelo",
+        "extensión propietaria",
+        "tipo compuesto"
+      ]
+    },
+    {
+      "termino": "proceso por conexión",
+      "clase": "031",
+      "fuente": "rogov-postgresql-internals",
+      "definicion": "Modelo de PostgreSQL: cada conexión es un proceso del sistema operativo con su propia memoria. Es robusto —una caída no arrastra a las demás— y caro: por eso un agrupador de conexiones deja de ser un lujo a partir de unos cientos de clientes.",
+      "ver_tambien": [
+        "autovacuum",
+        "saturación",
+        "buffer pool"
+      ]
+    },
+    {
+      "termino": "tipo compuesto",
+      "clase": "031",
+      "fuente": "docs-postgresql",
+      "definicion": "Tipo de dato definido por el usuario con varios campos, o los tipos estructurados que PostgreSQL trae de fábrica: arreglos, rangos, `JSONB`, tipos enumerados. Permiten modelar sin salir del relacional lo que en otros motores obligaría a una tabla más o a un documento.",
+      "ver_tambien": [
+        "tipo de dato",
+        "extensión",
+        "incrustación"
+      ]
+    },
+    {
+      "termino": "cadena vacia frente a nulo",
+      "clase": "032",
+      "fuente": "docs-oracle",
+      "definicion": "Divergencia que rompe código al migrar: Oracle trata la cadena vacía `''` como `NULL`, y el resto de motores la distingue. Una condición `= ''` cambia de significado según el producto, y un `NOT NULL` deja de proteger lo que se creía.",
+      "ver_tambien": [
+        "NULL",
+        "modo estricto",
+        "norma frente a producto"
+      ]
+    },
+    {
+      "termino": "identificador citado",
+      "clase": "032",
+      "fuente": "docs-mysql",
+      "definicion": "Nombre de objeto entre comillas dobles —o entre acentos graves en MySQL, entre corchetes en SQL Server—. Al citarlo se vuelve sensible a mayúsculas y se congela tal cual; sin citar, cada motor lo pliega a un caso distinto, y ahí nacen los «la tabla no existe» al cambiar de producto.",
+      "ver_tambien": [
+        "colación",
+        "matriz de portabilidad",
+        "norma frente a producto"
+      ]
+    },
+    {
+      "termino": "modo estricto",
+      "clase": "032",
+      "fuente": "docs-mysql",
+      "definicion": "Ajuste que decide si el motor rechaza un dato inválido o lo convierte en silencio. MySQL sin modo estricto trunca cadenas y transforma fechas imposibles en ceros; el mismo `INSERT` que en PostgreSQL falla, allí «funciona» y corrompe.",
+      "ver_tambien": [
+        "afinidad de tipos",
+        "cadena vacia frente a nulo",
+        "integridad declarada"
+      ]
+    },
+    {
+      "termino": "almacenamiento columnar",
+      "clase": "033",
+      "fuente": "docs-duckdb",
+      "definicion": "Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí.",
+      "ver_tambien": [
+        "compresión",
+        "ejecución vectorizada",
+        "carga analítica"
+      ]
+    },
+    {
+      "termino": "tipado dinamico",
+      "clase": "033",
+      "fuente": "docs-sqlite",
+      "definicion": "En SQLite el tipo pertenece al valor, no a la columna: la declaración es una sugerencia (afinidad) y no una barrera. Cómodo para prototipar, peligroso para datos que otro sistema leerá; desde la versión 3.37 existen las tablas `STRICT` para recuperar el rigor.",
+      "ver_tambien": [
+        "afinidad de tipos",
+        "modo estricto",
+        "motor embebido"
+      ]
+    },
+    {
+      "termino": "vectorización",
+      "clase": "033",
+      "fuente": "docs-duckdb",
+      "definicion": "Procesar lotes de miles de valores por llamada en lugar de una fila cada vez. Amortiza el costo de interpretación del plan y aprovecha las instrucciones SIMD del procesador; es la segunda mitad —junto al formato columnar— de la ventaja analítica de DuckDB o ClickHouse.",
+      "ver_tambien": [
+        "ejecución vectorizada",
+        "almacenamiento columnar",
+        "ejecutor"
+      ]
+    },
+    {
+      "termino": "actividad",
+      "clase": "034",
+      "fuente": "helland-life-beyond-2007",
+      "definicion": "Hecho que ocurre en un instante y relaciona entidades: un pedido, un pago, una inscripción. Su volumen crece sin límite con el tiempo, lo que la convierte en la candidata natural a tabla de hechos o a flujo de eventos, y en la mala candidata a incrustarse dentro de una entidad.",
+      "ver_tambien": [
+        "entidad",
+        "tabla de hechos",
+        "crecimiento no acotado"
+      ]
+    },
+    {
+      "termino": "entidad",
+      "clase": "034",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "Cosa del dominio con identidad propia que persiste a lo largo del tiempo: un cliente, un producto, una cuenta. Se distingue de la actividad en que existe aunque no pase nada, y suele ser la raíz de un agregado.",
+      "ver_tambien": [
+        "actividad",
+        "agregado",
+        "identidad estable"
+      ]
+    },
+    {
+      "termino": "frontera transaccional",
+      "clase": "034",
+      "fuente": "helland-life-beyond-2007",
+      "definicion": "El límite dentro del cual el motor garantiza atomicidad y aislamiento. En los motores de agregado coincide con el agregado: una escritura sobre un documento es atómica, dos sobre documentos distintos ya no. Diseñar el agregado es, por tanto, diseñar dónde termina la garantía.",
+      "ver_tambien": [
+        "agregado",
+        "atomicidad",
+        "saga"
+      ]
+    },
+    {
+      "termino": "crecimiento no acotado",
+      "clase": "035",
+      "fuente": "mongodb-definitive-3ed",
+      "definicion": "Un arreglo incrustado que puede crecer indefinidamente —los comentarios de una publicación viral, el histórico de un sensor—. Acaba chocando con el límite de tamaño del documento y degrada cada lectura, aunque solo se quería un campo. Es la señal de que ese arreglo debía ser una colección aparte.",
+      "ver_tambien": [
+        "incrustación",
+        "patrón de extensión",
+        "retención"
+      ]
+    },
+    {
+      "termino": "incrustación",
+      "clase": "035",
+      "fuente": "docs-mongodb-modeling",
+      "definicion": "Guardar los datos relacionados dentro del propio documento. Una sola lectura devuelve todo y la escritura es atómica, a cambio de duplicar el dato si otro documento también lo necesita y de arriesgar un documento que crece sin techo.",
+      "ver_tambien": [
+        "referencia",
+        "crecimiento no acotado",
+        "agregado"
+      ]
+    },
+    {
+      "termino": "patrón de extensión",
+      "clase": "035",
+      "fuente": "docs-mongodb-modeling",
+      "definicion": "Familia de soluciones para el crecimiento no acotado: partir el arreglo en cubos de tamaño fijo, guardar solo los N últimos elementos incrustados y el resto en otra colección, o separar los campos grandes en un documento satélite.",
+      "ver_tambien": [
+        "crecimiento no acotado",
+        "incrustación",
+        "submuestreo"
+      ]
+    },
+    {
+      "termino": "referencia",
+      "clase": "035",
+      "fuente": "docs-mongodb-modeling",
+      "definicion": "Guardar el identificador del documento relacionado en lugar de su contenido. Evita la duplicación y el crecimiento no acotado, a cambio de una segunda consulta —o de un `$lookup`— que el motor no optimiza como un `JOIN` relacional.",
+      "ver_tambien": [
+        "incrustación",
+        "clave foránea",
+        "canalización de agregación"
+      ]
+    },
+    {
+      "termino": "canalización de agregación",
+      "clase": "036",
+      "fuente": "docs-mongodb",
+      "definicion": "Secuencia de etapas (`$match`, `$group`, `$sort`, `$lookup`) por las que pasan los documentos en MongoDB. El orden importa de verdad: poner `$match` al principio permite usar el índice, ponerlo después obliga a recorrer la colección entera.",
+      "ver_tambien": [
+        "agrupación",
+        "índice compuesto",
+        "referencia"
+      ]
+    },
+    {
+      "termino": "cobertura",
+      "clase": "036",
+      "fuente": "winand-sql-performance",
+      "definicion": "Que el índice contenga todas las columnas que la consulta necesita, de modo que el motor responda sin tocar la tabla. Es la diferencia entre una lectura y dos, y suele ser la optimización con mejor relación entre esfuerzo y resultado.",
+      "ver_tambien": [
+        "índice cubriente",
+        "índice compuesto",
+        "pagina"
+      ]
+    },
+    {
+      "termino": "índice compuesto",
+      "clase": "036",
+      "fuente": "winand-sql-performance",
+      "definicion": "Índice sobre varias claves en un orden concreto. Sirve para las consultas que filtran por un prefijo de esa lista, no para cualquier subconjunto: `(a, b, c)` acelera filtrar por `a` o por `a, b`, pero no por `b` a secas.",
+      "ver_tambien": [
+        "prefijo más a la izquierda",
+        "cobertura",
+        "B-Tree"
+      ]
+    },
+    {
+      "termino": "índice multiclave",
+      "clase": "036",
+      "fuente": "docs-mongodb",
+      "definicion": "Índice sobre un campo que contiene un arreglo: MongoDB crea una entrada por elemento. Permite buscar dentro del arreglo, y explica por qué el índice de una colección puede tener muchas más entradas que documentos.",
+      "ver_tambien": [
+        "índice compuesto",
+        "GIN",
+        "incrustación"
+      ]
+    },
+    {
+      "termino": "durabilidad configurable",
+      "clase": "037",
+      "fuente": "docs-redis-persistence",
+      "definicion": "Poder elegir cuánta pérdida se acepta a cambio de latencia: Redis ofrece desde ninguna persistencia hasta `appendfsync always`, pasando por instantáneas periódicas. La decisión es de negocio, y hay que escribirla: «se pueden perder hasta N segundos de escrituras».",
+      "ver_tambien": [
+        "durabilidad",
+        "RPO",
+        "WAL"
+      ]
+    },
+    {
+      "termino": "estampida de caché",
+      "clase": "037",
+      "fuente": "docs-redis",
+      "definicion": "Cuando una clave muy consultada expira y miles de peticiones van a la vez a la base de datos a recalcularla. Se mitiga con expiraciones escalonadas, recálculo anticipado o un cerrojo que deja pasar a uno solo.",
+      "ver_tambien": [
+        "TTL",
+        "punto caliente",
+        "saturación"
+      ]
+    },
+    {
+      "termino": "invalidación",
+      "clase": "037",
+      "fuente": "docs-redis",
+      "definicion": "Borrar o marcar como obsoleta una entrada de caché cuando cambia el dato de origen. Es el problema difícil de las cachés porque exige que quien escribe en la base sepa qué claves quedaron mentirosas —y normalmente no lo sabe.",
+      "ver_tambien": [
+        "TTL",
+        "estampida de caché",
+        "escritura dual"
+      ]
+    },
+    {
+      "termino": "TTL",
+      "clase": "037",
+      "fuente": "docs-redis",
+      "definicion": "Tiempo de vida tras el cual la clave expira y desaparece. Es la política de retención más simple que existe y la que convierte a una caché en caché: sin TTL, un almacén clave-valor es solo una base de datos en memoria que crece hasta llenarla.",
+      "ver_tambien": [
+        "invalidación",
+        "retención",
+        "durabilidad configurable"
+      ]
+    },
+    {
+      "termino": "arista",
+      "clase": "038",
+      "fuente": "graph-databases-2ed",
+      "definicion": "Relación dirigida y con tipo entre dos nodos, que puede llevar sus propias propiedades. En un motor de grafos es un puntero real, no una clave foránea que haya que buscar en un índice, y de ahí viene su ventaja al recorrer.",
+      "ver_tambien": [
+        "nodo",
+        "reunión sin índice",
+        "atributo de relación"
+      ]
+    },
+    {
+      "termino": "nodo",
+      "clase": "038",
+      "fuente": "graph-databases-2ed",
+      "definicion": "Vértice del grafo de propiedades: una cosa con etiquetas y con pares clave-valor propios. Equivale a una fila, con la diferencia de que sus conexiones son parte de la estructura y no se recomponen por reunión.",
+      "ver_tambien": [
+        "arista",
+        "recorrido de profundidad variable",
+        "entidad"
+      ]
+    },
+    {
+      "termino": "recorrido de profundidad variable",
+      "clase": "038",
+      "fuente": "docs-neo4j",
+      "definicion": "Consulta del tipo «amigos de amigos hasta cinco saltos» o «cualquier camino entre A y B». En SQL exige una CTE recursiva y una reunión por nivel; en un motor de grafos el costo depende del subgrafo recorrido, no del tamaño total del grafo.",
+      "ver_tambien": [
+        "recursión",
+        "reunión sin índice",
+        "arista"
+      ]
+    },
+    {
+      "termino": "reunión sin índice",
+      "clase": "038",
+      "fuente": "graph-databases-2ed",
+      "definicion": "Propiedad de los motores de grafos nativos: cada nodo guarda las direcciones físicas de sus vecinos, así que pasar de uno a otro no consulta ningún índice. Es la razón técnica de que el recorrido profundo escale donde el `JOIN` repetido se degrada.",
+      "ver_tambien": [
+        "arista",
+        "recorrido de profundidad variable",
+        "B-Tree"
+      ]
+    },
+    {
+      "termino": "clave de agrupamiento",
+      "clase": "039",
+      "fuente": "cassandra-definitive-3ed",
+      "definicion": "La parte de la clave primaria que ordena las filas dentro de una partición. Es lo que permite leer rangos —«los últimos 20 mensajes de este chat»— con una sola lectura secuencial, y por eso el orden se decide al crear la tabla, no al consultar.",
+      "ver_tambien": [
+        "clave de partición",
+        "desnormalización por consulta",
+        "B-Tree"
+      ]
+    },
+    {
+      "termino": "clave de partición",
+      "clase": "039",
+      "fuente": "docs-cassandra",
+      "definicion": "La parte de la clave primaria que decide en qué nodo vive la fila. Toda consulta eficiente debe fijarla; una consulta sin ella obliga a preguntar a todo el anillo, y es el error de diseño número uno en columnas anchas.",
+      "ver_tambien": [
+        "clave de agrupamiento",
+        "hash consistente",
+        "punto caliente"
+      ]
+    },
+    {
+      "termino": "desnormalización por consulta",
+      "clase": "039",
+      "fuente": "cassandra-definitive-3ed",
+      "definicion": "Método de diseño de columnas anchas: se escribe primero la lista de consultas y luego una tabla por consulta, aunque los mismos datos queden repetidos en cinco tablas. La coherencia entre copias pasa a ser responsabilidad de la aplicación.",
+      "ver_tambien": [
+        "patrón de acceso",
+        "redundancia controlada",
+        "escritura dual"
+      ]
+    },
+    {
+      "termino": "agregado continuo",
+      "clase": "040",
+      "fuente": "docs-timescale",
+      "definicion": "Vista materializada que se actualiza de forma incremental según llegan datos nuevos, típicamente con medias u otros resúmenes por intervalo. Permite responder «el promedio por hora del último año» sin recorrer mil millones de puntos en cada consulta.",
+      "ver_tambien": [
+        "submuestreo",
+        "ventana",
+        "carga analítica"
+      ]
+    },
+    {
+      "termino": "cardinalidad de etiquetas",
+      "clase": "040",
+      "fuente": "docs-influxdb",
+      "definicion": "Número de combinaciones distintas de etiquetas en una base de series temporales; cada combinación es una serie con su índice y su memoria. Meter un identificador de usuario o de petición como etiqueta produce una explosión de cardinalidad que tumba el motor.",
+      "ver_tambien": [
+        "punto caliente",
+        "retención",
+        "submuestreo"
+      ]
+    },
+    {
+      "termino": "retención",
+      "clase": "040",
+      "fuente": "docs-timescale",
+      "definicion": "Cuánto tiempo se conservan los datos antes de borrarlos automáticamente. En series temporales es una decisión de capacidad; en datos personales es además una obligación legal, y las dos deben coincidir en la misma política escrita.",
+      "ver_tambien": [
+        "submuestreo",
+        "limitación de finalidad",
+        "derecho de supresión"
+      ]
+    },
+    {
+      "termino": "submuestreo",
+      "clase": "040",
+      "fuente": "docs-timescale",
+      "definicion": "Reducir la resolución de los datos antiguos: guardar cada segundo la última hora, cada minuto la última semana, cada hora el último año. Es cómo se sostiene un histórico largo sin que el tamaño crezca de forma lineal para siempre.",
+      "ver_tambien": [
+        "agregado continuo",
+        "retención",
+        "compresión"
+      ]
+    },
+    {
+      "termino": "BM25",
+      "clase": "041",
+      "fuente": "robertson-bm25-2009",
+      "definicion": "Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros `k1` y `b`. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales.",
+      "ver_tambien": [
+        "TF-IDF",
+        "fusión de rangos",
+        "índice invertido"
+      ]
+    },
+    {
+      "termino": "precisión y exhaustividad",
+      "clase": "041",
+      "fuente": "robertson-bm25-2009",
+      "definicion": "Precisión: qué proporción de lo devuelto era relevante. Exhaustividad (o *recall*): qué proporción de lo relevante se devolvió. Casi siempre se compensan entre sí, y por eso una búsqueda solo puede evaluarse fijando cuál de las dos importa en ese caso.",
+      "ver_tambien": [
+        "recall",
+        "recall@k",
+        "precisión@k"
+      ]
+    },
+    {
+      "termino": "TF-IDF",
+      "clase": "041",
+      "fuente": "robertson-bm25-2009",
+      "definicion": "Peso clásico de un término: crece con su frecuencia en el documento (TF) y decrece con el número de documentos en que aparece (IDF). Formaliza la intuición de que «el» no distingue nada y «hipervisor» distingue mucho.",
+      "ver_tambien": [
+        "BM25",
+        "índice invertido",
+        "precisión y exhaustividad"
+      ]
+    },
+    {
+      "termino": "índice invertido",
+      "clase": "041",
+      "fuente": "docs-opensearch",
+      "definicion": "Estructura que va de cada término al listado de documentos que lo contienen —lo contrario de recorrer los documentos buscando el término—. Es la base de todo buscador de texto y la razón de que `LIKE '%algo%'` no sea comparable a una búsqueda de verdad.",
+      "ver_tambien": [
+        "analizador",
+        "BM25",
+        "TF-IDF"
+      ]
+    },
+    {
+      "termino": "compresión",
+      "clase": "042",
+      "fuente": "docs-clickhouse",
+      "definicion": "En un formato columnar, los valores contiguos se parecen, así que técnicas como el diccionario, la codificación por carrera o el delta reducen el tamaño en un orden de magnitud. Menos bytes leídos es menos entrada y salida, que es de donde sale casi toda la ventaja analítica.",
+      "ver_tambien": [
+        "almacenamiento columnar",
+        "poda de particiones",
+        "pagina"
+      ]
+    },
+    {
+      "termino": "ejecución vectorizada",
+      "clase": "042",
+      "fuente": "docs-duckdb",
+      "definicion": "El ejecutor procesa lotes de valores por operador en lugar de fila a fila. Reduce el costo por fila del intérprete y permite usar instrucciones SIMD; combinada con el formato columnar, es la explicación de las diferencias de dos órdenes de magnitud frente a un motor de filas.",
+      "ver_tambien": [
+        "vectorización",
+        "almacenamiento columnar",
+        "ejecutor"
+      ]
+    },
+    {
+      "termino": "poda de particiones",
+      "clase": "042",
+      "fuente": "docs-duckdb",
+      "definicion": "Descartar ficheros o bloques enteros sin abrirlos, gracias a los mínimos y máximos guardados en sus metadatos. Es lo que hace que consultar un día concreto sobre un histórico de diez años cueste casi lo mismo que consultar ese día solo.",
+      "ver_tambien": [
+        "BRIN",
+        "partición por rango",
+        "compresión"
+      ]
+    },
+    {
+      "termino": "aislamiento",
+      "clase": "043",
+      "fuente": "gray-reuter-tp",
+      "definicion": "Grado en que una transacción concurrente no ve los pasos intermedios de otra. Es la única letra de ACID que se vende por niveles, y el nivel por defecto de casi todos los motores no es el más fuerte.",
+      "ver_tambien": [
+        "snapshot isolation",
+        "2PL",
+        "lectura sucia"
+      ]
+    },
+    {
+      "termino": "atomicidad",
+      "clase": "043",
+      "fuente": "gray-transaction-concept-1981",
+      "definicion": "Todo o nada: la transacción se aplica entera o no deja rastro. No promete que sea correcta ni que sea rápida, solo que no habrá estados a medias visibles para nadie.",
+      "ver_tambien": [
+        "unidad de recuperación",
+        "deshacer",
+        "frontera transaccional"
+      ]
+    },
+    {
+      "termino": "consistencia",
+      "clase": "043",
+      "fuente": "gray-reuter-tp",
+      "definicion": "La letra tramposa de ACID: significa que la transacción lleva la base de un estado válido a otro *según las restricciones declaradas*. Lo que el motor no sabe, no lo protege; la consistencia de negocio la pone quien declara las reglas, no el gestor.",
+      "ver_tambien": [
+        "integridad declarada",
+        "invariante",
+        "CHECK"
+      ]
+    },
+    {
+      "termino": "unidad de recuperación",
+      "clase": "043",
+      "fuente": "gray-transaction-concept-1981",
+      "definicion": "La transacción como frontera de lo que se rehace o se deshace tras una caída. Es lo que conecta ACID con el registro anticipado: sin transacción no hay nada que delimite qué debe sobrevivir.",
+      "ver_tambien": [
+        "atomicidad",
+        "WAL",
+        "rehacer",
+        "deshacer"
+      ]
+    },
+    {
+      "termino": "fantasma",
+      "clase": "044",
+      "fuente": "berenson-isolation-1995",
+      "definicion": "Repetir una consulta por rango y encontrar filas nuevas que otra transacción insertó. No es un cambio de valor sino de pertenencia al conjunto, y por eso exige bloquear el rango —o usar instantáneas— y no solo las filas leídas.",
+      "ver_tambien": [
+        "lectura no repetible",
+        "2PL",
+        "snapshot isolation"
+      ]
+    },
+    {
+      "termino": "lectura no repetible",
+      "clase": "044",
+      "fuente": "berenson-isolation-1995",
+      "definicion": "Leer la misma fila dos veces dentro de una transacción y obtener valores distintos, porque otra confirmó un cambio en medio. Es lo que `READ COMMITTED` permite y `REPEATABLE READ` impide.",
+      "ver_tambien": [
+        "fantasma",
+        "instantánea",
+        "aislamiento"
+      ]
+    },
+    {
+      "termino": "lectura sucia",
+      "clase": "044",
+      "fuente": "berenson-isolation-1995",
+      "definicion": "Leer un dato que otra transacción escribió y todavía no confirmó —y que puede acabar deshaciéndose—. Solo la permite el nivel `READ UNCOMMITTED`, que casi ningún motor usa por defecto.",
+      "ver_tambien": [
+        "lectura no repetible",
+        "aislamiento",
+        "snapshot isolation"
+      ]
+    },
+    {
+      "termino": "sesgo de escritura",
+      "clase": "044",
+      "fuente": "adya-generalized-isolation-1999",
+      "definicion": "Dos transacciones leen el mismo conjunto, cada una decide que puede escribir, y juntas rompen un invariante que ninguna rompía por separado —los dos médicos de guardia que se dan de baja a la vez—. Snapshot isolation lo permite; hace falta serializable o un bloqueo explícito.",
+      "ver_tambien": [
+        "snapshot isolation",
+        "invariante",
+        "bloqueo optimista"
+      ]
+    },
+    {
+      "termino": "snapshot isolation",
+      "clase": "044",
+      "fuente": "berenson-isolation-1995",
+      "definicion": "Cada transacción ve una fotografía coherente de la base tomada al empezar. Elimina lecturas sucias, no repetibles y fantasmas, pero no el sesgo de escritura; es el nivel que PostgreSQL llama `REPEATABLE READ`.",
+      "ver_tambien": [
+        "instantánea",
+        "versión de fila",
+        "sesgo de escritura"
+      ]
+    },
+    {
+      "termino": "2PL",
+      "clase": "045",
+      "fuente": "gray-reuter-tp",
+      "definicion": "Bloqueo en dos fases: una fase en la que la transacción solo adquiere cerrojos y otra en la que solo los libera. Es la técnica clásica que garantiza serializabilidad, al precio de que los lectores bloqueen a los escritores.",
+      "ver_tambien": [
+        "interbloqueo",
+        "aislamiento",
+        "versión de fila"
+      ]
+    },
+    {
+      "termino": "instantánea",
+      "clase": "045",
+      "fuente": "docs-postgresql-mvcc",
+      "definicion": "El conjunto de versiones visibles para una transacción, fijado en un instante. Permite que las lecturas no bloqueen y que dos consultas de la misma transacción vean exactamente lo mismo aunque el mundo cambie alrededor.",
+      "ver_tambien": [
+        "versión de fila",
+        "snapshot isolation",
+        "lectura no repetible"
+      ]
+    },
+    {
+      "termino": "interbloqueo",
+      "clase": "045",
+      "fuente": "gray-reuter-tp",
+      "definicion": "Dos transacciones que se esperan mutuamente porque cada una tiene el cerrojo que la otra necesita. El motor lo detecta y aborta a una; la aplicación debe estar preparada para reintentar, y ordenar siempre los accesos igual reduce la frecuencia.",
+      "ver_tambien": [
+        "2PL",
+        "reintento con retroceso",
+        "bloqueo optimista"
+      ]
+    },
+    {
+      "termino": "vacuum",
+      "clase": "045",
+      "fuente": "rogov-postgresql-internals",
+      "definicion": "Proceso que recupera el espacio de las versiones de fila que ya nadie puede ver y actualiza los mapas de visibilidad. Sin él, MVCC crece sin límite: es el mantenimiento invisible que explica por qué una tabla ocupa el triple de lo que debería.",
+      "ver_tambien": [
+        "autovacuum",
+        "versión de fila",
+        "costo de mantenimiento"
+      ]
+    },
+    {
+      "termino": "versión de fila",
+      "clase": "045",
+      "fuente": "docs-postgresql-mvcc",
+      "definicion": "Copia de una fila con el rango de transacciones para las que es visible. Con MVCC un `UPDATE` no sobrescribe: crea una versión nueva, de modo que quien está leyendo la anterior no se detiene. El precio es el espacio y el trabajo de limpiarlo.",
+      "ver_tambien": [
+        "instantánea",
+        "vacuum",
+        "snapshot isolation"
+      ]
+    },
+    {
+      "termino": "deshacer",
+      "clase": "046",
+      "fuente": "mohan-aries-1992",
+      "definicion": "Fase que revierte las transacciones que estaban a medias en el momento de la caída, usando la información de deshacer del registro. Es la implementación concreta de la atomicidad.",
+      "ver_tambien": [
+        "rehacer",
+        "atomicidad",
+        "transacción como red"
+      ]
+    },
+    {
+      "termino": "LSN",
+      "clase": "046",
+      "fuente": "mohan-aries-1992",
+      "definicion": "Número de secuencia del registro: identifica cada entrada del WAL en orden y se estampa en la página que modifica. Permite saber, página por página, si un cambio ya está aplicado —y por eso rehacer se puede repetir sin efectos secundarios.",
+      "ver_tambien": [
+        "WAL",
+        "rehacer",
+        "retraso de réplica"
+      ]
+    },
+    {
+      "termino": "punto de control",
+      "clase": "046",
+      "fuente": "mohan-aries-1992",
+      "definicion": "Marca periódica que fija hasta dónde están ya volcadas a disco las páginas modificadas. Acorta la recuperación, porque tras una caída solo hay que releer el registro desde el último punto de control y no desde el principio de los tiempos.",
+      "ver_tambien": [
+        "WAL",
+        "rehacer",
+        "recuperación"
+      ]
+    },
+    {
+      "termino": "rehacer",
+      "clase": "046",
+      "fuente": "mohan-aries-1992",
+      "definicion": "Fase de la recuperación que reaplica desde el registro todo lo confirmado que aún no había llegado a las páginas de datos. ARIES la ejecuta antes de deshacer y de forma que repetirla sea inofensiva, lo que permite recuperarse de una caída ocurrida durante la recuperación.",
+      "ver_tambien": [
+        "deshacer",
+        "WAL",
+        "punto de control",
+        "idempotencia"
+      ]
+    },
+    {
+      "termino": "WAL",
+      "clase": "046",
+      "fuente": "mohan-aries-1992",
+      "definicion": "Registro anticipado: antes de tocar la página de datos se escribe en un registro secuencial qué se va a cambiar, y ese registro se fuerza al disco antes de confirmar. Es lo que hace posible la durabilidad sin escribir cada página en cada `COMMIT`.",
+      "ver_tambien": [
+        "punto de control",
+        "rehacer",
+        "deshacer",
+        "LSN"
+      ]
+    },
+    {
+      "termino": "bloqueo optimista",
+      "clase": "047",
+      "fuente": "bernstein-newcomer-tp",
+      "definicion": "En lugar de bloquear, se lee una versión y al escribir se comprueba que no haya cambiado (`WHERE version = ?`). Si cambió, se reintenta. Rinde mejor que el bloqueo cuando los conflictos son raros, y peor cuando son frecuentes.",
+      "ver_tambien": [
+        "sesgo de escritura",
+        "reintento con retroceso",
+        "interbloqueo"
+      ]
+    },
+    {
+      "termino": "clave de idempotencia",
+      "clase": "047",
+      "fuente": "bernstein-newcomer-tp",
+      "definicion": "Identificador que el cliente genera y envía con la petición para que el servidor reconozca un reintento y devuelva el resultado anterior en lugar de ejecutar dos veces. Es cómo se cobra una tarjeta una sola vez aunque el navegador reenvíe.",
+      "ver_tambien": [
+        "idempotencia",
+        "reintento con retroceso",
+        "UNIQUE"
+      ]
+    },
+    {
+      "termino": "idempotencia",
+      "clase": "047",
+      "fuente": "helland-life-beyond-2007",
+      "definicion": "Propiedad de una operación que, repetida con la misma entrada, deja el mismo estado que ejecutarla una vez. Es la única defensa realista contra las redes: en un sistema distribuido no se puede distinguir «no llegó» de «llegó y se perdió la respuesta».",
+      "ver_tambien": [
+        "clave de idempotencia",
+        "reintento con retroceso",
+        "entrega al menos una vez"
+      ]
+    },
+    {
+      "termino": "reintento con retroceso",
+      "clase": "047",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Reintentar tras un fallo esperando cada vez más tiempo, con una componente aleatoria. El retroceso evita hundir un sistema que ya está en apuros y la aleatoriedad evita que todos los clientes vuelvan sincronizados a la vez.",
+      "ver_tambien": [
+        "idempotencia",
+        "interbloqueo",
+        "saturación",
+        "estampida de caché"
+      ]
+    },
+    {
+      "termino": "factor de bloque",
+      "clase": "048",
+      "fuente": "petrov-database-internals",
+      "definicion": "Cuántas filas caben en una página. Depende del ancho de la fila, así que columnas anchas que nadie consulta encarecen todas las lecturas de esa tabla, incluidas las que no las piden.",
+      "ver_tambien": [
+        "pagina",
+        "localidad",
+        "almacenamiento columnar"
+      ]
+    },
+    {
+      "termino": "lectura secuencial",
+      "clase": "048",
+      "fuente": "petrov-database-internals",
+      "definicion": "Leer páginas contiguas, que es órdenes de magnitud más barato por fila que saltar de una a otra. Por eso un recorrido completo puede ganarle a un índice cuando la consulta devuelve una fracción grande de la tabla.",
+      "ver_tambien": [
+        "selectividad",
+        "localidad",
+        "poda de particiones"
+      ]
+    },
+    {
+      "termino": "localidad",
+      "clase": "048",
+      "fuente": "hellerstein-architecture",
+      "definicion": "Que los datos que se usan juntos estén guardados juntos. Es la propiedad que convierte muchas lecturas lógicas en pocas lecturas físicas, y el motivo por el que el orden físico de una tabla —y la clave de agrupamiento— importa tanto.",
+      "ver_tambien": [
+        "pagina",
+        "lectura secuencial",
+        "clave de agrupamiento"
+      ]
+    },
+    {
+      "termino": "pagina",
+      "clase": "048",
+      "fuente": "petrov-database-internals",
+      "definicion": "La unidad mínima de lectura y escritura en disco, típicamente de 4 a 16 KB. El motor nunca lee «una fila»: lee la página que la contiene, y de ahí que quepan más filas por página sea una optimización real.",
+      "ver_tambien": [
+        "factor de bloque",
+        "buffer pool",
+        "localidad"
+      ]
+    },
+    {
+      "termino": "B-Tree",
+      "clase": "049",
+      "fuente": "bayer-mccreight-1972",
+      "definicion": "Árbol equilibrado de páginas ordenadas, con todos los datos en hojas enlazadas entre sí. Sirve para igualdad, para rangos y para devolver ya ordenado, con un número de accesos que crece logarítmicamente. Es la estructura por defecto de casi todos los motores relacionales.",
+      "ver_tambien": [
+        "prefijo más a la izquierda",
+        "selectividad",
+        "memtable"
+      ]
+    },
+    {
+      "termino": "prefijo más a la izquierda",
+      "clase": "049",
+      "fuente": "winand-sql-performance",
+      "definicion": "Un índice sobre `(a, b, c)` solo sirve para filtros que fijan `a`, o `a` y `b`, o los tres —nunca para `b` solo—. Es la regla que decide el orden de las columnas de un índice compuesto y la que explica por qué «tengo el índice y no lo usa».",
+      "ver_tambien": [
+        "índice compuesto",
+        "B-Tree",
+        "clave compuesta"
+      ]
+    },
+    {
+      "termino": "selectividad",
+      "clase": "049",
+      "fuente": "winand-sql-performance",
+      "definicion": "Qué fracción de la tabla devuelve un predicado. Un índice compensa cuando la selectividad es alta —pocas filas—; con predicados poco selectivos, el recorrido secuencial gana y el planificador lo elige a propósito.",
+      "ver_tambien": [
+        "estimación de cardinalidad",
+        "lectura secuencial",
+        "estadística"
+      ]
+    },
+    {
+      "termino": "índice cubriente",
+      "clase": "049",
+      "fuente": "winand-sql-performance",
+      "definicion": "Índice que incluye todas las columnas que la consulta necesita, así que el motor responde sin volver a la tabla. En PostgreSQL se construye con `INCLUDE`; su costo es un índice más ancho y más caro de mantener en cada escritura.",
+      "ver_tambien": [
+        "cobertura",
+        "costo de mantenimiento",
+        "índice compuesto"
+      ]
+    },
+    {
+      "termino": "amplificación de escritura",
+      "clase": "050",
+      "fuente": "petrov-database-internals",
+      "definicion": "Cuántos bytes acaba escribiendo el motor en disco por cada byte que escribió la aplicación, sumando registro y compactaciones sucesivas. Es la métrica que decide el desgaste del disco y el techo real de escritura de un motor LSM.",
+      "ver_tambien": [
+        "compactación",
+        "costo de escritura",
+        "memtable"
+      ]
+    },
+    {
+      "termino": "compactación",
+      "clase": "050",
+      "fuente": "petrov-database-internals",
+      "definicion": "Proceso de fusionar SSTables, descartar versiones antiguas y aplicar los borrados. Es lo que impide que las lecturas se degraden sin fin, y también lo que consume entrada y salida en segundo plano justo cuando el sistema está cargado.",
+      "ver_tambien": [
+        "amplificación de escritura",
+        "SSTable",
+        "vacuum"
+      ]
+    },
+    {
+      "termino": "filtro de Bloom",
+      "clase": "050",
+      "fuente": "bloom-1970",
+      "definicion": "Estructura probabilística compacta que responde «seguro que no está» o «puede que esté». Ahorra abrir SSTables que no contienen la clave; nunca produce falsos negativos, así que es seguro usarla para descartar.",
+      "ver_tambien": [
+        "SSTable",
+        "compactación",
+        "cuantización"
+      ]
+    },
+    {
+      "termino": "memtable",
+      "clase": "050",
+      "fuente": "oneil-lsm-1996",
+      "definicion": "Estructura ordenada en memoria donde un motor LSM acumula las escrituras antes de volcarlas a disco. Convierte escrituras aleatorias en secuenciales, que es la razón de que los LSM absorban mucha más carga de escritura que un B-Tree.",
+      "ver_tambien": [
+        "SSTable",
+        "compactación",
+        "WAL"
+      ]
+    },
+    {
+      "termino": "SSTable",
+      "clase": "050",
+      "fuente": "oneil-lsm-1996",
+      "definicion": "Fichero ordenado e inmutable resultante de volcar una memtable. Al ser inmutable no se actualiza: los cambios posteriores viven en ficheros más nuevos, y por eso una lectura puede tener que consultar varios niveles.",
+      "ver_tambien": [
+        "memtable",
+        "compactación",
+        "filtro de Bloom"
+      ]
+    },
+    {
+      "termino": "BRIN",
+      "clase": "051",
+      "fuente": "docs-postgresql-indexes",
+      "definicion": "Índice de rangos por bloque: guarda el mínimo y el máximo de cada grupo de páginas. Diminuto y utilísimo cuando el orden físico se correlaciona con la columna —una tabla de eventos por fecha—, e inútil cuando no.",
+      "ver_tambien": [
+        "poda de particiones",
+        "localidad",
+        "índice parcial"
+      ]
+    },
+    {
+      "termino": "costo de mantenimiento",
+      "clase": "051",
+      "fuente": "winand-sql-performance",
+      "definicion": "Lo que cada índice cobra en cada `INSERT`, `UPDATE` y `DELETE`, más el espacio que ocupa y el trabajo de reconstruirlo. Un índice que no usa ninguna consulta no es neutro: es una penalización permanente sobre todas las escrituras.",
+      "ver_tambien": [
+        "costo de escritura",
+        "índice cubriente",
+        "estadística"
+      ]
+    },
+    {
+      "termino": "GIN",
+      "clase": "051",
+      "fuente": "docs-postgresql-indexes",
+      "definicion": "Índice invertido generalizado de PostgreSQL: indexa los elementos de un valor compuesto —palabras de un texto, claves de un JSONB, elementos de un arreglo—. Es rápido buscando y caro escribiendo, y por eso admite una cola de actualizaciones diferida.",
+      "ver_tambien": [
+        "índice invertido",
+        "índice multiclave",
+        "BRIN"
+      ]
+    },
+    {
+      "termino": "índice de expresión",
+      "clase": "051",
+      "fuente": "docs-postgresql-indexes",
+      "definicion": "Índice sobre el resultado de una función, como `lower(correo)`. Es lo que permite que una búsqueda insensible a mayúsculas use índice, siempre que la consulta escriba la expresión exactamente igual que el índice.",
+      "ver_tambien": [
+        "índice parcial",
+        "colación",
+        "B-Tree"
+      ]
+    },
+    {
+      "termino": "índice parcial",
+      "clase": "051",
+      "fuente": "docs-postgresql-indexes",
+      "definicion": "Índice que solo cubre las filas que cumplen un predicado (`WHERE activo`). Ocupa una fracción del total y se mantiene más barato, y encaja perfectamente cuando las consultas siempre filtran por ese mismo estado.",
+      "ver_tambien": [
+        "índice de expresión",
+        "costo de mantenimiento",
+        "selectividad"
+      ]
+    },
+    {
+      "termino": "costo frente a tiempo",
+      "clase": "052",
+      "fuente": "docs-postgresql-explain",
+      "definicion": "El `cost` de `EXPLAIN` es una unidad interna comparativa, no milisegundos; el tiempo real solo aparece con `EXPLAIN ANALYZE`. Comparar filas estimadas contra filas reales en cada nodo es la técnica central para refutar una hipótesis de rendimiento.",
+      "ver_tambien": [
+        "estimación de cardinalidad",
+        "ejecutor",
+        "evidencia"
+      ]
+    },
+    {
+      "termino": "estadística",
+      "clase": "052",
+      "fuente": "docs-postgresql-explain",
+      "definicion": "Resúmenes que el motor guarda sobre los datos: número de filas, valores distintos, histogramas, valores más comunes. Cuando están obsoletas el optimizador estima mal y elige planes ruinosos, y ese es el primer sitio donde mirar ante una consulta que «de repente» se volvió lenta.",
+      "ver_tambien": [
+        "estimación de cardinalidad",
+        "autovacuum",
+        "optimizador por costos"
+      ]
+    },
+    {
+      "termino": "estimación de cardinalidad",
+      "clase": "052",
+      "fuente": "selinger-1979",
+      "definicion": "Cuántas filas cree el planificador que devolverá cada paso. Es la entrada de la que depende todo lo demás, y también la parte más frágil: los errores se multiplican al reunir tablas, y una estimación de 1 fila que en realidad son 100 000 explica casi cualquier plan absurdo.",
+      "ver_tambien": [
+        "estadística",
+        "selectividad",
+        "costo frente a tiempo"
+      ]
+    },
+    {
+      "termino": "optimizador por costos",
+      "clase": "052",
+      "fuente": "selinger-1979",
+      "definicion": "Componente que enumera planes equivalentes y elige el de menor costo estimado a partir de estadísticas. Desde el artículo de Selinger de 1979 el principio no ha cambiado: el motor no ejecuta lo que escribiste, ejecuta lo que calculó que es más barato.",
+      "ver_tambien": [
+        "estadística",
+        "estimación de cardinalidad",
+        "equivalencia"
+      ]
+    },
+    {
+      "termino": "lectura de tu propia escritura",
+      "clase": "053",
+      "fuente": "vogels-eventually-consistent-2009",
+      "definicion": "Garantía de sesión que asegura que quien acaba de escribir verá su propio cambio, aunque otros aún no. Se implementa dirigiendo al líder las lecturas recientes de ese usuario, o esperando a que la réplica alcance el LSN de su escritura.",
+      "ver_tambien": [
+        "retraso de réplica",
+        "lectura monotona",
+        "consistencia causal"
+      ]
+    },
+    {
+      "termino": "quórum",
+      "clase": "053",
+      "fuente": "decandia-dynamo-2007",
+      "definicion": "Regla de los sistemas sin líder: si las escrituras van a W réplicas, las lecturas consultan R, y `W + R > N`, entonces toda lectura toca al menos una réplica con el último valor. Permite ajustar el compromiso entre latencia y frescura por operación.",
+      "ver_tambien": [
+        "replicación sincrónica",
+        "convergencia",
+        "consenso"
+      ]
+    },
+    {
+      "termino": "replicación sincrónica",
+      "clase": "053",
+      "fuente": "kleppmann-ddia",
+      "definicion": "El líder no confirma la escritura hasta que al menos una réplica la ha recibido. Garantiza que no se pierda al caer el líder, a cambio de que la latencia del cliente incluya la de la réplica más lenta y de que una réplica caída pueda detener las escrituras.",
+      "ver_tambien": [
+        "retraso de réplica",
+        "quórum",
+        "RPO"
+      ]
+    },
+    {
+      "termino": "retraso de réplica",
+      "clase": "053",
+      "fuente": "kleppmann-ddia",
+      "definicion": "La distancia temporal entre lo que ya está en el líder y lo que la réplica ha aplicado. Con replicación asíncrona es inevitable, y es la causa directa de que un usuario guarde algo y al recargar no lo vea.",
+      "ver_tambien": [
+        "lectura de tu propia escritura",
+        "LSN",
+        "lectura monotona"
+      ]
+    },
+    {
+      "termino": "hash consistente",
+      "clase": "054",
+      "fuente": "decandia-dynamo-2007",
+      "definicion": "Reparto de claves sobre un anillo de posiciones de modo que añadir o quitar un nodo mueva solo una fracción de los datos, y no obligue a redistribuirlo todo como haría un `hash mod N`. Es la base del rebalanceo en Dynamo y Cassandra.",
+      "ver_tambien": [
+        "partición por rango",
+        "reequilibrio",
+        "clave de partición"
+      ]
+    },
+    {
+      "termino": "partición por rango",
+      "clase": "054",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Repartir por intervalos ordenados de la clave. Permite consultas por rango eficientes, a costa de generar puntos calientes cuando las escrituras se concentran al final del rango —el caso típico de una clave temporal.",
+      "ver_tambien": [
+        "hash consistente",
+        "punto caliente",
+        "poda de particiones"
+      ]
+    },
+    {
+      "termino": "punto caliente",
+      "clase": "054",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Partición que recibe una parte desproporcionada del tráfico: la celebridad con millones de seguidores, la fecha de hoy, el cliente que factura el 40 %. Ninguna cantidad de nodos ayuda mientras el reparto siga concentrando ahí.",
+      "ver_tambien": [
+        "clave de partición",
+        "reequilibrio",
+        "cardinalidad de etiquetas"
+      ]
+    },
+    {
+      "termino": "reequilibrio",
+      "clase": "054",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Mover particiones entre nodos al cambiar la capacidad del clúster. La práctica recomendada es fijar de antemano muchas más particiones que nodos y mover particiones enteras, en lugar de recalcular la asignación de cada clave.",
+      "ver_tambien": [
+        "hash consistente",
+        "punto caliente",
+        "clave de partición"
+      ]
+    },
+    {
+      "termino": "disponibilidad",
+      "clase": "055",
+      "fuente": "gilbert-lynch-2002",
+      "definicion": "En el enunciado formal de CAP, que toda petición a un nodo no caído reciba respuesta. Es una definición mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas del teorema.",
+      "ver_tambien": [
+        "partición de red",
+        "presupuesto de error",
+        "linealizabilidad"
+      ]
+    },
+    {
+      "termino": "latencia frente a consistencia",
+      "clase": "055",
+      "fuente": "abadi-pacelc-2012",
+      "definicion": "La mitad de PACELC que CAP ignora: incluso sin particiones hay que elegir entre responder rápido desde una réplica cercana o esperar la coordinación que garantiza el dato más reciente. Es el compromiso que se paga todos los días, no solo el día de la avería.",
+      "ver_tambien": [
+        "partición de red",
+        "linealizabilidad",
+        "percentil"
+      ]
+    },
+    {
+      "termino": "partición de red",
+      "clase": "055",
+      "fuente": "gilbert-lynch-2002",
+      "definicion": "Situación en la que dos grupos de nodos siguen vivos pero no pueden comunicarse. No es un fallo hipotético: es lo que ocurre con un cable, un cortafuegos mal aplicado o una latencia lo bastante alta como para que los tiempos de espera venzan.",
+      "ver_tambien": [
+        "disponibilidad",
+        "consenso",
+        "latencia frente a consistencia"
+      ]
+    },
+    {
+      "termino": "consistencia causal",
+      "clase": "056",
+      "fuente": "lamport-time-clocks-1978",
+      "definicion": "Si un evento pudo influir en otro, todos los observadores los ven en ese orden; los eventos sin relación causal pueden verse en cualquier orden. Es el punto dulce entre lo débil y lo caro: evita el efecto «respuesta antes que la pregunta» sin exigir coordinación global.",
+      "ver_tambien": [
+        "linealizabilidad",
+        "lectura monotona",
+        "convergencia"
+      ]
+    },
+    {
+      "termino": "convergencia",
+      "clase": "056",
+      "fuente": "shapiro-crdt-2011",
+      "definicion": "Que las réplicas acaben en el mismo estado si cesan las escrituras. Es la promesa de la consistencia eventual, y solo se cumple si hay una regla determinista de resolución de conflictos, como la que dan los CRDT.",
+      "ver_tambien": [
+        "quórum",
+        "consistencia causal",
+        "compensación"
+      ]
+    },
+    {
+      "termino": "lectura monotona",
+      "clase": "056",
+      "fuente": "vogels-eventually-consistent-2009",
+      "definicion": "Garantía de sesión que impide retroceder en el tiempo: si ya viste un valor, no volverás a ver uno anterior. Sin ella, alternar entre réplicas con distinto retraso hace que un dato aparezca y desaparezca al recargar.",
+      "ver_tambien": [
+        "lectura de tu propia escritura",
+        "retraso de réplica",
+        "consistencia causal"
+      ]
+    },
+    {
+      "termino": "linealizabilidad",
+      "clase": "056",
+      "fuente": "kingsbury-jepsen-consistency",
+      "definicion": "La garantía más fuerte para un objeto: el sistema se comporta como si hubiera una sola copia y cada operación ocurriera en un instante entre su inicio y su fin. Es cara porque exige coordinación, y casi ninguna aplicación la necesita para todo.",
+      "ver_tambien": [
+        "consenso",
+        "consistencia causal",
+        "disponibilidad"
+      ]
+    },
+    {
+      "termino": "commit en dos fases",
+      "clase": "057",
+      "fuente": "bernstein-newcomer-tp",
+      "definicion": "Protocolo para confirmar una transacción que abarca varios sistemas: primero se pregunta a todos si pueden, después se les ordena confirmar. Es correcto y es frágil: si el coordinador cae entre las dos fases, los participantes quedan bloqueados con los cerrojos tomados.",
+      "ver_tambien": [
+        "saga",
+        "consenso",
+        "atomicidad"
+      ]
+    },
+    {
+      "termino": "compensación",
+      "clase": "057",
+      "fuente": "helland-life-beyond-2007",
+      "definicion": "Operación de negocio que deshace el efecto de otra ya confirmada: reembolsar en vez de revertir, anular una reserva en vez de borrarla. No es un `ROLLBACK`, porque el estado intermedio existió y alguien pudo verlo.",
+      "ver_tambien": [
+        "saga",
+        "idempotencia",
+        "deshacer"
+      ]
+    },
+    {
+      "termino": "consenso",
+      "clase": "057",
+      "fuente": "ongaro-raft-2014",
+      "definicion": "Que un conjunto de nodos se ponga de acuerdo en un valor y no cambie de opinión, tolerando caídas de una minoría. Es el cimiento de la elección de líder, de la pertenencia al clúster y del commit atómico; Raft y Paxos son las dos formulaciones de referencia.",
+      "ver_tambien": [
+        "elección de líder",
+        "commit en dos fases",
+        "linealizabilidad"
+      ]
+    },
+    {
+      "termino": "elección de líder",
+      "clase": "057",
+      "fuente": "ongaro-raft-2014",
+      "definicion": "Procedimiento por el que la mayoría acuerda quién ordena las escrituras durante un mandato. Que se necesite mayoría es lo que impide dos líderes simultáneos —el escenario de cerebro dividido— cuando la red se parte.",
+      "ver_tambien": [
+        "consenso",
+        "partición de red",
+        "quórum"
+      ]
+    },
+    {
+      "termino": "saga",
+      "clase": "057",
+      "fuente": "helland-life-beyond-2007",
+      "definicion": "Secuencia de transacciones locales, cada una con su compensación, que sustituye a una transacción distribuida. Renuncia al aislamiento —los estados intermedios se ven— a cambio de no bloquear recursos entre servicios.",
+      "ver_tambien": [
+        "compensación",
+        "commit en dos fases",
+        "frontera transaccional"
+      ]
+    },
+    {
+      "termino": "prueba de restauración",
+      "clase": "058",
+      "fuente": "google-sre-book",
+      "definicion": "Restaurar la copia en un entorno limpio, comprobar la integridad de los datos y medir cuánto tardó. Un respaldo que nunca se ha restaurado no es un respaldo: es un fichero con nombre esperanzador.",
+      "ver_tambien": [
+        "RTO",
+        "evidencia",
+        "recuperación a un punto en el tiempo"
+      ]
+    },
+    {
+      "termino": "recuperación a un punto en el tiempo",
+      "clase": "058",
+      "fuente": "docs-postgresql-backup",
+      "definicion": "Restaurar una copia base y reaplicar el registro archivado hasta un instante concreto, justo antes del `DELETE` sin `WHERE`. Exige que el archivado del registro esté activo y verificado desde antes del incidente.",
+      "ver_tambien": [
+        "WAL",
+        "RPO",
+        "prueba de restauración"
+      ]
+    },
+    {
+      "termino": "RPO",
+      "clase": "058",
+      "fuente": "campbell-majors-dbre",
+      "definicion": "Objetivo de punto de recuperación: cuántos datos se acepta perder, medido en tiempo. Un RPO de cinco minutos obliga a archivar el registro al menos cada cinco minutos; si no está escrito y probado, el RPO real es «el que salga».",
+      "ver_tambien": [
+        "RTO",
+        "recuperación a un punto en el tiempo",
+        "durabilidad configurable"
+      ]
+    },
+    {
+      "termino": "RTO",
+      "clase": "058",
+      "fuente": "campbell-majors-dbre",
+      "definicion": "Objetivo de tiempo de recuperación: cuánto se acepta estar caído. Se mide restaurando de verdad y cronometrando, no estimando; casi siempre resulta ser varias veces mayor de lo que el equipo suponía.",
+      "ver_tambien": [
+        "RPO",
+        "prueba de restauración",
+        "presupuesto de error"
+      ]
+    },
+    {
+      "termino": "compatibilidad hacia atras",
+      "clase": "059",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Que el código nuevo siga entendiendo los datos escritos por el viejo, y que el viejo no se rompa con los del nuevo. Es obligatoria en cuanto el despliegue es gradual, porque durante un rato conviven las dos versiones.",
+      "ver_tambien": [
+        "expandir y contraer",
+        "independencia lógica",
+        "reversibilidad"
+      ]
+    },
+    {
+      "termino": "doble escritura",
+      "clase": "059",
+      "fuente": "ambler-sadalage-refactoring",
+      "definicion": "Fase transitoria en la que la aplicación escribe en la estructura vieja y en la nueva a la vez. Sostiene la migración mientras se rellena el histórico; hay que declarar desde el principio cuándo termina, porque si no se queda para siempre.",
+      "ver_tambien": [
+        "expandir y contraer",
+        "relleno",
+        "escritura dual"
+      ]
+    },
+    {
+      "termino": "expandir y contraer",
+      "clase": "059",
+      "fuente": "ambler-sadalage-refactoring",
+      "definicion": "Patrón de migración en tres tiempos: primero se añade lo nuevo sin quitar lo viejo, después se traslada el tráfico y se rellena, y solo cuando nadie usa lo antiguo se elimina. Es lo que permite desplegar esquema y código por separado sin ventana de caída.",
+      "ver_tambien": [
+        "doble escritura",
+        "relleno",
+        "compatibilidad hacia atras"
+      ]
+    },
+    {
+      "termino": "relleno",
+      "clase": "059",
+      "fuente": "ambler-sadalage-refactoring",
+      "definicion": "Copiar el histórico a la estructura nueva, por lotes y de forma reanudable, para no bloquear la tabla ni saturar el registro. Debe ser idempotente: se va a interrumpir y habrá que relanzarlo.",
+      "ver_tambien": [
+        "doble escritura",
+        "idempotencia",
+        "expandir y contraer"
+      ]
+    },
+    {
+      "termino": "privilegio mínimo",
+      "clase": "060",
+      "fuente": "nist-sp800-53",
+      "definicion": "Cada identidad recibe exactamente los permisos que necesita para su función y ninguno más. La comprobación práctica es incómoda y reveladora: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo.",
+      "ver_tambien": [
+        "rol",
+        "separación de funciones",
+        "defensa en profundidad"
+      ]
+    },
+    {
+      "termino": "rol",
+      "clase": "060",
+      "fuente": "docs-postgresql-rls",
+      "definicion": "Agrupación de privilegios que se concede a personas o a aplicaciones. Permite razonar sobre permisos por función en lugar de por individuo, y revocar el acceso de alguien sin tener que auditar cada objeto.",
+      "ver_tambien": [
+        "privilegio mínimo",
+        "separación de funciones",
+        "vista externa"
+      ]
+    },
+    {
+      "termino": "seguridad por fila",
+      "clase": "060",
+      "fuente": "docs-postgresql-rls",
+      "definicion": "Políticas que el motor añade automáticamente a cada consulta para que un usuario solo vea las filas que le corresponden. La ventaja sobre filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro.",
+      "ver_tambien": [
+        "vista externa",
+        "privilegio mínimo",
+        "seudonimización"
+      ]
+    },
+    {
+      "termino": "separación de funciones",
+      "clase": "060",
+      "fuente": "nist-sp800-53",
+      "definicion": "Que quien desarrolla no sea quien despliega en producción, y que quien opera no pueda borrar sus propias huellas de auditoría. Es un control organizativo antes que técnico, y sin él el registro de auditoría no prueba nada.",
+      "ver_tambien": [
+        "privilegio mínimo",
+        "rol",
+        "defensa en profundidad"
+      ]
+    },
+    {
+      "termino": "consulta parametrizada",
+      "clase": "061",
+      "fuente": "owasp-sqli-cheatsheet",
+      "definicion": "Enviar la sentencia y los valores por canales distintos, de modo que el motor nunca interprete el dato como código. Es la defensa completa contra la inyección SQL, no una mitigación: bien usada, no hay cadena de entrada que cambie la estructura de la consulta.",
+      "ver_tambien": [
+        "identificador dinamico",
+        "lista blanca",
+        "defensa en profundidad"
+      ]
+    },
+    {
+      "termino": "defensa en profundidad",
+      "clase": "061",
+      "fuente": "owasp-top10",
+      "definicion": "Poner varias barreras independientes, de modo que fallar una no baste: parametrizar, además dar privilegio mínimo, además registrar, además limitar por fila. Cada capa asume que las otras pueden fallar.",
+      "ver_tambien": [
+        "privilegio mínimo",
+        "lista blanca",
+        "seguridad por fila"
+      ]
+    },
+    {
+      "termino": "identificador dinamico",
+      "clase": "061",
+      "fuente": "owasp-sqli-cheatsheet",
+      "definicion": "El caso que los parámetros no cubren: nombres de tabla, de columna o la dirección de un `ORDER BY` no se pueden enviar como valor. La única solución correcta es validarlos contra una lista blanca cerrada, nunca escaparlos a mano.",
+      "ver_tambien": [
+        "lista blanca",
+        "consulta parametrizada"
+      ]
+    },
+    {
+      "termino": "lista blanca",
+      "clase": "061",
+      "fuente": "owasp-top10",
+      "definicion": "Permitir solo lo que está explícitamente enumerado y rechazar todo lo demás. Se prefiere a la lista negra porque no hay que anticipar todas las formas de atacar, solo todas las formas válidas de usar.",
+      "ver_tambien": [
+        "identificador dinamico",
+        "defensa en profundidad",
+        "CHECK"
+      ]
+    },
+    {
+      "termino": "consulta lenta",
+      "clase": "062",
+      "fuente": "campbell-majors-dbre",
+      "definicion": "Registro de las consultas que superan un umbral, agrupadas por forma —`pg_stat_statements` y equivalentes—. Lo que importa no es la más lenta, sino la que multiplica tiempo por frecuencia: mil consultas de 50 ms pesan más que una de 5 s.",
+      "ver_tambien": [
+        "percentil",
+        "estadística",
+        "costo frente a tiempo"
+      ]
+    },
+    {
+      "termino": "percentil",
+      "clase": "062",
+      "fuente": "dean-tail-at-scale-2013",
+      "definicion": "El valor por debajo del cual queda un porcentaje de las observaciones. La media oculta el problema; el p99 lo enseña. Y si una petición de usuario abre veinte consultas, casi todos los usuarios tocarán al menos una de la cola lenta.",
+      "ver_tambien": [
+        "presupuesto de error",
+        "consulta lenta",
+        "latencia frente a consistencia"
+      ]
+    },
+    {
+      "termino": "presupuesto de error",
+      "clase": "062",
+      "fuente": "google-sre-book",
+      "definicion": "Lo que resta entre el objetivo de servicio y el 100 %: con un SLO de 99,9 % se dispone de unos 43 minutos de fallo al mes. Convierte la fiabilidad en una cantidad que se gasta, y da una regla objetiva para decidir si se despliega o se estabiliza.",
+      "ver_tambien": [
+        "percentil",
+        "RTO",
+        "disponibilidad"
+      ]
+    },
+    {
+      "termino": "saturación",
+      "clase": "062",
+      "fuente": "google-sre-book",
+      "definicion": "Cuán lleno está el recurso más escaso: conexiones, entrada y salida, memoria, CPU. Es la señal que anticipa el incidente, porque la latencia se dispara de forma no lineal justo antes de que el recurso se agote.",
+      "ver_tambien": [
+        "percentil",
+        "proceso por conexión",
+        "estampida de caché"
+      ]
+    },
+    {
+      "termino": "derecho de supresión",
+      "clase": "063",
+      "fuente": "gdpr-2016-679",
+      "definicion": "Obligación de borrar los datos de una persona cuando lo solicita y no hay base para conservarlos. Choca de frente con los respaldos, las réplicas y los registros de auditoría, y por eso hay que diseñar dónde vive el dato personal antes de que lo pidan.",
+      "ver_tambien": [
+        "retención",
+        "limitación de finalidad",
+        "prueba de restauración"
+      ]
+    },
+    {
+      "termino": "limitación de finalidad",
+      "clase": "063",
+      "fuente": "gdpr-2016-679",
+      "definicion": "Los datos recogidos para un fin no pueden reutilizarse para otro incompatible sin nueva base legal. Es lo que impide que un correo pedido para la facturación acabe alimentando un modelo de recomendación.",
+      "ver_tambien": [
+        "minimización",
+        "retención",
+        "derecho de supresión"
+      ]
+    },
+    {
+      "termino": "minimización",
+      "clase": "063",
+      "fuente": "gdpr-2016-679",
+      "definicion": "Recoger solo los datos personales necesarios para la finalidad declarada. Es la medida de protección más eficaz que existe, porque el dato que no se guarda no se filtra, no hay que cifrarlo ni hay que borrarlo después.",
+      "ver_tambien": [
+        "limitación de finalidad",
+        "seudonimización",
+        "alcance"
+      ]
+    },
+    {
+      "termino": "seudonimización",
+      "clase": "063",
+      "fuente": "gdpr-2016-679",
+      "definicion": "Sustituir los identificadores directos por referencias, guardando por separado la tabla que permite revertirlo. Reduce el riesgo pero no convierte el dato en anónimo: mientras exista la clave, sigue siendo dato personal.",
+      "ver_tambien": [
+        "minimización",
+        "seguridad por fila",
+        "derecho de supresión"
+      ]
+    },
+    {
+      "termino": "carga analítica",
+      "clase": "064",
+      "fuente": "stonebraker-end-of-era-2007",
+      "definicion": "Pocas consultas que recorren millones de filas y agregan unas pocas columnas: OLAP. Favorece almacenamiento columnar, compresión y ejecución vectorizada, y tolera latencias de segundos.",
+      "ver_tambien": [
+        "carga transaccional",
+        "almacenamiento columnar",
+        "ejecución vectorizada"
+      ]
+    },
+    {
+      "termino": "carga transaccional",
+      "clase": "064",
+      "fuente": "stonebraker-end-of-era-2007",
+      "definicion": "Muchas operaciones pequeñas que leen y escriben pocas filas por identificador, con latencia de milisegundos: OLTP. Favorece filas juntas, índices B-Tree y transacciones cortas.",
+      "ver_tambien": [
+        "carga analítica",
+        "contención",
+        "patrón de acceso"
+      ]
+    },
+    {
+      "termino": "contención",
+      "clase": "064",
+      "fuente": "stonebraker-end-of-era-2007",
+      "definicion": "Lo que ocurre cuando la consulta analítica y la transaccional compiten por el mismo buffer, los mismos cerrojos y el mismo disco. Es la razón operativa —antes que la teórica— por la que el informe mensual acaba mudándose a otro sistema.",
+      "ver_tambien": [
+        "carga analítica",
+        "saturación",
+        "buffer pool"
+      ]
+    },
+    {
+      "termino": "formato de almacenamiento",
+      "clase": "064",
+      "fuente": "docs-duckdb",
+      "definicion": "Cómo se disponen los bytes en disco: por filas o por columnas, comprimidos o no, con o sin estadísticas por bloque. Es la decisión que explica la mayor parte de la diferencia de rendimiento entre OLTP y OLAP, muy por encima del lenguaje de consulta.",
+      "ver_tambien": [
+        "almacenamiento columnar",
+        "compresión",
+        "poda de particiones"
+      ]
+    },
+    {
+      "termino": "dimensión",
+      "clase": "065",
+      "fuente": "kimball-toolkit",
+      "definicion": "Tabla que describe el contexto por el que se filtra y se agrupa: producto, cliente, tiempo, sucursal. Se desnormaliza a propósito para evitar reuniones en cada consulta, y es donde vive casi todo el significado del modelo. (En la parte 13 la misma palabra designa otra cosa: el número de componentes de un vector.)",
+      "ver_tambien": [
+        "tabla de hechos",
+        "dimensión de cambio lento",
+        "espacio vectorial"
+      ]
+    },
+    {
+      "termino": "dimensión de cambio lento",
+      "clase": "065",
+      "fuente": "kimball-toolkit",
+      "definicion": "Técnica para tratar los atributos que cambian con el tiempo: sobrescribir y perder la historia (tipo 1), o añadir una fila nueva con vigencia y conservarla (tipo 2). Determina si un informe del año pasado sigue diciendo lo que decía entonces.",
+      "ver_tambien": [
+        "dimensión",
+        "identidad estable",
+        "retención"
+      ]
+    },
+    {
+      "termino": "grano",
+      "clase": "065",
+      "fuente": "kimball-toolkit",
+      "definicion": "Qué representa exactamente una fila de la tabla de hechos: ¿una venta, una línea de venta, un resumen diario? Es la primera decisión del modelo dimensional y la que no se puede corregir después sin rehacerlo todo.",
+      "ver_tambien": [
+        "tabla de hechos",
+        "doble conteo",
+        "dimensión"
+      ]
+    },
+    {
+      "termino": "tabla de hechos",
+      "clase": "065",
+      "fuente": "kimball-toolkit",
+      "definicion": "Tabla central del modelo dimensional: una fila por evento medible, con sus métricas numéricas y sus claves a las dimensiones. Crece indefinidamente y se consulta siempre agregando.",
+      "ver_tambien": [
+        "dimensión",
+        "grano",
+        "actividad"
+      ]
+    },
+    {
+      "termino": "CDC",
+      "clase": "066",
+      "fuente": "docs-debezium",
+      "definicion": "Captura de cambios: leer el registro de transacciones del origen para publicar cada `INSERT`, `UPDATE` y `DELETE` como un evento. Frente al muestreo periódico, no pierde cambios intermedios, no requiere columna de marca temporal y no carga el origen con consultas.",
+      "ver_tambien": [
+        "WAL",
+        "escritura dual",
+        "tiempo de evento"
+      ]
+    },
+    {
+      "termino": "ELT",
+      "clase": "066",
+      "fuente": "docs-dbt",
+      "definicion": "Cargar los datos en crudo y transformarlos dentro del almacén, con SQL versionado y probado. Es el enfoque dominante desde que el cómputo del almacén es barato, y su ventaja real es que la transformación queda auditable y se puede rehacer.",
+      "ver_tambien": [
+        "ETL",
+        "idempotencia de carga",
+        "carga analítica"
+      ]
+    },
+    {
+      "termino": "escritura dual",
+      "clase": "066",
+      "fuente": "kreps-log-2013",
+      "definicion": "Que la aplicación escriba a la vez en la base y en la cola. Parece la solución obvia y es un antipatrón: no hay atomicidad entre los dos destinos, así que tarde o temprano uno recibe lo que el otro no. La alternativa correcta es CDC o el patrón de bandeja de salida.",
+      "ver_tambien": [
+        "CDC",
+        "doble escritura",
+        "frontera transaccional"
+      ]
+    },
+    {
+      "termino": "ETL",
+      "clase": "066",
+      "fuente": "reis-housley-data-engineering",
+      "definicion": "Extraer, transformar y luego cargar: la transformación ocurre fuera del destino. Tiene sentido cuando el destino es caro o rígido, o cuando hay que limpiar datos personales antes de que entren.",
+      "ver_tambien": [
+        "ELT",
+        "CDC",
+        "minimización"
+      ]
+    },
+    {
+      "termino": "idempotencia de carga",
+      "clase": "066",
+      "fuente": "docs-dbt",
+      "definicion": "Que reprocesar el mismo lote no duplique ni corrompa el destino, gracias a una clave de negocio y a una operación de fusión. Es la condición para poder relanzar una carga fallida sin auditar a mano lo que había entrado.",
+      "ver_tambien": [
+        "idempotencia",
+        "entrega al menos una vez",
+        "relleno"
+      ]
+    },
+    {
+      "termino": "entrega al menos una vez",
+      "clase": "067",
+      "fuente": "docs-kafka",
+      "definicion": "Garantía de que ningún mensaje se pierde, admitiendo que alguno se repita. Es la garantía realista de las colas, y por eso el consumidor debe ser idempotente: el «exactamente una vez» de extremo a extremo se construye sobre esto, no en lugar de esto.",
+      "ver_tambien": [
+        "idempotencia",
+        "clave de idempotencia",
+        "idempotencia de carga"
+      ]
+    },
+    {
+      "termino": "marca de agua",
+      "clase": "067",
+      "fuente": "streaming-systems",
+      "definicion": "Estimación del sistema sobre hasta qué tiempo de evento ya llegó todo. Es lo que permite cerrar una ventana y emitir el resultado; siempre es una apuesta, y por eso hay que decidir explícitamente qué se hace con lo que llega tarde.",
+      "ver_tambien": [
+        "tiempo de evento",
+        "ventana",
+        "entrega al menos una vez"
+      ]
+    },
+    {
+      "termino": "tiempo de evento",
+      "clase": "067",
+      "fuente": "streaming-systems",
+      "definicion": "El instante en que el hecho ocurrió, frente al de proceso, que es cuando el sistema lo vio. Son distintos —un móvil sin cobertura envía tres horas después— y agrupar por el segundo cuando se quería el primero produce informes silenciosamente falsos.",
+      "ver_tambien": [
+        "marca de agua",
+        "ventana",
+        "fecha ISO-8601"
+      ]
+    },
+    {
+      "termino": "ventana",
+      "clase": "067",
+      "fuente": "streaming-systems",
+      "definicion": "Recorte temporal sobre el que se agrega un flujo: fija, deslizante o de sesión. Es lo que convierte un flujo infinito en resultados finitos que se pueden emitir.",
+      "ver_tambien": [
+        "marca de agua",
+        "agregado continuo",
+        "marco"
+      ]
+    },
+    {
+      "termino": "coseno",
+      "clase": "068",
+      "fuente": "docs-pgvector",
+      "definicion": "Medida de similitud basada en el ángulo entre dos vectores, que ignora su magnitud. Es la métrica habitual con embeddings de texto, donde importa la dirección del significado y no la longitud del documento.",
+      "ver_tambien": [
+        "producto interno",
+        "normalización",
+        "espacio vectorial"
+      ]
+    },
+    {
+      "termino": "espacio vectorial",
+      "clase": "068",
+      "fuente": "karpukhin-dpr-2020",
+      "definicion": "Representación de un texto, una imagen o un usuario como un punto de N coordenadas, colocado por un modelo de forma que la cercanía refleje parecido semántico. El parecido es el que aprendió ese modelo concreto: cambiar de modelo cambia el significado de «cerca».",
+      "ver_tambien": [
+        "coseno",
+        "dimensión",
+        "normalización"
+      ]
+    },
+    {
+      "termino": "normalización",
+      "clase": "068",
+      "fuente": "docs-pgvector",
+      "definicion": "Escalar cada vector a longitud 1. Hace equivalentes coseno y producto interno y permite usar el índice más rápido sin cambiar el orden de los resultados; es un paso rutinario que conviene declarar, porque mezclar vectores normalizados y sin normalizar arruina la búsqueda.",
+      "ver_tambien": [
+        "coseno",
+        "producto interno",
+        "cuantización"
+      ]
+    },
+    {
+      "termino": "producto interno",
+      "clase": "068",
+      "fuente": "johnson-faiss-2019",
+      "definicion": "Métrica que sí tiene en cuenta la magnitud, útil cuando el modelo codifica intensidad en la norma del vector. Sobre vectores normalizados es equivalente al coseno, y de ahí que normalizar simplifique la elección.",
+      "ver_tambien": [
+        "coseno",
+        "normalización",
+        "espacio vectorial"
+      ]
+    },
+    {
+      "termino": "búsqueda aproximada",
+      "clase": "069",
+      "fuente": "malkov-hnsw-2018",
+      "definicion": "Renunciar a encontrar con certeza los K vecinos más cercanos a cambio de responder en milisegundos en lugar de en minutos. La búsqueda exacta compara contra todos los vectores; la aproximada explora solo una parte del espacio y acepta perderse algunos.",
+      "ver_tambien": [
+        "recall",
+        "HNSW",
+        "latencia frente a exactitud"
+      ]
+    },
+    {
+      "termino": "cuantización",
+      "clase": "069",
+      "fuente": "johnson-faiss-2019",
+      "definicion": "Comprimir los vectores usando menos bits por componente —escalar, binaria o por producto—. Reduce la memoria en un orden de magnitud a cambio de precisión, y suele combinarse con un reordenamiento final sobre los vectores completos.",
+      "ver_tambien": [
+        "compresión",
+        "recall",
+        "HNSW"
+      ]
+    },
+    {
+      "termino": "HNSW",
+      "clase": "069",
+      "fuente": "malkov-hnsw-2018",
+      "definicion": "Grafo navegable de mundo pequeño por capas: las capas altas dan saltos largos y las bajas afinan. Da el mejor compromiso entre recall y latencia de los índices actuales, a costa de un uso de memoria alto y una construcción lenta.",
+      "ver_tambien": [
+        "búsqueda aproximada",
+        "cuantización",
+        "recorrido de profundidad variable"
+      ]
+    },
+    {
+      "termino": "latencia frente a exactitud",
+      "clase": "069",
+      "fuente": "malkov-hnsw-2018",
+      "definicion": "El compromiso que gobiernan los parámetros del índice (`ef_search`, `nprobe`): explorar más nodos sube el recall y el tiempo de respuesta. No hay valor correcto universal; se elige midiendo con los datos y las consultas reales.",
+      "ver_tambien": [
+        "recall",
+        "búsqueda aproximada",
+        "percentil"
+      ]
+    },
+    {
+      "termino": "recall",
+      "clase": "069",
+      "fuente": "johnson-faiss-2019",
+      "definicion": "Qué proporción de los verdaderos K vecinos devolvió el índice aproximado. Es la métrica que hay que medir contra una búsqueda exhaustiva antes de dar por buena una configuración; sin ese número, «funciona» significa «devolvió algo».",
+      "ver_tambien": [
+        "búsqueda aproximada",
+        "recall@k",
+        "precisión y exhaustividad"
+      ]
+    },
+    {
+      "termino": "filtro posterior",
+      "clase": "070",
+      "fuente": "docs-qdrant",
+      "definicion": "Buscar primero y filtrar después. Es simple y tiene un fallo característico: si de los K vecinos ninguno cumple el filtro, la respuesta llega vacía aunque existieran resultados válidos algo más lejos.",
+      "ver_tambien": [
+        "filtro previo",
+        "recall",
+        "búsqueda aproximada"
+      ]
+    },
+    {
+      "termino": "filtro previo",
+      "clase": "070",
+      "fuente": "docs-qdrant",
+      "definicion": "Aplicar el filtro de metadatos antes de la búsqueda vectorial, de modo que solo se exploren los candidatos admisibles. Conserva el número de resultados pedido, pero puede degradar la navegación del grafo si el filtro es muy selectivo.",
+      "ver_tambien": [
+        "filtro posterior",
+        "HNSW",
+        "selectividad"
+      ]
+    },
+    {
+      "termino": "fusión de rangos",
+      "clase": "070",
+      "fuente": "docs-opensearch",
+      "definicion": "Combinar dos listas ordenadas —la léxica y la vectorial— en una sola. La fusión recíproca de rangos suma el inverso de la posición en cada lista, y funciona bien precisamente porque no exige que las puntuaciones de ambos sistemas sean comparables entre sí.",
+      "ver_tambien": [
+        "BM25",
+        "filtro previo",
+        "recall@k"
+      ]
+    },
+    {
+      "termino": "fragmentación",
+      "clase": "071",
+      "fuente": "lewis-rag-2020",
+      "definicion": "Cómo se parte el documento antes de vectorizarlo: por tamaño, por párrafo, por sección, con o sin solape. Es la decisión que más mueve la calidad de un RAG y la que más se toma por defecto sin medirla.",
+      "ver_tambien": [
+        "recall@k",
+        "espacio vectorial",
+        "trazabilidad de la cita"
+      ]
+    },
+    {
+      "termino": "MRR",
+      "clase": "071",
+      "fuente": "karpukhin-dpr-2020",
+      "definicion": "Rango recíproco medio: la media de 1 dividido por la posición del primer resultado relevante. Premia colocar arriba la respuesta correcta, que es justo lo que importa cuando solo se van a leer los tres primeros fragmentos.",
+      "ver_tambien": [
+        "recall@k",
+        "precisión@k",
+        "fusión de rangos"
+      ]
+    },
+    {
+      "termino": "precisión@k",
+      "clase": "071",
+      "fuente": "robertson-bm25-2009",
+      "definicion": "Qué proporción de los K devueltos era relevante. Importa porque el contexto es finito y caro: llenar la ventana de ruido desplaza a los fragmentos que sí servían.",
+      "ver_tambien": [
+        "recall@k",
+        "MRR",
+        "precisión y exhaustividad"
+      ]
+    },
+    {
+      "termino": "recall@k",
+      "clase": "071",
+      "fuente": "lewis-rag-2020",
+      "definicion": "Qué proporción de los documentos relevantes aparece entre los K primeros resultados. Es la métrica que gobierna un sistema RAG: si el fragmento correcto no entra en el contexto, ningún modelo de lenguaje podrá responder bien.",
+      "ver_tambien": [
+        "precisión@k",
+        "MRR",
+        "recall"
+      ]
+    },
+    {
+      "termino": "trazabilidad de la cita",
+      "clase": "071",
+      "fuente": "lewis-rag-2020",
+      "definicion": "Que cada afirmación de la respuesta pueda seguirse hasta el fragmento y el documento del que salió. Es lo que permite auditar el sistema y detectar la alucinación; sin ella no hay forma de distinguir una respuesta correcta de una convincente.",
+      "ver_tambien": [
+        "fragmentación",
+        "evidencia",
+        "defensa técnica"
+      ]
+    },
+    {
+      "termino": "carga de trabajo",
+      "clase": "072",
+      "fuente": "kleppmann-ddia",
+      "definicion": "La descripción cuantificada de lo que el sistema tendrá que aguantar: volumen, proporción de lecturas y escrituras, latencia objetivo, consultas dominantes, crecimiento previsto. Es lo que convierte la elección de motor en una decisión técnica y no en una preferencia.",
+      "ver_tambien": [
+        "patrón de acceso",
+        "criterio de selección",
+        "percentil"
+      ]
+    },
+    {
+      "termino": "complejidad añadida",
+      "clase": "072",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Lo que cuesta cada sistema adicional: otro modelo de fallo, otro respaldo, otra guardia, otra consistencia que reconciliar. Es el argumento más fuerte a favor de un solo motor multimodelo mientras la carga lo permita.",
+      "ver_tambien": [
+        "costo de operación",
+        "multimodelo",
+        "costo total de propiedad"
+      ]
+    },
+    {
+      "termino": "criterio de selección",
+      "clase": "072",
+      "fuente": "sadalage-fowler-nosql",
+      "definicion": "La lista escrita de propiedades que se van a comparar entre candidatos, con su peso, fijada antes de mirar los productos. Escribirla después es escribir la justificación de lo que ya se había decidido.",
+      "ver_tambien": [
+        "carga de trabajo",
+        "ADR",
+        "complejidad añadida"
+      ]
+    },
+    {
+      "termino": "ADR",
+      "clase": "073",
+      "fuente": "redbook5",
+      "definicion": "Registro de decisión de arquitectura: un documento corto y numerado con el contexto, la decisión, las alternativas descartadas y las consecuencias. Su valor aparece dos años después, cuando alguien pregunta por qué esto es así y nadie lo recuerda.",
+      "ver_tambien": [
+        "contexto",
+        "consecuencia",
+        "reversibilidad"
+      ]
+    },
+    {
+      "termino": "consecuencia",
+      "clase": "073",
+      "fuente": "redbook5",
+      "definicion": "Lo que la decisión hace más fácil y lo que hace más difícil, incluidas las consecuencias negativas aceptadas. Un ADR que solo lista ventajas no es un registro de decisión: es un anuncio.",
+      "ver_tambien": [
+        "ADR",
+        "contexto",
+        "límite declarado"
+      ]
+    },
+    {
+      "termino": "contexto",
+      "clase": "073",
+      "fuente": "redbook5",
+      "definicion": "La sección del ADR que describe las fuerzas del momento: restricciones, plazos, volúmenes y lo que se sabía entonces. Es lo que permite juzgar la decisión con justicia después, y lo que indica cuándo dejó de ser válida.",
+      "ver_tambien": [
+        "ADR",
+        "consecuencia",
+        "reversibilidad"
+      ]
+    },
+    {
+      "termino": "costo total de propiedad",
+      "clase": "073",
+      "fuente": "campbell-majors-dbre",
+      "definicion": "La suma a varios años de licencias, infraestructura, personas, formación y migración de salida. Comparar solo el precio por hora de cómputo suele invertir el orden del ranking en cuanto se añaden las horas de operación.",
+      "ver_tambien": [
+        "costo de operación",
+        "complejidad añadida",
+        "reversibilidad"
+      ]
+    },
+    {
+      "termino": "reversibilidad",
+      "clase": "073",
+      "fuente": "reis-housley-data-engineering",
+      "definicion": "Cuánto cuesta deshacer la decisión si resulta equivocada. Es el criterio que decide cuánto análisis merece: una decisión barata de revertir se prueba, una cara se estudia antes.",
+      "ver_tambien": [
+        "ADR",
+        "costo total de propiedad",
+        "compatibilidad hacia atras"
+      ]
+    },
+    {
+      "termino": "defensa técnica",
+      "clase": "074",
+      "fuente": "redbook5",
+      "definicion": "Sostener una decisión ante preguntas hostiles: por qué este motor, qué mediste, qué alternativa descartaste y con qué dato. Es el formato de evaluación del proyecto final porque es el formato real de una revisión de arquitectura.",
+      "ver_tambien": [
+        "evidencia reproducible",
+        "límite declarado",
+        "ADR"
+      ]
+    },
+    {
+      "termino": "evidencia reproducible",
+      "clase": "074",
+      "fuente": "google-sre-book",
+      "definicion": "Mediciones que otra persona puede repetir: comando, versión, datos, semilla y salida. Sin ellas, un número de rendimiento en una defensa es una afirmación, y se le puede oponer cualquier otra.",
+      "ver_tambien": [
+        "evidencia",
+        "reproducibilidad",
+        "defensa técnica"
+      ]
+    },
+    {
+      "termino": "límite declarado",
+      "clase": "074",
+      "fuente": "kent-data-and-reality",
+      "definicion": "Lo que el trabajo explícitamente no demuestra: escala no probada, fallos no simulados, supuestos del entorno. Declararlo aumenta la credibilidad en lugar de restarla, porque distingue lo medido de lo esperado.",
+      "ver_tambien": [
+        "alcance",
+        "consecuencia",
+        "evidencia reproducible"
+      ]
+    },
+    {
+      "termino": "plan de evolución",
+      "clase": "074",
+      "fuente": "kleppmann-ddia",
+      "definicion": "Qué se haría al multiplicar por diez el volumen, y qué señal indicaría que ha llegado el momento. Convierte una arquitectura en una decisión con fecha de revisión en lugar de en una apuesta permanente.",
+      "ver_tambien": [
+        "reversibilidad",
+        "ADR",
+        "carga de trabajo"
+      ]
+    }
+  ]
+}

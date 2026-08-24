@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>norma frente a producto</code> · <code>matriz de portabilidad</code> · <code>extensión propietaria</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Qué exige la norma ISO/IEC 9075 y qué añade cada producto por su cuenta. El resultado de la clase no es una opinión sobre portabilidad sino un artefacto: una matriz que registra, construcción por construcción, si es de norma y cómo la escribe cada motor del proyecto.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 030&quot;]
     C --&gt; K1[&quot;norma frente a producto&quot;]
@@ -71,6 +74,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="024.html">024</a></td>
+<td>DDL: el esquema como contrato ejecutable</td>
+<td>tipo de dato · restricción · valor por defecto · DDL transaccional</td>
+</tr>
+<tr>
+<td><a href="029.html">029</a></td>
+<td>Nulos y lógica de tres valores</td>
+<td>UNKNOWN · IS DISTINCT FROM · NOT IN con nulos · agregados y nulos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-norma-frente-a-producto"></a><strong>norma frente a producto</strong></td>
+<td>La distinción entre lo que exige ISO/IEC 9075 y lo que cada motor añade por su cuenta. Ningún producto implementa la norma entera y todos la extienden; saber en qué lado está cada línea de tu código es lo que decide si una migración de motor cuesta un día o un trimestre.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-matriz-de-portabilidad"></a><strong>matriz de portabilidad</strong></td>
+<td>Tabla que registra, para cada construcción usada, si es de norma y cómo la escribe cada motor del proyecto. Convierte la portabilidad en un artefacto revisable en lugar de en una intención declarada en la primera reunión.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-extensión-propietaria"></a><strong>extensión propietaria</strong></td>
+<td>Sintaxis o función que solo existe en un motor: <code>LIMIT</code> frente a <code>FETCH FIRST</code>, <code>ON CONFLICT</code> frente a <code>MERGE</code>, tipos de arreglo, <code>RETURNING</code>. Usarlas es legítimo y a menudo correcto; lo que no lo es, es usarlas sin saber que se está atando el proyecto a ese producto.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir SQL que sobreviva a un cambio de motor, y saber exactamente dónde se paga por no hacerlo. La portabilidad total no existe; la portabilidad <em>gestionada</em> sí.</p>

@@ -12,6 +12,10 @@ Parte 13 — Vectores, recuperación y RAG · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los índices que hacen viable la búsqueda vectorial renunciando a la exactitud. HNSW e IVF con sus parámetros, la cuantización que cambia memoria por precisión, y la disciplina que la clase impone: medir el recall contra una búsqueda exhaustiva antes de dar por buena una configuración, porque sin ese número «funciona» solo significa «devolvió algo».
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 069"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [068](../../part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md) | Embeddings y métricas de distancia: qué significa parecido | espacio vectorial · coseno · producto interno · normalización · dimensión |
+| [049](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md) | B-Tree: estructura, orden de columnas y selectividad | B-Tree · prefijo más a la izquierda · selectividad · índice cubriente |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-búsqueda-aproximada"></a>**búsqueda aproximada** | Renunciar a encontrar con certeza los K vecinos más cercanos a cambio de responder en milisegundos en lugar de en minutos. La búsqueda exacta compara contra todos los vectores; la aproximada explora solo una parte del espacio y acepta perderse algunos. | se introduce aquí |
+| <a id="v-recall"></a>**recall** | Qué proporción de los verdaderos K vecinos devolvió el índice aproximado. Es la métrica que hay que medir contra una búsqueda exhaustiva antes de dar por buena una configuración; sin ese número, «funciona» significa «devolvió algo». | se introduce aquí |
+| <a id="v-hnsw"></a>**HNSW** | Grafo navegable de mundo pequeño por capas: las capas altas dan saltos largos y las bajas afinan. Da el mejor compromiso entre recall y latencia de los índices actuales, a costa de un uso de memoria alto y una construcción lenta. | se introduce aquí |
+| <a id="v-cuantización"></a>**cuantización** | Comprimir los vectores usando menos bits por componente —escalar, binaria o por producto—. Reduce la memoria en un orden de magnitud a cambio de precisión, y suele combinarse con un reordenamiento final sobre los vectores completos. | se introduce aquí |
+| <a id="v-latencia-frente-a-exactitud"></a>**latencia frente a exactitud** | El compromiso que gobiernan los parámetros del índice (`ef_search`, `nprobe`): explorar más nodos sube el recall y el tiempo de respuesta. No hay valor correcto universal; se elige midiendo con los datos y las consultas reales. | se introduce aquí |
 
 ---
 

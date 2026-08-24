@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>consulta parametrizada</code> · <code>identificador dinamico</code> · <code>lista blanca</code> · <code>defensa en profundidad</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La inyección SQL explicada por su causa —mezclar código y datos en la misma cadena— y su solución completa: la consulta parametrizada, que no es una mitigación sino una defensa total. Cubre además el caso que los parámetros no resuelven, los identificadores dinámicos, que solo se validan con lista blanca.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 061&quot;]
     C --&gt; K1[&quot;consulta parametrizada&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+<tr>
+<td><a href="024.html">024</a></td>
+<td>DDL: el esquema como contrato ejecutable</td>
+<td>tipo de dato · restricción · valor por defecto · DDL transaccional</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-consulta-parametrizada"></a><strong>consulta parametrizada</strong></td>
+<td>Enviar la sentencia y los valores por canales distintos, de modo que el motor nunca interprete el dato como código. Es la defensa completa contra la inyección SQL, no una mitigación: bien usada, no hay cadena de entrada que cambie la estructura de la consulta.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-identificador-dinamico"></a><strong>identificador dinamico</strong></td>
+<td>El caso que los parámetros no cubren: nombres de tabla, de columna o la dirección de un <code>ORDER BY</code> no se pueden enviar como valor. La única solución correcta es validarlos contra una lista blanca cerrada, nunca escaparlos a mano.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-lista-blanca"></a><strong>lista blanca</strong></td>
+<td>Permitir solo lo que está explícitamente enumerado y rechazar todo lo demás. Se prefiere a la lista negra porque no hay que anticipar todas las formas de atacar, solo todas las formas válidas de usar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-defensa-en-profundidad"></a><strong>defensa en profundidad</strong></td>
+<td>Poner varias barreras independientes, de modo que fallar una no baste: parametrizar, además dar privilegio mínimo, además registrar, además limitar por fila. Cada capa asume que las otras pueden fallar.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Eliminar la inyección SQL por construcción, entendiendo por qué la parametrización funciona y qué casos no cubre — que son justamente donde siguen apareciendo las vulnerabilidades.</p>

@@ -12,6 +12,10 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El método de trabajo del resto del programa: entorno en contenedor con la versión fijada, datos generados con semilla declarada, invariantes escritos y evidencia que otra persona pueda reproducir. Es la clase que convierte «me funcionó» en un resultado defendible.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 014"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [011](../../part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md) | Qué resuelve un sistema de bases de datos y qué no | persistencia · concurrencia · integridad · recuperación · independencia de datos |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-reproducibilidad"></a>**reproducibilidad** | Que otra persona, en otra máquina, obtenga el mismo resultado con las instrucciones dadas. Exige fijar versión del motor, datos de partida y semilla; sin eso, una medición es una anécdota. | se introduce aquí |
+| <a id="v-semilla"></a>**semilla** | El número que fija la secuencia de un generador pseudoaleatorio. Declararla convierte un conjunto de datos «aleatorio» en uno reproducible, que es la condición para poder comparar dos ejecuciones. | se introduce aquí |
+| <a id="v-contenedor"></a>**contenedor** | Entorno de ejecución aislado con el motor y su versión congelados. Elimina el «en mi máquina funciona» y convierte la versión del motor en parte de la evidencia, no en un detalle olvidado. | se introduce aquí |
+| <a id="v-invariante"></a>**invariante** | Algo que tiene que ser verdad siempre en el sistema: «ningún pedido sin cliente», «el saldo nunca es negativo». Un invariante que no está comprobado por una restricción o una prueba es un deseo. | se introduce aquí |
+| <a id="v-evidencia"></a>**evidencia** | La salida real de un comando, con su versión y sus parámetros, que respalda una afirmación. Una captura sin comando no es evidencia, porque no se puede repetir. | se introduce aquí |
 
 ---
 
