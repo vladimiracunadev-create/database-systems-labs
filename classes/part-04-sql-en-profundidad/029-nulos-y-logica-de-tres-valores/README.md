@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La lógica de tres valores y sus consecuencias prácticas: `NOT IN` que devuelve vacío por un solo nulo, agregados que ignoran ausencias y comparaciones que nunca son ciertas. Presenta `IS DISTINCT FROM` como la forma correcta de comparar columnas opcionales, que reaparece al detectar cambios en una migración.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 029"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+| [025](../../part-04-sql-en-profundidad/025-select-filtrado-proyeccion-y-orden/README.md) | SELECT: filtrado, proyección y orden con semántica precisa | predicado · orden de evaluación · colación · determinismo de orden |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-unknown"></a>**UNKNOWN** | El tercer valor de verdad de SQL, resultado de comparar con un nulo. No es verdadero ni falso: `NOT UNKNOWN` sigue siendo `UNKNOWN`, y un `WHERE` que se evalúa a `UNKNOWN` descarta la fila igual que si fuera falso. | se introduce aquí |
+| <a id="v-is-distinct-from"></a>**IS DISTINCT FROM** | Comparación que trata el nulo como un valor más: dos nulos son iguales y un nulo es distinto de cualquier valor, sin producir `UNKNOWN`. Es la forma correcta de comparar columnas opcionales, por ejemplo al detectar cambios en una migración. | se introduce aquí |
+| <a id="v-not-in-con-nulos"></a>**NOT IN con nulos** | Trampa clásica: si la lista o la subconsulta de un `NOT IN` contiene un solo nulo, el predicado nunca es verdadero y el resultado es vacío. `NOT EXISTS` no tiene ese problema y es la sustitución recomendada. | se introduce aquí |
+| <a id="v-agregados-y-nulos"></a>**agregados y nulos** | Las funciones de agregado ignoran los nulos, salvo `COUNT(*)` que cuenta filas. Por eso `COUNT(columna)` y `COUNT(*)` difieren, y por eso un `AVG` sobre una columna con huecos es la media de los presentes, no del total. | se introduce aquí |
 
 ---
 

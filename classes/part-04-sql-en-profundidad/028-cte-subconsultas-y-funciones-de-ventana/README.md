@@ -12,6 +12,10 @@ Parte 04 — SQL en profundidad · Intermedio ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las herramientas para consultas que no caben en una sola expresión: CTE para nombrar pasos, recursión para recorrer jerarquías y funciones de ventana para calcular por grupo sin perder el detalle. La sutileza que más resultados cambia es el marco por defecto de una ventana con `ORDER BY`.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 028"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [026](../../part-04-sql-en-profundidad/026-reuniones-inner-outer-semi-y-anti/README.md) | Reuniones: interna, externa, semi y anti | reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas |
+| [027](../../part-04-sql-en-profundidad/027-agregacion-group-by-y-having/README.md) | Agregación, GROUP BY y HAVING sin duplicar filas | agrupación · agregado · HAVING · doble conteo · dependencia funcional en GROUP BY |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-cte"></a>**CTE** | Expresión de tabla común (`WITH … AS`): un resultado con nombre, visible en la consulta que la sigue. Sirve para nombrar pasos intermedios y hacer legible una consulta larga; en algunos motores es además una barrera de optimización, y eso puede ayudar o estorbar. | se introduce aquí |
+| <a id="v-recursión"></a>**recursión** | `WITH RECURSIVE`: una CTE que se referencia a sí misma para recorrer jerarquías y grafos —organigramas, listas de materiales, caminos—. Necesita siempre una condición de parada; sin ella el motor recorre hasta agotar la memoria. | se introduce aquí |
+| <a id="v-subconsulta-correlacionada"></a>**subconsulta correlacionada** | Subconsulta que referencia una columna de la consulta externa y por tanto se evalúa en función de cada fila. Conceptualmente es un bucle; los optimizadores modernos suelen convertirla en una reunión, pero conviene comprobarlo en el plan y no suponerlo. | se introduce aquí |
+| <a id="v-partición-de-ventana"></a>**partición de ventana** | El `PARTITION BY` de una función de ventana: divide las filas en grupos para calcular el agregado dentro de cada uno, pero sin colapsarlas. Es la diferencia esencial con `GROUP BY`: la ventana conserva el detalle y añade el cálculo al lado. | se introduce aquí |
+| <a id="v-marco"></a>**marco** | El `ROWS`/`RANGE BETWEEN` que define qué filas de la partición entran en el cálculo de cada fila. Su valor por defecto no es «toda la partición» cuando hay `ORDER BY`, y esa sutileza cambia el resultado de una suma acumulada. | se introduce aquí |
 
 ---
 

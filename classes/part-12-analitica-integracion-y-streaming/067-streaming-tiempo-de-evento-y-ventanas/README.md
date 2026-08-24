@@ -12,6 +12,10 @@ Parte 12 — Analítica, integración y streaming · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El procesamiento continuo y su distinción fundacional: tiempo de evento frente a tiempo de proceso. La marca de agua permite cerrar una ventana sabiendo que es una apuesta, y la entrega al menos una vez obliga a que el consumidor sea idempotente —el «exactamente una vez» se construye sobre eso, no en lugar de eso.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 067"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [066](../../part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md) | Integración: ETL, ELT, captura de cambios y el registro como nexo | ETL · ELT · CDC · escritura dual · idempotencia de carga |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-tiempo-de-evento"></a>**tiempo de evento** | El instante en que el hecho ocurrió, frente al de proceso, que es cuando el sistema lo vio. Son distintos —un móvil sin cobertura envía tres horas después— y agrupar por el segundo cuando se quería el primero produce informes silenciosamente falsos. | se introduce aquí |
+| <a id="v-marca-de-agua"></a>**marca de agua** | Estimación del sistema sobre hasta qué tiempo de evento ya llegó todo. Es lo que permite cerrar una ventana y emitir el resultado; siempre es una apuesta, y por eso hay que decidir explícitamente qué se hace con lo que llega tarde. | se introduce aquí |
+| <a id="v-ventana"></a>**ventana** | Recorte temporal sobre el que se agrega un flujo: fija, deslizante o de sesión. Es lo que convierte un flujo infinito en resultados finitos que se pueden emitir. | se introduce aquí |
+| <a id="v-entrega-al-menos-una-vez"></a>**entrega al menos una vez** | Garantía de que ningún mensaje se pierde, admitiendo que alguno se repita. Es la garantía realista de las colas, y por eso el consumidor debe ser idempotente: el «exactamente una vez» de extremo a extremo se construye sobre esto, no en lugar de esto. | se introduce aquí |
 
 ---
 

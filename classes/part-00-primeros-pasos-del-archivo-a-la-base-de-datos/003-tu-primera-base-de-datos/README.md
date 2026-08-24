@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La primera base de datos real, creada, poblada y consultada en la misma sesión. Introduce la separación entre definir estructuras y manipular contenido, y la primera aparición del nulo. A partir de aquí todo el programa se puede ejecutar, no solo leer.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 003"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [001](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/README.md) | Qué es un dato, un registro y una tabla | dato · información · registro · campo · tabla |
+| [002](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) | Del archivo y la hoja de cálculo a la base de datos | integridad declarada · concurrencia · consulta declarativa · durabilidad |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-create-table"></a>**CREATE TABLE** | La orden que declara una tabla: columnas, tipos y restricciones. Es el contrato; a partir de ahí el motor rechaza todo lo que no lo cumpla, venga de donde venga. | se introduce aquí |
+| <a id="v-insert"></a>**INSERT** | La orden que añade filas. Falla —y debe fallar— si la fila viola una restricción declarada: es el momento en que la integridad declarada demuestra que sirve para algo. | se introduce aquí |
+| <a id="v-select"></a>**SELECT** | La orden de lectura. Nunca modifica datos; describe el conjunto que se quiere y deja al motor la estrategia para producirlo. | se introduce aquí |
+| <a id="v-definición-frente-a-manipulación"></a>**definición frente a manipulación** | SQL se separa en DDL, que define y cambia estructuras (`CREATE`, `ALTER`, `DROP`), y DML, que consulta y cambia contenido (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). La distinción importa porque no todos los motores dan al DDL las mismas garantías transaccionales. | se introduce aquí |
+| <a id="v-null"></a>**NULL** | Marca de ausencia de valor: no es cero, ni cadena vacía, ni «desconocido» codificado a mano. Introduce una lógica de tres valores que cambia el resultado de comparaciones, agregados y `NOT IN`. | se introduce aquí |
 
 ---
 

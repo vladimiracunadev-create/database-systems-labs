@@ -12,6 +12,10 @@ Parte 03 — Modelo relacional y álgebra · Intermedio ·
 
 **En este caso se comparan 5 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El cálculo relacional y el teorema que lo hace equivalente al álgebra. No es formalismo por gusto: esa equivalencia es exactamente el permiso que tiene el optimizador para reescribir tu consulta, y la razón de que SQL pueda ser declarativo.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 022"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [021](../../part-03-modelo-relacional-y-algebra/021-algebra-relacional-operadores/README.md) | Álgebra relacional: selección, proyección, producto y reunión | selección · proyección · producto cartesiano · reunión natural · división |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-cálculo-de-tuplas"></a>**cálculo de tuplas** | Formalismo que describe el resultado con una fórmula lógica —«las tuplas t tales que…»— en lugar de con una secuencia de operadores. Es el antepasado directo de SQL y la razón formal de que SQL sea declarativo. | se introduce aquí |
+| <a id="v-seguridad-de-expresión"></a>**seguridad de expresión** | Condición que garantiza que una fórmula del cálculo devuelve un resultado finito. `{t \| ¬P(t)}` no es segura: «todo lo que no cumple P» incluye el universo entero. Es la razón de que SQL obligue a nombrar siempre un `FROM`. | se introduce aquí |
+| <a id="v-equivalencia"></a>**equivalencia** | Dos expresiones son equivalentes si devuelven la misma relación para toda base de datos posible. Codd demostró que álgebra y cálculo tienen el mismo poder expresivo; sobre ese teorema descansa la libertad del optimizador para reescribir consultas. | se introduce aquí |
+| <a id="v-declaratividad"></a>**declaratividad** | Decir qué se quiere, no cómo obtenerlo. Su valor práctico es que el motor puede cambiar de estrategia —de recorrido completo a índice, de reunión anidada a hash— cuando cambian los datos, sin que nadie toque el código. | se introduce aquí |
 
 ---
 

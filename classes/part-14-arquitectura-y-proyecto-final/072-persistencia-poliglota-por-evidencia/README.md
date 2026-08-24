@@ -12,6 +12,10 @@ Parte 14 — Arquitectura y proyecto final · Avanzado ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La elección de motores hecha como decisión técnica: carga de trabajo cuantificada, criterio de comparación escrito antes de mirar los productos, y la complejidad añadida contada como lo que cuesta —otro modelo de fallo, otro respaldo, otra guardia. Es la clase que convierte las catorce partes anteriores en un método de decisión.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 072"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [010](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md) | El mapa de los motores: seis familias y un criterio | familias de motores · modelo de agregado · patrón de acceso · multimodelo |
+| [064](../../part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md) | OLTP frente a OLAP: por qué se separan | carga transaccional · carga analítica · contención · formato de almacenamiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-carga-de-trabajo"></a>**carga de trabajo** | La descripción cuantificada de lo que el sistema tendrá que aguantar: volumen, proporción de lecturas y escrituras, latencia objetivo, consultas dominantes, crecimiento previsto. Es lo que convierte la elección de motor en una decisión técnica y no en una preferencia. | se introduce aquí |
+| <a id="v-criterio-de-selección"></a>**criterio de selección** | La lista escrita de propiedades que se van a comparar entre candidatos, con su peso, fijada antes de mirar los productos. Escribirla después es escribir la justificación de lo que ya se había decidido. | se introduce aquí |
+| <a id="v-costo-de-operación"></a>**costo de operación** | Todo lo que cuesta mantener vivo un motor después de instalarlo: respaldos probados, actualizaciones, monitorización, personas de guardia. Suele superar con creces el costo de licencia o de cómputo. | se introdujo en la [009](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) |
+| <a id="v-complejidad-añadida"></a>**complejidad añadida** | Lo que cuesta cada sistema adicional: otro modelo de fallo, otro respaldo, otra guardia, otra consistencia que reconciliar. Es el argumento más fuerte a favor de un solo motor multimodelo mientras la carga lo permita. | se introduce aquí |
 
 ---
 

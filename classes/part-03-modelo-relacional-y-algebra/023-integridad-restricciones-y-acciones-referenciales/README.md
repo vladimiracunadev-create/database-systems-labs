@@ -12,6 +12,10 @@ Parte 03 — Modelo relacional y álgebra · Intermedio ·
 
 **En este caso se comparan 6 motores**: 3 lo resuelven (3 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La integridad declarada en su forma completa: integridad de entidad, integridad referencial, `CHECK` y las acciones referenciales. Insiste en que `ON DELETE CASCADE` es una decisión de dominio y no técnica, y presenta el aplazamiento para los casos en que el estado intermedio tiene que ser inválido.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 023"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [008](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) | Dos tablas y una relación: la clave foránea | clave foránea · tabla de relación · reunión · anomalías de repetición |
+| [016](../../part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/README.md) | Entidad-relación, cardinalidad y participación | entidad débil · cardinalidad · participación total · atributo de relación |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-integridad-de-entidad"></a>**integridad de entidad** | Regla que exige que ninguna columna de la clave primaria sea nula. Su fundamento no es estético: un identificador desconocido no identifica, y la fila deja de ser referenciable. | se introduce aquí |
+| <a id="v-integridad-referencial"></a>**integridad referencial** | Regla que exige que todo valor de clave foránea apunte a una fila existente o sea nulo. El gestor la comprueba en cada escritura, lo que la hace inmune a la aplicación que se olvidó de validar. | se introduce aquí |
+| <a id="v-check"></a>**CHECK** | Restricción que exige que una expresión sea verdadera en cada fila: `CHECK (precio >= 0)`. Convierte una regla de negocio en algo que el motor impone; cuidado con los nulos, porque `UNKNOWN` no viola un `CHECK`. | se introduce aquí |
+| <a id="v-on-delete"></a>**ON DELETE** | Acción referencial que declara qué pasa con las filas hijas cuando se borra la padre: `RESTRICT` lo impide, `CASCADE` las borra, `SET NULL` las desvincula. Es una decisión de dominio, no técnica: `CASCADE` sobre datos contables borra historia. | se introduce aquí |
+| <a id="v-aplazamiento"></a>**aplazamiento** | Postergar la comprobación de una restricción hasta el `COMMIT` (`DEFERRABLE INITIALLY DEFERRED`). Permite estados intermedios inválidos dentro de la transacción —como insertar dos filas que se referencian mutuamente— sin renunciar a la garantía final. | se introduce aquí |
 
 ---
 

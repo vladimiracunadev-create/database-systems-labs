@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 10 — Distribución, réplica y consistencia</h1>
 <p class="lead">Qué se gana y qué se paga al repartir los datos: replicación, partición, los teoremas que acotan lo posible y el consenso.</p>
-<p><strong>5 clases · 17 horas</strong></p>
+<p><strong>5 clases · 17 horas ·
+20 conceptos · 17 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-08.html">Parte 08 — Transacciones, concurrencia y recuperación</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Repartir los datos entre máquinas resuelve problemas de capacidad y de disponibilidad, y crea una clase entera de problemas nuevos que no existían en una sola máquina. Esta parte los nombra con precisión y acota lo que es teóricamente posible, para que las decisiones de arquitectura dejen de apoyarse en eslóganes.</p>
+<p>Réplica primero, con las tres arquitecturas y la consecuencia que el usuario nota: guardar algo y al recargar no verlo. Después particionado, con los dos esquemas de reparto y el punto caliente que cada uno genera. Luego CAP dicho con precisión —la disponibilidad del teorema es mucho más estricta que el noventa y nueve coma nueve del lenguaje operativo— y PACELC, que añade lo que CAP calla: el compromiso entre latencia y consistencia existe también los días en que no hay avería. Después el espectro de modelos de consistencia con las garantías de sesión que resuelven en la práctica la mayoría de los síntomas. Y al final consenso, commit en dos fases y sagas.</p>
+<p>Es la parte más citada del programa en fuentes primarias: Gilbert y Lynch, Brewer, Abadi, Lamport, Ongaro, DeCandia y Corbett. Merece leerse con los artículos abiertos al lado.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Elegir entre líder único, multilíder y sin líder según el patrón de escritura y la tolerancia a conflictos.</li>
+<li>Diseñar un esquema de particionado que evite puntos calientes y permita rebalancear.</li>
+<li>Enunciar CAP con precisión y explicar por qué «elegir dos de tres» es una simplificación errónea.</li>
+<li>Elegir el modelo de consistencia y las garantías de sesión que el caso realmente necesita.</li>
+<li>Comparar consenso, commit en dos fases y saga por lo que cada uno bloquea y garantiza.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -62,6 +83,103 @@
 <tr><td><a href="056.html">056</a></td><td><a href="056.html">Modelos de consistencia y garantías de sesión</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>5</td></tr>
 <tr><td><a href="057.html">057</a></td><td><a href="057.html">Consenso y transacciones distribuidas: Raft, 2PC y sagas</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>4</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="053.html">053 — Réplica: líder único, multilíder y sin líder</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      3 fuentes · requiere <a href="043.html">043</a>, <a href="046.html">046</a></p>
+    <p>Las tres arquitecturas de réplica y el compromiso que define cada una. La consecuencia visible para el usuario es el retraso de réplica: guardar algo y al recargar no verlo. Introduce las garantías de sesión que lo tapan y el quórum de los sistemas sin líder.</p>
+    <p><span class="tag">replicación sincrónica</span> <span class="tag">retraso de réplica</span> <span class="tag">quórum</span> <span class="tag">lectura de tu propia escritura</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="054.html">054 — Particionado, rebalanceo y claves calientes</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="039.html">039</a>, <a href="053.html">053</a></p>
+    <p>Repartir los datos entre nodos sin crear un cuello de botella. Compara hash consistente y partición por rango por lo que cada una permite y por el punto caliente que cada una genera, y explica por qué el rebalanceo se diseña fijando muchas más particiones que nodos desde el principio.</p>
+    <p><span class="tag">hash consistente</span> <span class="tag">partición por rango</span> <span class="tag">punto caliente</span> <span class="tag">reequilibrio</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="055.html">055 — CAP, PACELC y lo que realmente se elige</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      4 fuentes · requiere <a href="053.html">053</a></p>
+    <p>CAP dicho con precisión y despojado de la versión de póster. La disponibilidad del teorema es mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas. PACELC añade lo que CAP calla: el compromiso entre latencia y consistencia existe también los días en que no hay avería.</p>
+    <p><span class="tag">partición de red</span> <span class="tag">disponibilidad</span> <span class="tag">latencia frente a consistencia</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="056.html">056 — Modelos de consistencia y garantías de sesión</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      5 fuentes · requiere <a href="055.html">055</a></p>
+    <p>El espectro entre linealizabilidad y consistencia eventual, con las garantías de sesión —leer tu propia escritura, lectura monótona— que resuelven en la práctica la mayoría de los síntomas visibles. Insiste en que la consistencia eventual solo converge si existe una regla determinista de resolución de conflictos.</p>
+    <p><span class="tag">linealizabilidad</span> <span class="tag">consistencia causal</span> <span class="tag">lectura monotona</span> <span class="tag">convergencia</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="057.html">057 — Consenso y transacciones distribuidas: Raft, 2PC y sagas</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      4 fuentes · requiere <a href="055.html">055</a>, <a href="047.html">047</a></p>
+    <p>Cómo se ponen de acuerdo varios nodos y cómo se confirma algo que abarca varios sistemas. Raft para el consenso y la elección de líder, el commit en dos fases con su fragilidad conocida —el coordinador que cae dejando cerrojos tomados— y la saga con compensaciones como la alternativa que renuncia al aislamiento para no bloquear.</p>
+    <p><span class="tag">consenso</span> <span class="tag">elección de líder</span> <span class="tag">commit en dos fases</span> <span class="tag">saga</span> <span class="tag">compensación</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«CAP dice que elijas dos de tres.» El propio Brewer lo corrigió: cuando no hay partición no hay que renunciar a nada, y cuando la hay se elige entre consistencia y disponibilidad solo durante la partición.</li>
+<li>«Consistencia eventual significa que al final se arregla solo.» Solo converge si existe una regla determinista de resolución de conflictos. Sin ella, diverge para siempre.</li>
+<li>«Añado réplicas de lectura y escalo.» Añades retraso de réplica, que es un cambio de semántica visible para el usuario, no solo un ajuste de capacidad.</li>
+<li>«El commit en dos fases resuelve las transacciones distribuidas.» Es correcto y es bloqueante: si el coordinador cae entre las dos fases, los participantes quedan con los cerrojos tomados.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 20 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#commit-en-dos-fases"><strong>commit en dos fases</strong></a></td><td>Protocolo para confirmar una transacción que abarca varios sistemas: primero se pregunta a todos si pueden, después se les ordena confirmar. Es correcto y es frágil: si el coordinador cae entre las dos fases, los participantes quedan bloqueados con los cerrojos tomados.</td><td><a href="057.html">057</a></td></tr>
+<tr><td><a href="../glosario.html#compensación"><strong>compensación</strong></a></td><td>Operación de negocio que deshace el efecto de otra ya confirmada: reembolsar en vez de revertir, anular una reserva en vez de borrarla. No es un `ROLLBACK`, porque el estado intermedio existió y alguien pudo verlo.</td><td><a href="057.html">057</a></td></tr>
+<tr><td><a href="../glosario.html#consenso"><strong>consenso</strong></a></td><td>Que un conjunto de nodos se ponga de acuerdo en un valor y no cambie de opinión, tolerando caídas de una minoría. Es el cimiento de la elección de líder, de la pertenencia al clúster y del commit atómico; Raft y Paxos son las dos formulaciones de referencia.</td><td><a href="057.html">057</a></td></tr>
+<tr><td><a href="../glosario.html#consistencia-causal"><strong>consistencia causal</strong></a></td><td>Si un evento pudo influir en otro, todos los observadores los ven en ese orden; los eventos sin relación causal pueden verse en cualquier orden. Es el punto dulce entre lo débil y lo caro: evita el efecto «respuesta antes que la pregunta» sin exigir coordinación global.</td><td><a href="056.html">056</a></td></tr>
+<tr><td><a href="../glosario.html#convergencia"><strong>convergencia</strong></a></td><td>Que las réplicas acaben en el mismo estado si cesan las escrituras. Es la promesa de la consistencia eventual, y solo se cumple si hay una regla determinista de resolución de conflictos, como la que dan los CRDT.</td><td><a href="056.html">056</a></td></tr>
+<tr><td><a href="../glosario.html#disponibilidad"><strong>disponibilidad</strong></a></td><td>En el enunciado formal de CAP, que toda petición a un nodo no caído reciba respuesta. Es una definición mucho más estricta que el «99,9 % de tiempo activo» del lenguaje operativo, y confundirlas es el origen de casi todas las lecturas erróneas del teorema.</td><td><a href="055.html">055</a></td></tr>
+<tr><td><a href="../glosario.html#elección-de-líder"><strong>elección de líder</strong></a></td><td>Procedimiento por el que la mayoría acuerda quién ordena las escrituras durante un mandato. Que se necesite mayoría es lo que impide dos líderes simultáneos —el escenario de cerebro dividido— cuando la red se parte.</td><td><a href="057.html">057</a></td></tr>
+<tr><td><a href="../glosario.html#hash-consistente"><strong>hash consistente</strong></a></td><td>Reparto de claves sobre un anillo de posiciones de modo que añadir o quitar un nodo mueva solo una fracción de los datos, y no obligue a redistribuirlo todo como haría un `hash mod N`. Es la base del rebalanceo en Dynamo y Cassandra.</td><td><a href="054.html">054</a></td></tr>
+<tr><td><a href="../glosario.html#latencia-frente-a-consistencia"><strong>latencia frente a consistencia</strong></a></td><td>La mitad de PACELC que CAP ignora: incluso sin particiones hay que elegir entre responder rápido desde una réplica cercana o esperar la coordinación que garantiza el dato más reciente. Es el compromiso que se paga todos los días, no solo el día de la avería.</td><td><a href="055.html">055</a></td></tr>
+<tr><td><a href="../glosario.html#lectura-de-tu-propia-escritura"><strong>lectura de tu propia escritura</strong></a></td><td>Garantía de sesión que asegura que quien acaba de escribir verá su propio cambio, aunque otros aún no. Se implementa dirigiendo al líder las lecturas recientes de ese usuario, o esperando a que la réplica alcance el LSN de su escritura.</td><td><a href="053.html">053</a></td></tr>
+<tr><td><a href="../glosario.html#lectura-monotona"><strong>lectura monotona</strong></a></td><td>Garantía de sesión que impide retroceder en el tiempo: si ya viste un valor, no volverás a ver uno anterior. Sin ella, alternar entre réplicas con distinto retraso hace que un dato aparezca y desaparezca al recargar.</td><td><a href="056.html">056</a></td></tr>
+<tr><td><a href="../glosario.html#linealizabilidad"><strong>linealizabilidad</strong></a></td><td>La garantía más fuerte para un objeto: el sistema se comporta como si hubiera una sola copia y cada operación ocurriera en un instante entre su inicio y su fin. Es cara porque exige coordinación, y casi ninguna aplicación la necesita para todo.</td><td><a href="056.html">056</a></td></tr>
+<tr><td><a href="../glosario.html#partición-de-red"><strong>partición de red</strong></a></td><td>Situación en la que dos grupos de nodos siguen vivos pero no pueden comunicarse. No es un fallo hipotético: es lo que ocurre con un cable, un cortafuegos mal aplicado o una latencia lo bastante alta como para que los tiempos de espera venzan.</td><td><a href="055.html">055</a></td></tr>
+<tr><td><a href="../glosario.html#partición-por-rango"><strong>partición por rango</strong></a></td><td>Repartir por intervalos ordenados de la clave. Permite consultas por rango eficientes, a costa de generar puntos calientes cuando las escrituras se concentran al final del rango —el caso típico de una clave temporal.</td><td><a href="054.html">054</a></td></tr>
+<tr><td><a href="../glosario.html#punto-caliente"><strong>punto caliente</strong></a></td><td>Partición que recibe una parte desproporcionada del tráfico: la celebridad con millones de seguidores, la fecha de hoy, el cliente que factura el 40 %. Ninguna cantidad de nodos ayuda mientras el reparto siga concentrando ahí.</td><td><a href="054.html">054</a></td></tr>
+<tr><td><a href="../glosario.html#quórum"><strong>quórum</strong></a></td><td>Regla de los sistemas sin líder: si las escrituras van a W réplicas, las lecturas consultan R, y `W + R &gt; N`, entonces toda lectura toca al menos una réplica con el último valor. Permite ajustar el compromiso entre latencia y frescura por operación.</td><td><a href="053.html">053</a></td></tr>
+<tr><td><a href="../glosario.html#reequilibrio"><strong>reequilibrio</strong></a></td><td>Mover particiones entre nodos al cambiar la capacidad del clúster. La práctica recomendada es fijar de antemano muchas más particiones que nodos y mover particiones enteras, en lugar de recalcular la asignación de cada clave.</td><td><a href="054.html">054</a></td></tr>
+<tr><td><a href="../glosario.html#replicación-sincrónica"><strong>replicación sincrónica</strong></a></td><td>El líder no confirma la escritura hasta que al menos una réplica la ha recibido. Garantiza que no se pierda al caer el líder, a cambio de que la latencia del cliente incluya la de la réplica más lenta y de que una réplica caída pueda detener las escrituras.</td><td><a href="053.html">053</a></td></tr>
+<tr><td><a href="../glosario.html#retraso-de-réplica"><strong>retraso de réplica</strong></a></td><td>La distancia temporal entre lo que ya está en el líder y lo que la réplica ha aplicado. Con replicación asíncrona es inevitable, y es la causa directa de que un usuario guarde algo y al recargar no lo vea.</td><td><a href="053.html">053</a></td></tr>
+<tr><td><a href="../glosario.html#saga"><strong>saga</strong></a></td><td>Secuencia de transacciones locales, cada una con su compensación, que sustituye a una transacción distribuida. Renuncia al aislamiento —los estados intermedios se ven— a cambio de no bloquear recursos entre servicios.</td><td><a href="057.html">057</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>17 obras distintas sostienen lo que se afirma en estas
+5 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-docs-cassandra">Apache Cassandra Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 054</span></li>
+<li><a href="../fuentes.html#src-gilbert-lynch-2002">Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services</a> <span class="fuente-meta">(2002)</span> — <span class="fuente-meta">se cita en 055</span></li>
+<li><a href="../fuentes.html#src-brewer-cap-12-years">CAP Twelve Years Later: How the Rules Have Changed</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 055</span></li>
+<li><a href="../fuentes.html#src-shapiro-crdt-2011">Conflict-free Replicated Data Types</a> <span class="fuente-meta">(2011)</span> — <span class="fuente-meta">se cita en 056</span></li>
+<li><a href="../fuentes.html#src-abadi-pacelc-2012">Consistency Tradeoffs in Modern Distributed Database System Design</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 055</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 053, 054</span></li>
+<li><a href="../fuentes.html#src-decandia-dynamo-2007">Dynamo: Amazon's Highly Available Key-value Store</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 053, 054</span></li>
+<li><a href="../fuentes.html#src-vogels-eventually-consistent-2009">Eventually Consistent</a> <span class="fuente-meta">(2009)</span> — <span class="fuente-meta">se cita en 056</span></li>
+<li><a href="../fuentes.html#src-bailis-hat-2013">Highly Available Transactions: Virtues and Limitations</a> <span class="fuente-meta">(2014)</span> — <span class="fuente-meta">se cita en 055</span></li>
+<li><a href="../fuentes.html#src-ongaro-raft-2014">In Search of an Understandable Consensus Algorithm</a> <span class="fuente-meta">(2014)</span> — <span class="fuente-meta">se cita en 057</span></li>
+<li><a href="../fuentes.html#src-kingsbury-jepsen-analyses">Jepsen: Analyses</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 056</span></li>
+<li><a href="../fuentes.html#src-kingsbury-jepsen-consistency">Jepsen: Consistency Models</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 056</span></li>
+<li><a href="../fuentes.html#src-helland-life-beyond-2007">Life beyond Distributed Transactions: An Apostate's Opinion</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 057</span></li>
+<li><a href="../fuentes.html#src-corbett-spanner-2012">Spanner: Google's Globally-Distributed Database</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 057</span></li>
+<li><a href="../fuentes.html#src-gray-danger-replication-1996">The Dangers of Replication and a Solution</a> <span class="fuente-meta">(1996)</span> — <span class="fuente-meta">se cita en 053</span></li>
+<li><a href="../fuentes.html#src-lamport-paxos-1998">The Part-Time Parliament</a> <span class="fuente-meta">(1998)</span> — <span class="fuente-meta">se cita en 057</span></li>
+<li><a href="../fuentes.html#src-lamport-time-clocks-1978">Time, Clocks, and the Ordering of Events in a Distributed System</a> <span class="fuente-meta">(1978)</span> — <span class="fuente-meta">se cita en 056</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

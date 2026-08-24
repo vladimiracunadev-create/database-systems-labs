@@ -12,6 +12,10 @@ Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El modelo entidad-relación de Chen con las dos decisiones que más consecuencias tienen: la cardinalidad, que determina dónde va la clave foránea, y la participación, que determina si esa columna admite nulos. Introduce la entidad débil y el atributo que pertenece a la relación y no a ninguna de las dos entidades.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 016"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [015](../../part-02-modelado-conceptual-y-requisitos/015-de-requisitos-a-entidades/README.md) | De requisitos ambiguos a entidades defendibles | regla de negocio · diccionario de datos · alcance · patrón de acceso |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-entidad-débil"></a>**entidad débil** | Entidad que no puede identificarse sin la entidad de la que depende: una línea de pedido existe solo dentro de su pedido. Su clave incluye la del padre, y su ciclo de vida termina cuando termina el del padre. | se introduce aquí |
+| <a id="v-cardinalidad"></a>**cardinalidad** | Cuántas instancias de una entidad pueden relacionarse con cuántas de la otra: uno a uno, uno a muchos, muchos a muchos. Determina directamente dónde va la clave foránea y si hace falta una tabla intermedia. | se introduce aquí |
+| <a id="v-participación-total"></a>**participación total** | Cuando toda instancia de una entidad debe participar obligatoriamente en la relación —todo pedido tiene un cliente—. Se traduce en `NOT NULL` sobre la clave foránea; la participación parcial admite el nulo. | se introduce aquí |
+| <a id="v-atributo-de-relación"></a>**atributo de relación** | Dato que no pertenece a ninguna de las dos entidades sino al hecho de que estén relacionadas: la fecha de inscripción no es del estudiante ni del curso, es de la inscripción. Es la señal de que la tabla intermedia es una entidad de pleno derecho. | se introduce aquí |
 
 ---
 

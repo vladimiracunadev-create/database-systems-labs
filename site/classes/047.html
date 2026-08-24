@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>idempotencia</code> · <code>clave de idempotencia</code> · <code>bloqueo optimista</code> · <code>reintento con retroceso</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La parte de la concurrencia que el motor no resuelve por ti. Trata la idempotencia como la única defensa realista frente a una red que no distingue «no llegó» de «se perdió la respuesta», y el bloqueo optimista y el reintento con retroceso como los dos patrones que toda aplicación con transacciones acaba necesitando.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 047&quot;]
     C --&gt; K1[&quot;idempotencia&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="045.html">045</a></td>
+<td>Bloqueo en dos fases, MVCC e instantáneas</td>
+<td>2PL · versión de fila · instantánea · interbloqueo · vacuum</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-idempotencia"></a><strong>idempotencia</strong></td>
+<td>Propiedad de una operación que, repetida con la misma entrada, deja el mismo estado que ejecutarla una vez. Es la única defensa realista contra las redes: en un sistema distribuido no se puede distinguir «no llegó» de «llegó y se perdió la respuesta».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-de-idempotencia"></a><strong>clave de idempotencia</strong></td>
+<td>Identificador que el cliente genera y envía con la petición para que el servidor reconozca un reintento y devuelva el resultado anterior en lugar de ejecutar dos veces. Es cómo se cobra una tarjeta una sola vez aunque el navegador reenvíe.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-bloqueo-optimista"></a><strong>bloqueo optimista</strong></td>
+<td>En lugar de bloquear, se lee una versión y al escribir se comprueba que no haya cambiado (<code>WHERE version = ?</code>). Si cambió, se reintenta. Rinde mejor que el bloqueo cuando los conflictos son raros, y peor cuando son frecuentes.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-reintento-con-retroceso"></a><strong>reintento con retroceso</strong></td>
+<td>Reintentar tras un fallo esperando cada vez más tiempo, con una componente aleatoria. El retroceso evita hundir un sistema que ya está en apuros y la aleatoriedad evita que todos los clientes vuelvan sincronizados a la vez.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir aplicaciones correctas frente a reintentos, mensajes duplicados y operaciones concurrentes. La transacción del motor termina en el <code>COMMIT</code>; el sistema no.</p>

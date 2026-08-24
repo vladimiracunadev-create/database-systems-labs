@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Cómo se distingue una fila de otra. Presenta la clave primaria y el debate entre clave natural y sustituta con su criterio real —cuál de las dos sobrevive a los cambios del mundo— y la clave compuesta, que reaparecerá al hablar de índices y de particionado.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 007"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+| [006](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/006-tipos-de-datos-un-numero-no-es-un-texto/README.md) | Tipos de datos: por qué un número no es un texto | tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-clave-primaria"></a>**clave primaria** | La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila. | se introduce aquí |
+| <a id="v-clave-natural"></a>**clave natural** | Identificador que ya existe en el dominio —RUT, ISBN, matrícula—. Ventaja: significa algo. Riesgo: el mundo la cambia —una persona corrige su documento, un organismo reasigna códigos— y el cambio arrastra a todas las filas que la referencian. | se introduce aquí |
+| <a id="v-clave-sustituta"></a>**clave sustituta** | Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción `UNIQUE` sobre la clave natural real. | se introduce aquí |
+| <a id="v-clave-compuesta"></a>**clave compuesta** | Clave primaria formada por dos o más columnas, típica de las tablas de relación: `(estudiante_id, curso_id)`. Fija además el orden de las columnas del índice que la sostiene, y ese orden decide qué consultas se aceleran. | se introduce aquí |
+| <a id="v-unique"></a>**UNIQUE** | Restricción que prohíbe valores repetidos en una columna o combinación de columnas. A diferencia de la clave primaria admite nulos —y cuántos admite depende del motor, que es una de las divergencias clásicas entre dialectos. | se introduce aquí |
 
 ---
 

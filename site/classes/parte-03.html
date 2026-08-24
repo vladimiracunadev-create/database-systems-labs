@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,26 @@
 <main class="content" id="principal">
 <h1>Parte 03 — Modelo relacional y álgebra</h1>
 <p class="lead">La teoría que SQL implementa a medias: relaciones como conjuntos, operadores del álgebra, cálculo relacional e integridad declarada.</p>
-<p><strong>4 clases · 13 horas</strong></p>
+<p><strong>4 clases · 13 horas ·
+19 conceptos · 8 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-02.html">Parte 02 — Modelado conceptual y requisitos</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Esta parte da la teoría que SQL implementa a medias, y lo hace precisamente para que las diferencias entre teoría y lenguaje dejen de ser sorpresas. La relación de Codd es un conjunto: no tiene orden y no tiene duplicados. SQL trabaja con multiconjuntos ordenables. Conocer esa brecha explica de antemano por qué hace falta `DISTINCT`, por qué no se puede confiar en el orden y por qué `NOT IN` se comporta como se comporta.</p>
+<p>Las cuatro clases van de la definición al operador y del operador a la garantía. La relación como conjunto; los operadores del álgebra, que son el lenguaje en el que el optimizador piensa; el cálculo relacional y el teorema de equivalencia, que es literalmente el permiso que tiene el motor para reescribir tu consulta; y la integridad declarada en su forma completa, incluidas las acciones referenciales.</p>
+<p>Es la parte más formal del programa y la que más rendimiento da a largo plazo: quien la trabaja lee después un plan de ejecución sin adivinar.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Explicar las dos propiedades de la relación que SQL no respeta y sus consecuencias prácticas.</li>
+<li>Traducir una consulta SQL a una expresión del álgebra relacional y viceversa.</li>
+<li>Argumentar por qué el optimizador puede reordenar una consulta sin cambiar su resultado.</li>
+<li>Declarar integridad de entidad, referencial y de dominio, eligiendo la acción referencial adecuada.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -61,6 +81,86 @@
 <tr><td><a href="022.html">022</a></td><td><a href="022.html">Cálculo relacional y su equivalencia con el álgebra</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 <tr><td><a href="023.html">023</a></td><td><a href="023.html">Integridad: restricciones, claves foraneas y acciones referenciales</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>4</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="020.html">020 — La relación como conjunto: tuplas, dominios y acceso por valor</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="001.html">001</a>, <a href="004.html">004</a></p>
+    <p>La relación como conjunto de tuplas sobre dominios, con dos propiedades que SQL no respeta: no hay orden y no hay duplicados. Entender esa brecha explica de antemano la mitad de las sorpresas del lenguaje, del `DISTINCT` que hace falta al `ORDER BY` que no se puede dar por supuesto.</p>
+    <p><span class="tag">relación</span> <span class="tag">tupla</span> <span class="tag">dominio</span> <span class="tag">acceso por valor</span> <span class="tag">cierre</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="021.html">021 — Álgebra relacional: selección, proyección, producto y reunión</a></h3>
+    <p class="fuente-meta">Fundamentos · 4 h ·
+      3 fuentes · requiere <a href="020.html">020</a></p>
+    <p>Los operadores del álgebra relacional —selección, proyección, producto, reunión y división— como el lenguaje en el que el optimizador piensa. Ver una consulta como una expresión algebraica es lo que después permite entender por qué el motor la reordena y por qué eso es legítimo.</p>
+    <p><span class="tag">selección</span> <span class="tag">proyección</span> <span class="tag">producto cartesiano</span> <span class="tag">reunión natural</span> <span class="tag">división</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="022.html">022 — Cálculo relacional y su equivalencia con el álgebra</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="021.html">021</a></p>
+    <p>El cálculo relacional y el teorema que lo hace equivalente al álgebra. No es formalismo por gusto: esa equivalencia es exactamente el permiso que tiene el optimizador para reescribir tu consulta, y la razón de que SQL pueda ser declarativo.</p>
+    <p><span class="tag">cálculo de tuplas</span> <span class="tag">seguridad de expresión</span> <span class="tag">equivalencia</span> <span class="tag">declaratividad</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="023.html">023 — Integridad: restricciones, claves foraneas y acciones referenciales</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      4 fuentes · requiere <a href="008.html">008</a>, <a href="016.html">016</a></p>
+    <p>La integridad declarada en su forma completa: integridad de entidad, integridad referencial, `CHECK` y las acciones referenciales. Insiste en que `ON DELETE CASCADE` es una decisión de dominio y no técnica, y presenta el aplazamiento para los casos en que el estado intermedio tiene que ser inválido.</p>
+    <p><span class="tag">integridad de entidad</span> <span class="tag">integridad referencial</span> <span class="tag">CHECK</span> <span class="tag">ON DELETE</span> <span class="tag">aplazamiento</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Álgebra relacional es teoría que no se usa.» Es exactamente lo que muestra un plan de ejecución: selecciones, proyecciones y reuniones reordenadas.</li>
+<li>«`SELECT` devuelve un conjunto.» Devuelve un multiconjunto: los duplicados sobreviven salvo que se pidan `DISTINCT` o se agrupen.</li>
+<li>«`ON DELETE CASCADE` es lo cómodo.» Es una decisión de dominio: sobre datos contables o de auditoría, borra historia que había obligación de conservar.</li>
+<li>«La reunión natural es más limpia.» Y más frágil: empareja por todos los nombres coincidentes, así que añadir una columna homónima cambia el significado de la consulta sin avisar.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 19 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#acceso-por-valor"><strong>acceso por valor</strong></a></td><td>En el modelo relacional se llega a un dato por lo que vale, nunca por un puntero o una posición física. Es lo que hace posible la independencia de datos: el motor puede reorganizar el almacenamiento sin invalidar ninguna referencia.</td><td><a href="020.html">020</a></td></tr>
+<tr><td><a href="../glosario.html#aplazamiento"><strong>aplazamiento</strong></a></td><td>Postergar la comprobación de una restricción hasta el `COMMIT` (`DEFERRABLE INITIALLY DEFERRED`). Permite estados intermedios inválidos dentro de la transacción —como insertar dos filas que se referencian mutuamente— sin renunciar a la garantía final.</td><td><a href="023.html">023</a></td></tr>
+<tr><td><a href="../glosario.html#check"><strong>CHECK</strong></a></td><td>Restricción que exige que una expresión sea verdadera en cada fila: `CHECK (precio &gt;= 0)`. Convierte una regla de negocio en algo que el motor impone; cuidado con los nulos, porque `UNKNOWN` no viola un `CHECK`.</td><td><a href="023.html">023</a></td></tr>
+<tr><td><a href="../glosario.html#cierre"><strong>cierre</strong></a></td><td>Propiedad por la que toda operación del álgebra relacional sobre relaciones devuelve una relación. Es lo que permite anidar y componer consultas indefinidamente, y lo que sostiene las vistas y las CTE.</td><td><a href="020.html">020</a></td></tr>
+<tr><td><a href="../glosario.html#cálculo-de-tuplas"><strong>cálculo de tuplas</strong></a></td><td>Formalismo que describe el resultado con una fórmula lógica —«las tuplas t tales que…»— en lugar de con una secuencia de operadores. Es el antepasado directo de SQL y la razón formal de que SQL sea declarativo.</td><td><a href="022.html">022</a></td></tr>
+<tr><td><a href="../glosario.html#declaratividad"><strong>declaratividad</strong></a></td><td>Decir qué se quiere, no cómo obtenerlo. Su valor práctico es que el motor puede cambiar de estrategia —de recorrido completo a índice, de reunión anidada a hash— cuando cambian los datos, sin que nadie toque el código.</td><td><a href="022.html">022</a></td></tr>
+<tr><td><a href="../glosario.html#división"><strong>división</strong></a></td><td>Operador que responde a las preguntas de tipo «para todos»: qué estudiantes están inscritos en *todos* los cursos obligatorios. SQL no tiene un operador equivalente y se resuelve con doble negación (`NOT EXISTS` anidado) o contando.</td><td><a href="021.html">021</a></td></tr>
+<tr><td><a href="../glosario.html#dominio"><strong>dominio</strong></a></td><td>El conjunto de valores admisibles de un atributo, con sus operaciones. Es el concepto del que los tipos de SQL son una aproximación pobre: SQL permite comparar un número de teléfono con un código postal si ambos son enteros.</td><td><a href="020.html">020</a></td></tr>
+<tr><td><a href="../glosario.html#equivalencia"><strong>equivalencia</strong></a></td><td>Dos expresiones son equivalentes si devuelven la misma relación para toda base de datos posible. Codd demostró que álgebra y cálculo tienen el mismo poder expresivo; sobre ese teorema descansa la libertad del optimizador para reescribir consultas.</td><td><a href="022.html">022</a></td></tr>
+<tr><td><a href="../glosario.html#integridad-de-entidad"><strong>integridad de entidad</strong></a></td><td>Regla que exige que ninguna columna de la clave primaria sea nula. Su fundamento no es estético: un identificador desconocido no identifica, y la fila deja de ser referenciable.</td><td><a href="023.html">023</a></td></tr>
+<tr><td><a href="../glosario.html#integridad-referencial"><strong>integridad referencial</strong></a></td><td>Regla que exige que todo valor de clave foránea apunte a una fila existente o sea nulo. El gestor la comprueba en cada escritura, lo que la hace inmune a la aplicación que se olvidó de validar.</td><td><a href="023.html">023</a></td></tr>
+<tr><td><a href="../glosario.html#on-delete"><strong>ON DELETE</strong></a></td><td>Acción referencial que declara qué pasa con las filas hijas cuando se borra la padre: `RESTRICT` lo impide, `CASCADE` las borra, `SET NULL` las desvincula. Es una decisión de dominio, no técnica: `CASCADE` sobre datos contables borra historia.</td><td><a href="023.html">023</a></td></tr>
+<tr><td><a href="../glosario.html#producto-cartesiano"><strong>producto cartesiano</strong></a></td><td>Operador × que combina cada tupla de una relación con todas las de otra. Casi nunca se quiere: aparecer en un plan de ejecución suele indicar una condición de reunión olvidada y una explosión de filas.</td><td><a href="021.html">021</a></td></tr>
+<tr><td><a href="../glosario.html#proyección"><strong>proyección</strong></a></td><td>Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con `DISTINCT`, cosa que SQL no hace por defecto y el álgebra sí.</td><td><a href="021.html">021</a></td></tr>
+<tr><td><a href="../glosario.html#relación"><strong>relación</strong></a></td><td>En el modelo de Codd, un conjunto de tuplas sobre unos dominios dados. Al ser conjunto no tiene orden ni duplicados —dos propiedades que SQL no respeta, y de ahí nacen la mitad de las sorpresas del lenguaje.</td><td><a href="020.html">020</a></td></tr>
+<tr><td><a href="../glosario.html#reunión-natural"><strong>reunión natural</strong></a></td><td>Reunión que empareja por todos los atributos con el mismo nombre y deja una sola copia de cada uno. Elegante en el álgebra y peligrosa en SQL: si alguien añade una columna homónima, la consulta cambia de significado sin avisar.</td><td><a href="021.html">021</a></td></tr>
+<tr><td><a href="../glosario.html#seguridad-de-expresión"><strong>seguridad de expresión</strong></a></td><td>Condición que garantiza que una fórmula del cálculo devuelve un resultado finito. `{t | ¬P(t)}` no es segura: «todo lo que no cumple P» incluye el universo entero. Es la razón de que SQL obligue a nombrar siempre un `FROM`.</td><td><a href="022.html">022</a></td></tr>
+<tr><td><a href="../glosario.html#selección"><strong>selección</strong></a></td><td>Operador σ del álgebra: se queda con las tuplas que cumplen un predicado. Es el `WHERE` de SQL y el primero que el optimizador intenta empujar hacia abajo en el plan, para descartar filas antes de reunirlas.</td><td><a href="021.html">021</a></td></tr>
+<tr><td><a href="../glosario.html#tupla"><strong>tupla</strong></a></td><td>Un elemento de la relación: una asignación de un valor a cada atributo. No es «una fila en una posición», porque en un conjunto no hay posiciones; se identifica por sus valores, no por dónde está.</td><td><a href="020.html">020</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>8 obras distintas sostienen lo que se afirma en estas
+4 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-codd-1970">A Relational Model of Data for Large Shared Data Banks</a> <span class="fuente-meta">(1970)</span> — <span class="fuente-meta">se cita en 020</span></li>
+<li><a href="../fuentes.html#src-ramakrishnan-gehrke3">Database Management Systems</a> <span class="fuente-meta">(2002)</span> — <span class="fuente-meta">se cita en 020, 021, 022</span></li>
+<li><a href="../fuentes.html#src-silberschatz-dsc7">Database System Concepts</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 021</span></li>
+<li><a href="../fuentes.html#src-gmuw-complete-book">Database Systems: The Complete Book</a> <span class="fuente-meta">(2008)</span> — <span class="fuente-meta">se cita en 021, 022</span></li>
+<li><a href="../fuentes.html#src-codd-1979">Extending the Database Relational Model to Capture More Meaning</a> <span class="fuente-meta">(1979)</span> — <span class="fuente-meta">se cita en 023</span></li>
+<li><a href="../fuentes.html#src-iso-9075">ISO/IEC 9075: Information technology - Database languages - SQL</a> <span class="fuente-meta">(2023)</span> — <span class="fuente-meta">se cita en 023</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql">PostgreSQL Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 023</span></li>
+<li><a href="../fuentes.html#src-date-sql-relational-theory">SQL and Relational Theory: How to Write Accurate SQL Code</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 020, 022, 023</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,28 @@
 <main class="content" id="principal">
 <h1>Parte 04 — SQL en profundidad</h1>
 <p class="lead">Escribir SQL cuya semántica se pueda defender: definición del esquema, reuniones, agregación, ventanas y el comportamiento real de los nulos.</p>
-<p><strong>6 clases · 20 horas</strong></p>
+<p><strong>6 clases · 20 horas ·
+27 conceptos · 9 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-03.html">Parte 03 — Modelo relacional y álgebra</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Seis clases para escribir SQL cuya semántica se pueda defender. No es un recorrido por la sintaxis: es la parte donde se cierran los huecos por los que se cuelan los resultados silenciosamente incorrectos, que son mucho peores que los errores, porque no fallan.</p>
+<p>El orden sigue el ciclo de vida de una consulta. Primero el DDL como contrato ejecutable, porque lo que el esquema rechaza no hay que validarlo en ningún lenguaje. Después el `SELECT` con su orden lógico de evaluación y la colación, que decide si `a` es igual a `A`. Luego las cuatro formas de reunir, con la semirreunión como la corrección que más código arregla. La agregación y el doble conteo que produce una reunión previa. Las CTE, la recursión y las funciones de ventana, para lo que no cabe en una expresión. Y al final los nulos, colocados a propósito al cierre para que se vean actuando sobre todo lo anterior.</p>
+<p>Si solo hay tiempo para dos clases de esta parte, son la 026 y la 029: reuniones y nulos concentran la mayoría de los errores que llegan a producción sin ser detectados.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Escribir DDL que exprese las reglas del dominio como restricciones que el motor impone.</li>
+<li>Predecir el resultado de una consulta razonando desde el orden lógico de evaluación.</li>
+<li>Elegir entre reunión interna, externa, semi y anti según lo que la pregunta realmente pide.</li>
+<li>Detectar y corregir un doble conteo causado por una reunión que multiplica filas.</li>
+<li>Resolver con CTE, recursión o funciones de ventana lo que no cabe en una consulta plana.</li>
+<li>Predecir el efecto de los nulos en comparaciones, agregados y `NOT IN`.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -63,6 +85,110 @@
 <tr><td><a href="028.html">028</a></td><td><a href="028.html">CTE, subconsultas y funciones de ventana</a></td><td class="nivel-intermedio">Intermedio</td><td>4</td><td>4</td></tr>
 <tr><td><a href="029.html">029</a></td><td><a href="029.html">Nulos y lógica de tres valores</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="024.html">024 — DDL: el esquema como contrato ejecutable</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      4 fuentes · requiere <a href="006.html">006</a>, <a href="023.html">023</a></p>
+    <p>El DDL leído como un contrato ejecutable: cada tipo y cada restricción es una validación que ya no hay que escribir en ninguna aplicación. Incluye una divergencia que decide cómo se hacen las migraciones: si el DDL es transaccional en tu motor o si una migración a medias deja un estado sin retorno.</p>
+    <p><span class="tag">tipo de dato</span> <span class="tag">restricción</span> <span class="tag">valor por defecto</span> <span class="tag">DDL transaccional</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="025.html">025 — SELECT: filtrado, proyección y orden con semántica precisa</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      3 fuentes · requiere <a href="004.html">004</a>, <a href="020.html">020</a></p>
+    <p>El `SELECT` con su semántica exacta: el orden lógico de evaluación que explica por qué un alias del `SELECT` no vale en el `WHERE`, y la colación, que decide si `a` es igual a `A` y dónde va la `ñ`. Cierra con el determinismo de orden, que es la diferencia entre una consulta reproducible y una que cambia el día que cambia el plan.</p>
+    <p><span class="tag">predicado</span> <span class="tag">orden de evaluación</span> <span class="tag">colación</span> <span class="tag">determinismo de orden</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="026.html">026 — Reuniones: interna, externa, semi y anti</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      3 fuentes · requiere <a href="008.html">008</a>, <a href="021.html">021</a></p>
+    <p>Las cuatro formas de reunir y cuándo se quiere cada una. La distinción que más código corrige es la semirreunión: el `EXISTS` que casi siempre se quería cuando se escribió un `JOIN` seguido de `DISTINCT`, sin multiplicar filas ni arriesgar el doble conteo.</p>
+    <p><span class="tag">reunión interna</span> <span class="tag">reunión externa</span> <span class="tag">semirreunion</span> <span class="tag">antirreunion</span> <span class="tag">multiplicación de filas</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="027.html">027 — Agregación, GROUP BY y HAVING sin duplicar filas</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="026.html">026</a></p>
+    <p>Agregar sin mentir. Explica por qué `WHERE` y `HAVING` no son intercambiables, cómo una reunión previa multiplica filas y produce totales inflados, y cómo se corrige agregando en una CTE antes de reunir. Incluye la divergencia entre motores sobre qué columnas se pueden seleccionar sin agrupar.</p>
+    <p><span class="tag">agrupación</span> <span class="tag">agregado</span> <span class="tag">HAVING</span> <span class="tag">doble conteo</span> <span class="tag">dependencia funcional en GROUP BY</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="028.html">028 — CTE, subconsultas y funciones de ventana</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      4 fuentes · requiere <a href="026.html">026</a>, <a href="027.html">027</a></p>
+    <p>Las herramientas para consultas que no caben en una sola expresión: CTE para nombrar pasos, recursión para recorrer jerarquías y funciones de ventana para calcular por grupo sin perder el detalle. La sutileza que más resultados cambia es el marco por defecto de una ventana con `ORDER BY`.</p>
+    <p><span class="tag">CTE</span> <span class="tag">recursión</span> <span class="tag">subconsulta correlacionada</span> <span class="tag">partición de ventana</span> <span class="tag">marco</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="029.html">029 — Nulos y lógica de tres valores</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="003.html">003</a>, <a href="025.html">025</a></p>
+    <p>La lógica de tres valores y sus consecuencias prácticas: `NOT IN` que devuelve vacío por un solo nulo, agregados que ignoran ausencias y comparaciones que nunca son ciertas. Presenta `IS DISTINCT FROM` como la forma correcta de comparar columnas opcionales, que reaparece al detectar cambios en una migración.</p>
+    <p><span class="tag">UNKNOWN</span> <span class="tag">IS DISTINCT FROM</span> <span class="tag">NOT IN con nulos</span> <span class="tag">agregados y nulos</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«`WHERE` y `HAVING` son intercambiables.» `WHERE` filtra filas antes de agrupar y `HAVING` filtra grupos después. Cambiar uno por otro cambia el resultado o el costo.</li>
+<li>«Añadí un `DISTINCT` y ya salen bien.» El `DISTINCT` tapa el síntoma de una reunión que multiplica filas; casi siempre lo que se quería era una semirreunión.</li>
+<li>«`NOT IN` y `NOT EXISTS` son lo mismo.» Con un solo nulo en la subconsulta, `NOT IN` devuelve el conjunto vacío. `NOT EXISTS` no.</li>
+<li>«`LEFT JOIN` conserva las filas sin pareja.» Salvo que pongas una condición sobre la tabla externa en el `WHERE`, que la convierte de nuevo en interna.</li>
+<li>«`COUNT(*)` y `COUNT(columna)` son lo mismo.» El segundo ignora los nulos.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 27 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#agregado"><strong>agregado</strong></a></td><td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.)</td><td><a href="027.html">027</a></td></tr>
+<tr><td><a href="../glosario.html#agregados-y-nulos"><strong>agregados y nulos</strong></a></td><td>Las funciones de agregado ignoran los nulos, salvo `COUNT(*)` que cuenta filas. Por eso `COUNT(columna)` y `COUNT(*)` difieren, y por eso un `AVG` sobre una columna con huecos es la media de los presentes, no del total.</td><td><a href="029.html">029</a></td></tr>
+<tr><td><a href="../glosario.html#agrupación"><strong>agrupación</strong></a></td><td>Partir las filas en grupos por los valores de unas columnas (`GROUP BY`) y producir una fila de resultado por grupo. Todo lo que aparezca en el `SELECT` debe ser o columna de agrupación o resultado de una función de agregado.</td><td><a href="027.html">027</a></td></tr>
+<tr><td><a href="../glosario.html#antirreunion"><strong>antirreunion</strong></a></td><td>Quedarse con las filas que *no* tienen pareja: `NOT EXISTS`, o `LEFT JOIN … WHERE clave IS NULL`. `NOT IN` parece equivalente y no lo es: basta un nulo en la subconsulta para que devuelva el conjunto vacío.</td><td><a href="026.html">026</a></td></tr>
+<tr><td><a href="../glosario.html#colación"><strong>colación</strong></a></td><td>El conjunto de reglas que decide cómo se comparan y ordenan los textos: si `a` = `A`, dónde va la `ñ`, si los acentos cuentan. Cambia el resultado de `ORDER BY`, de `=` y de un `UNIQUE`, y es distinta por defecto en cada motor.</td><td><a href="025.html">025</a></td></tr>
+<tr><td><a href="../glosario.html#cte"><strong>CTE</strong></a></td><td>Expresión de tabla común (`WITH … AS`): un resultado con nombre, visible en la consulta que la sigue. Sirve para nombrar pasos intermedios y hacer legible una consulta larga; en algunos motores es además una barrera de optimización, y eso puede ayudar o estorbar.</td><td><a href="028.html">028</a></td></tr>
+<tr><td><a href="../glosario.html#ddl-transaccional"><strong>DDL transaccional</strong></a></td><td>Capacidad de ejecutar `CREATE`, `ALTER` o `DROP` dentro de una transacción y poder revertirlos. PostgreSQL y SQLite la tienen; MySQL histórico y Oracle confirman implícitamente, lo que convierte una migración fallida a mitad en un estado sin retorno.</td><td><a href="024.html">024</a></td></tr>
+<tr><td><a href="../glosario.html#dependencia-funcional-en-group-by"><strong>dependencia funcional en GROUP BY</strong></a></td><td>Regla que permite seleccionar una columna no agrupada si depende funcionalmente de la clave de agrupación —agrupar por `id` y seleccionar `nombre`—. PostgreSQL la reconoce; otros motores exigen listar todo, y MySQL en modo laxo devuelve un valor arbitrario sin avisar.</td><td><a href="027.html">027</a></td></tr>
+<tr><td><a href="../glosario.html#determinismo-de-orden"><strong>determinismo de orden</strong></a></td><td>Que dos ejecuciones de la misma consulta devuelvan las filas en el mismo orden. Solo lo garantiza un `ORDER BY` cuyas columnas no empaten; con empates, el desempate lo decide el plan y puede cambiar mañana.</td><td><a href="025.html">025</a></td></tr>
+<tr><td><a href="../glosario.html#doble-conteo"><strong>doble conteo</strong></a></td><td>Sumar o contar sobre un resultado que una reunión ya había multiplicado. El síntoma es un total que crece al añadir un `JOIN` que «solo traía un dato más»; la cura es agregar en una subconsulta o CTE antes de reunir.</td><td><a href="027.html">027</a></td></tr>
+<tr><td><a href="../glosario.html#having"><strong>HAVING</strong></a></td><td>Filtro que se aplica a los grupos ya formados, después de agregar. `WHERE` descarta filas antes de agrupar y por eso es más barato: la regla es filtrar en `WHERE` todo lo que no dependa del agregado.</td><td><a href="027.html">027</a></td></tr>
+<tr><td><a href="../glosario.html#is-distinct-from"><strong>IS DISTINCT FROM</strong></a></td><td>Comparación que trata el nulo como un valor más: dos nulos son iguales y un nulo es distinto de cualquier valor, sin producir `UNKNOWN`. Es la forma correcta de comparar columnas opcionales, por ejemplo al detectar cambios en una migración.</td><td><a href="029.html">029</a></td></tr>
+<tr><td><a href="../glosario.html#marco"><strong>marco</strong></a></td><td>El `ROWS`/`RANGE BETWEEN` que define qué filas de la partición entran en el cálculo de cada fila. Su valor por defecto no es «toda la partición» cuando hay `ORDER BY`, y esa sutileza cambia el resultado de una suma acumulada.</td><td><a href="028.html">028</a></td></tr>
+<tr><td><a href="../glosario.html#multiplicación-de-filas"><strong>multiplicación de filas</strong></a></td><td>Efecto de reunir con una tabla que tiene varias filas por clave: cada fila del lado uno aparece repetida. Es la causa del doble conteo cuando después se suma, y la razón de que agregar antes de reunir sea a menudo la corrección.</td><td><a href="026.html">026</a></td></tr>
+<tr><td><a href="../glosario.html#not-in-con-nulos"><strong>NOT IN con nulos</strong></a></td><td>Trampa clásica: si la lista o la subconsulta de un `NOT IN` contiene un solo nulo, el predicado nunca es verdadero y el resultado es vacío. `NOT EXISTS` no tiene ese problema y es la sustitución recomendada.</td><td><a href="029.html">029</a></td></tr>
+<tr><td><a href="../glosario.html#orden-de-evaluación"><strong>orden de evaluación</strong></a></td><td>El orden lógico en que SQL procesa una consulta: `FROM`, `WHERE`, `GROUP BY`, `HAVING`, `SELECT`, `ORDER BY`, `LIMIT`. Explica por qué no se puede usar un alias del `SELECT` en el `WHERE` y por qué `HAVING` filtra grupos y `WHERE` filtra filas.</td><td><a href="025.html">025</a></td></tr>
+<tr><td><a href="../glosario.html#partición-de-ventana"><strong>partición de ventana</strong></a></td><td>El `PARTITION BY` de una función de ventana: divide las filas en grupos para calcular el agregado dentro de cada uno, pero sin colapsarlas. Es la diferencia esencial con `GROUP BY`: la ventana conserva el detalle y añade el cálculo al lado.</td><td><a href="028.html">028</a></td></tr>
+<tr><td><a href="../glosario.html#predicado"><strong>predicado</strong></a></td><td>Expresión lógica que se evalúa a verdadero, falso o desconocido para cada fila. En SQL solo pasan el filtro las filas cuyo predicado es verdadero: `UNKNOWN` se descarta igual que `FALSE`, y ahí empiezan los resultados sorprendentes con nulos.</td><td><a href="025.html">025</a></td></tr>
+<tr><td><a href="../glosario.html#recursión"><strong>recursión</strong></a></td><td>`WITH RECURSIVE`: una CTE que se referencia a sí misma para recorrer jerarquías y grafos —organigramas, listas de materiales, caminos—. Necesita siempre una condición de parada; sin ella el motor recorre hasta agotar la memoria.</td><td><a href="028.html">028</a></td></tr>
+<tr><td><a href="../glosario.html#restricción"><strong>restricción</strong></a></td><td>Regla declarada en el esquema que el motor impone siempre: `NOT NULL`, `UNIQUE`, `CHECK`, `PRIMARY KEY`, `FOREIGN KEY`. Su ventaja sobre la validación en la aplicación es que no depende de que alguien se acuerde.</td><td><a href="024.html">024</a></td></tr>
+<tr><td><a href="../glosario.html#reunión-externa"><strong>reunión externa</strong></a></td><td>`LEFT`, `RIGHT` o `FULL OUTER JOIN`: conserva las filas sin pareja y rellena con nulos. Cuidado con poner en el `WHERE` una condición sobre la tabla externa: la convierte de nuevo en interna.</td><td><a href="026.html">026</a></td></tr>
+<tr><td><a href="../glosario.html#reunión-interna"><strong>reunión interna</strong></a></td><td>`INNER JOIN`: devuelve solo los pares que casan. Las filas sin pareja desaparecen, y ese descarte silencioso es la causa más frecuente de informes con menos filas de las esperadas.</td><td><a href="026.html">026</a></td></tr>
+<tr><td><a href="../glosario.html#semirreunion"><strong>semirreunion</strong></a></td><td>Filtrar una tabla por la existencia de una pareja, sin traer columnas de la otra ni multiplicar filas: `WHERE EXISTS (…)` o `IN (…)`. Es lo que casi siempre se quería cuando se escribió un `JOIN` seguido de `DISTINCT`.</td><td><a href="026.html">026</a></td></tr>
+<tr><td><a href="../glosario.html#subconsulta-correlacionada"><strong>subconsulta correlacionada</strong></a></td><td>Subconsulta que referencia una columna de la consulta externa y por tanto se evalúa en función de cada fila. Conceptualmente es un bucle; los optimizadores modernos suelen convertirla en una reunión, pero conviene comprobarlo en el plan y no suponerlo.</td><td><a href="028.html">028</a></td></tr>
+<tr><td><a href="../glosario.html#tipo-de-dato"><strong>tipo de dato</strong></a></td><td>La declaración que fija qué valores acepta una columna y qué operaciones tienen sentido sobre ella. Es la primera línea de defensa del esquema y la más barata: lo que el tipo rechaza no hay que validarlo en ningún lenguaje de aplicación.</td><td><a href="024.html">024</a></td></tr>
+<tr><td><a href="../glosario.html#unknown"><strong>UNKNOWN</strong></a></td><td>El tercer valor de verdad de SQL, resultado de comparar con un nulo. No es verdadero ni falso: `NOT UNKNOWN` sigue siendo `UNKNOWN`, y un `WHERE` que se evalúa a `UNKNOWN` descarta la fila igual que si fuera falso.</td><td><a href="029.html">029</a></td></tr>
+<tr><td><a href="../glosario.html#valor-por-defecto"><strong>valor por defecto</strong></a></td><td>Valor que el motor asigna cuando el `INSERT` no menciona la columna. Bien usado evita nulos accidentales; mal usado enmascara datos que faltaban de verdad y que convenía detectar.</td><td><a href="024.html">024</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>9 obras distintas sostienen lo que se afirma en estas
+6 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-gmuw-complete-book">Database Systems: The Complete Book</a> <span class="fuente-meta">(2008)</span> — <span class="fuente-meta">se cita en 027</span></li>
+<li><a href="../fuentes.html#src-codd-1979">Extending the Database Relational Model to Capture More Meaning</a> <span class="fuente-meta">(1979)</span> — <span class="fuente-meta">se cita en 029</span></li>
+<li><a href="../fuentes.html#src-iso-9075">ISO/IEC 9075: Information technology - Database languages - SQL</a> <span class="fuente-meta">(2023)</span> — <span class="fuente-meta">se cita en 024, 028</span></li>
+<li><a href="../fuentes.html#src-celko-smarties">Joe Celko's SQL for Smarties: Advanced SQL Programming</a> <span class="fuente-meta">(2014)</span> — <span class="fuente-meta">se cita en 027, 028</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql">PostgreSQL Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 024, 028, 029</span></li>
+<li><a href="../fuentes.html#src-molinaro-sql-cookbook">SQL Cookbook</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 025, 026, 027, 028</span></li>
+<li><a href="../fuentes.html#src-winand-sql-performance">SQL Performance Explained</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 026</span></li>
+<li><a href="../fuentes.html#src-date-sql-relational-theory">SQL and Relational Theory: How to Write Accurate SQL Code</a> <span class="fuente-meta">(2015)</span> — <span class="fuente-meta">se cita en 024, 025, 026, 029</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite">SQLite Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 024, 025</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

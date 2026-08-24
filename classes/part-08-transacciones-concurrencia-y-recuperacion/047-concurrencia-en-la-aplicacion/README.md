@@ -12,6 +12,10 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La parte de la concurrencia que el motor no resuelve por ti. Trata la idempotencia como la única defensa realista frente a una red que no distingue «no llegó» de «se perdió la respuesta», y el bloqueo optimista y el reintento con retroceso como los dos patrones que toda aplicación con transacciones acaba necesitando.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 047"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [045](../../part-08-transacciones-concurrencia-y-recuperacion/045-bloqueo-en-dos-fases-y-mvcc/README.md) | Bloqueo en dos fases, MVCC e instantáneas | 2PL · versión de fila · instantánea · interbloqueo · vacuum |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-idempotencia"></a>**idempotencia** | Propiedad de una operación que, repetida con la misma entrada, deja el mismo estado que ejecutarla una vez. Es la única defensa realista contra las redes: en un sistema distribuido no se puede distinguir «no llegó» de «llegó y se perdió la respuesta». | se introduce aquí |
+| <a id="v-clave-de-idempotencia"></a>**clave de idempotencia** | Identificador que el cliente genera y envía con la petición para que el servidor reconozca un reintento y devuelva el resultado anterior en lugar de ejecutar dos veces. Es cómo se cobra una tarjeta una sola vez aunque el navegador reenvíe. | se introduce aquí |
+| <a id="v-bloqueo-optimista"></a>**bloqueo optimista** | En lugar de bloquear, se lee una versión y al escribir se comprueba que no haya cambiado (`WHERE version = ?`). Si cambió, se reintenta. Rinde mejor que el bloqueo cuando los conflictos son raros, y peor cuando son frecuentes. | se introduce aquí |
+| <a id="v-reintento-con-retroceso"></a>**reintento con retroceso** | Reintentar tras un fallo esperando cada vez más tiempo, con una componente aleatoria. El retroceso evita hundir un sistema que ya está en apuros y la aleatoriedad evita que todos los clientes vuelvan sincronizados a la vez. | se introduce aquí |
 
 ---
 

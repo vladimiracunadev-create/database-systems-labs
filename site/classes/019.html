@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>redundancia controlada</code> · <code>costo de escritura</code> · <code>agregado</code> · <code>patrón de lectura</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El contrapeso de la clase anterior: cuándo duplicar a propósito. Exige tres cosas antes de desnormalizar —un patrón de lectura medido, un mecanismo declarado que mantenga las copias al día y el costo de escritura aceptado por escrito—, y así separa la redundancia controlada de la accidental.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 019&quot;]
     C --&gt; K1[&quot;redundancia controlada&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="018.html">018</a></td>
+<td>Normalización de 1FN a BCFN con dependencias funcionales</td>
+<td>dependencia funcional · anomalía de actualización · BCFN · descomposición sin pérdida</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-redundancia-controlada"></a><strong>redundancia controlada</strong></td>
+<td>Duplicar un dato a propósito, sabiendo dónde está la copia y quién la mantiene al día. Se distingue de la redundancia accidental en que existe un mecanismo declarado de sincronización y un costo de escritura aceptado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-costo-de-escritura"></a><strong>costo de escritura</strong></td>
+<td>Lo que se paga en cada <code>INSERT</code> o <code>UPDATE</code> por las copias, los índices y los agregados que hay que mantener coherentes. Toda aceleración de lectura por duplicación se cobra aquí; el diseño consiste en decidir de qué lado se quiere el dolor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-agregado"></a><strong>agregado</strong></td>
+<td>Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como <code>SUM</code> o <code>COUNT</code>.)</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-patrón-de-lectura"></a><strong>patrón de lectura</strong></td>
+<td>Qué se consulta, con qué filtros y con qué frecuencia. Es el argumento que justifica desnormalizar: sin una lectura dominante medida, duplicar datos es solo asumir el costo sin cobrar el beneficio.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Introducir redundancia a propósito, con evidencia de que hacía falta y con un mecanismo declarado que la mantenga coherente. Desnormalizar sin ambas cosas no es una optimización: es una anomalía planificada.</p>

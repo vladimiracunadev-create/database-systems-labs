@@ -9,12 +9,13 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
 
 ```mermaid
 flowchart TD
-    CY["curriculum.yaml<br/>partes · clases · horas · fuentes"] --> BC["scripts/build_classes.py"]
+    CY["curriculum.yaml<br/>partes · clases · horas · fuentes<br/>resumen · prerrequisitos · pauta"] --> BC["scripts/build_classes.py"]
     LM["classes/**/lesson.md<br/>la materia, escrita a mano"] --> BC
     MY["classes/**/motores.yaml<br/>el caso y la matriz de motores"] --> BC
     IM["classes/**/implementaciones/<br/>el código real, uno por motor"] --> BC
     SJ["catalog/sources.json<br/>120 fuentes"] --> BC
-    BC --> CR["classes/**/README.md<br/>+ índices de parte<br/>(generados)"]
+    GJ["catalog/glosario.json<br/>306 términos"] --> BC
+    BC --> CR["classes/**/README.md<br/>+ portadas de parte<br/>+ GLOSARIO.md<br/>(generados)"]
 
     MY --> VE["scripts/verificar_equivalencia.py"]
     IM --> VE
@@ -23,11 +24,13 @@ flowchart TD
     CY --> GS["scripts/generate_site.py"]
     CR --> GS
     SJ --> GS
+    GJ --> GS
     DJ["catalog/databases.json<br/>27 motores"] --> GS
     GS --> ST["site/<br/>una página por clase + busqueda.json<br/>(generado)"]
 
     CY --> VR["scripts/validate_repository.py"]
     SJ --> VR
+    GJ --> VR
     DJ --> VR
     LM --> VR
     MY --> VR
@@ -46,6 +49,7 @@ flowchart TD
 | `catalog/*.json` | Fuente | **Sí** |
 | `labs/`, `reference-data/`, `docs/` | Fuente | **Sí** |
 | `classes/**/README.md` | Artefacto | No |
+| `GLOSARIO.md` | Artefacto | No |
 | `classes/README.md` y `classes/part-*/README.md` | Artefacto | No |
 | `site/**` | Artefacto | No |
 
@@ -58,8 +62,25 @@ repositorio digan cosas distintas.
 ### `curriculum.yaml`
 
 Metadatos de las 74 clases: identificador, `slug`, título, horas, nivel,
-conceptos, motores, laboratorio y **fuentes**. También las rutas por objetivo y
-los pesos de evaluación. Nada de lo que aquí se declara se repite en otro sitio.
+conceptos, motores, laboratorio y **fuentes**. Lleva además la
+**pauta pedagógica**: el `resumen` y los `prerrequisitos` de cada clase, y por
+cada parte su `introduccion`, sus `resultados` y sus `errores` frecuentes. De ahí
+salen la portada de cada parte y el índice general. También contiene las rutas
+por objetivo y los pesos de evaluación. Nada de lo que aquí se declara se repite
+en otro sitio.
+
+### `catalog/glosario.json`
+
+Los 306 conceptos que declaran las clases, definidos una sola vez. Cada entrada
+lleva la definición, la clase donde el término se introduce, la fuente que la
+respalda y los términos relacionados. De aquí salen tres cosas: el vocabulario
+que abre cada clase, el vocabulario de cada portada de parte y el
+[`GLOSARIO.md`](../GLOSARIO.md) del programa.
+
+El validador exige cobertura **exacta en los dos sentidos**: ningún concepto del
+currículo sin definición, y ninguna definición que ninguna clase declare. La
+primera regla evita que el lector tenga que deducir del contexto; la segunda
+evita que el registro acumule entradas que nadie revisa.
 
 ### `catalog/sources.json`
 
@@ -135,6 +156,11 @@ catálogo de motores.
 | ISBN en libros, DOI o sede en artículos | Citas no localizables |
 | Motores citados presentes en el catálogo | Prometer cobertura inexistente |
 | Secuencia 001..074 sin huecos | Clases perdidas al reordenar |
+| Cobertura exacta del glosario en los dos sentidos | Términos usados sin definir y definiciones huérfanas |
+| Remisiones del glosario resueltas | «Ver también» que lleva a la nada |
+| Resumen y prerrequisitos en toda clase | Clases que aparecen sin explicar por qué están ahí |
+| Prerrequisitos siempre anteriores | Dependencias circulares en el orden de estudio |
+| Introducción, resultados y errores en toda parte | Portadas de parte que son solo una tabla |
 | Todo motor con su `porque_no` | Comparativas de folleto, con solo ventajas |
 | Todo motor con su `doc:` en el dominio oficial | Afirmaciones sobre un motor sin respaldo |
 | Implementación declarada que existe en disco | Código prometido y ausente |
@@ -162,5 +188,15 @@ catálogo de motores.
   se publica, y GitHub Pages no necesita construir nada.
 - **Los `slug` en ASCII.** Son rutas de carpeta y de URL; los acentos ahí causan
   problemas entre sistemas de archivos.
+- **El glosario en JSON y no en Markdown.** Permite comprobar la cobertura
+  contra el currículo y generar el mismo término en tres sitios —clase, parte y
+  glosario— sin tres copias que se desincronizan.
+- **La pauta pedagógica en `curriculum.yaml` y no en cada `lesson.md`.** El
+  resumen de una clase se lee en su propio README, en la portada de su parte y
+  en el índice general. Escrito una sola vez, los tres dicen lo mismo por
+  construcción.
+- **Los prerrequisitos declarados y validados hacia atrás.** Un prerrequisito
+  que apunta hacia delante es una dependencia circular, y el validador la
+  rechaza. Es lo que garantiza que seguir la numeración nunca deje un hueco.
 - **La validación falla, no avisa.** Un aviso que nadie lee es una regla que no
   existe.

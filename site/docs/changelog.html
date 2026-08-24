@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html" aria-current="page">Documentación</a>
@@ -54,8 +55,56 @@
 <h1 id="changelog">Changelog</h1>
 <p>Formato basado en <a href="https://keepachangelog.com/es-ES/1.1.0/">Keep a Changelog</a>.</p>
 <h2 id="no-publicado">No publicado</h2>
-<p>Avance del hito 2.1: el núcleo ejecutable pasa de dos laboratorios a cinco, y
-el validador deja de ser el único componente sin pruebas.</p>
+<p>Dos avances: la <strong>capa pedagógica</strong> —el programa deja de ser un catálogo de
+clases para explicarse a sí mismo de principio a fin— y el hito 2.1, en el que
+el núcleo ejecutable pasa de dos laboratorios a cinco y el validador deja de ser
+el único componente sin pruebas.</p>
+<h3 id="añadido--capa-pedagógica">Añadido — capa pedagógica</h3>
+<ul>
+<li><strong>Glosario del programa</strong> (<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md"><code>GLOSARIO.md</code></a>, generado desde
+  <code>catalog/glosario.json</code>): los <strong>306 conceptos</strong> que declaran las 74 clases,
+  definidos una sola vez. Cada entrada trae la definición, la clase donde el
+  término se introduce, la fuente que la respalda y sus términos relacionados.
+  La cobertura contra el currículo es <strong>exacta en los dos sentidos</strong> y la
+  comprueba el validador.</li>
+<li><strong>Pauta pedagógica en <code>curriculum.yaml</code></strong>: cada clase declara ahora su
+  <code>resumen</code> —para qué está y qué cambia al terminarla— y sus <code>prerrequisitos</code>;
+  cada parte declara su <code>introduccion</code>, sus <code>resultados</code> de aprendizaje y los
+  <code>errores</code> frecuentes que desmonta. Son 1 207 líneas nuevas de material
+  escrito, no metadatos.</li>
+<li><strong>Portada de parte reconstruida</strong>: donde antes había un resumen de tres líneas
+  y una tabla, ahora hay «antes de esta parte», «de qué trata», «al terminar
+  podrás», un mapa de las clases encadenadas, <strong>una ficha explicada por clase</strong>,
+  los errores frecuentes, el vocabulario completo de la parte y su bibliografía
+  agregada con las clases que citan cada obra.</li>
+<li><strong>Tres secciones nuevas en cada una de las 74 clases</strong>: «De qué trata esta
+  clase», «Antes de empezar» —qué se da por sabido, con enlace a la clase donde
+  se explicó— y «Vocabulario de la clase», que define cada concepto antes de que
+  el texto lo use.</li>
+<li><strong><a href="guia-de-estudio.html">Guía de estudio</a></strong>: los
+  cuatro niveles de lectura, el método de ocho pasos por clase, el orden y sus
+  atajos legítimos con lo que cuesta cada uno, tres ritmos con su duración, la
+  autocomprobación de fin de parte y qué hacer cuando algo no sale.</li>
+<li><strong>Página de glosario en el sitio</strong> (<code>site/glosario.html</code>), con filtro en vivo,
+  navegación alfabética y enlace cruzado a la clase de cada término; más el
+  vocabulario y la bibliografía de cada parte en su página.</li>
+<li><strong>16 pruebas nuevas</strong> (<code>tests/test_glosario.py</code>, 143 en total): comprueban la
+  cobertura del glosario en los dos sentidos, que ninguna remisión apunte al
+  vacío, que cada término se defina en una clase que lo declara, que toda clase
+  publique su vocabulario y sus prerrequisitos, y que la portada de cada parte
+  explique todas sus clases. Además someten al validador a cinco repositorios
+  rotos a propósito —concepto sin definir, definición huérfana, remisión rota,
+  resumen vacío y prerrequisito circular— y exigen que los detecte.</li>
+</ul>
+<h3 id="cambiado--capa-pedagógica">Cambiado — capa pedagógica</h3>
+<ul>
+<li><code>scripts/validate_repository.py</code> incorpora <code>validar_glosario</code> y
+  <code>validar_pauta</code>. La segunda regla del repositorio pasa a ser explícita:
+  <strong>ningún concepto se usa sin estar definido en el glosario</strong>. Un prerrequisito
+  que no precede a su clase se trata como dependencia circular y falla.</li>
+<li>El índice general (<code>classes/README.md</code>) explica cómo se lee el material y
+  resume cada clase en una línea, en lugar de listar solo títulos.</li>
+</ul>
 <h3 id="añadido">Añadido</h3>
 <ul>
 <li><strong>Laboratorio 03 ejecutable</strong> (<code>labs/03-transactions/run_transactions_lab.py</code>):
@@ -72,7 +121,7 @@ el validador deja de ser el único componente sin pruebas.</p>
   mide TTL frente a coherencia, incrustar frente a referenciar bajo carga de
   lectura y de escritura, el techo de un arreglo incrustado ante el límite de
   16 MiB por documento, y el reparto de una clave de partición caliente.</li>
-<li><strong>Pruebas</strong> (<code>tests/</code>): 127 pruebas que ejecutan los laboratorios, comprueban
+<li><strong>Pruebas</strong> (<code>tests/</code>): una batería que ejecuta los laboratorios, comprueba
   que no importan dependencias externas, verifican la idempotencia de los
   generadores y su modo <code>--check</code>, y someten al validador a un repositorio roto
   a propósito —clase con una sola fuente, cita al vacío, fuente huérfana, libro

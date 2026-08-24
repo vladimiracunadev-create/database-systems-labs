@@ -12,6 +12,10 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 
 **En este caso se comparan 8 motores**: 7 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El recorrido completo de una consulta desde el cliente hasta el disco: analizador, planificador, ejecutor, gestor de almacenamiento y buffer. Es el mapa mental que después permite leer un plan de ejecución sin adivinar, y saber en qué componente vive cada problema de rendimiento.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 012"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [011](../../part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md) | Qué resuelve un sistema de bases de datos y qué no | persistencia · concurrencia · integridad · recuperación · independencia de datos |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-analizador"></a>**analizador** | Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.) | se introduce aquí |
+| <a id="v-planificador"></a>**planificador** | Decide *cómo* ejecutar la consulta: qué índice usar, en qué orden reunir las tablas, con qué algoritmo. Elige por costo estimado a partir de estadísticas, no por el orden en que está escrita la consulta. | se introduce aquí |
+| <a id="v-ejecutor"></a>**ejecutor** | Recorre el plan elegido operador a operador y produce las filas. Es donde `EXPLAIN ANALYZE` muestra los tiempos reales frente a los que el planificador había estimado. | se introduce aquí |
+| <a id="v-gestor-de-almacenamiento"></a>**gestor de almacenamiento** | La capa que traduce filas a páginas en disco y de vuelta, y que sostiene el registro, el buffer y las estructuras de índice. Es donde se decide si el motor es B-Tree o LSM, y con ello su perfil de lectura y escritura. | se introduce aquí |
+| <a id="v-buffer-pool"></a>**buffer pool** | La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms. | se introduce aquí |
 
 ---
 

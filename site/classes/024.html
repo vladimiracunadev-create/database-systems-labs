@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>tipo de dato</code> · <code>restricción</code> · <code>valor por defecto</code> · <code>DDL transaccional</code></p>
 <p><strong>En este caso se comparan 8 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El DDL leído como un contrato ejecutable: cada tipo y cada restricción es una validación que ya no hay que escribir en ninguna aplicación. Incluye una divergencia que decide cómo se hacen las migraciones: si el DDL es transaccional en tu motor o si una migración a medias deja un estado sin retorno.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 024&quot;]
     C --&gt; K1[&quot;tipo de dato&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="006.html">006</a></td>
+<td>Tipos de datos: por qué un número no es un texto</td>
+<td>tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos</td>
+</tr>
+<tr>
+<td><a href="023.html">023</a></td>
+<td>Integridad: restricciones, claves foraneas y acciones referenciales</td>
+<td>integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-tipo-de-dato"></a><strong>tipo de dato</strong></td>
+<td>La declaración que fija qué valores acepta una columna y qué operaciones tienen sentido sobre ella. Es la primera línea de defensa del esquema y la más barata: lo que el tipo rechaza no hay que validarlo en ningún lenguaje de aplicación.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-restricción"></a><strong>restricción</strong></td>
+<td>Regla declarada en el esquema que el motor impone siempre: <code>NOT NULL</code>, <code>UNIQUE</code>, <code>CHECK</code>, <code>PRIMARY KEY</code>, <code>FOREIGN KEY</code>. Su ventaja sobre la validación en la aplicación es que no depende de que alguien se acuerde.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-valor-por-defecto"></a><strong>valor por defecto</strong></td>
+<td>Valor que el motor asigna cuando el <code>INSERT</code> no menciona la columna. Bien usado evita nulos accidentales; mal usado enmascara datos que faltaban de verdad y que convenía detectar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-ddl-transaccional"></a><strong>DDL transaccional</strong></td>
+<td>Capacidad de ejecutar <code>CREATE</code>, <code>ALTER</code> o <code>DROP</code> dentro de una transacción y poder revertirlos. PostgreSQL y SQLite la tienen; MySQL histórico y Oracle confirman implícitamente, lo que convierte una migración fallida a mitad en un estado sin retorno.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir el esquema como un contrato ejecutable: cada línea de DDL es una promesa que el motor hace cumplir. Un esquema laxo traslada esa responsabilidad a cada programa cliente, presente y futuro.</p>

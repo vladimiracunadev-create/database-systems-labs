@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/07-replication/README.md"><code>labs/07-replication</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>replicación sincrónica</code> · <code>retraso de réplica</code> · <code>quórum</code> · <code>lectura de tu propia escritura</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las tres arquitecturas de réplica y el compromiso que define cada una. La consecuencia visible para el usuario es el retraso de réplica: guardar algo y al recargar no verlo. Introduce las garantías de sesión que lo tapan y el quórum de los sistemas sin líder.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 053&quot;]
     C --&gt; K1[&quot;replicación sincrónica&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="043.html">043</a></td>
+<td>ACID: qué garantiza cada letra y quién la implementa</td>
+<td>atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación</td>
+</tr>
+<tr>
+<td><a href="046.html">046</a></td>
+<td>Registro anticipado y recuperación: WAL y ARIES</td>
+<td>WAL · punto de control · rehacer · deshacer · LSN</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-replicación-sincrónica"></a><strong>replicación sincrónica</strong></td>
+<td>El líder no confirma la escritura hasta que al menos una réplica la ha recibido. Garantiza que no se pierda al caer el líder, a cambio de que la latencia del cliente incluya la de la réplica más lenta y de que una réplica caída pueda detener las escrituras.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-retraso-de-réplica"></a><strong>retraso de réplica</strong></td>
+<td>La distancia temporal entre lo que ya está en el líder y lo que la réplica ha aplicado. Con replicación asíncrona es inevitable, y es la causa directa de que un usuario guarde algo y al recargar no lo vea.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-quórum"></a><strong>quórum</strong></td>
+<td>Regla de los sistemas sin líder: si las escrituras van a W réplicas, las lecturas consultan R, y <code>W + R &gt; N</code>, entonces toda lectura toca al menos una réplica con el último valor. Permite ajustar el compromiso entre latencia y frescura por operación.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-lectura-de-tu-propia-escritura"></a><strong>lectura de tu propia escritura</strong></td>
+<td>Garantía de sesión que asegura que quien acaba de escribir verá su propio cambio, aunque otros aún no. Se implementa dirigiendo al líder las lecturas recientes de ese usuario, o esperando a que la réplica alcance el LSN de su escritura.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Replicar datos entendiendo qué se gana (disponibilidad, lectura escalada, cercanía geográfica) y qué se paga (retraso, conflictos, pérdida potencial en la conmutación).</p>

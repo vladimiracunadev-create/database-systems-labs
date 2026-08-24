@@ -12,6 +12,10 @@ Parte 10 — Distribución, réplica y consistencia · Avanzado ·
 
 **En este caso se comparan 8 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Repartir los datos entre nodos sin crear un cuello de botella. Compara hash consistente y partición por rango por lo que cada una permite y por el punto caliente que cada una genera, y explica por qué el rebalanceo se diseña fijando muchas más particiones que nodos desde el principio.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 054"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [039](../../part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/README.md) | Columnas anchas: modelar desde la consulta | clave de partición · clave de agrupamiento · desnormalización por consulta |
+| [053](../../part-10-distribucion-replica-y-consistencia/053-replica-lider-unico-multilider-y-sin-lider/README.md) | Réplica: líder único, multilíder y sin líder | replicación sincrónica · retraso de réplica · quórum · lectura de tu propia escritura |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-hash-consistente"></a>**hash consistente** | Reparto de claves sobre un anillo de posiciones de modo que añadir o quitar un nodo mueva solo una fracción de los datos, y no obligue a redistribuirlo todo como haría un `hash mod N`. Es la base del rebalanceo en Dynamo y Cassandra. | se introduce aquí |
+| <a id="v-partición-por-rango"></a>**partición por rango** | Repartir por intervalos ordenados de la clave. Permite consultas por rango eficientes, a costa de generar puntos calientes cuando las escrituras se concentran al final del rango —el caso típico de una clave temporal. | se introduce aquí |
+| <a id="v-punto-caliente"></a>**punto caliente** | Partición que recibe una parte desproporcionada del tráfico: la celebridad con millones de seguidores, la fecha de hoy, el cliente que factura el 40 %. Ninguna cantidad de nodos ayuda mientras el reparto siga concentrando ahí. | se introduce aquí |
+| <a id="v-reequilibrio"></a>**reequilibrio** | Mover particiones entre nodos al cambiar la capacidad del clúster. La práctica recomendada es fijar de antemano muchas más particiones que nodos y mover particiones enteras, en lugar de recalcular la asignación de cada clave. | se introduce aquí |
 
 ---
 

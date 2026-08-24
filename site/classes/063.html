@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/02-polyglot-modeling/README.md"><code>labs/02-polyglot-modeling</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>minimización</code> · <code>limitación de finalidad</code> · <code>seudonimización</code> · <code>derecho de supresión</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El dato personal como una obligación de diseño y no como un anexo legal. Minimización, limitación de finalidad, seudonimización y derecho de supresión, con el choque que hay que resolver antes de que llegue la solicitud: los respaldos, las réplicas y los registros de auditoría también contienen ese dato.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 063&quot;]
     C --&gt; K1[&quot;minimización&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="058.html">058</a></td>
+<td>Respaldo y restauración: solo cuenta lo que se ha restaurado</td>
+<td>RPO · RTO · recuperación a un punto en el tiempo · prueba de restauración</td>
+</tr>
+<tr>
+<td><a href="060.html">060</a></td>
+<td>Control de acceso: privilegio mínimo, roles y seguridad por fila</td>
+<td>privilegio mínimo · rol · seguridad por fila · separación de funciones</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-minimización"></a><strong>minimización</strong></td>
+<td>Recoger solo los datos personales necesarios para la finalidad declarada. Es la medida de protección más eficaz que existe, porque el dato que no se guarda no se filtra, no hay que cifrarlo ni hay que borrarlo después.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-limitación-de-finalidad"></a><strong>limitación de finalidad</strong></td>
+<td>Los datos recogidos para un fin no pueden reutilizarse para otro incompatible sin nueva base legal. Es lo que impide que un correo pedido para la facturación acabe alimentando un modelo de recomendación.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-seudonimización"></a><strong>seudonimización</strong></td>
+<td>Sustituir los identificadores directos por referencias, guardando por separado la tabla que permite revertirlo. Reduce el riesgo pero no convierte el dato en anónimo: mientras exista la clave, sigue siendo dato personal.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-derecho-de-supresión"></a><strong>derecho de supresión</strong></td>
+<td>Obligación de borrar los datos de una persona cuando lo solicita y no hay base para conservarlos. Choca de frente con los respaldos, las réplicas y los registros de auditoría, y por eso hay que diseñar dónde vive el dato personal antes de que lo pidan.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Traducir las obligaciones de privacidad en decisiones de esquema. Minimización, retención y supresión no son cláusulas de un documento legal: son columnas, políticas y trabajos programados.</p>

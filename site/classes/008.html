@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>clave foránea</code> · <code>tabla de relación</code> · <code>reunión</code> · <code>anomalías de repetición</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La segunda tabla y el momento en que aparece la relación. La clave foránea convierte una convención en una regla que el motor impone, la tabla intermedia resuelve el muchos-a-muchos y la reunión permite volver a ver el hecho completo. Aquí se ven por primera vez las anomalías que justifican toda la parte 02.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 008&quot;]
     C --&gt; K1[&quot;clave foránea&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="007.html">007</a></td>
+<td>La clave primaria: cómo se distingue una fila de otra</td>
+<td>clave primaria · clave natural · clave sustituta · clave compuesta · UNIQUE</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-clave-foránea"></a><strong>clave foránea</strong></td>
+<td>Columna que referencia la clave primaria de otra tabla y a la que el gestor obliga a apuntar a una fila existente. Es la integridad referencial hecha declaración: sin ella, las relaciones son una convención que alguien acabará rompiendo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-tabla-de-relación"></a><strong>tabla de relación</strong></td>
+<td>Tabla intermedia que resuelve una relación muchos-a-muchos guardando pares de claves foráneas. Deja de ser «solo técnica» en cuanto la relación tiene atributos propios —fecha de inscripción, nota— y pasa a ser una entidad de pleno derecho.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-reunión"></a><strong>reunión</strong></td>
+<td>Combinar filas de dos tablas emparejándolas por un valor común, normalmente clave foránea contra clave primaria. Es la operación que permite normalizar sin perder la capacidad de ver el hecho completo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-anomalías-de-repetición"></a><strong>anomalías de repetición</strong></td>
+<td>Los tres desastres de guardar el mismo hecho en varios sitios: al insertar hay que repetir datos, al actualizar se corrige una copia y no las otras, y al borrar se pierde información que solo vivía ahí. Son el argumento original de la normalización.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Dar el paso que separa «guardar datos» de «modelar»: <strong>partir una tabla en dos y

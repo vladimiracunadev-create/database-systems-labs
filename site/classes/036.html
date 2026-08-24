@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>índice compuesto</code> · <code>canalización de agregación</code> · <code>índice multiclave</code> · <code>cobertura</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Cómo se consulta e indexa lo que se modeló en la clase anterior: índices compuestos y multiclave, cobertura, y la canalización de agregación con la regla que más rendimiento decide —poner <code>$match</code> al principio para que el índice sirva, no después.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 036&quot;]
     C --&gt; K1[&quot;índice compuesto&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="035.html">035</a></td>
+<td>Modelado documental: incrustar o referenciar</td>
+<td>incrustación · referencia · crecimiento no acotado · patrón de extensión</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-índice-compuesto"></a><strong>índice compuesto</strong></td>
+<td>Índice sobre varias claves en un orden concreto. Sirve para las consultas que filtran por un prefijo de esa lista, no para cualquier subconjunto: <code>(a, b, c)</code> acelera filtrar por <code>a</code> o por <code>a, b</code>, pero no por <code>b</code> a secas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-canalización-de-agregación"></a><strong>canalización de agregación</strong></td>
+<td>Secuencia de etapas (<code>$match</code>, <code>$group</code>, <code>$sort</code>, <code>$lookup</code>) por las que pasan los documentos en MongoDB. El orden importa de verdad: poner <code>$match</code> al principio permite usar el índice, ponerlo después obliga a recorrer la colección entera.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-índice-multiclave"></a><strong>índice multiclave</strong></td>
+<td>Índice sobre un campo que contiene un arreglo: MongoDB crea una entrada por elemento. Permite buscar dentro del arreglo, y explica por qué el índice de una colección puede tener muchas más entradas que documentos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cobertura"></a><strong>cobertura</strong></td>
+<td>Que el índice contenga todas las columnas que la consulta necesita, de modo que el motor responda sin tocar la tabla. Es la diferencia entre una lectura y dos, y suele ser la optimización con mejor relación entre esfuerzo y resultado.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Consultar documentos con la misma disciplina que se consulta SQL: sabiendo qué índice se usa, cuántos documentos se examinan y por qué una etapa de la canalización es cara.</p>

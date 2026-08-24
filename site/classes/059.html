@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>expandir y contraer</code> · <code>doble escritura</code> · <code>relleno</code> · <code>compatibilidad hacia atras</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Cambiar el esquema con el sistema en marcha, usando expandir y contraer: primero añadir sin quitar, después trasladar el tráfico y rellenar el histórico por lotes reanudables, y solo al final eliminar lo viejo. La compatibilidad hacia atrás deja de ser una buena práctica y pasa a ser obligatoria en cuanto el despliegue es gradual.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 059&quot;]
     C --&gt; K1[&quot;expandir y contraer&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="013.html">013</a></td>
+<td>Independencia de datos y los tres niveles de esquema</td>
+<td>esquema conceptual · esquema físico · vista externa · independencia lógica</td>
+</tr>
+<tr>
+<td><a href="024.html">024</a></td>
+<td>DDL: el esquema como contrato ejecutable</td>
+<td>tipo de dato · restricción · valor por defecto · DDL transaccional</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-expandir-y-contraer"></a><strong>expandir y contraer</strong></td>
+<td>Patrón de migración en tres tiempos: primero se añade lo nuevo sin quitar lo viejo, después se traslada el tráfico y se rellena, y solo cuando nadie usa lo antiguo se elimina. Es lo que permite desplegar esquema y código por separado sin ventana de caída.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-doble-escritura"></a><strong>doble escritura</strong></td>
+<td>Fase transitoria en la que la aplicación escribe en la estructura vieja y en la nueva a la vez. Sostiene la migración mientras se rellena el histórico; hay que declarar desde el principio cuándo termina, porque si no se queda para siempre.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-relleno"></a><strong>relleno</strong></td>
+<td>Copiar el histórico a la estructura nueva, por lotes y de forma reanudable, para no bloquear la tabla ni saturar el registro. Debe ser idempotente: se va a interrumpir y habrá que relanzarlo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-compatibilidad-hacia-atras"></a><strong>compatibilidad hacia atras</strong></td>
+<td>Que el código nuevo siga entendiendo los datos escritos por el viejo, y que el viejo no se rompa con los del nuevo. Es obligatoria en cuanto el despliegue es gradual, porque durante un rato conviven las dos versiones.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Cambiar el esquema mientras la aplicación sirve tráfico. La técnica se resume en una idea: nunca hacer un cambio incompatible; hacer dos compatibles con un periodo de convivencia en medio.</p>

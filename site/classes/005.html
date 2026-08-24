@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>UPDATE</code> · <code>DELETE</code> · <code>alcance del cambio</code> · <code>filas afectadas</code> · <code>transacción como red</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las tres órdenes que cambian datos y la disciplina que las hace seguras: comprobar el alcance con un <code>SELECT</code> antes de escribir, leer el número de filas afectadas y envolver el cambio en una transacción que se pueda deshacer. Es la clase que evita el <code>UPDATE</code> sin <code>WHERE</code> que todo el mundo cuenta haber hecho una vez.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 005&quot;]
     C --&gt; K1[&quot;UPDATE&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+<tr>
+<td><a href="004.html">004</a></td>
+<td>Leer datos: SELECT, WHERE y ORDER BY</td>
+<td>filtrado · proyección · orden · LIMIT · IS NULL</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-update"></a><strong>UPDATE</strong></td>
+<td>Cambia valores de las filas que cumplen el <code>WHERE</code>. Sin <code>WHERE</code> cambia todas: es la orden que más datos ha destruido en la historia de las bases de datos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-delete"></a><strong>DELETE</strong></td>
+<td>Borra las filas que cumplen el <code>WHERE</code>. Igual que <code>UPDATE</code>, sin <code>WHERE</code> alcanza a toda la tabla; a diferencia de <code>DROP</code>, deja la estructura en pie.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-alcance-del-cambio"></a><strong>alcance del cambio</strong></td>
+<td>Cuántas filas toca realmente una orden de escritura. La disciplina es comprobarlo antes: escribir el <code>SELECT</code> con el mismo <code>WHERE</code>, contar, y solo entonces convertirlo en <code>UPDATE</code> o <code>DELETE</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-filas-afectadas"></a><strong>filas afectadas</strong></td>
+<td>El número que el motor devuelve tras una escritura. Es la evidencia de que el cambio alcanzó lo previsto: si esperabas una fila y salieron cuatro mil, el <code>WHERE</code> estaba mal.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-transacción-como-red"></a><strong>transacción como red</strong></td>
+<td>Envolver un cambio en <code>BEGIN</code> … <code>ROLLBACK</code> permite ver su efecto y deshacerlo. Es la red de seguridad más barata que existe y la razón práctica de que un <code>UPDATE</code> sin transacción sea una apuesta.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Modificar datos sin romper nada. Las tres órdenes que cambian el contenido de una

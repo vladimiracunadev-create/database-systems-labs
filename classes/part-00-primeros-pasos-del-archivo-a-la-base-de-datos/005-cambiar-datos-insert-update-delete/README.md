@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Las tres órdenes que cambian datos y la disciplina que las hace seguras: comprobar el alcance con un `SELECT` antes de escribir, leer el número de filas afectadas y envolver el cambio en una transacción que se pueda deshacer. Es la clase que evita el `UPDATE` sin `WHERE` que todo el mundo cuenta haber hecho una vez.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 005"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+| [004](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) | Leer datos: SELECT, WHERE y ORDER BY | filtrado · proyección · orden · LIMIT · IS NULL |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-update"></a>**UPDATE** | Cambia valores de las filas que cumplen el `WHERE`. Sin `WHERE` cambia todas: es la orden que más datos ha destruido en la historia de las bases de datos. | se introduce aquí |
+| <a id="v-delete"></a>**DELETE** | Borra las filas que cumplen el `WHERE`. Igual que `UPDATE`, sin `WHERE` alcanza a toda la tabla; a diferencia de `DROP`, deja la estructura en pie. | se introduce aquí |
+| <a id="v-alcance-del-cambio"></a>**alcance del cambio** | Cuántas filas toca realmente una orden de escritura. La disciplina es comprobarlo antes: escribir el `SELECT` con el mismo `WHERE`, contar, y solo entonces convertirlo en `UPDATE` o `DELETE`. | se introduce aquí |
+| <a id="v-filas-afectadas"></a>**filas afectadas** | El número que el motor devuelve tras una escritura. Es la evidencia de que el cambio alcanzó lo previsto: si esperabas una fila y salieron cuatro mil, el `WHERE` estaba mal. | se introduce aquí |
+| <a id="v-transacción-como-red"></a>**transacción como red** | Envolver un cambio en `BEGIN` … `ROLLBACK` permite ver su efecto y deshacerlo. Es la red de seguridad más barata que existe y la razón práctica de que un `UPDATE` sin transacción sea una apuesta. | se introduce aquí |
 
 ---
 

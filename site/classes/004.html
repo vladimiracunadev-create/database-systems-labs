@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>filtrado</code> · <code>proyección</code> · <code>orden</code> · <code>LIMIT</code> · <code>IS NULL</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Leer con precisión: filtrar filas, elegir columnas y ordenar el resultado. La idea que más consecuencias tendrá después es que el resultado de una consulta no tiene orden hasta que lo declaras, así que <code>LIMIT</code> sin <code>ORDER BY</code> devuelve filas cualesquiera.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 004&quot;]
     C --&gt; K1[&quot;filtrado&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-filtrado"></a><strong>filtrado</strong></td>
+<td>Quedarse con las filas que cumplen un predicado (<code>WHERE</code>). En álgebra relacional es la selección: reduce el número de filas, nunca el de columnas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-proyección"></a><strong>proyección</strong></td>
+<td>Quedarse con un subconjunto de columnas. Reduce el ancho de la fila, no su cantidad —salvo que se eliminen los duplicados resultantes con <code>DISTINCT</code>, cosa que SQL no hace por defecto y el álgebra sí.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-orden"></a><strong>orden</strong></td>
+<td>El resultado de una consulta es un conjunto: no tiene orden hasta que se declara <code>ORDER BY</code>. Confiar en el orden «que salió» es un error que sobrevive en pruebas y falla en producción el día que cambia el plan.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-limit"></a><strong>LIMIT</strong></td>
+<td>Corta el resultado a las primeras N filas. Sin <code>ORDER BY</code> no significa nada estable: «las primeras N» sin criterio de orden es «N cualesquiera».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-is-null"></a><strong>IS NULL</strong></td>
+<td>El único predicado que comprueba ausencia de valor. <code>= NULL</code> nunca es cierto —da <code>UNKNOWN</code>— porque nada, ni siquiera otro nulo, es igual a lo desconocido.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Aprender a hacer preguntas. Un <code>SELECT</code> tiene tres decisiones —qué filas, qué

@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Medir lo que los usuarios notan. La media oculta y el p99 enseña; con veinte consultas por petición, casi todo el mundo toca la cola lenta. Une objetivos de servicio, presupuesto de error, saturación como señal anticipada y el registro de consultas lentas ordenado por tiempo total, no por la peor.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 062"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [052](../../part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md) | Planes de ejecución: leer EXPLAIN y refutar una hipótesis | optimizador por costos · estadística · estimación de cardinalidad · costo frente a tiempo |
+| [058](../../part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md) | Respaldo y restauración: solo cuenta lo que se ha restaurado | RPO · RTO · recuperación a un punto en el tiempo · prueba de restauración |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-percentil"></a>**percentil** | El valor por debajo del cual queda un porcentaje de las observaciones. La media oculta el problema; el p99 lo enseña. Y si una petición de usuario abre veinte consultas, casi todos los usuarios tocarán al menos una de la cola lenta. | se introduce aquí |
+| <a id="v-presupuesto-de-error"></a>**presupuesto de error** | Lo que resta entre el objetivo de servicio y el 100 %: con un SLO de 99,9 % se dispone de unos 43 minutos de fallo al mes. Convierte la fiabilidad en una cantidad que se gasta, y da una regla objetiva para decidir si se despliega o se estabiliza. | se introduce aquí |
+| <a id="v-saturación"></a>**saturación** | Cuán lleno está el recurso más escaso: conexiones, entrada y salida, memoria, CPU. Es la señal que anticipa el incidente, porque la latencia se dispara de forma no lineal justo antes de que el recurso se agote. | se introduce aquí |
+| <a id="v-consulta-lenta"></a>**consulta lenta** | Registro de las consultas que superan un umbral, agrupadas por forma —`pg_stat_statements` y equivalentes—. Lo que importa no es la más lenta, sino la que multiplica tiempo por frecuencia: mil consultas de 50 ms pesan más que una de 5 s. | se introduce aquí |
 
 ---
 

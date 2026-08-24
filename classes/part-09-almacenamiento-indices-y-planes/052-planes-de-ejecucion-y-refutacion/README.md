@@ -12,6 +12,10 @@ Parte 09 — Almacenamiento, índices y planes · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Leer un plan de ejecución para refutar una hipótesis, no para confirmarla. La técnica central es comparar filas estimadas contra reales nodo a nodo: un error de estimación explica casi cualquier plan absurdo. Insiste en que el `cost` no son milisegundos y en que solo `EXPLAIN ANALYZE` mide tiempo.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 052"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [049](../../part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md) | B-Tree: estructura, orden de columnas y selectividad | B-Tree · prefijo más a la izquierda · selectividad · índice cubriente |
+| [051](../../part-09-almacenamiento-indices-y-planes/051-indices-especializados/README.md) | Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes | índice parcial · índice de expresión · GIN · BRIN · costo de mantenimiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-optimizador-por-costos"></a>**optimizador por costos** | Componente que enumera planes equivalentes y elige el de menor costo estimado a partir de estadísticas. Desde el artículo de Selinger de 1979 el principio no ha cambiado: el motor no ejecuta lo que escribiste, ejecuta lo que calculó que es más barato. | se introduce aquí |
+| <a id="v-estadística"></a>**estadística** | Resúmenes que el motor guarda sobre los datos: número de filas, valores distintos, histogramas, valores más comunes. Cuando están obsoletas el optimizador estima mal y elige planes ruinosos, y ese es el primer sitio donde mirar ante una consulta que «de repente» se volvió lenta. | se introduce aquí |
+| <a id="v-estimación-de-cardinalidad"></a>**estimación de cardinalidad** | Cuántas filas cree el planificador que devolverá cada paso. Es la entrada de la que depende todo lo demás, y también la parte más frágil: los errores se multiplican al reunir tablas, y una estimación de 1 fila que en realidad son 100 000 explica casi cualquier plan absurdo. | se introduce aquí |
+| <a id="v-costo-frente-a-tiempo"></a>**costo frente a tiempo** | El `cost` de `EXPLAIN` es una unidad interna comparativa, no milisegundos; el tiempo real solo aparece con `EXPLAIN ANALYZE`. Comparar filas estimadas contra filas reales en cada nodo es la técnica central para refutar una hipótesis de rendimiento. | se introduce aquí |
 
 ---
 

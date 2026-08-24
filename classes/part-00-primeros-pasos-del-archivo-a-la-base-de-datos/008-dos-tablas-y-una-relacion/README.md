@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La segunda tabla y el momento en que aparece la relación. La clave foránea convierte una convención en una regla que el motor impone, la tabla intermedia resuelve el muchos-a-muchos y la reunión permite volver a ver el hecho completo. Aquí se ven por primera vez las anomalías que justifican toda la parte 02.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 008"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [007](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/007-la-clave-primaria/README.md) | La clave primaria: cómo se distingue una fila de otra | clave primaria · clave natural · clave sustituta · clave compuesta · UNIQUE |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-clave-foránea"></a>**clave foránea** | Columna que referencia la clave primaria de otra tabla y a la que el gestor obliga a apuntar a una fila existente. Es la integridad referencial hecha declaración: sin ella, las relaciones son una convención que alguien acabará rompiendo. | se introduce aquí |
+| <a id="v-tabla-de-relación"></a>**tabla de relación** | Tabla intermedia que resuelve una relación muchos-a-muchos guardando pares de claves foráneas. Deja de ser «solo técnica» en cuanto la relación tiene atributos propios —fecha de inscripción, nota— y pasa a ser una entidad de pleno derecho. | se introduce aquí |
+| <a id="v-reunión"></a>**reunión** | Combinar filas de dos tablas emparejándolas por un valor común, normalmente clave foránea contra clave primaria. Es la operación que permite normalizar sin perder la capacidad de ver el hecho completo. | se introduce aquí |
+| <a id="v-anomalías-de-repetición"></a>**anomalías de repetición** | Los tres desastres de guardar el mismo hecho en varios sitios: al insertar hay que repetir datos, al actualizar se corrige una copia y no las otras, y al borrar se pierde información que solo vivía ahí. Son el argumento original de la normalización. | se introduce aquí |
 
 ---
 

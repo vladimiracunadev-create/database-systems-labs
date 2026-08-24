@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/08-recovery/README.md"><code>labs/08-recovery</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>RPO</code> · <code>RTO</code> · <code>recuperación a un punto en el tiempo</code> · <code>prueba de restauración</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La clase que convierte una intención en una garantía medida. RPO y RTO se declaran en números, la recuperación a un punto en el tiempo se demuestra restaurando de verdad, y la conclusión es incómoda a propósito: un respaldo que nunca se ha restaurado no es un respaldo, es un fichero con nombre esperanzador.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 058&quot;]
     C --&gt; K1[&quot;RPO&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="046.html">046</a></td>
+<td>Registro anticipado y recuperación: WAL y ARIES</td>
+<td>WAL · punto de control · rehacer · deshacer · LSN</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-rpo"></a><strong>RPO</strong></td>
+<td>Objetivo de punto de recuperación: cuántos datos se acepta perder, medido en tiempo. Un RPO de cinco minutos obliga a archivar el registro al menos cada cinco minutos; si no está escrito y probado, el RPO real es «el que salga».</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-rto"></a><strong>RTO</strong></td>
+<td>Objetivo de tiempo de recuperación: cuánto se acepta estar caído. Se mide restaurando de verdad y cronometrando, no estimando; casi siempre resulta ser varias veces mayor de lo que el equipo suponía.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-recuperación-a-un-punto-en-el-tiempo"></a><strong>recuperación a un punto en el tiempo</strong></td>
+<td>Restaurar una copia base y reaplicar el registro archivado hasta un instante concreto, justo antes del <code>DELETE</code> sin <code>WHERE</code>. Exige que el archivado del registro esté activo y verificado desde antes del incidente.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-prueba-de-restauración"></a><strong>prueba de restauración</strong></td>
+<td>Restaurar la copia en un entorno limpio, comprobar la integridad de los datos y medir cuánto tardó. Un respaldo que nunca se ha restaurado no es un respaldo: es un fichero con nombre esperanzador.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Convertir la copia de seguridad en una garantía verificada. Una copia que nunca se ha restaurado no es una copia: es una carpeta que ocupa espacio.</p>

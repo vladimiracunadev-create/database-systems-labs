@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>persistencia</code> · <code>concurrencia</code> · <code>integridad</code> · <code>recuperación</code> · <code>independencia de datos</code></p>
 <p><strong>En este caso se comparan 9 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La misma pregunta de la clase 002, ahora con el vocabulario de sistemas: qué garantiza un gestor —persistencia, concurrencia, integridad, recuperación— y, con la misma seriedad, qué no garantiza. La independencia de datos aparece aquí como la idea de Codd que ordena todo lo demás.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 011&quot;]
     C --&gt; K1[&quot;persistencia&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="002.html">002</a></td>
+<td>Del archivo y la hoja de cálculo a la base de datos</td>
+<td>integridad declarada · concurrencia · consulta declarativa · durabilidad</td>
+</tr>
+<tr>
+<td><a href="010.html">010</a></td>
+<td>El mapa de los motores: seis familias y un criterio</td>
+<td>familias de motores · modelo de agregado · patrón de acceso · multimodelo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-persistencia"></a><strong>persistencia</strong></td>
+<td>Que el dato siga existiendo cuando el proceso que lo escribió ya no está. Es el requisito mínimo de una base de datos y la única de sus funciones que un archivo también cumple.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-concurrencia"></a><strong>concurrencia</strong></td>
+<td>Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones.</td>
+<td>se introdujo en la <a href="002.html">002</a></td>
+</tr>
+<tr>
+<td><a id="v-integridad"></a><strong>integridad</strong></td>
+<td>Que los datos cumplan siempre las reglas del dominio, incluidas las que ninguna aplicación recordó comprobar. El gestor la sostiene con restricciones declaradas y con transacciones.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-recuperación"></a><strong>recuperación</strong></td>
+<td>Volver a un estado correcto después de una caída, descartando lo no confirmado y rehaciendo lo confirmado. Es lo que distingue una base de datos de un archivo que se corrompió a medio escribir.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-independencia-de-datos"></a><strong>independencia de datos</strong></td>
+<td>Poder cambiar cómo se guardan los datos sin reescribir las aplicaciones que los consultan. Es la idea central del artículo de Codd de 1970 y la razón de que exista un nivel lógico separado del físico.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Establecer qué problemas concretos resuelve un sistema gestor de bases de datos (SGBD) y, sobre todo, cuáles <strong>no</strong> resuelve. Sin esa demarcación, cualquier archivo con datos se llama «base de datos» y cualquier fallo de diseño se atribuye al motor.</p>

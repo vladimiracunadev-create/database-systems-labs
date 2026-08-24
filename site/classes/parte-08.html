@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 08 — Transacciones, concurrencia y recuperación</h1>
 <p class="lead">Que garantiza realmente ACID, que anomalías sobreviven en cada nivel de aislamiento y como se vuelve de una caída.</p>
-<p><strong>5 clases · 18 horas</strong></p>
+<p><strong>5 clases · 18 horas ·
+24 conceptos · 15 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>La parte donde el programa se pone serio con la corrección. Todo lo anterior asume implícitamente que las operaciones ocurren una detrás de otra y que la máquina no se apaga. Las cinco clases de aquí retiran esas dos suposiciones y muestran qué hace falta para que el sistema siga siendo correcto sin ellas.</p>
+<p>ACID primero, con cuidado especial en la letra que más se malinterpreta: la consistencia es respetar las restricciones declaradas, así que lo que el motor no sabe no lo protege. Después las anomalías reales y la crítica de Berenson y otros, que demuestra que los niveles de la norma no las definen sin ambigüedad —de ahí que el nivel por defecto de tu motor no sea el que crees y haya que comprobarlo experimentalmente—. Luego los dos mecanismos que sostienen el aislamiento: bloqueo, que hace esperar, y versiones, que hacen copias. Después la recuperación, con el registro anticipado y ARIES. Y al final la parte que el motor no resuelve por ti: idempotencia, reintentos y bloqueo optimista en la aplicación.</p>
+<p>Es la parte con más laboratorio por clase del programa, y no por casualidad: las anomalías de aislamiento se creen cuando se ven ocurrir en dos sesiones abiertas al mismo tiempo.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Explicar qué garantiza cada letra de ACID y quién implementa cada garantía.</li>
+<li>Reproducir experimentalmente una lectura no repetible, un fantasma y un sesgo de escritura.</li>
+<li>Explicar por qué con MVCC las lecturas no bloquean y qué costo de mantenimiento genera.</li>
+<li>Describir la recuperación tras una caída en términos de registro, punto de control, rehacer y deshacer.</li>
+<li>Diseñar una operación idempotente con clave de idempotencia y reintento con retroceso.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -62,6 +83,105 @@
 <tr><td><a href="046.html">046</a></td><td><a href="046.html">Registro anticipado y recuperación: WAL y ARIES</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
 <tr><td><a href="047.html">047</a></td><td><a href="047.html">Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="043.html">043 — ACID: qué garantiza cada letra y quién la implementa</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="005.html">005</a>, <a href="023.html">023</a></p>
+    <p>Qué garantiza cada letra de ACID y quién la implementa, con especial cuidado en la que más se malinterpreta: la consistencia es respetar las restricciones declaradas, así que lo que el motor no sabe no lo protege. Deja planteado que el aislamiento es la única letra que se vende por niveles.</p>
+    <p><span class="tag">atomicidad</span> <span class="tag">consistencia</span> <span class="tag">aislamiento</span> <span class="tag">durabilidad</span> <span class="tag">unidad de recuperación</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="044.html">044 — Anomalías de aislamiento y la crítica a los niveles ANSI</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      5 fuentes · requiere <a href="043.html">043</a></p>
+    <p>Las anomalías reales —lectura sucia, no repetible, fantasma y sesgo de escritura— y la crítica de Berenson y otros que demuestra que los niveles de la norma no las definen sin ambigüedad. La consecuencia práctica es que el nivel por defecto de tu motor no es el que crees y hay que comprobarlo experimentalmente.</p>
+    <p><span class="tag">lectura sucia</span> <span class="tag">lectura no repetible</span> <span class="tag">fantasma</span> <span class="tag">sesgo de escritura</span> <span class="tag">snapshot isolation</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="045.html">045 — Bloqueo en dos fases, MVCC e instantáneas</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      3 fuentes · requiere <a href="044.html">044</a></p>
+    <p>Las dos formas de sostener el aislamiento: bloqueo en dos fases, que hace esperar, y control de versiones, que hace copias. Explica por qué con MVCC las lecturas no bloquean, y también su factura escondida: las versiones muertas que el vacuum tiene que recoger.</p>
+    <p><span class="tag">2PL</span> <span class="tag">versión de fila</span> <span class="tag">instantánea</span> <span class="tag">interbloqueo</span> <span class="tag">vacuum</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="046.html">046 — Registro anticipado y recuperación: WAL y ARIES</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      3 fuentes · requiere <a href="043.html">043</a></p>
+    <p>Cómo se vuelve de una caída. El registro anticipado escribe la intención antes que el dato, el punto de control acorta la recuperación y ARIES ordena las fases de rehacer y deshacer de modo que repetirlas sea inofensivo —lo que permite recuperarse de una caída ocurrida durante la recuperación.</p>
+    <p><span class="tag">WAL</span> <span class="tag">punto de control</span> <span class="tag">rehacer</span> <span class="tag">deshacer</span> <span class="tag">LSN</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="047.html">047 — Concurrencia en la aplicación: idempotencia, reintentos y bloqueo optimista</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="045.html">045</a></p>
+    <p>La parte de la concurrencia que el motor no resuelve por ti. Trata la idempotencia como la única defensa realista frente a una red que no distingue «no llegó» de «se perdió la respuesta», y el bloqueo optimista y el reintento con retroceso como los dos patrones que toda aplicación con transacciones acaba necesitando.</p>
+    <p><span class="tag">idempotencia</span> <span class="tag">clave de idempotencia</span> <span class="tag">bloqueo optimista</span> <span class="tag">reintento con retroceso</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Mi motor es ACID, entonces mis transacciones son serializables.» El nivel por defecto casi nunca es serializable: suele ser `READ COMMITTED` o snapshot.</li>
+<li>«Snapshot isolation elimina todas las anomalías.» Deja pasar el sesgo de escritura, que es justo el que rompe invariantes de negocio.</li>
+<li>«MVCC no tiene costo.» Cada versión muerta hay que recogerla; cuando el vacuum se queda atrás, la tabla se hincha y los planes se degradan.</li>
+<li>«Si la transacción falla, reintento y ya.» Solo si la operación es idempotente. Si no, el reintento cobra dos veces.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 24 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#2pl"><strong>2PL</strong></a></td><td>Bloqueo en dos fases: una fase en la que la transacción solo adquiere cerrojos y otra en la que solo los libera. Es la técnica clásica que garantiza serializabilidad, al precio de que los lectores bloqueen a los escritores.</td><td><a href="045.html">045</a></td></tr>
+<tr><td><a href="../glosario.html#aislamiento"><strong>aislamiento</strong></a></td><td>Grado en que una transacción concurrente no ve los pasos intermedios de otra. Es la única letra de ACID que se vende por niveles, y el nivel por defecto de casi todos los motores no es el más fuerte.</td><td><a href="043.html">043</a></td></tr>
+<tr><td><a href="../glosario.html#atomicidad"><strong>atomicidad</strong></a></td><td>Todo o nada: la transacción se aplica entera o no deja rastro. No promete que sea correcta ni que sea rápida, solo que no habrá estados a medias visibles para nadie.</td><td><a href="043.html">043</a></td></tr>
+<tr><td><a href="../glosario.html#bloqueo-optimista"><strong>bloqueo optimista</strong></a></td><td>En lugar de bloquear, se lee una versión y al escribir se comprueba que no haya cambiado (`WHERE version = ?`). Si cambió, se reintenta. Rinde mejor que el bloqueo cuando los conflictos son raros, y peor cuando son frecuentes.</td><td><a href="047.html">047</a></td></tr>
+<tr><td><a href="../glosario.html#clave-de-idempotencia"><strong>clave de idempotencia</strong></a></td><td>Identificador que el cliente genera y envía con la petición para que el servidor reconozca un reintento y devuelva el resultado anterior en lugar de ejecutar dos veces. Es cómo se cobra una tarjeta una sola vez aunque el navegador reenvíe.</td><td><a href="047.html">047</a></td></tr>
+<tr><td><a href="../glosario.html#consistencia"><strong>consistencia</strong></a></td><td>La letra tramposa de ACID: significa que la transacción lleva la base de un estado válido a otro *según las restricciones declaradas*. Lo que el motor no sabe, no lo protege; la consistencia de negocio la pone quien declara las reglas, no el gestor.</td><td><a href="043.html">043</a></td></tr>
+<tr><td><a href="../glosario.html#deshacer"><strong>deshacer</strong></a></td><td>Fase que revierte las transacciones que estaban a medias en el momento de la caída, usando la información de deshacer del registro. Es la implementación concreta de la atomicidad.</td><td><a href="046.html">046</a></td></tr>
+<tr><td><a href="../glosario.html#durabilidad"><strong>durabilidad</strong></a></td><td>Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho».</td><td><a href="043.html">043</a></td></tr>
+<tr><td><a href="../glosario.html#fantasma"><strong>fantasma</strong></a></td><td>Repetir una consulta por rango y encontrar filas nuevas que otra transacción insertó. No es un cambio de valor sino de pertenencia al conjunto, y por eso exige bloquear el rango —o usar instantáneas— y no solo las filas leídas.</td><td><a href="044.html">044</a></td></tr>
+<tr><td><a href="../glosario.html#idempotencia"><strong>idempotencia</strong></a></td><td>Propiedad de una operación que, repetida con la misma entrada, deja el mismo estado que ejecutarla una vez. Es la única defensa realista contra las redes: en un sistema distribuido no se puede distinguir «no llegó» de «llegó y se perdió la respuesta».</td><td><a href="047.html">047</a></td></tr>
+<tr><td><a href="../glosario.html#instantánea"><strong>instantánea</strong></a></td><td>El conjunto de versiones visibles para una transacción, fijado en un instante. Permite que las lecturas no bloqueen y que dos consultas de la misma transacción vean exactamente lo mismo aunque el mundo cambie alrededor.</td><td><a href="045.html">045</a></td></tr>
+<tr><td><a href="../glosario.html#interbloqueo"><strong>interbloqueo</strong></a></td><td>Dos transacciones que se esperan mutuamente porque cada una tiene el cerrojo que la otra necesita. El motor lo detecta y aborta a una; la aplicación debe estar preparada para reintentar, y ordenar siempre los accesos igual reduce la frecuencia.</td><td><a href="045.html">045</a></td></tr>
+<tr><td><a href="../glosario.html#lectura-no-repetible"><strong>lectura no repetible</strong></a></td><td>Leer la misma fila dos veces dentro de una transacción y obtener valores distintos, porque otra confirmó un cambio en medio. Es lo que `READ COMMITTED` permite y `REPEATABLE READ` impide.</td><td><a href="044.html">044</a></td></tr>
+<tr><td><a href="../glosario.html#lectura-sucia"><strong>lectura sucia</strong></a></td><td>Leer un dato que otra transacción escribió y todavía no confirmó —y que puede acabar deshaciéndose—. Solo la permite el nivel `READ UNCOMMITTED`, que casi ningún motor usa por defecto.</td><td><a href="044.html">044</a></td></tr>
+<tr><td><a href="../glosario.html#lsn"><strong>LSN</strong></a></td><td>Número de secuencia del registro: identifica cada entrada del WAL en orden y se estampa en la página que modifica. Permite saber, página por página, si un cambio ya está aplicado —y por eso rehacer se puede repetir sin efectos secundarios.</td><td><a href="046.html">046</a></td></tr>
+<tr><td><a href="../glosario.html#punto-de-control"><strong>punto de control</strong></a></td><td>Marca periódica que fija hasta dónde están ya volcadas a disco las páginas modificadas. Acorta la recuperación, porque tras una caída solo hay que releer el registro desde el último punto de control y no desde el principio de los tiempos.</td><td><a href="046.html">046</a></td></tr>
+<tr><td><a href="../glosario.html#rehacer"><strong>rehacer</strong></a></td><td>Fase de la recuperación que reaplica desde el registro todo lo confirmado que aún no había llegado a las páginas de datos. ARIES la ejecuta antes de deshacer y de forma que repetirla sea inofensiva, lo que permite recuperarse de una caída ocurrida durante la recuperación.</td><td><a href="046.html">046</a></td></tr>
+<tr><td><a href="../glosario.html#reintento-con-retroceso"><strong>reintento con retroceso</strong></a></td><td>Reintentar tras un fallo esperando cada vez más tiempo, con una componente aleatoria. El retroceso evita hundir un sistema que ya está en apuros y la aleatoriedad evita que todos los clientes vuelvan sincronizados a la vez.</td><td><a href="047.html">047</a></td></tr>
+<tr><td><a href="../glosario.html#sesgo-de-escritura"><strong>sesgo de escritura</strong></a></td><td>Dos transacciones leen el mismo conjunto, cada una decide que puede escribir, y juntas rompen un invariante que ninguna rompía por separado —los dos médicos de guardia que se dan de baja a la vez—. Snapshot isolation lo permite; hace falta serializable o un bloqueo explícito.</td><td><a href="044.html">044</a></td></tr>
+<tr><td><a href="../glosario.html#snapshot-isolation"><strong>snapshot isolation</strong></a></td><td>Cada transacción ve una fotografía coherente de la base tomada al empezar. Elimina lecturas sucias, no repetibles y fantasmas, pero no el sesgo de escritura; es el nivel que PostgreSQL llama `REPEATABLE READ`.</td><td><a href="044.html">044</a></td></tr>
+<tr><td><a href="../glosario.html#unidad-de-recuperación"><strong>unidad de recuperación</strong></a></td><td>La transacción como frontera de lo que se rehace o se deshace tras una caída. Es lo que conecta ACID con el registro anticipado: sin transacción no hay nada que delimite qué debe sobrevivir.</td><td><a href="043.html">043</a></td></tr>
+<tr><td><a href="../glosario.html#vacuum"><strong>vacuum</strong></a></td><td>Proceso que recupera el espacio de las versiones de fila que ya nadie puede ver y actualiza los mapas de visibilidad. Sin él, MVCC crece sin límite: es el mantenimiento invisible que explica por qué una tabla ocupa el triple de lo que debería.</td><td><a href="045.html">045</a></td></tr>
+<tr><td><a href="../glosario.html#versión-de-fila"><strong>versión de fila</strong></a></td><td>Copia de una fila con el rango de transacciones para las que es visible. Con MVCC un `UPDATE` no sobrescribe: crea una versión nueva, de modo que quien está leyendo la anterior no se detiene. El precio es el espacio y el trabajo de limpiarlo.</td><td><a href="045.html">045</a></td></tr>
+<tr><td><a href="../glosario.html#wal"><strong>WAL</strong></a></td><td>Registro anticipado: antes de tocar la página de datos se escribe en un registro secuencial qué se va a cambiar, y ese registro se fuerza al disco antes de confirmar. Es lo que hace posible la durabilidad sin escribir cada página en cada `COMMIT`.</td><td><a href="046.html">046</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>15 obras distintas sostienen lo que se afirma en estas
+5 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-berenson-isolation-1995">A Critique of ANSI SQL Isolation Levels</a> <span class="fuente-meta">(1995)</span> — <span class="fuente-meta">se cita en 044</span></li>
+<li><a href="../fuentes.html#src-mohan-aries-1992">ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging</a> <span class="fuente-meta">(1992)</span> — <span class="fuente-meta">se cita en 046</span></li>
+<li><a href="../fuentes.html#src-petrov-database-internals">Database Internals: A Deep Dive into How Distributed Data Systems Work</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 046</span></li>
+<li><a href="../fuentes.html#src-silberschatz-dsc7">Database System Concepts</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 043</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 047</span></li>
+<li><a href="../fuentes.html#src-kleppmann-hermitage">Hermitage: Testing Transaction Isolation Levels</a> <span class="fuente-meta">(2014)</span> — <span class="fuente-meta">se cita en 044</span></li>
+<li><a href="../fuentes.html#src-helland-life-beyond-2007">Life beyond Distributed Transactions: An Apostate's Opinion</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 047</span></li>
+<li><a href="../fuentes.html#src-rogov-postgresql-internals">PostgreSQL 14 Internals</a> <span class="fuente-meta">(2022)</span> — <span class="fuente-meta">se cita en 045</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql-mvcc">PostgreSQL: Concurrency Control</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 044, 045</span></li>
+<li><a href="../fuentes.html#src-bernstein-newcomer-tp">Principles of Transaction Processing</a> <span class="fuente-meta">(2009)</span> — <span class="fuente-meta">se cita en 047</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite-isolation">SQLite: Isolation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 044</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite-wal">SQLite: Write-Ahead Logging</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 046</span></li>
+<li><a href="../fuentes.html#src-gray-transaction-concept-1981">The Transaction Concept: Virtues and Limitations</a> <span class="fuente-meta">(1981)</span> — <span class="fuente-meta">se cita en 043</span></li>
+<li><a href="../fuentes.html#src-gray-reuter-tp">Transaction Processing: Concepts and Techniques</a> <span class="fuente-meta">(1992)</span> — <span class="fuente-meta">se cita en 043, 045</span></li>
+<li><a href="../fuentes.html#src-adya-generalized-isolation-1999">Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions</a> <span class="fuente-meta">(1999)</span> — <span class="fuente-meta">se cita en 044</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

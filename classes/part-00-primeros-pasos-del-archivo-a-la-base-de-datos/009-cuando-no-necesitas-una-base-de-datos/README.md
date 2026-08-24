@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (0 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La clase que da permiso para no usar una base de datos. Enumera los casos en que un archivo, un Parquet o un motor embebido es la respuesta correcta, y pone precio a la alternativa: el costo de operación de un motor servidor no aparece en la factura de licencia sino en las guardias, los respaldos y las actualizaciones.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 009"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [002](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) | Del archivo y la hoja de cálculo a la base de datos | integridad declarada · concurrencia · consulta declarativa · durabilidad |
+| [008](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) | Dos tablas y una relación: la clave foránea | clave foránea · tabla de relación · reunión · anomalías de repetición |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-criterio-de-decisión"></a>**criterio de decisión** | La regla explícita por la que se elige —o se descarta— una tecnología: volumen, concurrencia, garantías necesarias y costo de operación. Sin criterio escrito, la elección se justifica a posteriori y ya no se puede revisar. | se introduce aquí |
+| <a id="v-motor-embebido"></a>**motor embebido** | Base de datos que corre dentro del proceso de la aplicación, sin servidor ni puerto: SQLite, DuckDB. Elimina el costo de operación y la latencia de red, a cambio de no poder servir a varias máquinas. | se introduce aquí |
+| <a id="v-costo-de-operación"></a>**costo de operación** | Todo lo que cuesta mantener vivo un motor después de instalarlo: respaldos probados, actualizaciones, monitorización, personas de guardia. Suele superar con creces el costo de licencia o de cómputo. | se introduce aquí |
+| <a id="v-alternativas"></a>**alternativas** | Lo que se usa cuando una base de datos no está justificada: un CSV o un Parquet, un JSON versionado, una hoja de cálculo compartida, un fichero por proceso. Nombrarlas obliga a defender la elección de motor en lugar de darla por hecha. | se introduce aquí |
 
 ---
 

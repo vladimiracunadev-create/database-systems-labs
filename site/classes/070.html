@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/06-vector-search/README.md"><code>labs/06-vector-search</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>BM25</code> · <code>fusión de rangos</code> · <code>filtro previo</code> · <code>filtro posterior</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 5 lo resuelven (3 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Por qué lo léxico y lo vectorial se combinan en lugar de competir: uno acierta con el término exacto, el otro con el significado. La fusión recíproca de rangos los une sin exigir que sus puntuaciones sean comparables, y el filtrado por metadatos plantea la decisión entre filtro previo y posterior, cada uno con su fallo característico.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 070&quot;]
     C --&gt; K1[&quot;BM25&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="041.html">041</a></td>
+<td>Búsqueda de texto: índice invertido, análisis y relevancia</td>
+<td>índice invertido · analizador · TF-IDF · BM25 · precisión y exhaustividad</td>
+</tr>
+<tr>
+<td><a href="069.html">069</a></td>
+<td>Índices vectoriales aproximados: HNSW, IVF y el recall</td>
+<td>búsqueda aproximada · recall · HNSW · cuantización · latencia frente a exactitud</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-bm25"></a><strong>BM25</strong></td>
+<td>Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros <code>k1</code> y <code>b</code>. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales.</td>
+<td>se introdujo en la <a href="041.html">041</a></td>
+</tr>
+<tr>
+<td><a id="v-fusión-de-rangos"></a><strong>fusión de rangos</strong></td>
+<td>Combinar dos listas ordenadas —la léxica y la vectorial— en una sola. La fusión recíproca de rangos suma el inverso de la posición en cada lista, y funciona bien precisamente porque no exige que las puntuaciones de ambos sistemas sean comparables entre sí.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-filtro-previo"></a><strong>filtro previo</strong></td>
+<td>Aplicar el filtro de metadatos antes de la búsqueda vectorial, de modo que solo se exploren los candidatos admisibles. Conserva el número de resultados pedido, pero puede degradar la navegación del grafo si el filtro es muy selectivo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-filtro-posterior"></a><strong>filtro posterior</strong></td>
+<td>Buscar primero y filtrar después. Es simple y tiene un fallo característico: si de los K vecinos ninguno cumple el filtro, la respuesta llega vacía aunque existieran resultados válidos algo más lejos.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Combinar búsqueda léxica y vectorial, porque fallan de formas distintas. La híbrida no es «lo mejor de dos mundos» automáticamente: hay que fusionar bien y medir que mejora.</p>

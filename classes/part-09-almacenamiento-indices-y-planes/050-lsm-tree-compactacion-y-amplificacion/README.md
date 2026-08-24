@@ -12,6 +12,10 @@ Parte 09 — Almacenamiento, índices y planes · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La otra familia de estructuras de almacenamiento: memtable, SSTable y compactación. Explica por qué un LSM absorbe mucha más escritura que un B-Tree y qué paga a cambio —amplificación de escritura y compactaciones que consumen recursos justo cuando el sistema está cargado—, con el filtro de Bloom como pieza que salva lecturas.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 050"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [048](../../part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md) | Páginas, filas y buffer: por qué la entrada y salida manda | pagina · factor de bloque · buffer pool · localidad · lectura secuencial |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-memtable"></a>**memtable** | Estructura ordenada en memoria donde un motor LSM acumula las escrituras antes de volcarlas a disco. Convierte escrituras aleatorias en secuenciales, que es la razón de que los LSM absorban mucha más carga de escritura que un B-Tree. | se introduce aquí |
+| <a id="v-sstable"></a>**SSTable** | Fichero ordenado e inmutable resultante de volcar una memtable. Al ser inmutable no se actualiza: los cambios posteriores viven en ficheros más nuevos, y por eso una lectura puede tener que consultar varios niveles. | se introduce aquí |
+| <a id="v-compactación"></a>**compactación** | Proceso de fusionar SSTables, descartar versiones antiguas y aplicar los borrados. Es lo que impide que las lecturas se degraden sin fin, y también lo que consume entrada y salida en segundo plano justo cuando el sistema está cargado. | se introduce aquí |
+| <a id="v-amplificación-de-escritura"></a>**amplificación de escritura** | Cuántos bytes acaba escribiendo el motor en disco por cada byte que escribió la aplicación, sumando registro y compactaciones sucesivas. Es la métrica que decide el desgaste del disco y el techo real de escritura de un motor LSM. | se introduce aquí |
+| <a id="v-filtro-de-bloom"></a>**filtro de Bloom** | Estructura probabilística compacta que responde «seguro que no está» o «puede que esté». Ahorra abrir SSTables que no contienen la clave; nunca produce falsos negativos, así que es seguro usarla para descartar. | se introduce aquí |
 
 ---
 

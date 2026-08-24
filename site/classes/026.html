@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>reunión interna</code> · <code>reunión externa</code> · <code>semirreunion</code> · <code>antirreunion</code> · <code>multiplicación de filas</code></p>
 <p><strong>En este caso se comparan 12 motores</strong>: 9 lo resuelven (6 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las cuatro formas de reunir y cuándo se quiere cada una. La distinción que más código corrige es la semirreunión: el <code>EXISTS</code> que casi siempre se quería cuando se escribió un <code>JOIN</code> seguido de <code>DISTINCT</code>, sin multiplicar filas ni arriesgar el doble conteo.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 026&quot;]
     C --&gt; K1[&quot;reunión interna&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="008.html">008</a></td>
+<td>Dos tablas y una relación: la clave foránea</td>
+<td>clave foránea · tabla de relación · reunión · anomalías de repetición</td>
+</tr>
+<tr>
+<td><a href="021.html">021</a></td>
+<td>Álgebra relacional: selección, proyección, producto y reunión</td>
+<td>selección · proyección · producto cartesiano · reunión natural · división</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-reunión-interna"></a><strong>reunión interna</strong></td>
+<td><code>INNER JOIN</code>: devuelve solo los pares que casan. Las filas sin pareja desaparecen, y ese descarte silencioso es la causa más frecuente de informes con menos filas de las esperadas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-reunión-externa"></a><strong>reunión externa</strong></td>
+<td><code>LEFT</code>, <code>RIGHT</code> o <code>FULL OUTER JOIN</code>: conserva las filas sin pareja y rellena con nulos. Cuidado con poner en el <code>WHERE</code> una condición sobre la tabla externa: la convierte de nuevo en interna.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-semirreunion"></a><strong>semirreunion</strong></td>
+<td>Filtrar una tabla por la existencia de una pareja, sin traer columnas de la otra ni multiplicar filas: <code>WHERE EXISTS (…)</code> o <code>IN (…)</code>. Es lo que casi siempre se quería cuando se escribió un <code>JOIN</code> seguido de <code>DISTINCT</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-antirreunion"></a><strong>antirreunion</strong></td>
+<td>Quedarse con las filas que <em>no</em> tienen pareja: <code>NOT EXISTS</code>, o <code>LEFT JOIN … WHERE clave IS NULL</code>. <code>NOT IN</code> parece equivalente y no lo es: basta un nulo en la subconsulta para que devuelva el conjunto vacío.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-multiplicación-de-filas"></a><strong>multiplicación de filas</strong></td>
+<td>Efecto de reunir con una tabla que tiene varias filas por clave: cada fila del lado uno aparece repetida. Es la causa del doble conteo cuando después se suma, y la razón de que agregar antes de reunir sea a menudo la corrección.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Combinar tablas sin multiplicar filas por accidente. La reunión es la operación que más resultados incorrectos produce, y casi siempre en silencio: el informe sale, solo que con números inflados.</p>

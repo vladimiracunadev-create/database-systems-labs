@@ -12,6 +12,10 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Los tres niveles de esquema —externo, conceptual y físico— y por qué separarlos es lo que permite añadir un índice, particionar una tabla o dividir una entidad sin reescribir las aplicaciones. La independencia lógica que se define aquí es el fundamento técnico de las migraciones sin caída de la parte 11.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 013"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [011](../../part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md) | Qué resuelve un sistema de bases de datos y qué no | persistencia · concurrencia · integridad · recuperación · independencia de datos |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-esquema-conceptual"></a>**esquema conceptual** | La descripción del qué: entidades, atributos y relaciones del dominio, sin decir cómo se guardan. Es el nivel en el que se discute con quien conoce el negocio. | se introduce aquí |
+| <a id="v-esquema-físico"></a>**esquema físico** | Cómo se materializan realmente los datos: ficheros, páginas, índices, particiones, compresión. Debe poder cambiar —añadir un índice, particionar una tabla— sin que ninguna consulta se reescriba. | se introduce aquí |
+| <a id="v-vista-externa"></a>**vista externa** | La porción del esquema que ve cada aplicación o cada rol, normalmente mediante vistas. Permite dar acceso a lo necesario y solo a eso, y absorber cambios del esquema sin romper a quien consulta. | se introduce aquí |
+| <a id="v-independencia-lógica"></a>**independencia lógica** | Poder cambiar el esquema conceptual —dividir una tabla, renombrar una columna— sin romper las aplicaciones, apoyándose en vistas que preservan el contrato anterior. Es más difícil de lograr que la independencia física y es la base técnica de las migraciones sin caída. | se introduce aquí |
 
 ---
 

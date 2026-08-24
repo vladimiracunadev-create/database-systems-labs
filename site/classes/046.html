@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>WAL</code> · <code>punto de control</code> · <code>rehacer</code> · <code>deshacer</code> · <code>LSN</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Cómo se vuelve de una caída. El registro anticipado escribe la intención antes que el dato, el punto de control acorta la recuperación y ARIES ordena las fases de rehacer y deshacer de modo que repetirlas sea inofensivo —lo que permite recuperarse de una caída ocurrida durante la recuperación.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 046&quot;]
     C --&gt; K1[&quot;WAL&quot;]
@@ -73,6 +76,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="043.html">043</a></td>
+<td>ACID: qué garantiza cada letra y quién la implementa</td>
+<td>atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-wal"></a><strong>WAL</strong></td>
+<td>Registro anticipado: antes de tocar la página de datos se escribe en un registro secuencial qué se va a cambiar, y ese registro se fuerza al disco antes de confirmar. Es lo que hace posible la durabilidad sin escribir cada página en cada <code>COMMIT</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-punto-de-control"></a><strong>punto de control</strong></td>
+<td>Marca periódica que fija hasta dónde están ya volcadas a disco las páginas modificadas. Acorta la recuperación, porque tras una caída solo hay que releer el registro desde el último punto de control y no desde el principio de los tiempos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-rehacer"></a><strong>rehacer</strong></td>
+<td>Fase de la recuperación que reaplica desde el registro todo lo confirmado que aún no había llegado a las páginas de datos. ARIES la ejecuta antes de deshacer y de forma que repetirla sea inofensiva, lo que permite recuperarse de una caída ocurrida durante la recuperación.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-deshacer"></a><strong>deshacer</strong></td>
+<td>Fase que revierte las transacciones que estaban a medias en el momento de la caída, usando la información de deshacer del registro. Es la implementación concreta de la atomicidad.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-lsn"></a><strong>LSN</strong></td>
+<td>Número de secuencia del registro: identifica cada entrada del WAL en orden y se estampa en la página que modifica. Permite saber, página por página, si un cambio ya está aplicado —y por eso rehacer se puede repetir sin efectos secundarios.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender cómo un motor sobrevive a una caída: el registro anticipado y el algoritmo de recuperación. Es el mecanismo que hace real la D de ACID, y explica muchas decisiones de configuración.</p>

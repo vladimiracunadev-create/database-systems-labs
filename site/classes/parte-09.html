@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,27 @@
 <main class="content" id="principal">
 <h1>Parte 09 — Almacenamiento, índices y planes</h1>
 <p class="lead">Por qué una consulta tarda: páginas, estructuras de índice, estadísticas y la lectura honesta de un plan de ejecución.</p>
-<p><strong>5 clases · 17 horas</strong></p>
+<p><strong>5 clases · 17 horas ·
+23 conceptos · 12 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-01.html">Parte 01 — Fundamentos, sistemas y método</a></li><li><a href="parte-04.html">Parte 04 — SQL en profundidad</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Por qué una consulta tarda, respondido desde el disco hacia arriba. La parte empieza donde de verdad empieza el costo —la página, no la fila— y termina en la única herramienta que convierte el rendimiento en un asunto de evidencia: el plan de ejecución.</p>
+<p>Primero páginas, factor de bloque, buffer y localidad, que explican por qué a veces recorrer la tabla entera le gana a usar el índice. Después las dos grandes familias de estructuras: B-Tree, con la regla del prefijo más a la izquierda que decide el orden de las columnas de un índice compuesto, y LSM-Tree, con su compactación y su amplificación de escritura. Luego los índices especializados, cada uno con el caso concreto en que gana y con el costo de mantenimiento que hace que un índice inútil sea una penalización permanente. Y al final leer `EXPLAIN` para refutar una hipótesis, comparando filas estimadas contra reales nodo a nodo.</p>
+<p>La clase 052 es la que cambia la forma de trabajar: después de ella, «creo que va lento por el índice» deja de ser una frase aceptable sin un plan al lado.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Explicar por qué la unidad de costo es la página y qué consecuencias tiene para el diseño de la fila.</li>
+<li>Elegir el orden de las columnas de un índice compuesto y justificarlo con las consultas que debe servir.</li>
+<li>Comparar B-Tree y LSM-Tree en términos de amplificación de lectura y de escritura.</li>
+<li>Elegir el índice especializado adecuado y contar su costo de mantenimiento.</li>
+<li>Leer un plan de ejecución y refutar una hipótesis de rendimiento con filas estimadas frente a reales.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -62,6 +83,101 @@
 <tr><td><a href="051.html">051</a></td><td><a href="051.html">Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
 <tr><td><a href="052.html">052</a></td><td><a href="052.html">Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a></td><td class="nivel-avanzado">Avanzado</td><td>4</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="048.html">048 — Páginas, filas y buffer: por qué la entrada y salida manda</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="012.html">012</a></p>
+    <p>Por qué la entrada y salida manda: el motor no lee filas, lee páginas. De ahí salen el factor de bloque, la localidad y la ventaja de la lectura secuencial, que explica por qué a veces recorrer la tabla entera le gana a usar el índice —y por qué el planificador lo elige a propósito.</p>
+    <p><span class="tag">pagina</span> <span class="tag">factor de bloque</span> <span class="tag">buffer pool</span> <span class="tag">localidad</span> <span class="tag">lectura secuencial</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="049.html">049 — B-Tree: estructura, orden de columnas y selectividad</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      3 fuentes · requiere <a href="048.html">048</a></p>
+    <p>El B-Tree y las dos preguntas que responde en la práctica: en qué orden poner las columnas de un índice compuesto —la regla del prefijo más a la izquierda— y cuándo el índice no compensa, que es cuando la selectividad es baja. Introduce el índice cubriente, la optimización con mejor relación entre esfuerzo y resultado.</p>
+    <p><span class="tag">B-Tree</span> <span class="tag">prefijo más a la izquierda</span> <span class="tag">selectividad</span> <span class="tag">índice cubriente</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="050.html">050 — LSM-Tree, compactación y amplificación de escritura</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="048.html">048</a></p>
+    <p>La otra familia de estructuras de almacenamiento: memtable, SSTable y compactación. Explica por qué un LSM absorbe mucha más escritura que un B-Tree y qué paga a cambio —amplificación de escritura y compactaciones que consumen recursos justo cuando el sistema está cargado—, con el filtro de Bloom como pieza que salva lecturas.</p>
+    <p><span class="tag">memtable</span> <span class="tag">SSTable</span> <span class="tag">compactación</span> <span class="tag">amplificación de escritura</span> <span class="tag">filtro de Bloom</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="051.html">051 — Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="049.html">049</a></p>
+    <p>Los índices que no son B-Tree y el caso concreto en que cada uno gana: hash para igualdad pura, GIN para contenido de arreglos y documentos, GiST para geometría y rangos, BRIN cuando el orden físico se correlaciona con la columna, más parciales, de expresión y cubrientes. Cierra con el costo de mantenimiento, que hace que un índice inútil no sea neutro sino una penalización permanente.</p>
+    <p><span class="tag">índice parcial</span> <span class="tag">índice de expresión</span> <span class="tag">GIN</span> <span class="tag">BRIN</span> <span class="tag">costo de mantenimiento</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="052.html">052 — Planes de ejecución: leer EXPLAIN y refutar una hipótesis</a></h3>
+    <p class="fuente-meta">Avanzado · 4 h ·
+      3 fuentes · requiere <a href="049.html">049</a>, <a href="051.html">051</a></p>
+    <p>Leer un plan de ejecución para refutar una hipótesis, no para confirmarla. La técnica central es comparar filas estimadas contra reales nodo a nodo: un error de estimación explica casi cualquier plan absurdo. Insiste en que el `cost` no son milisegundos y en que solo `EXPLAIN ANALYZE` mide tiempo.</p>
+    <p><span class="tag">optimizador por costos</span> <span class="tag">estadística</span> <span class="tag">estimación de cardinalidad</span> <span class="tag">costo frente a tiempo</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Añadir índices siempre ayuda.» Cada índice se paga en cada escritura y ocupa espacio; el que no usa ninguna consulta es una penalización permanente.</li>
+<li>«Tengo el índice pero el motor no lo usa.» Casi siempre es la regla del prefijo más a la izquierda, una función aplicada a la columna, o una selectividad demasiado baja.</li>
+<li>«El `cost` de `EXPLAIN` son milisegundos.» Es una unidad interna comparativa. El tiempo solo aparece con `EXPLAIN ANALYZE`.</li>
+<li>«El recorrido secuencial siempre es malo.» Es lo correcto cuando la consulta devuelve una fracción grande de la tabla, y el planificador lo elige a propósito.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 23 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#amplificación-de-escritura"><strong>amplificación de escritura</strong></a></td><td>Cuántos bytes acaba escribiendo el motor en disco por cada byte que escribió la aplicación, sumando registro y compactaciones sucesivas. Es la métrica que decide el desgaste del disco y el techo real de escritura de un motor LSM.</td><td><a href="050.html">050</a></td></tr>
+<tr><td><a href="../glosario.html#b-tree"><strong>B-Tree</strong></a></td><td>Árbol equilibrado de páginas ordenadas, con todos los datos en hojas enlazadas entre sí. Sirve para igualdad, para rangos y para devolver ya ordenado, con un número de accesos que crece logarítmicamente. Es la estructura por defecto de casi todos los motores relacionales.</td><td><a href="049.html">049</a></td></tr>
+<tr><td><a href="../glosario.html#brin"><strong>BRIN</strong></a></td><td>Índice de rangos por bloque: guarda el mínimo y el máximo de cada grupo de páginas. Diminuto y utilísimo cuando el orden físico se correlaciona con la columna —una tabla de eventos por fecha—, e inútil cuando no.</td><td><a href="051.html">051</a></td></tr>
+<tr><td><a href="../glosario.html#buffer-pool"><strong>buffer pool</strong></a></td><td>La memoria donde el motor mantiene las páginas leídas para no volver a pedirlas al disco. Su tasa de acierto explica la mayor parte de la diferencia entre una consulta de 2 ms y la misma consulta de 200 ms.</td><td><a href="048.html">048</a></td></tr>
+<tr><td><a href="../glosario.html#compactación"><strong>compactación</strong></a></td><td>Proceso de fusionar SSTables, descartar versiones antiguas y aplicar los borrados. Es lo que impide que las lecturas se degraden sin fin, y también lo que consume entrada y salida en segundo plano justo cuando el sistema está cargado.</td><td><a href="050.html">050</a></td></tr>
+<tr><td><a href="../glosario.html#costo-de-mantenimiento"><strong>costo de mantenimiento</strong></a></td><td>Lo que cada índice cobra en cada `INSERT`, `UPDATE` y `DELETE`, más el espacio que ocupa y el trabajo de reconstruirlo. Un índice que no usa ninguna consulta no es neutro: es una penalización permanente sobre todas las escrituras.</td><td><a href="051.html">051</a></td></tr>
+<tr><td><a href="../glosario.html#costo-frente-a-tiempo"><strong>costo frente a tiempo</strong></a></td><td>El `cost` de `EXPLAIN` es una unidad interna comparativa, no milisegundos; el tiempo real solo aparece con `EXPLAIN ANALYZE`. Comparar filas estimadas contra filas reales en cada nodo es la técnica central para refutar una hipótesis de rendimiento.</td><td><a href="052.html">052</a></td></tr>
+<tr><td><a href="../glosario.html#estadística"><strong>estadística</strong></a></td><td>Resúmenes que el motor guarda sobre los datos: número de filas, valores distintos, histogramas, valores más comunes. Cuando están obsoletas el optimizador estima mal y elige planes ruinosos, y ese es el primer sitio donde mirar ante una consulta que «de repente» se volvió lenta.</td><td><a href="052.html">052</a></td></tr>
+<tr><td><a href="../glosario.html#estimación-de-cardinalidad"><strong>estimación de cardinalidad</strong></a></td><td>Cuántas filas cree el planificador que devolverá cada paso. Es la entrada de la que depende todo lo demás, y también la parte más frágil: los errores se multiplican al reunir tablas, y una estimación de 1 fila que en realidad son 100 000 explica casi cualquier plan absurdo.</td><td><a href="052.html">052</a></td></tr>
+<tr><td><a href="../glosario.html#factor-de-bloque"><strong>factor de bloque</strong></a></td><td>Cuántas filas caben en una página. Depende del ancho de la fila, así que columnas anchas que nadie consulta encarecen todas las lecturas de esa tabla, incluidas las que no las piden.</td><td><a href="048.html">048</a></td></tr>
+<tr><td><a href="../glosario.html#filtro-de-bloom"><strong>filtro de Bloom</strong></a></td><td>Estructura probabilística compacta que responde «seguro que no está» o «puede que esté». Ahorra abrir SSTables que no contienen la clave; nunca produce falsos negativos, así que es seguro usarla para descartar.</td><td><a href="050.html">050</a></td></tr>
+<tr><td><a href="../glosario.html#gin"><strong>GIN</strong></a></td><td>Índice invertido generalizado de PostgreSQL: indexa los elementos de un valor compuesto —palabras de un texto, claves de un JSONB, elementos de un arreglo—. Es rápido buscando y caro escribiendo, y por eso admite una cola de actualizaciones diferida.</td><td><a href="051.html">051</a></td></tr>
+<tr><td><a href="../glosario.html#lectura-secuencial"><strong>lectura secuencial</strong></a></td><td>Leer páginas contiguas, que es órdenes de magnitud más barato por fila que saltar de una a otra. Por eso un recorrido completo puede ganarle a un índice cuando la consulta devuelve una fracción grande de la tabla.</td><td><a href="048.html">048</a></td></tr>
+<tr><td><a href="../glosario.html#localidad"><strong>localidad</strong></a></td><td>Que los datos que se usan juntos estén guardados juntos. Es la propiedad que convierte muchas lecturas lógicas en pocas lecturas físicas, y el motivo por el que el orden físico de una tabla —y la clave de agrupamiento— importa tanto.</td><td><a href="048.html">048</a></td></tr>
+<tr><td><a href="../glosario.html#memtable"><strong>memtable</strong></a></td><td>Estructura ordenada en memoria donde un motor LSM acumula las escrituras antes de volcarlas a disco. Convierte escrituras aleatorias en secuenciales, que es la razón de que los LSM absorban mucha más carga de escritura que un B-Tree.</td><td><a href="050.html">050</a></td></tr>
+<tr><td><a href="../glosario.html#optimizador-por-costos"><strong>optimizador por costos</strong></a></td><td>Componente que enumera planes equivalentes y elige el de menor costo estimado a partir de estadísticas. Desde el artículo de Selinger de 1979 el principio no ha cambiado: el motor no ejecuta lo que escribiste, ejecuta lo que calculó que es más barato.</td><td><a href="052.html">052</a></td></tr>
+<tr><td><a href="../glosario.html#pagina"><strong>pagina</strong></a></td><td>La unidad mínima de lectura y escritura en disco, típicamente de 4 a 16 KB. El motor nunca lee «una fila»: lee la página que la contiene, y de ahí que quepan más filas por página sea una optimización real.</td><td><a href="048.html">048</a></td></tr>
+<tr><td><a href="../glosario.html#prefijo-más-a-la-izquierda"><strong>prefijo más a la izquierda</strong></a></td><td>Un índice sobre `(a, b, c)` solo sirve para filtros que fijan `a`, o `a` y `b`, o los tres —nunca para `b` solo—. Es la regla que decide el orden de las columnas de un índice compuesto y la que explica por qué «tengo el índice y no lo usa».</td><td><a href="049.html">049</a></td></tr>
+<tr><td><a href="../glosario.html#selectividad"><strong>selectividad</strong></a></td><td>Qué fracción de la tabla devuelve un predicado. Un índice compensa cuando la selectividad es alta —pocas filas—; con predicados poco selectivos, el recorrido secuencial gana y el planificador lo elige a propósito.</td><td><a href="049.html">049</a></td></tr>
+<tr><td><a href="../glosario.html#sstable"><strong>SSTable</strong></a></td><td>Fichero ordenado e inmutable resultante de volcar una memtable. Al ser inmutable no se actualiza: los cambios posteriores viven en ficheros más nuevos, y por eso una lectura puede tener que consultar varios niveles.</td><td><a href="050.html">050</a></td></tr>
+<tr><td><a href="../glosario.html#índice-cubriente"><strong>índice cubriente</strong></a></td><td>Índice que incluye todas las columnas que la consulta necesita, así que el motor responde sin volver a la tabla. En PostgreSQL se construye con `INCLUDE`; su costo es un índice más ancho y más caro de mantener en cada escritura.</td><td><a href="049.html">049</a></td></tr>
+<tr><td><a href="../glosario.html#índice-de-expresión"><strong>índice de expresión</strong></a></td><td>Índice sobre el resultado de una función, como `lower(correo)`. Es lo que permite que una búsqueda insensible a mayúsculas use índice, siempre que la consulta escriba la expresión exactamente igual que el índice.</td><td><a href="051.html">051</a></td></tr>
+<tr><td><a href="../glosario.html#índice-parcial"><strong>índice parcial</strong></a></td><td>Índice que solo cubre las filas que cumplen un predicado (`WHERE activo`). Ocupa una fracción del total y se mantiene más barato, y encaja perfectamente cuando las consultas siempre filtran por ese mismo estado.</td><td><a href="051.html">051</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>12 obras distintas sostienen lo que se afirma en estas
+5 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-selinger-1979">Access Path Selection in a Relational Database Management System</a> <span class="fuente-meta">(1979)</span> — <span class="fuente-meta">se cita en 052</span></li>
+<li><a href="../fuentes.html#src-hellerstein-architecture">Architecture of a Database System</a> <span class="fuente-meta">(2007)</span> — <span class="fuente-meta">se cita en 048</span></li>
+<li><a href="../fuentes.html#src-petrov-database-internals">Database Internals: A Deep Dive into How Distributed Data Systems Work</a> <span class="fuente-meta">(2019)</span> — <span class="fuente-meta">se cita en 048, 050</span></li>
+<li><a href="../fuentes.html#src-graefe-btree-2011">Modern B-Tree Techniques</a> <span class="fuente-meta">(2011)</span> — <span class="fuente-meta">se cita en 049</span></li>
+<li><a href="../fuentes.html#src-bayer-mccreight-1972">Organization and Maintenance of Large Ordered Indices</a> <span class="fuente-meta">(1972)</span> — <span class="fuente-meta">se cita en 049</span></li>
+<li><a href="../fuentes.html#src-rogov-postgresql-internals">PostgreSQL 14 Internals</a> <span class="fuente-meta">(2022)</span> — <span class="fuente-meta">se cita en 048, 051</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql-indexes">PostgreSQL: Indexes</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 051</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql-explain">PostgreSQL: Using EXPLAIN</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 052</span></li>
+<li><a href="../fuentes.html#src-winand-sql-performance">SQL Performance Explained</a> <span class="fuente-meta">(2012)</span> — <span class="fuente-meta">se cita en 049, 051</span></li>
+<li><a href="../fuentes.html#src-docs-sqlite-optoverview">SQLite: Query Optimizer Overview</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 052</span></li>
+<li><a href="../fuentes.html#src-bloom-1970">Space/Time Trade-offs in Hash Coding with Allowable Errors</a> <span class="fuente-meta">(1970)</span> — <span class="fuente-meta">se cita en 050</span></li>
+<li><a href="../fuentes.html#src-oneil-lsm-1996">The Log-Structured Merge-Tree (LSM-Tree)</a> <span class="fuente-meta">(1996)</span> — <span class="fuente-meta">se cita en 050</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

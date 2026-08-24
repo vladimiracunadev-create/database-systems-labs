@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>CREATE TABLE</code> · <code>INSERT</code> · <code>SELECT</code> · <code>definición frente a manipulación</code> · <code>NULL</code></p>
 <p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La primera base de datos real, creada, poblada y consultada en la misma sesión. Introduce la separación entre definir estructuras y manipular contenido, y la primera aparición del nulo. A partir de aquí todo el programa se puede ejecutar, no solo leer.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 003&quot;]
     C --&gt; K1[&quot;CREATE TABLE&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="001.html">001</a></td>
+<td>Qué es un dato, un registro y una tabla</td>
+<td>dato · información · registro · campo · tabla</td>
+</tr>
+<tr>
+<td><a href="002.html">002</a></td>
+<td>Del archivo y la hoja de cálculo a la base de datos</td>
+<td>integridad declarada · concurrencia · consulta declarativa · durabilidad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-create-table"></a><strong>CREATE TABLE</strong></td>
+<td>La orden que declara una tabla: columnas, tipos y restricciones. Es el contrato; a partir de ahí el motor rechaza todo lo que no lo cumpla, venga de donde venga.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-insert"></a><strong>INSERT</strong></td>
+<td>La orden que añade filas. Falla —y debe fallar— si la fila viola una restricción declarada: es el momento en que la integridad declarada demuestra que sirve para algo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-select"></a><strong>SELECT</strong></td>
+<td>La orden de lectura. Nunca modifica datos; describe el conjunto que se quiere y deja al motor la estrategia para producirlo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-definición-frente-a-manipulación"></a><strong>definición frente a manipulación</strong></td>
+<td>SQL se separa en DDL, que define y cambia estructuras (<code>CREATE</code>, <code>ALTER</code>, <code>DROP</code>), y DML, que consulta y cambia contenido (<code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>). La distinción importa porque no todos los motores dan al DDL las mismas garantías transaccionales.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-null"></a><strong>NULL</strong></td>
+<td>Marca de ausencia de valor: no es cero, ni cadena vacía, ni «desconocido» codificado a mano. Introduce una lógica de tres valores que cambia el resultado de comparaciones, agregados y <code>NOT IN</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Crear una base de datos, una tabla y guardar datos dentro, con la menor cantidad

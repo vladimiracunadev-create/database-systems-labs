@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>integridad de entidad</code> · <code>integridad referencial</code> · <code>CHECK</code> · <code>ON DELETE</code> · <code>aplazamiento</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 3 lo resuelven (3 con el resultado comprobado por máquina) y 3 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La integridad declarada en su forma completa: integridad de entidad, integridad referencial, <code>CHECK</code> y las acciones referenciales. Insiste en que <code>ON DELETE CASCADE</code> es una decisión de dominio y no técnica, y presenta el aplazamiento para los casos en que el estado intermedio tiene que ser inválido.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 023&quot;]
     C --&gt; K1[&quot;integridad de entidad&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="008.html">008</a></td>
+<td>Dos tablas y una relación: la clave foránea</td>
+<td>clave foránea · tabla de relación · reunión · anomalías de repetición</td>
+</tr>
+<tr>
+<td><a href="016.html">016</a></td>
+<td>Entidad-relación, cardinalidad y participación</td>
+<td>entidad débil · cardinalidad · participación total · atributo de relación</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-integridad-de-entidad"></a><strong>integridad de entidad</strong></td>
+<td>Regla que exige que ninguna columna de la clave primaria sea nula. Su fundamento no es estético: un identificador desconocido no identifica, y la fila deja de ser referenciable.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-integridad-referencial"></a><strong>integridad referencial</strong></td>
+<td>Regla que exige que todo valor de clave foránea apunte a una fila existente o sea nulo. El gestor la comprueba en cada escritura, lo que la hace inmune a la aplicación que se olvidó de validar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-check"></a><strong>CHECK</strong></td>
+<td>Restricción que exige que una expresión sea verdadera en cada fila: <code>CHECK (precio &gt;= 0)</code>. Convierte una regla de negocio en algo que el motor impone; cuidado con los nulos, porque <code>UNKNOWN</code> no viola un <code>CHECK</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-on-delete"></a><strong>ON DELETE</strong></td>
+<td>Acción referencial que declara qué pasa con las filas hijas cuando se borra la padre: <code>RESTRICT</code> lo impide, <code>CASCADE</code> las borra, <code>SET NULL</code> las desvincula. Es una decisión de dominio, no técnica: <code>CASCADE</code> sobre datos contables borra historia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-aplazamiento"></a><strong>aplazamiento</strong></td>
+<td>Postergar la comprobación de una restricción hasta el <code>COMMIT</code> (<code>DEFERRABLE INITIALLY DEFERRED</code>). Permite estados intermedios inválidos dentro de la transacción —como insertar dos filas que se referencian mutuamente— sin renunciar a la garantía final.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Convertir las reglas del dominio en restricciones que el motor haga cumplir para todos los clientes. Una regla que vive solo en la aplicación es una regla que algún día alguien saltará.</p>

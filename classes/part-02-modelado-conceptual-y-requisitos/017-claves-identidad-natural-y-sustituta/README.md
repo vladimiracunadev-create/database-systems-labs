@@ -12,6 +12,10 @@ Parte 02 — Modelado conceptual y requisitos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El debate entre clave natural y clave sustituta resuelto por un criterio y no por preferencia: cuál de las dos mantiene la identidad estable cuando el mundo cambia. La conclusión práctica —usar sustituta y proteger además la natural con `UNIQUE`— se aplica al resto del programa.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 017"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [007](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/007-la-clave-primaria/README.md) | La clave primaria: cómo se distingue una fila de otra | clave primaria · clave natural · clave sustituta · clave compuesta · UNIQUE |
+| [016](../../part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/README.md) | Entidad-relación, cardinalidad y participación | entidad débil · cardinalidad · participación total · atributo de relación |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-clave-candidata"></a>**clave candidata** | Cualquier conjunto mínimo de atributos que identifica unívocamente una fila. Una tabla puede tener varias; elegir una como primaria no anula a las demás, que deben seguir protegidas con `UNIQUE`. | se introduce aquí |
+| <a id="v-clave-primaria"></a>**clave primaria** | La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila. | se introdujo en la [007](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/007-la-clave-primaria/README.md) |
+| <a id="v-clave-sustituta"></a>**clave sustituta** | Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción `UNIQUE` sobre la clave natural real. | se introdujo en la [007](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/007-la-clave-primaria/README.md) |
+| <a id="v-identidad-estable"></a>**identidad estable** | La propiedad de que el identificador de una fila no cambie mientras la fila represente la misma cosa. Es el criterio real del debate entre clave natural y sustituta: no cuál es más elegante, sino cuál sobrevive a los cambios del mundo. | se introduce aquí |
 
 ---
 

@@ -50,6 +50,7 @@ NAV = [
     ("laboratorios", "Laboratorios", "laboratorios.html"),
     ("certificaciones", "Certificaciones", "certificaciones/index.html"),
     ("autoevaluacion", "Autoevaluación", "autoevaluacion.html"),
+    ("glosario", "Glosario", "glosario.html"),
     ("fuentes", "Fuentes", "fuentes.html"),
     ("motores", "Motores", "motores.html"),
     ("docs", "Documentación", "docs/index.html"),
@@ -60,6 +61,8 @@ NAV = [
 DOCUMENTOS = [
     ("docs/ARCHITECTURE.md", "docs/arquitectura.html", "Arquitectura del repositorio",
      "Qué es fuente y qué es artefacto derivado, y por qué la separación importa."),
+    ("docs/GUIA-DE-ESTUDIO.md", "docs/guia-de-estudio.html", "Guía de estudio",
+     "Cómo recorrer las 74 clases: orden, método por clase, ritmo y autocomprobación."),
     ("docs/LEARNING-MODEL.md", "docs/modelo-pedagogico.html", "Modelo pedagógico",
      "Cómo está construida cada clase y qué se exige para darla por superada."),
     ("docs/SOURCES.md", "docs/politica-de-fuentes.html", "Política de fuentes",
@@ -336,6 +339,9 @@ def construir() -> dict[Path, str | bytes]:
     curriculo = yaml.safe_load((ROOT / "curriculum.yaml").read_text(encoding="utf-8"))
     fuentes = json.loads((ROOT / "catalog" / "sources.json").read_text(encoding="utf-8"))
     motores = json.loads((ROOT / "catalog" / "databases.json").read_text(encoding="utf-8"))
+    registro_glosario = json.loads(
+        (ROOT / "catalog" / "glosario.json").read_text(encoding="utf-8"))
+    glosario = {t["termino"]: t for t in registro_glosario["terms"]}
     programa = curriculo["programa"]
     salidas: dict[Path, str | bytes] = {}
 
@@ -425,6 +431,7 @@ def construir() -> dict[Path, str | bytes]:
     salidas[SITE / "busqueda.json"] = json.dumps(indice_busqueda, ensure_ascii=False)
 
     # ---------- indice por parte ----------
+    titulo_de_parte = {p["id"]: p for p in partes}
     for parte in partes:
         filas = "\n".join(
             f'<tr><td><a href="{c["id"]}.html">{c["id"]}</a></td>'
@@ -433,9 +440,62 @@ def construir() -> dict[Path, str | bytes]:
             f'<td>{c["hours"]}</td><td>{len(c["sources"])}</td></tr>'
             for c in parte["classes"])
         horas = sum(c["hours"] for c in parte["classes"])
+        conceptos_parte = {k for c in parte["classes"] for k in c["concepts"]}
+        obras_parte = {s for c in parte["classes"] for s in c["sources"]}
         otras = "\n".join(
             f'<li><a href="parte-{p["id"]}.html">Parte {p["id"]} — {escapar(p["title"])}</a></li>'
             for p in partes if p["id"] != parte["id"])
+
+        previas = parte.get("prerrequisitos") or []
+        if previas:
+            antes = ("<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera "
+                     "del programa, revisa al menos el vocabulario de:</p><ul>" +
+                     "".join(f'<li><a href="parte-{p}.html">Parte {p} — '
+                             f'{escapar(titulo_de_parte[p]["title"])}</a></li>'
+                             for p in previas) + "</ul>")
+        else:
+            antes = ("<p>Ninguno. Es la puerta de entrada al programa y no supone nada "
+                     "anterior.</p>")
+
+        introduccion = "\n".join(f"<p>{escapar(t)}</p>" for t in parte["introduccion"])
+        resultados = "\n".join(f"<li>{escapar(r)}</li>" for r in parte["resultados"])
+        errores = "\n".join(f"<li>{escapar(e)}</li>" for e in parte["errores"])
+
+        fichas = []
+        for c in parte["classes"]:
+            previos = c.get("prerrequisitos") or []
+            requiere = ("requiere " + ", ".join(f'<a href="{x}.html">{x}</a>'
+                                                for x in previos)
+                        if previos else "sin prerrequisitos")
+            etiquetas = " ".join(f'<span class="tag">{escapar(k)}</span>'
+                                 for k in c["concepts"])
+            fichas.append(f"""  <article class="ficha-clase">
+    <h3><a href="{c['id']}.html">{c['id']} — {escapar(c['title'])}</a></h3>
+    <p class="fuente-meta">{NIVELES[c['level']]} · {c['hours']} h ·
+      {len(c['sources'])} fuentes · {requiere}</p>
+    <p>{escapar(c['resumen'])}</p>
+    <p>{etiquetas}</p>
+  </article>""")
+
+        vistos_parte: dict[str, str] = {}
+        for c in parte["classes"]:
+            for k in c["concepts"]:
+                vistos_parte.setdefault(k, c["id"])
+        vocabulario = "\n".join(
+            f'<tr><td><a href="../glosario.html#{ancla(k)}"><strong>{escapar(k)}</strong>'
+            f'</a></td><td>{escapar(glosario[k]["definicion"])}</td>'
+            f'<td><a href="{cid}.html">{cid}</a></td></tr>'
+            for k, cid in sorted(vistos_parte.items(), key=lambda x: x[0].lower()))
+
+        usos: dict[str, list[str]] = {}
+        for c in parte["classes"]:
+            for sid in c["sources"]:
+                usos.setdefault(sid, []).append(c["id"])
+        bibliografia = "\n".join(
+            f'<li>{cita(sid, "../")} — <span class="fuente-meta">se cita en '
+            f'{", ".join(usos[sid])}</span></li>'
+            for sid in sorted(usos, key=lambda s: por_fuente[s]["title"]))
+
         cuerpo = f"""<nav class="migas" aria-label="Ruta de navegación">
   <a href="../index.html">Inicio</a><span aria-hidden="true">/</span>
   <span>Parte {parte['id']}</span>
@@ -443,12 +503,51 @@ def construir() -> dict[Path, str | bytes]:
 <main class="content" id="principal">
 <h1>Parte {parte['id']} — {escapar(parte['title'])}</h1>
 <p class="lead">{escapar(parte['summary'])}</p>
-<p><strong>{len(parte['classes'])} clases · {horas} horas</strong></p>
+<p><strong>{len(parte['classes'])} clases · {horas} horas ·
+{len(conceptos_parte)} conceptos · {len(obras_parte)} fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+{antes}
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+{introduccion}
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+{resultados}
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
 {filas}
 </tbody></table></div>
+{chr(10).join(fichas)}
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+{errores}
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los {len(vistos_parte)} términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+{vocabulario}
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>{len(usos)} obras distintas sostienen lo que se afirma en estas
+{len(parte['classes'])} clases.</p>
+<ul>
+{bibliografia}
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 {otras}
@@ -459,6 +558,85 @@ def construir() -> dict[Path, str | bytes]:
             descripcion=parte["summary"], cuerpo=cuerpo, prefijo="../",
             ruta=f"classes/parte-{parte['id']}.html", programa=programa, activo="clases",
             extra_css='<link rel="stylesheet" href="../assets/class.css">\n')
+
+    # ---------- glosario ----------
+    def clave_alfabetica(termino: str) -> str:
+        tabla = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
+        return termino.translate(tabla).lower()
+
+    parte_de_clase = {c["id"]: p for p, c in plano}
+    clase_por_id = {c["id"]: c for _, c in plano}
+    ordenados = sorted(glosario.values(), key=lambda t: clave_alfabetica(t["termino"]))
+    grupos_glosario: dict[str, list[dict]] = {}
+    for entrada in ordenados:
+        grupos_glosario.setdefault(
+            clave_alfabetica(entrada["termino"])[0].upper(), []).append(entrada)
+
+    bloques_glosario = []
+    for letra, entradas in grupos_glosario.items():
+        articulos = []
+        for t in entradas:
+            clase_origen = clase_por_id[t["clase"]]
+            parte_origen = parte_de_clase[t["clase"]]
+            relacionados = ", ".join(
+                f'<a href="#{ancla(v)}">{escapar(v)}</a>' for v in t["ver_tambien"])
+            articulos.append(f"""  <article class="termino" id="{ancla(t['termino'])}"
+      data-termino="{escapar(clave_alfabetica(t['termino']))}"
+      data-parte="{parte_origen['id']}">
+    <h3>{escapar(t['termino'])}</h3>
+    <p>{escapar(t['definicion'])}</p>
+    <p class="fuente-meta">Se trabaja en
+      <a href="classes/{t['clase']}.html">{t['clase']} — {escapar(clase_origen['title'])}</a>
+      · parte {parte_origen['id']}</p>
+    <p class="fuente-meta">Ver también: {relacionados}</p>
+    <p class="fuente-meta">Fuente: {cita(t['fuente'], '')}</p>
+  </article>""")
+        bloques_glosario.append(
+            f'<section class="letra" id="letra-{letra.lower()}">\n'
+            f'  <h2>{letra}</h2>\n' + "\n".join(articulos) + "\n</section>")
+
+    navegacion_letras = " ".join(
+        f'<a class="tag" href="#letra-{letra.lower()}">{letra}</a>'
+        for letra in grupos_glosario)
+
+    salidas[SITE / "glosario.html"] = pagina(
+        titulo="Glosario · Database Systems Labs",
+        descripcion=(f"{len(ordenados)} términos del programa, definidos una sola vez, "
+                     "con la clase donde se trabajan y la fuente de cada definición."),
+        prefijo="", ruta="glosario.html", programa=programa, activo="glosario",
+        extra_css='<link rel="stylesheet" href="assets/class.css">\n',
+        cuerpo=f"""<nav class="migas" aria-label="Ruta de navegación">
+  <a href="index.html">Inicio</a><span aria-hidden="true">/</span>
+  <span>Glosario</span></nav>
+<main class="content" id="principal">
+<h1>Glosario del programa</h1>
+<p class="lead">{len(ordenados)} términos: todos los conceptos que las
+{total_clases} clases declaran, definidos una sola vez y con la misma palabra
+significando lo mismo de principio a fin. Cada entrada dice dónde se trabaja el
+término, con qué otros se relaciona y de qué obra procede la definición.</p>
+<p><label for="buscar-termino">Filtrar términos</label>
+<input id="buscar-termino" type="search" placeholder="escribe un término…"
+  autocomplete="off"></p>
+<p>{navegacion_letras}</p>
+{chr(10).join(bloques_glosario)}
+</main>
+<script>
+(function () {{
+  var caja = document.getElementById('buscar-termino');
+  if (!caja) return;
+  var terminos = Array.prototype.slice.call(document.querySelectorAll('.termino'));
+  var letras = Array.prototype.slice.call(document.querySelectorAll('.letra'));
+  caja.addEventListener('input', function () {{
+    var q = caja.value.trim().toLowerCase();
+    terminos.forEach(function (t) {{
+      t.hidden = q !== '' && t.dataset.termino.indexOf(q) === -1;
+    }});
+    letras.forEach(function (s) {{
+      s.hidden = !s.querySelector('.termino:not([hidden])');
+    }});
+  }});
+}})();
+</script>""")
 
     salidas[SITE / "classes" / "indice.html"] = pagina(
         titulo="Todas las clases · Database Systems Labs",

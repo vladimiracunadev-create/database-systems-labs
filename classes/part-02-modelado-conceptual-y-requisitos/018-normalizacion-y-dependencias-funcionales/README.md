@@ -12,6 +12,10 @@ Parte 02 — Modelado conceptual y requisitos · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La normalización explicada como lo que es: una demostración a partir de dependencias funcionales, no una intuición sobre qué pertenece a qué. Recorre de la primera forma normal a la de Boyce-Codd y exige que cada descomposición sea sin pérdida, es decir, que reunir las tablas devuelva exactamente la original.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 018"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [008](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/008-dos-tablas-y-una-relacion/README.md) | Dos tablas y una relación: la clave foránea | clave foránea · tabla de relación · reunión · anomalías de repetición |
+| [016](../../part-02-modelado-conceptual-y-requisitos/016-entidad-relacion-cardinalidad-y-participacion/README.md) | Entidad-relación, cardinalidad y participación | entidad débil · cardinalidad · participación total · atributo de relación |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-dependencia-funcional"></a>**dependencia funcional** | Relación `X → Y`: conocido el valor de X queda determinado el de Y. Es la herramienta formal con la que se demuestra que una tabla está mal descompuesta, y no una intuición sobre qué «pertenece» a qué. | se introduce aquí |
+| <a id="v-anomalía-de-actualización"></a>**anomalía de actualización** | Consecuencia de guardar un hecho en varias filas: corregirlo exige tocarlas todas, y la que se olvida deja la base contradiciéndose a sí misma. Junto con las anomalías de inserción y borrado, es lo que la normalización elimina. | se introduce aquí |
+| <a id="v-bcfn"></a>**BCFN** | Forma normal de Boyce-Codd: toda dependencia funcional no trivial tiene como determinante una clave candidata. Es más estricta que la tercera forma normal y es el listón práctico de este programa para un esquema transaccional. | se introduce aquí |
+| <a id="v-descomposición-sin-pérdida"></a>**descomposición sin pérdida** | Partir una tabla en dos de modo que reunirlas devuelva exactamente la original, ni una fila más ni una menos. Se garantiza cuando el atributo común es clave en al menos una de las dos; sin esa condición la normalización inventa datos. | se introduce aquí |
 
 ---
 

@@ -1,16 +1,21 @@
 """Genera el `README.md` de cada clase a partir del curriculo y de su leccion.
 
-Reparto de responsabilidades, para que 64 clases no se conviertan en 64 copias
+Reparto de responsabilidades, para que 74 clases no se conviertan en 74 copias
 del mismo encabezado que hay que arreglar una por una:
 
-    curriculum.yaml            metadatos (horas, nivel, conceptos, fuentes)
+    curriculum.yaml            metadatos, resumen, prerrequisitos y la
+                               introduccion pedagogica de cada parte
     classes/**/lesson.md       la materia, escrita a mano
     catalog/sources.json       de donde sale cada afirmacion
+    catalog/glosario.json      que significa cada concepto y donde se introduce
     -> classes/**/README.md    documento publicable, generado
+    -> classes/README.md       indice general con el resumen de cada clase
+    -> classes/part-*/README.md portada pedagogica de la parte
+    -> GLOSARIO.md             glosario unico del programa
 
 El README es un artefacto derivado: se regenera y se compara en CI con
 `--check`. Si alguien lo edita a mano, el trabajo se pierde en la siguiente
-generacion; la materia se edita en `lesson.md`.
+generacion; la materia se edita en `lesson.md` y la pauta en `curriculum.yaml`.
 
 Uso:
     python scripts/build_classes.py            # escribe
@@ -48,10 +53,13 @@ RUBRICA = """| Criterio | Peso | Qué se comprueba |
 | Límites y riesgos declarados | 25 % | Dice qué no demuestra el ejercicio y qué faltaría en producción |"""
 
 
-def cargar() -> tuple[dict, dict[str, dict]]:
+def cargar() -> tuple[dict, dict[str, dict], dict[str, dict]]:
     curriculo = yaml.safe_load((ROOT / "curriculum.yaml").read_text(encoding="utf-8"))
     registro = json.loads((ROOT / "catalog" / "sources.json").read_text(encoding="utf-8"))
-    return curriculo, {f["id"]: f for f in registro["sources"]}
+    glosario = json.loads((ROOT / "catalog" / "glosario.json").read_text(encoding="utf-8"))
+    return (curriculo,
+            {f["id"]: f for f in registro["sources"]},
+            {t["termino"]: t for t in glosario["terms"]})
 
 
 def indice_plano(curriculo: dict) -> list[tuple[dict, dict]]:
@@ -80,6 +88,71 @@ def cita(fuente: dict) -> str:
     # «7.a ed.» ya termina en punto: unir con «. » dejaria «7.a ed..».
     referencia = ". ".join(p.rstrip(".") for p in partes)
     return f"- {referencia}.  \n  {fuente['note']}"
+
+
+def ancla(texto: str) -> str:
+    """Ancla de GitHub para un encabezado: minusculas, sin puntuacion, guiones."""
+    limpio = "".join(c for c in texto.lower() if c.isalnum() or c in " -_")
+    return limpio.strip().replace(" ", "-")
+
+
+def ruta_clase(indice: dict[str, tuple[dict, dict]], cid: str, desde: str) -> str:
+    """Enlace relativo a la clase `cid` desde `desde` ('clase', 'parte' o 'raiz')."""
+    parte, clase = indice[cid]
+    carpeta = f"part-{parte['id']}-{parte['slug']}/{clase['id']}-{clase['slug']}/README.md"
+    prefijo = {"clase": "../../", "parte": "../", "raiz": "classes/"}[desde]
+    return f"{prefijo}{carpeta}"
+
+
+def bloque_prerrequisitos(clase: dict, indice: dict[str, tuple[dict, dict]]) -> str:
+    """Que hay que traer sabido a esta clase, con el enlace a donde se explicó."""
+    previos = clase.get("prerrequisitos") or []
+    if not previos:
+        return ("## Antes de empezar\n\nNinguno. Esta es una clase de entrada: no supone "
+                "nada anterior del programa más allá de saber abrir una terminal.\n")
+    filas = "\n".join(
+        f"| [{indice[c][1]['id']}]({ruta_clase(indice, c, 'clase')}) "
+        f"| {celda(indice[c][1]['title'])} "
+        f"| {celda(' · '.join(indice[c][1]['concepts']))} |"
+        for c in previos)
+    return f"""## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+{filas}
+"""
+
+
+def bloque_vocabulario(clase: dict, glosario: dict[str, dict],
+                       indice: dict[str, tuple[dict, dict]]) -> str:
+    """Los conceptos de la clase, definidos antes de que aparezcan en el texto.
+
+    Se genera desde `catalog/glosario.json` para que la misma palabra signifique
+    lo mismo en las 74 clases y en el glosario general.
+    """
+    filas = []
+    for concepto in clase["concepts"]:
+        termino = glosario[concepto]
+        origen = termino["clase"]
+        procedencia = ("se introduce aquí" if origen == clase["id"] else
+                       f"se introdujo en la [{origen}]({ruta_clase(indice, origen, 'clase')})")
+        filas.append(
+            f"| <a id=\"v-{ancla(concepto)}\"></a>**{celda(concepto)}** "
+            f"| {celda(termino['definicion'])} | {procedencia} |")
+    return f"""## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+{chr(10).join(filas)}
+"""
 
 
 SELLO = {
@@ -252,7 +325,8 @@ def mapa_conceptos(clase: dict) -> str:
 def render(parte: dict, clase: dict, cuerpo: str, fuentes: dict[str, dict],
            anterior: tuple[dict, dict] | None, siguiente: tuple[dict, dict] | None,
            laboratorios: dict[str, dict], comparacion: ml.Comparacion | None,
-           catalogo: dict[str, dict], total_clases: int) -> str:
+           catalogo: dict[str, dict], total_clases: int,
+           glosario: dict[str, dict], indice: dict[str, tuple[dict, dict]]) -> str:
     ruta_parte = f"part-{parte['id']}-{parte['slug']}"
     lab = laboratorios.get(clase["lab"], {})
     comando_lab = lab.get("comando") or (
@@ -300,8 +374,16 @@ Parte {parte['id']} — {parte['title']} · {NIVEL_ETIQUETA[clase['level']]} ·
 
 **Conceptos centrales:** {conceptos}{resumen_motores}
 
+## De qué trata esta clase
+
+{clase['resumen']}
+
 {mapa_conceptos(clase)}
 
+---
+
+{bloque_prerrequisitos(clase, indice)}
+{bloque_vocabulario(clase, glosario, indice)}
 ---
 
 {cuerpo.strip()}
@@ -340,63 +422,316 @@ enlaces se comprueba con `python scripts/check_external_links.py`.
 """
 
 
-def indice_parte(parte: dict, curriculo: dict) -> str:
+MAPA_ESTUDIO = """## Cómo estudiar esta parte
+
+El mismo método en las 74 clases, y conviene respetar el orden:
+
+1. **Lee el vocabulario antes que la materia.** Cada clase define sus términos
+   arriba precisamente para que no haya que deducirlos del contexto.
+2. **Ejecuta el ejemplo trabajado mientras lees**, no después. La mitad de lo
+   que se aprende aquí solo aparece cuando la salida no es la esperada.
+3. **Compara los motores.** La sección comparada muestra el mismo problema
+   resuelto —o descartado con argumento— en varios sistemas. Lee también las
+   filas de los que no lo resuelven: descartar con motivo es la habilidad que
+   se evalúa en el proyecto final.
+4. **Responde las preguntas de evaluación por escrito.** Una respuesta que no
+   se puede escribir en tres líneas todavía no está entendida.
+5. **Haz el reto de transferencia.** Es el único ejercicio que comprueba si el
+   concepto se puede aplicar a un caso que la clase no mostró.
+6. **Guarda la evidencia**: comando, versión del motor, semilla y salida
+   completa. Sin eso no hay nota, porque no hay nada que revisar.
+"""
+
+
+def mapa_parte(parte: dict) -> str:
+    """Diagrama con las clases de la parte encadenadas en su orden de estudio."""
+    def etiqueta(clase: dict) -> str:
+        titulo = clase["title"].replace('"', "'")
+        if len(titulo) > 44:
+            titulo = titulo[:41].rstrip() + "…"
+        return f'{clase["id"]}<br/>{titulo}'
+
+    nodos = [f'    C{c["id"]}["{etiqueta(c)}"]' for c in parte["classes"]]
+    flechas = [f'    C{a["id"]} --> C{b["id"]}'
+               for a, b in zip(parte["classes"], parte["classes"][1:])]
+    colores = {"fundamentos": "fund", "intermedio": "inter", "avanzado": "avan"}
+    clases_css = [f'    class C{c["id"]} {colores[c["level"]]}' for c in parte["classes"]]
+    return "\n".join([
+        "```mermaid",
+        "flowchart LR",
+        *nodos,
+        *flechas,
+        "    classDef fund fill:#0b3d2e,stroke:#3fb950,color:#fff",
+        "    classDef inter fill:#0d2d5e,stroke:#58a6ff,color:#fff",
+        "    classDef avan fill:#2d1b4e,stroke:#bc8cff,color:#fff",
+        *clases_css,
+        "```",
+    ])
+
+
+def fichas_de_clase(parte: dict, indice: dict[str, tuple[dict, dict]]) -> str:
+    """Una ficha explicada por clase: para qué está, qué exige y qué introduce."""
+    fichas = []
+    for clase in parte["classes"]:
+        destino = f"{clase['id']}-{clase['slug']}/README.md"
+        previos = clase.get("prerrequisitos") or []
+
+        def enlace_previo(cid: str) -> str:
+            """Dentro de la misma parte basta la ruta corta; fuera hace falta subir."""
+            otra, previa = indice[cid]
+            if otra["id"] == parte["id"]:
+                return f"[{cid}]({previa['id']}-{previa['slug']}/README.md)"
+            return f"[{cid}]({ruta_clase(indice, cid, 'parte')})"
+
+        requiere = ("requiere " + ", ".join(enlace_previo(c) for c in previos)
+                    if previos else "sin prerrequisitos")
+        conceptos = " · ".join(f"`{c}`" for c in clase["concepts"])
+        fichas.append(
+            f"### [{clase['id']} — {clase['title']}]({destino})\n\n"
+            f"*{NIVEL_ETIQUETA[clase['level']]} · {clase['hours']} h · "
+            f"{len(clase['sources'])} fuentes · {requiere}*\n\n"
+            f"{clase['resumen']}\n\n"
+            f"**Conceptos que introduce:** {conceptos}\n\n"
+            f"[Ir a la clase →]({destino})\n")
+    return "\n".join(fichas)
+
+
+def vocabulario_de_parte(parte: dict, glosario: dict[str, dict]) -> str:
+    """Todos los conceptos que la parte introduce, definidos y sin repetir."""
+    destinos = {c["id"]: f"{c['id']}-{c['slug']}/README.md" for c in parte["classes"]}
+    vistos: dict[str, str] = {}
+    for clase in parte["classes"]:
+        for concepto in clase["concepts"]:
+            vistos.setdefault(concepto, clase["id"])
+    filas = "\n".join(
+        f"| **{celda(t)}** | {celda(glosario[t]['definicion'])} "
+        f"| [{cid}]({destinos[cid]}) |"
+        for t, cid in sorted(vistos.items(), key=lambda x: x[0].lower()))
+    return f"""## Vocabulario de la parte
+
+Los {len(vistos)} términos que esta parte introduce. Cada uno enlaza a la clase
+en la que se trabaja, y todos aparecen también en el
+[glosario del programa](../../GLOSARIO.md) con sus términos relacionados.
+
+| Término | Qué significa | Se trabaja en |
+|---|---|---|
+{filas}
+"""
+
+
+def fuentes_de_parte(parte: dict, fuentes: dict[str, dict]) -> str:
+    """La bibliografia de la parte entera, sin repetir y con las clases que la citan."""
+    usos: dict[str, list[str]] = {}
+    for clase in parte["classes"]:
+        for sid in clase["sources"]:
+            usos.setdefault(sid, []).append(clase["id"])
+    orden = sorted(usos, key=lambda s: (fuentes[s]["kind"], fuentes[s]["title"]))
+    entradas = "\n".join(
+        f"{cita(fuentes[sid])}  \n  *Se cita en las clases "
+        f"{', '.join(usos[sid])}.*" for sid in orden)
+    return f"""## Fuentes usadas en esta parte
+
+{len(orden)} obras distintas sostienen lo que se afirma en estas
+{len(parte['classes'])} clases. Los identificadores viven en
+[`catalog/sources.json`](../../catalog/sources.json) y el estado de los enlaces
+se comprueba con `python scripts/check_external_links.py`.
+
+{entradas}
+"""
+
+
+def indice_parte(parte: dict, curriculo: dict, fuentes: dict[str, dict],
+                 glosario: dict[str, dict], indice: dict[str, tuple[dict, dict]]) -> str:
+    horas = sum(c["hours"] for c in parte["classes"])
+    conceptos = {c for cl in parte["classes"] for c in cl["concepts"]}
+    obras = {s for cl in parte["classes"] for s in cl["sources"]}
+    titulos = {p["id"]: p for p in curriculo["parts"]}
+
     filas = "\n".join(
         f"| [{c['id']}]({c['id']}-{c['slug']}/README.md) "
         f"| [{c['title']}]({c['id']}-{c['slug']}/README.md) "
         f"| {NIVEL_ETIQUETA[c['level']]} | {c['hours']} | {len(c['sources'])} |"
-        for c in parte["classes"]
-    )
-    horas = sum(c["hours"] for c in parte["classes"])
+        for c in parte["classes"])
+
+    previas = parte.get("prerrequisitos") or []
+    if previas:
+        lista_previas = "\n".join(
+            f"- [Parte {p} — {titulos[p]['title']}]"
+            f"(../part-{p}-{titulos[p]['slug']}/README.md)" for p in previas)
+        antes = ("Esta parte se apoya en lo trabajado antes. Si vienes de fuera del "
+                 "programa, revisa al menos el vocabulario de:\n\n" + lista_previas)
+    else:
+        antes = ("Ninguno. Es la puerta de entrada al programa y no supone nada "
+                 "anterior.")
+
+    introduccion = "\n\n".join(parte["introduccion"])
+    resultados = "\n".join(f"{i}. {r}" for i, r in enumerate(parte["resultados"], 1))
+    errores = "\n".join(f"- {e}" for e in parte["errores"])
     otras = "\n".join(
         f"- [Parte {p['id']} — {p['title']}](../part-{p['id']}-{p['slug']}/README.md)"
-        for p in curriculo["parts"] if p["id"] != parte["id"]
-    )
+        for p in curriculo["parts"] if p["id"] != parte["id"])
+
     return f"""# Parte {parte['id']} — {parte['title']}
 
-> [Programa](../../README.md) · [Índice de clases](../README.md)
+> [Programa](../../README.md) · [Índice de clases](../README.md) ·
+> [Glosario](../../GLOSARIO.md) · [Modelo de aprendizaje](../../docs/LEARNING-MODEL.md)
 
 {parte['summary']}
 
-**{len(parte['classes'])} clases · {horas} horas**
+**{len(parte['classes'])} clases · {horas} horas · {len(conceptos)} conceptos · {len(obras)} fuentes**
+
+## Antes de esta parte
+
+{antes}
+
+## De qué trata esta parte
+
+{introduccion}
+
+## Al terminar esta parte podrás
+
+{resultados}
+
+## Mapa de la parte
+
+{mapa_parte(parte)}
 
 | # | Clase | Nivel | Horas | Fuentes |
 |---|---|---|---:|---:|
 {filas}
 
+## Las clases, una por una
+
+{fichas_de_clase(parte, indice)}
+## Errores frecuentes en esta parte
+
+Cada uno de estos es una creencia habitual y su corrección. Si alguna te suena
+propia, la clase que la desmonta está señalada arriba.
+
+{errores}
+
+{vocabulario_de_parte(parte, glosario)}
+{fuentes_de_parte(parte, fuentes)}
+{MAPA_ESTUDIO}
 ## Otras partes
 
 {otras}
 """
 
 
+def primera_frase(texto: str) -> str:
+    """La frase de apertura del resumen, para la columna de vistazo del índice."""
+    frase = texto.strip().split(". ")[0].rstrip(".")
+    return frase if len(frase) <= 150 else frase[:147].rstrip() + "…"
+
+
 def indice_general(curriculo: dict) -> str:
     bloques = []
     for parte in curriculo["parts"]:
         horas = sum(c["hours"] for c in parte["classes"])
+        conceptos = {c for cl in parte["classes"] for c in cl["concepts"]}
         filas = "\n".join(
             f"| [{c['id']}](part-{parte['id']}-{parte['slug']}/{c['id']}-{c['slug']}/README.md) "
-            f"| {c['title']} | {NIVEL_ETIQUETA[c['level']]} | {c['hours']} |"
+            f"| {celda(c['title'])} | {celda(primera_frase(c['resumen']))} "
+            f"| {NIVEL_ETIQUETA[c['level']]} | {c['hours']} |"
             for c in parte["classes"]
         )
         bloques.append(
             f"## [Parte {parte['id']} — {parte['title']}]"
             f"(part-{parte['id']}-{parte['slug']}/README.md)\n\n"
             f"{parte['summary']}\n\n"
-            f"*{len(parte['classes'])} clases · {horas} horas*\n\n"
-            f"| # | Clase | Nivel | Horas |\n|---|---|---|---:|\n{filas}"
+            f"{parte['introduccion'][0]}\n\n"
+            f"*{len(parte['classes'])} clases · {horas} horas · "
+            f"{len(conceptos)} conceptos* — "
+            f"[portada de la parte, con la explicación de cada clase]"
+            f"(part-{parte['id']}-{parte['slug']}/README.md)\n\n"
+            f"| # | Clase | En una línea | Nivel | Horas |\n"
+            f"|---|---|---|---|---:|\n{filas}"
         )
     total = sum(len(p["classes"]) for p in curriculo["parts"])
     horas = sum(c["hours"] for p in curriculo["parts"] for c in p["classes"])
+    conceptos = {c for p in curriculo["parts"] for cl in p["classes"] for c in cl["concepts"]}
     return f"""# Clases
 
-{total} clases repartidas en {len(curriculo['parts'])} partes, {horas} horas estimadas.
+{total} clases repartidas en {len(curriculo['parts'])} partes, {horas} horas
+estimadas y {len(conceptos)} conceptos definidos en el
+[glosario del programa](../GLOSARIO.md).
 
-Cada clase declara sus fuentes al final. Este índice y los README de clase se
-generan con `python scripts/build_classes.py`; la materia se edita en el
-`lesson.md` de cada carpeta.
+## Cómo se lee este índice
+
+Cada parte tiene su **portada**, y ahí es donde empieza el trabajo: explica de
+qué trata la parte, qué hay que traer sabido, qué sabrás hacer al terminar, una
+ficha por clase, los errores frecuentes que desmonta, su vocabulario y la
+bibliografía completa. Este índice es solo el mapa para llegar hasta allí.
+
+La columna «en una línea» resume cada clase; la explicación completa está en la
+portada de su parte y, con todo el detalle, en el README de la clase.
+
+Cada clase declara sus fuentes al final y ninguna se publica sin al menos tres.
+Este índice, los README de clase y el glosario se generan con
+`python scripts/build_classes.py`; la materia se edita en el `lesson.md` de cada
+carpeta y la pauta pedagógica en [`curriculum.yaml`](../curriculum.yaml).
 
 {(chr(10) * 2).join(bloques)}
+"""
+
+
+def glosario_md(curriculo: dict, glosario: dict[str, dict], fuentes: dict[str, dict],
+                indice: dict[str, tuple[dict, dict]]) -> str:
+    """El glosario unico del programa, agrupado por inicial y con enlaces cruzados."""
+    def clave(termino: str) -> str:
+        tabla = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
+        return termino.translate(tabla).lower()
+
+    terminos = sorted(glosario.values(), key=lambda t: clave(t["termino"]))
+    grupos: dict[str, list[dict]] = {}
+    for termino in terminos:
+        grupos.setdefault(clave(termino["termino"])[0].upper(), []).append(termino)
+
+    navegacion = " · ".join(f"[{letra}](#{letra.lower()})" for letra in grupos)
+    secciones = []
+    for letra, entradas in grupos.items():
+        cuerpo = []
+        for t in entradas:
+            parte, clase = indice[t["clase"]]
+            destino = ruta_clase(indice, t["clase"], "raiz")
+            relacionados = ", ".join(
+                f"[{v}](#{ancla(v)})" for v in t["ver_tambien"]) or "—"
+            fuente = fuentes[t["fuente"]]
+            autores = ", ".join(fuente["authors"])
+            cuerpo.append(
+                f"### {t['termino']}\n\n"
+                f"{t['definicion']}\n\n"
+                f"- **Se trabaja en:** [{clase['id']} — {clase['title']}]({destino}) "
+                f"(parte {parte['id']})\n"
+                f"- **Ver también:** {relacionados}\n"
+                f"- **Fuente:** {autores} ({fuente['year']}), "
+                f"[{fuente['title']}]({fuente['url']})\n")
+        # `.rstrip()`: cada entrada ya termina en salto y las secciones se unen
+        # con linea en blanco; sin esto quedarian dos y markdownlint lo rechaza.
+        secciones.append(f"## {letra}\n\n" + "\n".join(cuerpo).rstrip())
+
+    total_clases = sum(len(p["classes"]) for p in curriculo["parts"])
+    return f"""# Glosario del programa
+
+{len(terminos)} términos: todos los conceptos que las {total_clases} clases
+declaran, definidos una sola vez y con la misma palabra significando lo mismo de
+principio a fin. Cada entrada dice dónde se trabaja el término, con qué otros se
+relaciona y de qué obra procede la definición.
+
+> [Programa](README.md) · [Índice de clases](classes/README.md) ·
+> [Registro de fuentes](catalog/sources.json) ·
+> [Modelo de aprendizaje](docs/LEARNING-MODEL.md)
+
+Este archivo se genera desde [`catalog/glosario.json`](catalog/glosario.json) con
+`python scripts/build_classes.py`. Editarlo a mano no sirve de nada: el cambio se
+pierde en la siguiente generación. `scripts/validate_repository.py` comprueba que
+no haya ningún concepto del currículo sin definición ni ninguna definición sin
+concepto.
+
+**Índice alfabético:** {navegacion}
+
+{(chr(10) * 2).join(secciones)}
 """
 
 
@@ -406,10 +741,21 @@ def main() -> int:
                         help="no escribe: falla si algun archivo generado esta desactualizado")
     args = parser.parse_args()
 
-    curriculo, fuentes = cargar()
+    curriculo, fuentes, glosario = cargar()
     plano = indice_plano(curriculo)
+    indice = {clase["id"]: (parte, clase) for parte, clase in plano}
     laboratorios = {lab["ruta"]: lab for lab in curriculo["laboratorios"]}
     catalogo = ml.cargar_catalogo()
+
+    # Un concepto sin definicion romperia el README a mitad de generacion con un
+    # KeyError opaco: se avisa aqui, con el nombre del concepto y su clase.
+    sin_definir = sorted({(c["id"], k) for _, c in plano
+                          for k in c["concepts"] if k not in glosario})
+    if sin_definir:
+        print("Conceptos sin entrada en catalog/glosario.json:", file=sys.stderr)
+        for cid, concepto in sin_definir:
+            print(f"  clase {cid}: {concepto!r}", file=sys.stderr)
+        return 1
     pendientes: list[str] = []
     faltan_lecciones: list[str] = []
     mal_declaradas: list[str] = []
@@ -430,13 +776,14 @@ def main() -> int:
             parte, clase, leccion.read_text(encoding="utf-8"), fuentes,
             plano[posicion - 1] if posicion > 0 else None,
             plano[posicion + 1] if posicion + 1 < len(plano) else None,
-            laboratorios, comparacion, catalogo, len(plano),
+            laboratorios, comparacion, catalogo, len(plano), glosario, indice,
         )
 
     for parte in curriculo["parts"]:
         ruta = CLASSES / f"part-{parte['id']}-{parte['slug']}" / "README.md"
-        salidas[ruta] = indice_parte(parte, curriculo)
+        salidas[ruta] = indice_parte(parte, curriculo, fuentes, glosario, indice)
     salidas[CLASSES / "README.md"] = indice_general(curriculo)
+    salidas[ROOT / "GLOSARIO.md"] = glosario_md(curriculo, glosario, fuentes, indice)
 
     if mal_declaradas:
         print("Comparaciones de motores mal declaradas:", file=sys.stderr)

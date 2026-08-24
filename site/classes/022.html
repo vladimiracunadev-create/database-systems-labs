@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>cálculo de tuplas</code> · <code>seguridad de expresión</code> · <code>equivalencia</code> · <code>declaratividad</code></p>
 <p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El cálculo relacional y el teorema que lo hace equivalente al álgebra. No es formalismo por gusto: esa equivalencia es exactamente el permiso que tiene el optimizador para reescribir tu consulta, y la razón de que SQL pueda ser declarativo.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 022&quot;]
     C --&gt; K1[&quot;cálculo de tuplas&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="021.html">021</a></td>
+<td>Álgebra relacional: selección, proyección, producto y reunión</td>
+<td>selección · proyección · producto cartesiano · reunión natural · división</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-cálculo-de-tuplas"></a><strong>cálculo de tuplas</strong></td>
+<td>Formalismo que describe el resultado con una fórmula lógica —«las tuplas t tales que…»— en lugar de con una secuencia de operadores. Es el antepasado directo de SQL y la razón formal de que SQL sea declarativo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-seguridad-de-expresión"></a><strong>seguridad de expresión</strong></td>
+<td>Condición que garantiza que una fórmula del cálculo devuelve un resultado finito. <code>{t \| ¬P(t)}</code> no es segura: «todo lo que no cumple P» incluye el universo entero. Es la razón de que SQL obligue a nombrar siempre un <code>FROM</code>.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-equivalencia"></a><strong>equivalencia</strong></td>
+<td>Dos expresiones son equivalentes si devuelven la misma relación para toda base de datos posible. Codd demostró que álgebra y cálculo tienen el mismo poder expresivo; sobre ese teorema descansa la libertad del optimizador para reescribir consultas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-declaratividad"></a><strong>declaratividad</strong></td>
+<td>Decir qué se quiere, no cómo obtenerlo. Su valor práctico es que el motor puede cambiar de estrategia —de recorrido completo a índice, de reunión anidada a hash— cuando cambian los datos, sin que nadie toque el código.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Entender por qué SQL es declarativo. El cálculo relacional describe <strong>qué</strong> se quiere sin decir cómo obtenerlo; su equivalencia con el álgebra es el teorema que autoriza a un optimizador a elegir el cómo.</p>

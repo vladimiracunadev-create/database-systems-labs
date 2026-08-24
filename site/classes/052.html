@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/04-indexing/README.md"><code>labs/04-indexing</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>optimizador por costos</code> · <code>estadística</code> · <code>estimación de cardinalidad</code> · <code>costo frente a tiempo</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Leer un plan de ejecución para refutar una hipótesis, no para confirmarla. La técnica central es comparar filas estimadas contra reales nodo a nodo: un error de estimación explica casi cualquier plan absurdo. Insiste en que el <code>cost</code> no son milisegundos y en que solo <code>EXPLAIN ANALYZE</code> mide tiempo.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 052&quot;]
     C --&gt; K1[&quot;optimizador por costos&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="049.html">049</a></td>
+<td>B-Tree: estructura, orden de columnas y selectividad</td>
+<td>B-Tree · prefijo más a la izquierda · selectividad · índice cubriente</td>
+</tr>
+<tr>
+<td><a href="051.html">051</a></td>
+<td>Índices especializados: hash, GIN, GiST, BRIN, parciales y cubrientes</td>
+<td>índice parcial · índice de expresión · GIN · BRIN · costo de mantenimiento</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-optimizador-por-costos"></a><strong>optimizador por costos</strong></td>
+<td>Componente que enumera planes equivalentes y elige el de menor costo estimado a partir de estadísticas. Desde el artículo de Selinger de 1979 el principio no ha cambiado: el motor no ejecuta lo que escribiste, ejecuta lo que calculó que es más barato.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-estadística"></a><strong>estadística</strong></td>
+<td>Resúmenes que el motor guarda sobre los datos: número de filas, valores distintos, histogramas, valores más comunes. Cuando están obsoletas el optimizador estima mal y elige planes ruinosos, y ese es el primer sitio donde mirar ante una consulta que «de repente» se volvió lenta.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-estimación-de-cardinalidad"></a><strong>estimación de cardinalidad</strong></td>
+<td>Cuántas filas cree el planificador que devolverá cada paso. Es la entrada de la que depende todo lo demás, y también la parte más frágil: los errores se multiplican al reunir tablas, y una estimación de 1 fila que en realidad son 100 000 explica casi cualquier plan absurdo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-costo-frente-a-tiempo"></a><strong>costo frente a tiempo</strong></td>
+<td>El <code>cost</code> de <code>EXPLAIN</code> es una unidad interna comparativa, no milisegundos; el tiempo real solo aparece con <code>EXPLAIN ANALYZE</code>. Comparar filas estimadas contra filas reales en cada nodo es la técnica central para refutar una hipótesis de rendimiento.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Leer un plan de ejecución como evidencia y no como adorno. El plan permite convertir «va lento» en una hipótesis concreta, comprobable y refutable.</p>

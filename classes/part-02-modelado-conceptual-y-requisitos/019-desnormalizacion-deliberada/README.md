@@ -12,6 +12,10 @@ Parte 02 — Modelado conceptual y requisitos · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El contrapeso de la clase anterior: cuándo duplicar a propósito. Exige tres cosas antes de desnormalizar —un patrón de lectura medido, un mecanismo declarado que mantenga las copias al día y el costo de escritura aceptado por escrito—, y así separa la redundancia controlada de la accidental.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 019"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [018](../../part-02-modelado-conceptual-y-requisitos/018-normalizacion-y-dependencias-funcionales/README.md) | Normalización de 1FN a BCFN con dependencias funcionales | dependencia funcional · anomalía de actualización · BCFN · descomposición sin pérdida |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-redundancia-controlada"></a>**redundancia controlada** | Duplicar un dato a propósito, sabiendo dónde está la copia y quién la mantiene al día. Se distingue de la redundancia accidental en que existe un mecanismo declarado de sincronización y un costo de escritura aceptado. | se introduce aquí |
+| <a id="v-costo-de-escritura"></a>**costo de escritura** | Lo que se paga en cada `INSERT` o `UPDATE` por las copias, los índices y los agregados que hay que mantener coherentes. Toda aceleración de lectura por duplicación se cobra aquí; el diseño consiste en decidir de qué lado se quiere el dolor. | se introduce aquí |
+| <a id="v-agregado"></a>**agregado** | Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.) | se introduce aquí |
+| <a id="v-patrón-de-lectura"></a>**patrón de lectura** | Qué se consulta, con qué filtros y con qué frecuencia. Es el argumento que justifica desnormalizar: sin una lectura dominante medida, duplicar datos es solo asumir el costo sin cobrar el beneficio. | se introduce aquí |
 
 ---
 

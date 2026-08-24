@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 4 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué llega un momento en que la hoja de cálculo deja de servir, expresado en cuatro capacidades que un archivo no tiene: integridad declarada, concurrencia, consulta declarativa y durabilidad. No es una clase contra las hojas de cálculo —siguen siendo la herramienta correcta muchas veces— sino el primer criterio explícito para saber de qué lado está tu problema.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 002"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [001](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/README.md) | Qué es un dato, un registro y una tabla | dato · información · registro · campo · tabla |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-integridad-declarada"></a>**integridad declarada** | Las reglas del dominio escritas en el esquema —`NOT NULL`, `UNIQUE`, `CHECK`, clave foránea— para que el gestor las imponga a toda aplicación que escriba, no solo a la que recordó comprobarlas. Es la diferencia entre una regla y una esperanza. | se introduce aquí |
+| <a id="v-concurrencia"></a>**concurrencia** | Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones. | se introduce aquí |
+| <a id="v-consulta-declarativa"></a>**consulta declarativa** | Se declara *qué* resultado se quiere y el motor decide *cómo* obtenerlo. Quien consulta no escribe recorridos ni bucles; el optimizador elige el plan y puede cambiarlo cuando cambian los datos, sin que nadie reescriba la consulta. | se introduce aquí |
+| <a id="v-durabilidad"></a>**durabilidad** | Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho». | se introduce aquí |
 
 ---
 

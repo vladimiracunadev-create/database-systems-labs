@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>CTE</code> · <code>recursión</code> · <code>subconsulta correlacionada</code> · <code>partición de ventana</code> · <code>marco</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las herramientas para consultas que no caben en una sola expresión: CTE para nombrar pasos, recursión para recorrer jerarquías y funciones de ventana para calcular por grupo sin perder el detalle. La sutileza que más resultados cambia es el marco por defecto de una ventana con <code>ORDER BY</code>.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 028&quot;]
     C --&gt; K1[&quot;CTE&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="026.html">026</a></td>
+<td>Reuniones: interna, externa, semi y anti</td>
+<td>reunión interna · reunión externa · semirreunion · antirreunion · multiplicación de filas</td>
+</tr>
+<tr>
+<td><a href="027.html">027</a></td>
+<td>Agregación, GROUP BY y HAVING sin duplicar filas</td>
+<td>agrupación · agregado · HAVING · doble conteo · dependencia funcional en GROUP BY</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-cte"></a><strong>CTE</strong></td>
+<td>Expresión de tabla común (<code>WITH … AS</code>): un resultado con nombre, visible en la consulta que la sigue. Sirve para nombrar pasos intermedios y hacer legible una consulta larga; en algunos motores es además una barrera de optimización, y eso puede ayudar o estorbar.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-recursión"></a><strong>recursión</strong></td>
+<td><code>WITH RECURSIVE</code>: una CTE que se referencia a sí misma para recorrer jerarquías y grafos —organigramas, listas de materiales, caminos—. Necesita siempre una condición de parada; sin ella el motor recorre hasta agotar la memoria.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-subconsulta-correlacionada"></a><strong>subconsulta correlacionada</strong></td>
+<td>Subconsulta que referencia una columna de la consulta externa y por tanto se evalúa en función de cada fila. Conceptualmente es un bucle; los optimizadores modernos suelen convertirla en una reunión, pero conviene comprobarlo en el plan y no suponerlo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-partición-de-ventana"></a><strong>partición de ventana</strong></td>
+<td>El <code>PARTITION BY</code> de una función de ventana: divide las filas en grupos para calcular el agregado dentro de cada uno, pero sin colapsarlas. Es la diferencia esencial con <code>GROUP BY</code>: la ventana conserva el detalle y añade el cálculo al lado.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-marco"></a><strong>marco</strong></td>
+<td>El <code>ROWS</code>/<code>RANGE BETWEEN</code> que define qué filas de la partición entran en el cálculo de cada fila. Su valor por defecto no es «toda la partición» cuando hay <code>ORDER BY</code>, y esa sutileza cambia el resultado de una suma acumulada.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Resolver con SQL preguntas que exigen comparar una fila con su grupo, recorrer jerarquías o numerar dentro de particiones — sin sacar los datos a la aplicación para procesarlos allí.</p>

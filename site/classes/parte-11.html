@@ -38,6 +38,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -52,7 +53,28 @@
 <main class="content" id="principal">
 <h1>Parte 11 — Operación, seguridad y gobierno</h1>
 <p class="lead">Lo que separa un ejercicio de un sistema: restauración probada, migraciones sin caída, control de acceso, observabilidad y privacidad.</p>
-<p><strong>6 clases · 19 horas</strong></p>
+<p><strong>6 clases · 19 horas ·
+24 conceptos · 17 fuentes</strong></p>
+
+<h2 id="antes">Antes de esta parte</h2>
+<p>Esta parte se apoya en lo trabajado antes. Si vienes de fuera del programa, revisa al menos el vocabulario de:</p><ul><li><a href="parte-08.html">Parte 08 — Transacciones, concurrencia y recuperación</a></li></ul>
+
+<h2 id="de-que-trata">De qué trata esta parte</h2>
+<p>Lo que separa un ejercicio de un sistema. Seis clases sobre las tareas que no aparecen en ningún tutorial de SQL y que son las que deciden si el sistema sobrevive a su segundo año: restaurar, migrar sin caída, controlar el acceso, no ser vulnerable, medir lo que los usuarios notan y tratar el dato personal como una obligación de diseño.</p>
+<p>El orden es el de la gravedad de las consecuencias. Primero el respaldo, con la afirmación más incómoda del programa: solo cuenta lo que se ha restaurado. Después las migraciones evolutivas con expandir y contraer, que es el patrón que permite desplegar esquema y código por separado. Luego el control de acceso, con una comprobación que suele salir mal: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo. Después la inyección SQL, explicada por su causa y con su solución completa. Luego la observabilidad, donde la media oculta y el p99 enseña. Y al final privacidad, retención y gobierno.</p>
+<p>La clase 061 está clasificada como fundamentos a propósito, aunque esté en una parte avanzada: no hay nivel de experiencia en el que la parametrización sea opcional.</p>
+
+<h2 id="resultados">Al terminar esta parte podrás</h2>
+<ol>
+<li>Declarar RPO y RTO en números y demostrarlos con una restauración cronometrada.</li>
+<li>Ejecutar una migración de esquema sin ventana de caída usando expandir y contraer.</li>
+<li>Configurar roles con privilegio mínimo y seguridad por fila, y comprobar que el filtro no se puede eludir.</li>
+<li>Escribir código inmune a inyección y validar los identificadores dinámicos con lista blanca.</li>
+<li>Definir objetivos de servicio por percentil y usar el presupuesto de error para decidir.</li>
+<li>Diseñar retención y supresión de datos personales incluyendo respaldos y réplicas.</li>
+</ol>
+
+<h2 id="clases">Las clases, una por una</h2>
 <div class="tabla-scroll"><table>
 <thead><tr><th>#</th><th>Clase</th><th>Nivel</th><th>Horas</th><th>Fuentes</th></tr></thead>
 <tbody>
@@ -63,6 +85,114 @@
 <tr><td><a href="062.html">062</a></td><td><a href="062.html">Observabilidad, objetivos de servicio y capacidad</a></td><td class="nivel-avanzado">Avanzado</td><td>3</td><td>3</td></tr>
 <tr><td><a href="063.html">063</a></td><td><a href="063.html">Privacidad, retención y gobierno del dato</a></td><td class="nivel-intermedio">Intermedio</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+  <article class="ficha-clase">
+    <h3><a href="058.html">058 — Respaldo y restauración: solo cuenta lo que se ha restaurado</a></h3>
+    <p class="fuente-meta">Intermedio · 4 h ·
+      3 fuentes · requiere <a href="046.html">046</a></p>
+    <p>La clase que convierte una intención en una garantía medida. RPO y RTO se declaran en números, la recuperación a un punto en el tiempo se demuestra restaurando de verdad, y la conclusión es incómoda a propósito: un respaldo que nunca se ha restaurado no es un respaldo, es un fichero con nombre esperanzador.</p>
+    <p><span class="tag">RPO</span> <span class="tag">RTO</span> <span class="tag">recuperación a un punto en el tiempo</span> <span class="tag">prueba de restauración</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="059.html">059 — Migraciones evolutivas sin ventana de caída</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="013.html">013</a>, <a href="024.html">024</a></p>
+    <p>Cambiar el esquema con el sistema en marcha, usando expandir y contraer: primero añadir sin quitar, después trasladar el tráfico y rellenar el histórico por lotes reanudables, y solo al final eliminar lo viejo. La compatibilidad hacia atrás deja de ser una buena práctica y pasa a ser obligatoria en cuanto el despliegue es gradual.</p>
+    <p><span class="tag">expandir y contraer</span> <span class="tag">doble escritura</span> <span class="tag">relleno</span> <span class="tag">compatibilidad hacia atras</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="060.html">060 — Control de acceso: privilegio mínimo, roles y seguridad por fila</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      4 fuentes · requiere <a href="013.html">013</a>, <a href="024.html">024</a></p>
+    <p>El control de acceso con una comprobación incómoda como punto de partida: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo. Trata roles, separación de funciones y seguridad por fila, cuya ventaja sobre filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro.</p>
+    <p><span class="tag">privilegio mínimo</span> <span class="tag">rol</span> <span class="tag">seguridad por fila</span> <span class="tag">separación de funciones</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="061.html">061 — Inyección SQL y el contrato de parametrización</a></h3>
+    <p class="fuente-meta">Fundamentos · 3 h ·
+      4 fuentes · requiere <a href="003.html">003</a>, <a href="024.html">024</a></p>
+    <p>La inyección SQL explicada por su causa —mezclar código y datos en la misma cadena— y su solución completa: la consulta parametrizada, que no es una mitigación sino una defensa total. Cubre además el caso que los parámetros no resuelven, los identificadores dinámicos, que solo se validan con lista blanca.</p>
+    <p><span class="tag">consulta parametrizada</span> <span class="tag">identificador dinamico</span> <span class="tag">lista blanca</span> <span class="tag">defensa en profundidad</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="062.html">062 — Observabilidad, objetivos de servicio y capacidad</a></h3>
+    <p class="fuente-meta">Avanzado · 3 h ·
+      3 fuentes · requiere <a href="052.html">052</a>, <a href="058.html">058</a></p>
+    <p>Medir lo que los usuarios notan. La media oculta y el p99 enseña; con veinte consultas por petición, casi todo el mundo toca la cola lenta. Une objetivos de servicio, presupuesto de error, saturación como señal anticipada y el registro de consultas lentas ordenado por tiempo total, no por la peor.</p>
+    <p><span class="tag">percentil</span> <span class="tag">presupuesto de error</span> <span class="tag">saturación</span> <span class="tag">consulta lenta</span></p>
+  </article>
+  <article class="ficha-clase">
+    <h3><a href="063.html">063 — Privacidad, retención y gobierno del dato</a></h3>
+    <p class="fuente-meta">Intermedio · 3 h ·
+      3 fuentes · requiere <a href="058.html">058</a>, <a href="060.html">060</a></p>
+    <p>El dato personal como una obligación de diseño y no como un anexo legal. Minimización, limitación de finalidad, seudonimización y derecho de supresión, con el choque que hay que resolver antes de que llegue la solicitud: los respaldos, las réplicas y los registros de auditoría también contienen ese dato.</p>
+    <p><span class="tag">minimización</span> <span class="tag">limitación de finalidad</span> <span class="tag">seudonimización</span> <span class="tag">derecho de supresión</span></p>
+  </article>
+
+<h2 id="errores">Errores frecuentes en esta parte</h2>
+<p>Cada uno de estos es una creencia habitual y su corrección.</p>
+<ul>
+<li>«Tengo respaldos automáticos.» Tienes ficheros. Hasta que no se restaura uno en un entorno limpio y se cronometra, el RTO real es desconocido.</li>
+<li>«Escapo las comillas y ya estoy protegido.» Escapar a mano falla; parametrizar no. Y para identificadores dinámicos ni una cosa ni la otra: lista blanca.</li>
+<li>«La latencia media está bien.» La media oculta la cola. Con veinte consultas por petición, casi todos los usuarios tocan al menos una lenta.</li>
+<li>«Borro al usuario de la tabla y cumplo.» Sigue estando en los respaldos, en las réplicas y probablemente en el registro de auditoría.</li>
+</ul>
+
+<h2 id="vocabulario">Vocabulario de la parte</h2>
+<p>Los 24 términos que esta parte introduce. Todos están también
+en el <a href="../glosario.html">glosario del programa</a> con sus términos
+relacionados.</p>
+<div class="tabla-scroll"><table>
+<thead><tr><th>Término</th><th>Qué significa</th><th>Se trabaja en</th></tr></thead>
+<tbody>
+<tr><td><a href="../glosario.html#compatibilidad-hacia-atras"><strong>compatibilidad hacia atras</strong></a></td><td>Que el código nuevo siga entendiendo los datos escritos por el viejo, y que el viejo no se rompa con los del nuevo. Es obligatoria en cuanto el despliegue es gradual, porque durante un rato conviven las dos versiones.</td><td><a href="059.html">059</a></td></tr>
+<tr><td><a href="../glosario.html#consulta-lenta"><strong>consulta lenta</strong></a></td><td>Registro de las consultas que superan un umbral, agrupadas por forma —`pg_stat_statements` y equivalentes—. Lo que importa no es la más lenta, sino la que multiplica tiempo por frecuencia: mil consultas de 50 ms pesan más que una de 5 s.</td><td><a href="062.html">062</a></td></tr>
+<tr><td><a href="../glosario.html#consulta-parametrizada"><strong>consulta parametrizada</strong></a></td><td>Enviar la sentencia y los valores por canales distintos, de modo que el motor nunca interprete el dato como código. Es la defensa completa contra la inyección SQL, no una mitigación: bien usada, no hay cadena de entrada que cambie la estructura de la consulta.</td><td><a href="061.html">061</a></td></tr>
+<tr><td><a href="../glosario.html#defensa-en-profundidad"><strong>defensa en profundidad</strong></a></td><td>Poner varias barreras independientes, de modo que fallar una no baste: parametrizar, además dar privilegio mínimo, además registrar, además limitar por fila. Cada capa asume que las otras pueden fallar.</td><td><a href="061.html">061</a></td></tr>
+<tr><td><a href="../glosario.html#derecho-de-supresión"><strong>derecho de supresión</strong></a></td><td>Obligación de borrar los datos de una persona cuando lo solicita y no hay base para conservarlos. Choca de frente con los respaldos, las réplicas y los registros de auditoría, y por eso hay que diseñar dónde vive el dato personal antes de que lo pidan.</td><td><a href="063.html">063</a></td></tr>
+<tr><td><a href="../glosario.html#doble-escritura"><strong>doble escritura</strong></a></td><td>Fase transitoria en la que la aplicación escribe en la estructura vieja y en la nueva a la vez. Sostiene la migración mientras se rellena el histórico; hay que declarar desde el principio cuándo termina, porque si no se queda para siempre.</td><td><a href="059.html">059</a></td></tr>
+<tr><td><a href="../glosario.html#expandir-y-contraer"><strong>expandir y contraer</strong></a></td><td>Patrón de migración en tres tiempos: primero se añade lo nuevo sin quitar lo viejo, después se traslada el tráfico y se rellena, y solo cuando nadie usa lo antiguo se elimina. Es lo que permite desplegar esquema y código por separado sin ventana de caída.</td><td><a href="059.html">059</a></td></tr>
+<tr><td><a href="../glosario.html#identificador-dinamico"><strong>identificador dinamico</strong></a></td><td>El caso que los parámetros no cubren: nombres de tabla, de columna o la dirección de un `ORDER BY` no se pueden enviar como valor. La única solución correcta es validarlos contra una lista blanca cerrada, nunca escaparlos a mano.</td><td><a href="061.html">061</a></td></tr>
+<tr><td><a href="../glosario.html#limitación-de-finalidad"><strong>limitación de finalidad</strong></a></td><td>Los datos recogidos para un fin no pueden reutilizarse para otro incompatible sin nueva base legal. Es lo que impide que un correo pedido para la facturación acabe alimentando un modelo de recomendación.</td><td><a href="063.html">063</a></td></tr>
+<tr><td><a href="../glosario.html#lista-blanca"><strong>lista blanca</strong></a></td><td>Permitir solo lo que está explícitamente enumerado y rechazar todo lo demás. Se prefiere a la lista negra porque no hay que anticipar todas las formas de atacar, solo todas las formas válidas de usar.</td><td><a href="061.html">061</a></td></tr>
+<tr><td><a href="../glosario.html#minimización"><strong>minimización</strong></a></td><td>Recoger solo los datos personales necesarios para la finalidad declarada. Es la medida de protección más eficaz que existe, porque el dato que no se guarda no se filtra, no hay que cifrarlo ni hay que borrarlo después.</td><td><a href="063.html">063</a></td></tr>
+<tr><td><a href="../glosario.html#percentil"><strong>percentil</strong></a></td><td>El valor por debajo del cual queda un porcentaje de las observaciones. La media oculta el problema; el p99 lo enseña. Y si una petición de usuario abre veinte consultas, casi todos los usuarios tocarán al menos una de la cola lenta.</td><td><a href="062.html">062</a></td></tr>
+<tr><td><a href="../glosario.html#presupuesto-de-error"><strong>presupuesto de error</strong></a></td><td>Lo que resta entre el objetivo de servicio y el 100 %: con un SLO de 99,9 % se dispone de unos 43 minutos de fallo al mes. Convierte la fiabilidad en una cantidad que se gasta, y da una regla objetiva para decidir si se despliega o se estabiliza.</td><td><a href="062.html">062</a></td></tr>
+<tr><td><a href="../glosario.html#privilegio-mínimo"><strong>privilegio mínimo</strong></a></td><td>Cada identidad recibe exactamente los permisos que necesita para su función y ninguno más. La comprobación práctica es incómoda y reveladora: si la aplicación se conecta como propietaria del esquema, no hay privilegio mínimo.</td><td><a href="060.html">060</a></td></tr>
+<tr><td><a href="../glosario.html#prueba-de-restauración"><strong>prueba de restauración</strong></a></td><td>Restaurar la copia en un entorno limpio, comprobar la integridad de los datos y medir cuánto tardó. Un respaldo que nunca se ha restaurado no es un respaldo: es un fichero con nombre esperanzador.</td><td><a href="058.html">058</a></td></tr>
+<tr><td><a href="../glosario.html#recuperación-a-un-punto-en-el-tiempo"><strong>recuperación a un punto en el tiempo</strong></a></td><td>Restaurar una copia base y reaplicar el registro archivado hasta un instante concreto, justo antes del `DELETE` sin `WHERE`. Exige que el archivado del registro esté activo y verificado desde antes del incidente.</td><td><a href="058.html">058</a></td></tr>
+<tr><td><a href="../glosario.html#relleno"><strong>relleno</strong></a></td><td>Copiar el histórico a la estructura nueva, por lotes y de forma reanudable, para no bloquear la tabla ni saturar el registro. Debe ser idempotente: se va a interrumpir y habrá que relanzarlo.</td><td><a href="059.html">059</a></td></tr>
+<tr><td><a href="../glosario.html#rol"><strong>rol</strong></a></td><td>Agrupación de privilegios que se concede a personas o a aplicaciones. Permite razonar sobre permisos por función en lugar de por individuo, y revocar el acceso de alguien sin tener que auditar cada objeto.</td><td><a href="060.html">060</a></td></tr>
+<tr><td><a href="../glosario.html#rpo"><strong>RPO</strong></a></td><td>Objetivo de punto de recuperación: cuántos datos se acepta perder, medido en tiempo. Un RPO de cinco minutos obliga a archivar el registro al menos cada cinco minutos; si no está escrito y probado, el RPO real es «el que salga».</td><td><a href="058.html">058</a></td></tr>
+<tr><td><a href="../glosario.html#rto"><strong>RTO</strong></a></td><td>Objetivo de tiempo de recuperación: cuánto se acepta estar caído. Se mide restaurando de verdad y cronometrando, no estimando; casi siempre resulta ser varias veces mayor de lo que el equipo suponía.</td><td><a href="058.html">058</a></td></tr>
+<tr><td><a href="../glosario.html#saturación"><strong>saturación</strong></a></td><td>Cuán lleno está el recurso más escaso: conexiones, entrada y salida, memoria, CPU. Es la señal que anticipa el incidente, porque la latencia se dispara de forma no lineal justo antes de que el recurso se agote.</td><td><a href="062.html">062</a></td></tr>
+<tr><td><a href="../glosario.html#seguridad-por-fila"><strong>seguridad por fila</strong></a></td><td>Políticas que el motor añade automáticamente a cada consulta para que un usuario solo vea las filas que le corresponden. La ventaja sobre filtrar en la aplicación es que no hay consulta que se pueda olvidar del filtro.</td><td><a href="060.html">060</a></td></tr>
+<tr><td><a href="../glosario.html#separación-de-funciones"><strong>separación de funciones</strong></a></td><td>Que quien desarrolla no sea quien despliega en producción, y que quien opera no pueda borrar sus propias huellas de auditoría. Es un control organizativo antes que técnico, y sin él el registro de auditoría no prueba nada.</td><td><a href="060.html">060</a></td></tr>
+<tr><td><a href="../glosario.html#seudonimización"><strong>seudonimización</strong></a></td><td>Sustituir los identificadores directos por referencias, guardando por separado la tabla que permite revertirlo. Reduce el riesgo pero no convierte el dato en anónimo: mientras exista la clave, sigue siendo dato personal.</td><td><a href="063.html">063</a></td></tr>
+</tbody></table></div>
+
+<h2 id="fuentes">Fuentes usadas en esta parte</h2>
+<p>17 obras distintas sostienen lo que se afirma en estas
+6 clases.</p>
+<ul>
+<li><a href="../fuentes.html#src-cis-benchmarks">CIS Benchmarks</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 060</span></li>
+<li><a href="../fuentes.html#src-campbell-majors-dbre">Database Reliability Engineering</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 058, 062</span></li>
+<li><a href="../fuentes.html#src-kleppmann-ddia">Designing Data-Intensive Applications</a> <span class="fuente-meta">(2017)</span> — <span class="fuente-meta">se cita en 059</span></li>
+<li><a href="../fuentes.html#src-chile-ley-19628">Ley 19.628 sobre proteccion de la vida privada</a> <span class="fuente-meta">(1999)</span> — <span class="fuente-meta">se cita en 063</span></li>
+<li><a href="../fuentes.html#src-nist-csf">NIST Cybersecurity Framework 2.0</a> <span class="fuente-meta">(2024)</span> — <span class="fuente-meta">se cita en 063</span></li>
+<li><a href="../fuentes.html#src-nist-sp800-53">NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems</a> <span class="fuente-meta">(2020)</span> — <span class="fuente-meta">se cita en 060</span></li>
+<li><a href="../fuentes.html#src-owasp-top10">OWASP Top 10</a> <span class="fuente-meta">(2021)</span> — <span class="fuente-meta">se cita en 060, 061</span></li>
+<li><a href="../fuentes.html#src-docs-pep-249">PEP 249 - Python Database API Specification v2.0</a> <span class="fuente-meta">(1999)</span> — <span class="fuente-meta">se cita en 061</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql">PostgreSQL Documentation</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 059</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql-backup">PostgreSQL: Backup and Restore</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 058</span></li>
+<li><a href="../fuentes.html#src-docs-postgresql-rls">PostgreSQL: Row Security Policies</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 060</span></li>
+<li><a href="../fuentes.html#src-docs-python-sqlite3">Python: sqlite3</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 061</span></li>
+<li><a href="../fuentes.html#src-ambler-sadalage-refactoring">Refactoring Databases: Evolutionary Database Design</a> <span class="fuente-meta">(2006)</span> — <span class="fuente-meta">se cita en 059</span></li>
+<li><a href="../fuentes.html#src-gdpr-2016-679">Reglamento (UE) 2016/679 - Proteccion de datos personales</a> <span class="fuente-meta">(2016)</span> — <span class="fuente-meta">se cita en 063</span></li>
+<li><a href="../fuentes.html#src-owasp-sqli-cheatsheet">SQL Injection Prevention Cheat Sheet</a> <span class="fuente-meta">(2026)</span> — <span class="fuente-meta">se cita en 061</span></li>
+<li><a href="../fuentes.html#src-google-sre-book">Site Reliability Engineering: How Google Runs Production Systems</a> <span class="fuente-meta">(2016)</span> — <span class="fuente-meta">se cita en 058, 062</span></li>
+<li><a href="../fuentes.html#src-dean-tail-at-scale-2013">The Tail at Scale</a> <span class="fuente-meta">(2013)</span> — <span class="fuente-meta">se cita en 062</span></li>
+</ul>
+
 <h2>Otras partes</h2>
 <ul>
 <li><a href="parte-00.html">Parte 00 — Primeros pasos: del archivo a la base de datos</a></li>

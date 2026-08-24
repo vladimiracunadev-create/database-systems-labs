@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/05-nosql-workloads/README.md"><code>labs/05-nosql-workloads</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>incrustación</code> · <code>referencia</code> · <code>crecimiento no acotado</code> · <code>patrón de extensión</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (4 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La decisión central del modelado documental —incrustar o referenciar— con sus dos criterios: si el dato se lee siempre junto y si puede crecer sin techo. Presenta el crecimiento no acotado como el fallo característico del modelo documental y los patrones de extensión que lo evitan.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 035&quot;]
     C --&gt; K1[&quot;incrustación&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="034.html">034</a></td>
+<td>El agregado como unidad de consistencia</td>
+<td>agregado · frontera transaccional · entidad · actividad</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-incrustación"></a><strong>incrustación</strong></td>
+<td>Guardar los datos relacionados dentro del propio documento. Una sola lectura devuelve todo y la escritura es atómica, a cambio de duplicar el dato si otro documento también lo necesita y de arriesgar un documento que crece sin techo.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-referencia"></a><strong>referencia</strong></td>
+<td>Guardar el identificador del documento relacionado en lugar de su contenido. Evita la duplicación y el crecimiento no acotado, a cambio de una segunda consulta —o de un <code>$lookup</code>— que el motor no optimiza como un <code>JOIN</code> relacional.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-crecimiento-no-acotado"></a><strong>crecimiento no acotado</strong></td>
+<td>Un arreglo incrustado que puede crecer indefinidamente —los comentarios de una publicación viral, el histórico de un sensor—. Acaba chocando con el límite de tamaño del documento y degrada cada lectura, aunque solo se quería un campo. Es la señal de que ese arreglo debía ser una colección aparte.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-patrón-de-extensión"></a><strong>patrón de extensión</strong></td>
+<td>Familia de soluciones para el crecimiento no acotado: partir el arreglo en cubos de tamaño fijo, guardar solo los N últimos elementos incrustados y el resto en otra colección, o separar los campos grandes en un documento satélite.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Tomar la decisión central del modelado documental —incrustar o referenciar— con criterios medibles, y conocer los patrones que resuelven los casos donde ninguna de las dos basta.</p>

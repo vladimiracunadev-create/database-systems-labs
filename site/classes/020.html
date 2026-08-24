@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>relación</code> · <code>tupla</code> · <code>dominio</code> · <code>acceso por valor</code> · <code>cierre</code></p>
 <p><strong>En este caso se comparan 5 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>La relación como conjunto de tuplas sobre dominios, con dos propiedades que SQL no respeta: no hay orden y no hay duplicados. Entender esa brecha explica de antemano la mitad de las sorpresas del lenguaje, del <code>DISTINCT</code> que hace falta al <code>ORDER BY</code> que no se puede dar por supuesto.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 020&quot;]
     C --&gt; K1[&quot;relación&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="001.html">001</a></td>
+<td>Qué es un dato, un registro y una tabla</td>
+<td>dato · información · registro · campo · tabla</td>
+</tr>
+<tr>
+<td><a href="004.html">004</a></td>
+<td>Leer datos: SELECT, WHERE y ORDER BY</td>
+<td>filtrado · proyección · orden · LIMIT · IS NULL</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-relación"></a><strong>relación</strong></td>
+<td>En el modelo de Codd, un conjunto de tuplas sobre unos dominios dados. Al ser conjunto no tiene orden ni duplicados —dos propiedades que SQL no respeta, y de ahí nacen la mitad de las sorpresas del lenguaje.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-tupla"></a><strong>tupla</strong></td>
+<td>Un elemento de la relación: una asignación de un valor a cada atributo. No es «una fila en una posición», porque en un conjunto no hay posiciones; se identifica por sus valores, no por dónde está.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-dominio"></a><strong>dominio</strong></td>
+<td>El conjunto de valores admisibles de un atributo, con sus operaciones. Es el concepto del que los tipos de SQL son una aproximación pobre: SQL permite comparar un número de teléfono con un código postal si ambos son enteros.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-acceso-por-valor"></a><strong>acceso por valor</strong></td>
+<td>En el modelo relacional se llega a un dato por lo que vale, nunca por un puntero o una posición física. Es lo que hace posible la independencia de datos: el motor puede reorganizar el almacenamiento sin invalidar ninguna referencia.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cierre"></a><strong>cierre</strong></td>
+<td>Propiedad por la que toda operación del álgebra relacional sobre relaciones devuelve una relación. Es lo que permite anidar y componer consultas indefinidamente, y lo que sostiene las vistas y las CTE.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Precisar qué es una relación en el sentido de Codd y en qué se aparta SQL de esa definición. Muchos comportamientos «raros» de SQL —duplicados, orden, nulos— se explican exactamente por ahí.</p>

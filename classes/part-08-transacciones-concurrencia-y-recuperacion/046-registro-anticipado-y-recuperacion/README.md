@@ -12,6 +12,10 @@ Parte 08 — Transacciones, concurrencia y recuperación · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (0 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Cómo se vuelve de una caída. El registro anticipado escribe la intención antes que el dato, el punto de control acorta la recuperación y ARIES ordena las fases de rehacer y deshacer de modo que repetirlas sea inofensivo —lo que permite recuperarse de una caída ocurrida durante la recuperación.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 046"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [043](../../part-08-transacciones-concurrencia-y-recuperacion/043-acid-que-garantiza-cada-letra/README.md) | ACID: qué garantiza cada letra y quién la implementa | atomicidad · consistencia · aislamiento · durabilidad · unidad de recuperación |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-wal"></a>**WAL** | Registro anticipado: antes de tocar la página de datos se escribe en un registro secuencial qué se va a cambiar, y ese registro se fuerza al disco antes de confirmar. Es lo que hace posible la durabilidad sin escribir cada página en cada `COMMIT`. | se introduce aquí |
+| <a id="v-punto-de-control"></a>**punto de control** | Marca periódica que fija hasta dónde están ya volcadas a disco las páginas modificadas. Acorta la recuperación, porque tras una caída solo hay que releer el registro desde el último punto de control y no desde el principio de los tiempos. | se introduce aquí |
+| <a id="v-rehacer"></a>**rehacer** | Fase de la recuperación que reaplica desde el registro todo lo confirmado que aún no había llegado a las páginas de datos. ARIES la ejecuta antes de deshacer y de forma que repetirla sea inofensiva, lo que permite recuperarse de una caída ocurrida durante la recuperación. | se introduce aquí |
+| <a id="v-deshacer"></a>**deshacer** | Fase que revierte las transacciones que estaban a medias en el momento de la caída, usando la información de deshacer del registro. Es la implementación concreta de la atomicidad. | se introduce aquí |
+| <a id="v-lsn"></a>**LSN** | Número de secuencia del registro: identifica cada entrada del WAL en orden y se estampa en la página que modifica. Permite saber, página por página, si un cambio ya está aplicado —y por eso rehacer se puede repetir sin efectos secundarios. | se introduce aquí |
 
 ---
 

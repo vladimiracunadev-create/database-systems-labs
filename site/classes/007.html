@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>clave primaria</code> · <code>clave natural</code> · <code>clave sustituta</code> · <code>clave compuesta</code> · <code>UNIQUE</code></p>
 <p><strong>En este caso se comparan 6 motores</strong>: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Cómo se distingue una fila de otra. Presenta la clave primaria y el debate entre clave natural y sustituta con su criterio real —cuál de las dos sobrevive a los cambios del mundo— y la clave compuesta, que reaparecerá al hablar de índices y de particionado.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 007&quot;]
     C --&gt; K1[&quot;clave primaria&quot;]
@@ -73,6 +76,72 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="003.html">003</a></td>
+<td>Tu primera base de datos: crear, insertar y leer</td>
+<td>CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL</td>
+</tr>
+<tr>
+<td><a href="006.html">006</a></td>
+<td>Tipos de datos: por qué un número no es un texto</td>
+<td>tipo · decimal exacto · coma flotante · fecha ISO-8601 · afinidad de tipos</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-clave-primaria"></a><strong>clave primaria</strong></td>
+<td>La clave candidata elegida para identificar cada fila: única, no nula y estable en el tiempo. Es la dirección por la que el resto del esquema se referirá a esa fila.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-natural"></a><strong>clave natural</strong></td>
+<td>Identificador que ya existe en el dominio —RUT, ISBN, matrícula—. Ventaja: significa algo. Riesgo: el mundo la cambia —una persona corrige su documento, un organismo reasigna códigos— y el cambio arrastra a todas las filas que la referencian.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-sustituta"></a><strong>clave sustituta</strong></td>
+<td>Identificador inventado por el sistema y sin significado externo: entero autoincremental, UUID. No cambia nunca porque no depende del mundo, a costa de necesitar además una restricción <code>UNIQUE</code> sobre la clave natural real.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-clave-compuesta"></a><strong>clave compuesta</strong></td>
+<td>Clave primaria formada por dos o más columnas, típica de las tablas de relación: <code>(estudiante_id, curso_id)</code>. Fija además el orden de las columnas del índice que la sostiene, y ese orden decide qué consultas se aceleran.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-unique"></a><strong>UNIQUE</strong></td>
+<td>Restricción que prohíbe valores repetidos en una columna o combinación de columnas. A diferencia de la clave primaria admite nulos —y cuántos admite depende del motor, que es una de las divergencias clásicas entre dialectos.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Contestar una pregunta que parece trivial y no lo es: <strong>¿cómo distingue el

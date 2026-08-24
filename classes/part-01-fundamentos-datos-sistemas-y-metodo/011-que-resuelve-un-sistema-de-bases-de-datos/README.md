@@ -12,6 +12,10 @@ Parte 01 — Fundamentos, sistemas y método · Fundamentos ·
 
 **En este caso se comparan 9 motores**: 7 lo resuelven (6 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+La misma pregunta de la clase 002, ahora con el vocabulario de sistemas: qué garantiza un gestor —persistencia, concurrencia, integridad, recuperación— y, con la misma seriedad, qué no garantiza. La independencia de datos aparece aquí como la idea de Codd que ordena todo lo demás.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 011"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [002](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) | Del archivo y la hoja de cálculo a la base de datos | integridad declarada · concurrencia · consulta declarativa · durabilidad |
+| [010](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md) | El mapa de los motores: seis familias y un criterio | familias de motores · modelo de agregado · patrón de acceso · multimodelo |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-persistencia"></a>**persistencia** | Que el dato siga existiendo cuando el proceso que lo escribió ya no está. Es el requisito mínimo de una base de datos y la única de sus funciones que un archivo también cumple. | se introduce aquí |
+| <a id="v-concurrencia"></a>**concurrencia** | Varias sesiones leyendo y escribiendo a la vez sobre los mismos datos. Un archivo compartido no la resuelve: el último en guardar pisa al anterior. Un gestor la resuelve con transacciones, bloqueo o versiones. | se introdujo en la [002](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) |
+| <a id="v-integridad"></a>**integridad** | Que los datos cumplan siempre las reglas del dominio, incluidas las que ninguna aplicación recordó comprobar. El gestor la sostiene con restricciones declaradas y con transacciones. | se introduce aquí |
+| <a id="v-recuperación"></a>**recuperación** | Volver a un estado correcto después de una caída, descartando lo no confirmado y rehaciendo lo confirmado. Es lo que distingue una base de datos de un archivo que se corrompió a medio escribir. | se introduce aquí |
+| <a id="v-independencia-de-datos"></a>**independencia de datos** | Poder cambiar cómo se guardan los datos sin reescribir las aplicaciones que los consultan. Es la idea central del artículo de Codd de 1970 y la razón de que exista un nivel lógico separado del físico. | se introduce aquí |
 
 ---
 

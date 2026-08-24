@@ -12,6 +12,10 @@ Parte 06 — Documentos y clave-valor · Intermedio ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Qué se gana y qué se pierde exactamente al poner una caché delante. Trata el TTL como política de retención, la invalidación como el problema difícil que es, la estampida como fallo predecible, y la durabilidad configurable de Redis como una decisión de negocio que hay que escribir en segundos de pérdida aceptable.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 037"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [034](../../part-06-documentos-y-clave-valor/034-el-agregado-como-unidad-de-consistencia/README.md) | El agregado como unidad de consistencia | agregado · frontera transaccional · entidad · actividad |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-ttl"></a>**TTL** | Tiempo de vida tras el cual la clave expira y desaparece. Es la política de retención más simple que existe y la que convierte a una caché en caché: sin TTL, un almacén clave-valor es solo una base de datos en memoria que crece hasta llenarla. | se introduce aquí |
+| <a id="v-invalidación"></a>**invalidación** | Borrar o marcar como obsoleta una entrada de caché cuando cambia el dato de origen. Es el problema difícil de las cachés porque exige que quien escribe en la base sepa qué claves quedaron mentirosas —y normalmente no lo sabe. | se introduce aquí |
+| <a id="v-estampida-de-caché"></a>**estampida de caché** | Cuando una clave muy consultada expira y miles de peticiones van a la vez a la base de datos a recalcularla. Se mitiga con expiraciones escalonadas, recálculo anticipado o un cerrojo que deja pasar a uno solo. | se introduce aquí |
+| <a id="v-durabilidad-configurable"></a>**durabilidad configurable** | Poder elegir cuánta pérdida se acepta a cambio de latencia: Redis ofrece desde ninguna persistencia hasta `appendfsync always`, pasando por instantáneas periódicas. La decisión es de negocio, y hay que escribirla: «se pueden perder hasta N segundos de escrituras». | se introduce aquí |
 
 ---
 

@@ -12,6 +12,10 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué `LIKE '%algo%'` no es buscar. Presenta el índice invertido, el analizador que decide qué es un término, y la relevancia de TF-IDF a BM25. Cierra con precisión y exhaustividad, el par de métricas que hace que una búsqueda se pueda evaluar en lugar de opinar sobre ella; ambas reaparecen en la parte 13.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 041"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [004](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/004-leer-datos-select-where-y-order-by/README.md) | Leer datos: SELECT, WHERE y ORDER BY | filtrado · proyección · orden · LIMIT · IS NULL |
+| [025](../../part-04-sql-en-profundidad/025-select-filtrado-proyeccion-y-orden/README.md) | SELECT: filtrado, proyección y orden con semántica precisa | predicado · orden de evaluación · colación · determinismo de orden |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-índice-invertido"></a>**índice invertido** | Estructura que va de cada término al listado de documentos que lo contienen —lo contrario de recorrer los documentos buscando el término—. Es la base de todo buscador de texto y la razón de que `LIKE '%algo%'` no sea comparable a una búsqueda de verdad. | se introduce aquí |
+| <a id="v-analizador"></a>**analizador** | Primer componente del gestor: convierte el texto SQL en un árbol sintáctico y comprueba que los objetos citados existen y que los tipos encajan. Aquí mueren los errores de sintaxis, antes de tocar un solo dato. (En la clase 041 la misma palabra nombra otra cosa: el analizador de texto que parte un documento en términos indexables.) | se introdujo en la [012](../../part-01-fundamentos-datos-sistemas-y-metodo/012-arquitectura-interna-de-un-gestor/README.md) |
+| <a id="v-tf-idf"></a>**TF-IDF** | Peso clásico de un término: crece con su frecuencia en el documento (TF) y decrece con el número de documentos en que aparece (IDF). Formaliza la intuición de que «el» no distingue nada y «hipervisor» distingue mucho. | se introduce aquí |
+| <a id="v-bm25"></a>**BM25** | Función de relevancia que refina TF-IDF con saturación de la frecuencia y normalización por longitud del documento, gobernadas por los parámetros `k1` y `b`. Es la referencia léxica contra la que se compara cualquier buscador, incluidos los vectoriales. | se introduce aquí |
+| <a id="v-precisión-y-exhaustividad"></a>**precisión y exhaustividad** | Precisión: qué proporción de lo devuelto era relevante. Exhaustividad (o *recall*): qué proporción de lo relevante se devolvió. Casi siempre se compensan entre sí, y por eso una búsqueda solo puede evaluarse fijando cuál de las dos importa en ese caso. | se introduce aquí |
 
 ---
 

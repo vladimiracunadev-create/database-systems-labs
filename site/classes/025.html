@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/01-sql-foundations/README.md"><code>labs/01-sql-foundations</code></a> · 3 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>predicado</code> · <code>orden de evaluación</code> · <code>colación</code> · <code>determinismo de orden</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (6 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>El <code>SELECT</code> con su semántica exacta: el orden lógico de evaluación que explica por qué un alias del <code>SELECT</code> no vale en el <code>WHERE</code>, y la colación, que decide si <code>a</code> es igual a <code>A</code> y dónde va la <code>ñ</code>. Cierra con el determinismo de orden, que es la diferencia entre una consulta reproducible y una que cambia el día que cambia el plan.</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 025&quot;]
     C --&gt; K1[&quot;predicado&quot;]
@@ -72,6 +75,67 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="004.html">004</a></td>
+<td>Leer datos: SELECT, WHERE y ORDER BY</td>
+<td>filtrado · proyección · orden · LIMIT · IS NULL</td>
+</tr>
+<tr>
+<td><a href="020.html">020</a></td>
+<td>La relación como conjunto: tuplas, dominios y acceso por valor</td>
+<td>relación · tupla · dominio · acceso por valor · cierre</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-predicado"></a><strong>predicado</strong></td>
+<td>Expresión lógica que se evalúa a verdadero, falso o desconocido para cada fila. En SQL solo pasan el filtro las filas cuyo predicado es verdadero: <code>UNKNOWN</code> se descarta igual que <code>FALSE</code>, y ahí empiezan los resultados sorprendentes con nulos.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-orden-de-evaluación"></a><strong>orden de evaluación</strong></td>
+<td>El orden lógico en que SQL procesa una consulta: <code>FROM</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>SELECT</code>, <code>ORDER BY</code>, <code>LIMIT</code>. Explica por qué no se puede usar un alias del <code>SELECT</code> en el <code>WHERE</code> y por qué <code>HAVING</code> filtra grupos y <code>WHERE</code> filtra filas.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-colación"></a><strong>colación</strong></td>
+<td>El conjunto de reglas que decide cómo se comparan y ordenan los textos: si <code>a</code> = <code>A</code>, dónde va la <code>ñ</code>, si los acentos cuentan. Cambia el resultado de <code>ORDER BY</code>, de <code>=</code> y de un <code>UNIQUE</code>, y es distinta por defecto en cada motor.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-determinismo-de-orden"></a><strong>determinismo de orden</strong></td>
+<td>Que dos ejecuciones de la misma consulta devuelvan las filas en el mismo orden. Solo lo garantiza un <code>ORDER BY</code> cuyas columnas no empaten; con empates, el desempate lo decide el plan y puede cambiar mañana.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Escribir <code>SELECT</code> sabiendo exactamente qué devuelve. La mayoría de los errores de consulta no son de sintaxis: son de semántica, y aparecen cuando los datos cambian.</p>

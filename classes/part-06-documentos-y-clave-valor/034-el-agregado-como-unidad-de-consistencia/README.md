@@ -12,6 +12,10 @@ Parte 06 — Documentos y clave-valor · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+El agregado como unidad de lectura, escritura y consistencia, y la consecuencia que ordena toda la parte: en los motores documentales la frontera transaccional coincide con el agregado. Diseñar el agregado es, por tanto, decidir dónde termina la garantía del motor y empieza el trabajo de la aplicación.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 034"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [019](../../part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md) | Desnormalización deliberada y patrones de acceso | redundancia controlada · costo de escritura · agregado · patrón de lectura |
+| [023](../../part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md) | Integridad: restricciones, claves foraneas y acciones referenciales | integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-agregado"></a>**agregado** | Conjunto de datos que se trata como una unidad para leer, escribir y garantizar consistencia: un pedido con sus líneas. Sadalage y Fowler lo toman del diseño dirigido por el dominio y lo convierten en el criterio que separa a los motores NoSQL del relacional. (En la clase 027 la palabra se usa en su otro sentido: el resultado de una función de agregación como `SUM` o `COUNT`.) | se introdujo en la [019](../../part-02-modelado-conceptual-y-requisitos/019-desnormalizacion-deliberada/README.md) |
+| <a id="v-frontera-transaccional"></a>**frontera transaccional** | El límite dentro del cual el motor garantiza atomicidad y aislamiento. En los motores de agregado coincide con el agregado: una escritura sobre un documento es atómica, dos sobre documentos distintos ya no. Diseñar el agregado es, por tanto, diseñar dónde termina la garantía. | se introduce aquí |
+| <a id="v-entidad"></a>**entidad** | Cosa del dominio con identidad propia que persiste a lo largo del tiempo: un cliente, un producto, una cuenta. Se distingue de la actividad en que existe aunque no pase nada, y suele ser la raíz de un agregado. | se introduce aquí |
+| <a id="v-actividad"></a>**actividad** | Hecho que ocurre en un instante y relaciona entidades: un pedido, un pago, una inscripción. Su volumen crece sin límite con el tiempo, lo que la convierte en la candidata natural a tabla de hechos o a flujo de eventos, y en la mala candidata a incrustarse dentro de una entidad. | se introduce aquí |
 
 ---
 

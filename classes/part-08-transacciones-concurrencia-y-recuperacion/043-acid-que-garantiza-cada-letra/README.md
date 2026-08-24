@@ -12,6 +12,10 @@ Parte 08 — Transacciones, concurrencia y recuperación · Intermedio ·
 
 **En este caso se comparan 7 motores**: 5 lo resuelven (4 con el resultado comprobado por máquina) y 2 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Qué garantiza cada letra de ACID y quién la implementa, con especial cuidado en la que más se malinterpreta: la consistencia es respetar las restricciones declaradas, así que lo que el motor no sabe no lo protege. Deja planteado que el aislamiento es la única letra que se vende por niveles.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 043"]
@@ -23,6 +27,33 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [005](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/005-cambiar-datos-insert-update-delete/README.md) | Cambiar datos: INSERT, UPDATE, DELETE y el WHERE que salva | UPDATE · DELETE · alcance del cambio · filas afectadas · transacción como red |
+| [023](../../part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md) | Integridad: restricciones, claves foraneas y acciones referenciales | integridad de entidad · integridad referencial · CHECK · ON DELETE · aplazamiento |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-atomicidad"></a>**atomicidad** | Todo o nada: la transacción se aplica entera o no deja rastro. No promete que sea correcta ni que sea rápida, solo que no habrá estados a medias visibles para nadie. | se introduce aquí |
+| <a id="v-consistencia"></a>**consistencia** | La letra tramposa de ACID: significa que la transacción lleva la base de un estado válido a otro *según las restricciones declaradas*. Lo que el motor no sabe, no lo protege; la consistencia de negocio la pone quien declara las reglas, no el gestor. | se introduce aquí |
+| <a id="v-aislamiento"></a>**aislamiento** | Grado en que una transacción concurrente no ve los pasos intermedios de otra. Es la única letra de ACID que se vende por niveles, y el nivel por defecto de casi todos los motores no es el más fuerte. | se introduce aquí |
+| <a id="v-durabilidad"></a>**durabilidad** | Una vez confirmada la transacción, su efecto sobrevive a un corte de luz. Se consigue escribiendo el cambio en un registro secuencial y forzándolo al disco antes de responder «hecho». | se introdujo en la [002](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/002-del-archivo-y-la-hoja-de-calculo-a-la-base-de-datos/README.md) |
+| <a id="v-unidad-de-recuperación"></a>**unidad de recuperación** | La transacción como frontera de lo que se rehace o se deshace tras una caída. Es lo que conecta ACID con el registro anticipado: sin transacción no hay nada que delimite qué debe sobrevivir. | se introduce aquí |
 
 ---
 

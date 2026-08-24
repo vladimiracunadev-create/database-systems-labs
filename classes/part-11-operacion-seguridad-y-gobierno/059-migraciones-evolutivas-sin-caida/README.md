@@ -12,6 +12,10 @@ Parte 11 — Operación, seguridad y gobierno · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Cambiar el esquema con el sistema en marcha, usando expandir y contraer: primero añadir sin quitar, después trasladar el tráfico y rellenar el histórico por lotes reanudables, y solo al final eliminar lo viejo. La compatibilidad hacia atrás deja de ser una buena práctica y pasa a ser obligatoria en cuanto el despliegue es gradual.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 059"]
@@ -22,6 +26,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [013](../../part-01-fundamentos-datos-sistemas-y-metodo/013-independencia-de-datos-y-niveles-de-esquema/README.md) | Independencia de datos y los tres niveles de esquema | esquema conceptual · esquema físico · vista externa · independencia lógica |
+| [024](../../part-04-sql-en-profundidad/024-ddl-el-esquema-como-contrato/README.md) | DDL: el esquema como contrato ejecutable | tipo de dato · restricción · valor por defecto · DDL transaccional |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-expandir-y-contraer"></a>**expandir y contraer** | Patrón de migración en tres tiempos: primero se añade lo nuevo sin quitar lo viejo, después se traslada el tráfico y se rellena, y solo cuando nadie usa lo antiguo se elimina. Es lo que permite desplegar esquema y código por separado sin ventana de caída. | se introduce aquí |
+| <a id="v-doble-escritura"></a>**doble escritura** | Fase transitoria en la que la aplicación escribe en la estructura vieja y en la nueva a la vez. Sostiene la migración mientras se rellena el histórico; hay que declarar desde el principio cuándo termina, porque si no se queda para siempre. | se introduce aquí |
+| <a id="v-relleno"></a>**relleno** | Copiar el histórico a la estructura nueva, por lotes y de forma reanudable, para no bloquear la tabla ni saturar el registro. Debe ser idempotente: se va a interrumpir y habrá que relanzarlo. | se introduce aquí |
+| <a id="v-compatibilidad-hacia-atras"></a>**compatibilidad hacia atras** | Que el código nuevo siga entendiendo los datos escritos por el viejo, y que el viejo no se rompa con los del nuevo. Es obligatoria en cuanto el despliegue es gradual, porque durante un rato conviven las dos versiones. | se introduce aquí |
 
 ---
 

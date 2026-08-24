@@ -12,6 +12,10 @@ Parte 07 — Grafos, columnas, tiempo y búsqueda · Avanzado ·
 
 **En este caso se comparan 7 motores**: 6 lo resuelven (3 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+De dónde salen realmente los dos órdenes de magnitud de la analítica: leer solo las columnas necesarias, comprimirlas mejor porque los valores contiguos se parecen, procesarlas en lotes vectorizados y podar bloques enteros por sus estadísticas. La clase mide las cuatro contribuciones en lugar de atribuirlas al producto.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 042"]
@@ -22,6 +26,31 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [033](../../part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/README.md) | SQLite y DuckDB: motores embebidos, transaccional frente a analítico | motor embebido · tipado dinamico · almacenamiento columnar · vectorización |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-almacenamiento-columnar"></a>**almacenamiento columnar** | Guardar juntos todos los valores de una misma columna en lugar de todas las columnas de una misma fila. Una consulta analítica lee solo las columnas que necesita y comprime mucho mejor, porque los valores contiguos se parecen entre sí. | se introdujo en la [033](../../part-05-motores-relacionales-y-dialectos/033-sqlite-y-duckdb-motores-embebidos/README.md) |
+| <a id="v-compresión"></a>**compresión** | En un formato columnar, los valores contiguos se parecen, así que técnicas como el diccionario, la codificación por carrera o el delta reducen el tamaño en un orden de magnitud. Menos bytes leídos es menos entrada y salida, que es de donde sale casi toda la ventaja analítica. | se introduce aquí |
+| <a id="v-ejecución-vectorizada"></a>**ejecución vectorizada** | El ejecutor procesa lotes de valores por operador en lugar de fila a fila. Reduce el costo por fila del intérprete y permite usar instrucciones SIMD; combinada con el formato columnar, es la explicación de las diferencias de dos órdenes de magnitud frente a un motor de filas. | se introduce aquí |
+| <a id="v-poda-de-particiones"></a>**poda de particiones** | Descartar ficheros o bloques enteros sin abrirlos, gracias a los mínimos y máximos guardados en sus metadatos. Es lo que hace que consultar un día concreto sobre un histórico de diez años cueste casi lo mismo que consultar ese día solo. | se introduce aquí |
 
 ---
 

@@ -39,6 +39,7 @@
     <a href="../laboratorios.html">Laboratorios</a>
     <a href="../certificaciones/index.html">Certificaciones</a>
     <a href="../autoevaluacion.html">Autoevaluación</a>
+    <a href="../glosario.html">Glosario</a>
     <a href="../fuentes.html">Fuentes</a>
     <a href="../motores.html">Motores</a>
     <a href="../docs/index.html">Documentación</a>
@@ -63,6 +64,8 @@
 <a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/labs/03-transactions/README.md"><code>labs/03-transactions</code></a> · 4 fuentes.</p>
 <p><strong>Conceptos centrales:</strong> <code>colación</code> · <code>modo estricto</code> · <code>cadena vacia frente a nulo</code> · <code>identificador citado</code></p>
 <p><strong>En este caso se comparan 7 motores</strong>: 7 lo resuelven (4 con el resultado comprobado por máquina) y 0 no, con el motivo escrito.</p>
+<h2 id="de-qué-trata-esta-clase">De qué trata esta clase</h2>
+<p>Las divergencias concretas que rompen código al cambiar de motor: el modo estricto de MySQL que convierte datos inválidos en silencio, la cadena vacía que Oracle trata como nulo, y el plegado de mayúsculas de los identificadores sin citar. Cada una se demuestra con el <code>INSERT</code> que en un motor falla y en otro «funciona».</p>
 <pre><code class="language-mermaid">flowchart LR
     C[&quot;🗄️ Clase 032&quot;]
     C --&gt; K1[&quot;colación&quot;]
@@ -72,6 +75,62 @@
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 </code></pre>
+<hr />
+<h2 id="antes-de-empezar">Antes de empezar</h2>
+<p>Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Clase previa</th>
+<th>Lo que se da por sabido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="030.html">030</a></td>
+<td>Portabilidad: qué exige la norma y qué añade cada motor</td>
+<td>norma frente a producto · matriz de portabilidad · extensión propietaria</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="vocabulario-de-la-clase">Vocabulario de la clase</h2>
+<p>Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+<a href="https://github.com/vladimiracunadev-create/database-systems-labs/blob/main/GLOSARIO.md">glosario del programa</a>.</p>
+<div class="tabla-scroll"><table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Qué significa</th>
+<th>Procedencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="v-colación"></a><strong>colación</strong></td>
+<td>El conjunto de reglas que decide cómo se comparan y ordenan los textos: si <code>a</code> = <code>A</code>, dónde va la <code>ñ</code>, si los acentos cuentan. Cambia el resultado de <code>ORDER BY</code>, de <code>=</code> y de un <code>UNIQUE</code>, y es distinta por defecto en cada motor.</td>
+<td>se introdujo en la <a href="025.html">025</a></td>
+</tr>
+<tr>
+<td><a id="v-modo-estricto"></a><strong>modo estricto</strong></td>
+<td>Ajuste que decide si el motor rechaza un dato inválido o lo convierte en silencio. MySQL sin modo estricto trunca cadenas y transforma fechas imposibles en ceros; el mismo <code>INSERT</code> que en PostgreSQL falla, allí «funciona» y corrompe.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-cadena-vacia-frente-a-nulo"></a><strong>cadena vacia frente a nulo</strong></td>
+<td>Divergencia que rompe código al migrar: Oracle trata la cadena vacía <code>''</code> como <code>NULL</code>, y el resto de motores la distingue. Una condición <code>= ''</code> cambia de significado según el producto, y un <code>NOT NULL</code> deja de proteger lo que se creía.</td>
+<td>se introduce aquí</td>
+</tr>
+<tr>
+<td><a id="v-identificador-citado"></a><strong>identificador citado</strong></td>
+<td>Nombre de objeto entre comillas dobles —o entre acentos graves en MySQL, entre corchetes en SQL Server—. Al citarlo se vuelve sensible a mayúsculas y se congela tal cual; sin citar, cada motor lo pliega a un caso distinto, y ahí nacen los «la tabla no existe» al cambiar de producto.</td>
+<td>se introduce aquí</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="propósito">Propósito</h2>
 <p>Conocer las divergencias concretas de MySQL/MariaDB, SQL Server y Oracle que rompen código escrito para otro motor — especialmente las que no producen ningún error.</p>

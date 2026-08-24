@@ -12,6 +12,10 @@ Parte 00 — Primeros pasos: del archivo a la base de datos · Fundamentos ·
 
 **En este caso se comparan 6 motores**: 5 lo resuelven (5 con el resultado comprobado por máquina) y 1 no, con el motivo escrito.
 
+## De qué trata esta clase
+
+Por qué el tipo de una columna no es burocracia: decide qué comparaciones tienen sentido, qué ordenaciones son correctas y si el dinero se calcula bien. Distingue decimal exacto de coma flotante, fija el formato ISO-8601 para fechas y explica la afinidad de tipos de SQLite, que es la razón de que un dato inválido entre en un motor y sea rechazado en otro.
+
 ```mermaid
 flowchart LR
     C["🗄️ Clase 006"]
@@ -23,6 +27,32 @@ flowchart LR
     classDef raiz fill:#0b3d2e,stroke:#3fb950,color:#fff
     class C raiz
 ```
+
+---
+
+## Antes de empezar
+
+Esta clase supone que ya trabajaste lo siguiente. Si algo de la última columna
+no te suena, vuelve a esa clase antes de seguir: aquí se usa sin volver a
+explicarlo.
+
+| # | Clase previa | Lo que se da por sabido |
+|---|---|---|
+| [003](../../part-00-primeros-pasos-del-archivo-a-la-base-de-datos/003-tu-primera-base-de-datos/README.md) | Tu primera base de datos: crear, insertar y leer | CREATE TABLE · INSERT · SELECT · definición frente a manipulación · NULL |
+
+## Vocabulario de la clase
+
+Los términos que siguen se usan más adelante con este significado exacto. La
+definición completa, con sus términos relacionados, está en el
+[glosario del programa](../../../GLOSARIO.md).
+
+| Término | Qué significa | Procedencia |
+|---|---|---|
+| <a id="v-tipo"></a>**tipo** | El conjunto de valores posibles de un campo más las operaciones válidas sobre ellos. Declarar el tipo correcto delega en el motor la mitad de las validaciones que, si no, hay que escribir a mano en cada aplicación. | se introduce aquí |
+| <a id="v-decimal-exacto"></a>**decimal exacto** | Tipo numérico de precisión y escala fijas (`NUMERIC`, `DECIMAL`) que representa exactamente los valores decimales. Es el tipo del dinero: no arrastra el error de representación binaria de la coma flotante. | se introduce aquí |
+| <a id="v-coma-flotante"></a>**coma flotante** | Representación binaria aproximada (`REAL`, `DOUBLE`) según IEEE 754. Rápida y adecuada para magnitudes físicas, ruinosa para dinero: `0.1 + 0.2` no da `0.3` y la diferencia se acumula fila a fila. | se introduce aquí |
+| <a id="v-fecha-iso-8601"></a>**fecha ISO-8601** | El formato `AAAA-MM-DD` —y `AAAA-MM-DDTHH:MM:SSZ` con hora— que ordena alfabéticamente igual que cronológicamente y no es ambiguo entre día y mes. Guardar fechas como texto libre es la vía directa a datos que no se pueden comparar. | se introduce aquí |
+| <a id="v-afinidad-de-tipos"></a>**afinidad de tipos** | Regla de SQLite por la que la columna sugiere un tipo pero acepta valores de otro y los convierte cuando puede. Explica por qué en SQLite entra un texto en una columna `INTEGER` y por qué ese mismo dato es rechazado en PostgreSQL. | se introduce aquí |
 
 ---
 
