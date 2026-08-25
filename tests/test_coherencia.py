@@ -31,15 +31,21 @@ def curriculo() -> dict:
 def test_la_tabla_del_programa_cuadra_con_el_curriculo(curriculo: dict) -> None:
     real = {p["id"]: (len(p["classes"]), sum(c["hours"] for c in p["classes"]))
             for p in curriculo["parts"]}
-    # | 🪜 | [**00**](…) | Tema | Qué sabrás hacer | 10 | 20 | 🟢… | — |
+    rangos = {p["id"]: (p["classes"][0]["id"], p["classes"][-1]["id"])
+              for p in curriculo["parts"]}
+    # | 🪜 | [**00**](…) | Tema | Qué sabrás hacer | **001–010** (10) | 20 | 🟢… | — |
     filas = re.findall(
-        r"\| [^|]* \| \[\*\*(\d{2})\*\*\]\([^)]+\) \| [^|]+ \| [^|]+ \| (\d+) \| (\d+) \|",
+        r"\| [^|]* \| \[\*\*(\d{2})\*\*\]\([^)]+\) \| [^|]+ \| [^|]+ "
+        r"\| \*\*(\d{3})–(\d{3})\*\* \((\d+)\) \| (\d+) \|",
         README)
     assert len(filas) == len(real), "la tabla del programa no lista todas las partes"
-    for pid, clases, horas in filas:
+    for pid, primera, ultima, clases, horas in filas:
         assert (int(clases), int(horas)) == real[pid], (
             f"parte {pid}: el README dice {clases} clases y {horas} h; "
             f"el currículo suma {real[pid][0]} y {real[pid][1]}")
+        assert (primera, ultima) == rangos[pid], (
+            f"parte {pid}: el README dice que va de la clase {primera} a la {ultima}; "
+            f"el currículo dice {rangos[pid][0]}–{rangos[pid][1]}")
 
 
 def test_la_tabla_de_tramos_suma_lo_que_suman_sus_partes(curriculo: dict) -> None:
@@ -51,11 +57,14 @@ def test_la_tabla_de_tramos_suma_lo_que_suman_sus_partes(curriculo: dict) -> Non
     """
     clases = {p["id"]: len(p["classes"]) for p in curriculo["parts"]}
     horas = {p["id"]: sum(c["hours"] for c in p["classes"]) for p in curriculo["parts"]}
-    filas = re.findall(r"\| \*\*[^*]+\*\* \| ([0-9 ·]+) \| (\d+) \| (\d+) \|", README)
+    ids_clase = {p["id"]: [c["id"] for c in p["classes"]] for p in curriculo["parts"]}
+    filas = re.findall(
+        r"\| \*\*[^*]+\*\* \| ([0-9 ·]+) \| \*\*(\d{3})–(\d{3})\*\* \((\d+)\) \| (\d+) \|",
+        README)
     assert filas, "el README no trae la tabla de tramos"
 
     vistas: list[str] = []
-    for ids_texto, n_clases, n_horas in filas:
+    for ids_texto, primera, ultima, n_clases, n_horas in filas:
         ids = ids_texto.replace("·", " ").split()
         vistas += ids
         assert sum(clases[p] for p in ids) == int(n_clases), (
@@ -64,6 +73,10 @@ def test_la_tabla_de_tramos_suma_lo_que_suman_sus_partes(curriculo: dict) -> Non
         assert sum(horas[p] for p in ids) == int(n_horas), (
             f"tramo {ids_texto.strip()}: dice {n_horas} horas y sus partes suman "
             f"{sum(horas[p] for p in ids)}")
+        del_tramo = [c for p in ids for c in ids_clase[p]]
+        assert (primera, ultima) == (del_tramo[0], del_tramo[-1]), (
+            f"tramo {ids_texto.strip()}: dice que va de la clase {primera} a la {ultima}; "
+            f"sus partes van de la {del_tramo[0]} a la {del_tramo[-1]}")
 
     assert sorted(vistas) == sorted(clases), (
         "los tramos no cubren todas las partes exactamente una vez: "
