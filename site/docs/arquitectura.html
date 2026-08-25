@@ -152,6 +152,22 @@ sitio— produce la incoherencia clásica: el índice dice 60 clases, el README 
 <p>La integración continua ejecuta los generadores con <code>--check</code> y falla si algún
 artefacto quedó desactualizado. Es lo que impide que el sitio publicado y el
 repositorio digan cosas distintas.</p>
+<h3 id="la-excepción-el-about-de-github">La excepción: el «About» de GitHub</h3>
+<p>Hay una superficie que afirma cifras del programa y <strong>no vive en el árbol de
+ficheros</strong>: la descripción del repositorio en GitHub. Ningún <code>grep</code> la alcanza,
+ninguna revisión de un cambio la mira y la validación no la ve, pero es lo
+primero que lee quien llega. Estuvo anunciando las cifras de la versión anterior
+—clases, partes, horas y fuentes— mucho después de que el README dijera las
+correctas, sin que nada lo detectara.</p>
+<p>Se comprueba y se corrige a mano, y conviene hacerlo cada vez que cambia una
+cifra de la portada:</p>
+<pre><code class="language-bash">gh api repos/&lt;owner&gt;/&lt;repo&gt; --jq '{description, homepage, topics}'
+</code></pre>
+<p>Para escribirla, el texto va en un JSON y se envía con
+<code>gh api --method PATCH repos/&lt;owner&gt;/&lt;repo&gt; --input payload.json</code>. Nunca por el
+shell: los emoji y las tildes se corrompen en tránsito y se acaba publicando
+mojibake justo al arreglar la coherencia. Se verifica releyendo de la API, con
+el texto escapado a ASCII, no por lo que imprima la consola.</p>
 <h2 id="los-componentes">Los componentes</h2>
 <h3 id="curriculumyaml"><code>curriculum.yaml</code></h3>
 <p>Metadatos de las 74 clases: identificador, <code>slug</code>, título, horas, nivel,

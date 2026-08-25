@@ -5,7 +5,7 @@
 
 **Duración:** 90 minutos · **Dependencias:** Python 3.11+ (SQLite). PostgreSQL, opcional
 · **Marca de éxito:** `INDEXING_LAB_OK`
-· **Parte:** [08 — Almacenamiento, índices y planes](../../classes/part-09-almacenamiento-indices-y-planes/README.md)
+· **Parte:** [09 — Almacenamiento, índices y planes](../../classes/part-09-almacenamiento-indices-y-planes/README.md)
 
 ## 🎯 Qué demuestra
 
@@ -83,8 +83,8 @@ aparte, al menos quince repeticiones, mediana y dispersión, y declarar la máqu
 ## 🎓 Dónde encaja
 
 - **Clases:** [038–042](../../classes/part-09-almacenamiento-indices-y-planes/README.md), en
-  especial [039 — B-tree, orden de columnas y selectividad](../../classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)
-  y [042 — Planes de ejecución y refutación](../../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md).
+  especial [049 — B-tree, orden de columnas y selectividad](../../classes/part-09-almacenamiento-indices-y-planes/049-b-tree-orden-de-columnas-y-selectividad/README.md)
+  y [052 — Planes de ejecución y refutación](../../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md).
 - **Rutas:** [Desarrollador de aplicaciones](../../rutas/desarrollo-de-aplicaciones.md),
   [DBA / SRE de datos](../../rutas/fiabilidad-y-operacion.md),
   [Analytics engineer / BI](../../rutas/analitica-y-bi.md).

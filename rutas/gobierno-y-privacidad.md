@@ -112,31 +112,33 @@ flowchart LR
 
 <!-- recorrido:fin -->
 
-8 partes, 147 horas estimadas.
+9 partes, 147 horas estimadas.
 
-1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 00 — Primeros pasos: del archivo a la base de datos**](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md)
+   (10 clases · 20 h). La rampa de entrada. Fíjate en [007 — La clave primaria](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/007-la-clave-primaria/README.md): sin identidad estable no hay forma de atender una solicitud de supresión.
+2. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 02 — Modelado conceptual y requisitos**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
+3. 📚 [**Parte 02 — Modelado conceptual y requisitos**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). No se gobierna lo que no se sabe nombrar.
-3. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Necesitas leer y escribir las consultas que auditas. Añade
-   [013 — Integridad: restricciones y acciones referenciales](../classes/part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md).
-4. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
+   [023 — Integridad: restricciones y acciones referenciales](../classes/part-03-modelo-relacional-y-algebra/023-integridad-restricciones-y-acciones-referenciales/README.md).
+5. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
    (5 clases · 18 h). Para entender qué significa que un dato esté «confirmado».
-5. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
+6. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
    (5 clases · 17 h). Dónde acaban las copias.
-6. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
+7. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
    (6 clases · 19 h). El núcleo del rol:
-   [048 — Respaldo y restauración probada](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md),
-   [050 — Control de acceso: privilegio mínimo, roles y seguridad por fila](../classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md),
-   [051 — Inyección SQL y parametrización](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md)
-   y [053 — Privacidad, retención y gobierno del dato](../classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md).
-7. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
+   [058 — Respaldo y restauración probada](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md),
+   [060 — Control de acceso: privilegio mínimo, roles y seguridad por fila](../classes/part-11-operacion-seguridad-y-gobierno/060-control-de-acceso-y-seguridad-por-fila/README.md),
+   [061 — Inyección SQL y parametrización](../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md)
+   y [063 — Privacidad, retención y gobierno del dato](../classes/part-11-operacion-seguridad-y-gobierno/063-privacidad-retencion-y-gobierno-del-dato/README.md).
+8. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
    (4 clases · 13 h). El dato personal se multiplica en las tuberías analíticas, y ahí se
    olvida.
-8. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
+9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h). Con
-   [063 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md),
+   [073 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md),
    que es el formato en el que se documenta una decisión de gobierno.
 
 Laboratorios de la ruta:

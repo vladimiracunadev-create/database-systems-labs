@@ -113,31 +113,33 @@ flowchart LR
 
 <!-- recorrido:fin -->
 
-9 partes, 151 horas estimadas.
+10 partes, 151 horas estimadas.
 
-1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 00 — Primeros pasos: del archivo a la base de datos**](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md)
+   (10 clases · 20 h). La rampa de entrada. No la saltes por venir del lado del modelo: [010 — El mapa de los motores](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md) sitúa dónde encaja un índice vectorial entre las demás familias.
+2. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
+3. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h).
-3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
+4. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h).
-4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
+5. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Los filtros y las reuniones que acompañan a cada búsqueda.
-5. 📚 [**Parte 06 — Documentos y clave-valor**](../classes/part-06-documentos-y-clave-valor/README.md)
+6. 📚 [**Parte 06 — Documentos y clave-valor**](../classes/part-06-documentos-y-clave-valor/README.md)
    (4 clases · 13 h). El agregado, la caché y su expiración.
-6. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
+7. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
    (5 clases · 15 h). Especialmente
-   [031 — Búsqueda de texto: índice invertido y relevancia](../classes/part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md).
-7. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
+   [041 — Búsqueda de texto: índice invertido y relevancia](../classes/part-07-grafos-columnas-tiempo-y-busqueda/041-busqueda-de-texto-indice-invertido-y-relevancia/README.md).
+8. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
    (5 clases · 17 h). Con
-   [041 — Índices especializados](../classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/README.md).
-8. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
+   [051 — Índices especializados](../classes/part-09-almacenamiento-indices-y-planes/051-indices-especializados/README.md).
+9. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
    (4 clases · 13 h). El núcleo:
-   [058 — Embeddings y métricas de distancia](../classes/part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md),
-   [059 — Índices vectoriales aproximados](../classes/part-13-vectores-recuperacion-y-rag/069-indices-vectoriales-aproximados/README.md),
-   [060 — Búsqueda híbrida y filtrado](../classes/part-13-vectores-recuperacion-y-rag/070-busqueda-hibrida-y-filtrado/README.md)
-   y [061 — RAG evaluable](../classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/README.md).
-9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
+   [068 — Embeddings y métricas de distancia](../classes/part-13-vectores-recuperacion-y-rag/068-embeddings-y-metricas-de-distancia/README.md),
+   [069 — Índices vectoriales aproximados](../classes/part-13-vectores-recuperacion-y-rag/069-indices-vectoriales-aproximados/README.md),
+   [070 — Búsqueda híbrida y filtrado](../classes/part-13-vectores-recuperacion-y-rag/070-busqueda-hibrida-y-filtrado/README.md)
+   y [071 — RAG evaluable](../classes/part-13-vectores-recuperacion-y-rag/071-rag-evaluable/README.md).
+10. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:

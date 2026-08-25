@@ -1061,12 +1061,46 @@ término, con qué otros se relaciona y de qué obra procede la definición.</p>
   <a href="{REPO}/blob/main/{origen}" rel="noopener"><code>{origen}</code></a></p>
 </main>""")
 
-    lista_docs = "\n".join(
-        f'<div class="fuente"><div class="fuente-titulo">'
-        f'<a href="{destino.removeprefix("docs/")}">{escapar(titulo)}</a></div>'
-        f'<div class="fuente-nota">{escapar(resumen)}</div>'
-        f'<div class="fuente-meta"><code>{origen}</code></div></div>'
-        for origen, destino, titulo, resumen in DOCUMENTOS)
+    # Veintiuna paginas en una lista plana no dicen por donde se empieza. Se
+    # agrupan por la pregunta que responden, en el orden en que suelen hacerse.
+    grupos_docs: list[tuple[str, str, list[str]]] = [
+        ("Para empezar", "Lo que conviene leer antes de la primera clase.",
+         ["docs/GUIA-DE-ESTUDIO.md", "assessments/diagnostic.md",
+          "docs/LEARNING-MODEL.md", "docs/DECISION-GUIDE.md"]),
+        ("Practicar", "Los laboratorios, los entornos y los dominios sobre los "
+         "que se trabaja.",
+         ["labs/README.md", "docs/ENVIRONMENTS.md", "projects/canonical-domains.md"]),
+        ("Evaluarse", "Qué se corrige, con qué criterio y qué cuenta como evidencia.",
+         ["assessments/README.md", "assessments/rubric.md", "assessments/evidencias.md",
+          "assessments/examen-por-rol.md", "projects/README.md", "projects/capstone.md",
+          "projects/portafolio.md"]),
+        ("Cómo está construido", "La arquitectura del repositorio y la regla que lo gobierna.",
+         ["docs/ARCHITECTURE.md", "docs/SOURCES.md", "CONTRIBUTING.md"]),
+        ("Seguridad y ética", "Qué datos se usan, qué límites tiene el material y cómo reportar.",
+         ["docs/SECURITY-AND-ETHICS.md", "SECURITY.md"]),
+        ("Historia y plan", "Qué cambió en cada versión y qué falta por hacer.",
+         ["ROADMAP.md", "CHANGELOG.md"]),
+    ]
+    por_origen = {origen: (destino, titulo, resumen)
+                  for origen, destino, titulo, resumen in DOCUMENTOS}
+    agrupados = {o for _, _, origenes in grupos_docs for o in origenes}
+    sueltos = [o for o in por_origen if o not in agrupados]
+    if sueltos:  # ningun documento puede quedar fuera del indice sin que se note
+        grupos_docs.append(("Otros", "Documentos aun sin clasificar.", sueltos))
+
+    bloques_docs = []
+    for titulo_grupo, descripcion, origenes in grupos_docs:
+        tarjetas = "\n".join(
+            f'<div class="fuente"><div class="fuente-titulo">'
+            f'<a href="{por_origen[o][0].removeprefix("docs/")}">'
+            f'{escapar(por_origen[o][1])}</a></div>'
+            f'<div class="fuente-nota">{escapar(por_origen[o][2])}</div>'
+            f'<div class="fuente-meta"><code>{o}</code></div></div>'
+            for o in origenes if o in por_origen)
+        bloques_docs.append(
+            f'<h2>{escapar(titulo_grupo)}</h2>\n'
+            f'<p class="lead">{escapar(descripcion)}</p>\n{tarjetas}')
+    lista_docs = "\n".join(bloques_docs)
 
     salidas[SITE / "docs" / "index.html"] = pagina(
         titulo="Documentación · Database Systems Labs",
@@ -1081,7 +1115,13 @@ término, con qué otros se relaciona y de qué obra procede la definición.</p>
 <h1>Documentación</h1>
 <p class="lead">Cómo está construido el programa, con qué método enseña, qué regla lo
 gobierna y qué falta por hacer. Cada página se publica desde el mismo archivo del
-repositorio que la integración continua valida.</p>
+repositorio que la integración continua valida, así que lo que lees aquí es
+exactamente lo que la máquina comprueba.</p>
+<p><strong>Si es tu primera vez:</strong> empieza por la
+<a href="guia-de-estudio.html">guía de estudio</a>, que explica el método y el orden;
+sitúate con el <a href="diagnostico.html">diagnóstico inicial</a>; y elige tu
+<a href="../rutas/index.html">ruta por rol</a>. El
+<a href="../glosario.html">glosario</a> queda a mano para cualquier término.</p>
 {lista_docs}
 </main>""")
 

@@ -57,6 +57,28 @@ La integración continua ejecuta los generadores con `--check` y falla si algún
 artefacto quedó desactualizado. Es lo que impide que el sitio publicado y el
 repositorio digan cosas distintas.
 
+### La excepción: el «About» de GitHub
+
+Hay una superficie que afirma cifras del programa y **no vive en el árbol de
+ficheros**: la descripción del repositorio en GitHub. Ningún `grep` la alcanza,
+ninguna revisión de un cambio la mira y la validación no la ve, pero es lo
+primero que lee quien llega. Estuvo anunciando las cifras de la versión anterior
+—clases, partes, horas y fuentes— mucho después de que el README dijera las
+correctas, sin que nada lo detectara.
+
+Se comprueba y se corrige a mano, y conviene hacerlo cada vez que cambia una
+cifra de la portada:
+
+```bash
+gh api repos/<owner>/<repo> --jq '{description, homepage, topics}'
+```
+
+Para escribirla, el texto va en un JSON y se envía con
+`gh api --method PATCH repos/<owner>/<repo> --input payload.json`. Nunca por el
+shell: los emoji y las tildes se corrompen en tránsito y se acaba publicando
+mojibake justo al arreglar la coherencia. Se verifica releyendo de la API, con
+el texto escapado a ASCII, no por lo que imprima la consola.
+
 ## Los componentes
 
 ### `curriculum.yaml`

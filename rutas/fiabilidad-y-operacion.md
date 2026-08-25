@@ -111,31 +111,33 @@ flowchart LR
 
 <!-- recorrido:fin -->
 
-9 partes, 163 horas estimadas.
+10 partes, 163 horas estimadas.
 
-1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 00 — Primeros pasos: del archivo a la base de datos**](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md)
+   (10 clases · 20 h). La rampa de entrada. Presta atención a [005 — Cambiar datos](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/005-cambiar-datos-insert-update-delete/README.md): el `UPDATE` sin `WHERE` es el incidente que más veces vas a prevenir.
+2. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
+3. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). Operar un modelo malo cuesta el doble; conviene reconocerlo.
-3. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
+4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h).
-4. 📚 [**Parte 05 — Motores relacionales y dialectos**](../classes/part-05-motores-relacionales-y-dialectos/README.md)
+5. 📚 [**Parte 05 — Motores relacionales y dialectos**](../classes/part-05-motores-relacionales-y-dialectos/README.md)
    (4 clases · 12 h). Lo que cambia de un motor a otro cuando toca operarlo.
-5. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
+6. 📚 [**Parte 08 — Transacciones, concurrencia y recuperación**](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md)
    (5 clases · 18 h). Imprescindible:
-   [036 — Registro anticipado y recuperación (WAL y ARIES)](../classes/part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md).
-6. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
+   [046 — Registro anticipado y recuperación (WAL y ARIES)](../classes/part-08-transacciones-concurrencia-y-recuperacion/046-registro-anticipado-y-recuperacion/README.md).
+7. 📚 [**Parte 09 — Almacenamiento, índices y planes**](../classes/part-09-almacenamiento-indices-y-planes/README.md)
    (5 clases · 17 h). Con
-   [038 — Páginas, filas y buffer](../classes/part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md)
-   y [042 — Planes de ejecución y refutación](../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md).
-7. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
+   [048 — Páginas, filas y buffer](../classes/part-09-almacenamiento-indices-y-planes/048-paginas-filas-y-buffer-pool/README.md)
+   y [052 — Planes de ejecución y refutación](../classes/part-09-almacenamiento-indices-y-planes/052-planes-de-ejecucion-y-refutacion/README.md).
+8. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
    (5 clases · 17 h).
-8. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
+9. 📚 [**Parte 11 — Operación, seguridad y gobierno**](../classes/part-11-operacion-seguridad-y-gobierno/README.md)
    (6 clases · 19 h). El núcleo del rol:
-   [048 — Respaldo y restauración probada](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md),
-   [049 — Migraciones evolutivas sin caída](../classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/README.md)
-   y [052 — Observabilidad, objetivos de servicio y capacidad](../classes/part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md).
-9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
+   [058 — Respaldo y restauración probada](../classes/part-11-operacion-seguridad-y-gobierno/058-respaldo-y-restauracion-probada/README.md),
+   [059 — Migraciones evolutivas sin caída](../classes/part-11-operacion-seguridad-y-gobierno/059-migraciones-evolutivas-sin-caida/README.md)
+   y [062 — Observabilidad, objetivos de servicio y capacidad](../classes/part-11-operacion-seguridad-y-gobierno/062-observabilidad-slo-y-capacidad/README.md).
+10. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:

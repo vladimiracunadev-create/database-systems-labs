@@ -26,7 +26,8 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 [![Python](https://img.shields.io/badge/Python-3.11%20·%203.12%20·%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](requirements.txt)
 [![Sin dependencias](https://img.shields.io/badge/laboratorios-solo%20stdlib-0ea5e9?style=flat-square)](labs/README.md)
-[![Pruebas](https://img.shields.io/badge/pruebas-143%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Pruebas](https://img.shields.io/badge/pruebas-150%20pytest-8957e5?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![Glosario](https://img.shields.io/badge/glosario-306%20t%C3%A9rminos-0b7285?style=flat-square)](GLOSARIO.md)
 [![Motores](https://img.shields.io/badge/motores-27%20en%20catálogo-ffc861?style=flat-square&logo=postgresql&logoColor=white)](catalog/databases.json)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-sitio%20vivo-222?style=flat-square&logo=githubpages&logoColor=white)](https://vladimiracunadev-create.github.io/database-systems-labs/)
 
@@ -41,6 +42,8 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 [🌐 **Sitio de estudio**](https://vladimiracunadev-create.github.io/database-systems-labs/) ·
 [▶️ **Empezar por la clase 001**](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/001-que-es-un-dato-un-registro-y-una-tabla/README.md) ·
 [📚 **Índice de las 74 clases**](classes/README.md) ·
+[🧭 **Guía de estudio**](docs/GUIA-DE-ESTUDIO.md) ·
+[🔤 **Glosario de 306 términos**](GLOSARIO.md) ·
 [🧭 **Rutas por rol**](rutas/README.md) ·
 [🧪 **Laboratorios**](labs/README.md) ·
 [📝 **Autoevaluación**](https://vladimiracunadev-create.github.io/database-systems-labs/autoevaluacion.html) ·
@@ -50,9 +53,9 @@ apunta al vacío: lo comprueba la integración continua en cada `push`.**
 
 <br>
 
-| 📚 Clases | 🗂️ Partes | ⏱️ Horas | 🧩 Motores | 🔬 Implementaciones | 🧪 Labs | 📖 Fuentes | 📝 Preguntas |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **74** | **15** | **230** | **27** | **408** | **8** | **120** | **296** |
+| 📚 Clases | 🗂️ Partes | ⏱️ Horas | 🔤 Glosario | 🧩 Motores | 🔬 Implementaciones | 🧪 Labs | 📖 Fuentes | 📝 Preguntas |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **74** | **15** | **230** | **306** | **27** | **408** | **8** | **120** | **296** |
 
 </div>
 
@@ -198,32 +201,87 @@ flowchart LR
 
 ## 🗂️ Programa
 
-| | Parte | Tema | Clases | Horas |
-|:---:|:---:|---|---:|---:|
-| 🪜 | [00](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | 10 | 20 |
-| 🧱 | [01](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | 4 | 12 |
-| 📐 | [02](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | 5 | 16 |
-| 🔗 | [03](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | 4 | 13 |
-| 🔎 | [04](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | 6 | 20 |
-| 🐘 | [05](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | 4 | 12 |
-| 📄 | [06](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | 4 | 13 |
-| 🕸️ | [07](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | 5 | 15 |
-| 🔒 | [08](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | 5 | 18 |
-| 🗂️ | [09](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | 5 | 17 |
-| 🌐 | [10](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | 5 | 17 |
-| 🛡️ | [11](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | 6 | 19 |
-| 📊 | [12](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | 4 | 13 |
-| 🧠 | [13](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | 4 | 13 |
-| 🏛️ | [14](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | 3 | 12 |
+15 partes en cinco tramos. Cada tramo responde una pregunta distinta y
+ninguno se sostiene sin el anterior; por eso el orden por defecto es el numérico.
+
+```mermaid
+flowchart LR
+    subgraph T1["① Cimientos"]
+        direction LR
+        T1P00["🪜 00"]
+        T1P01["🧱 01"]
+        T1P02["📐 02"]
+        T1P03["🔗 03"]
+        T1P04["🔎 04"]
+    end
+    subgraph T2["② Modelos"]
+        direction LR
+        T2P05["🐘 05"]
+        T2P06["📄 06"]
+        T2P07["🕸️ 07"]
+    end
+    subgraph T3["③ Por dentro"]
+        direction LR
+        T3P08["🔒 08"]
+        T3P09["🗂️ 09"]
+    end
+    subgraph T4["④ A escala"]
+        direction LR
+        T4P10["🌐 10"]
+        T4P11["🛡️ 11"]
+        T4P12["📊 12"]
+    end
+    subgraph T5["⑤ IA y cierre"]
+        direction LR
+        T5P13["🧠 13"]
+        T5P14["🏛️ 14"]
+    end
+    T1 --> T2 --> T3 --> T4 --> T5
+    classDef base fill:#0b3d2e,stroke:#3fb950,color:#fff
+    classDef fin fill:#3d2e0b,stroke:#e8590c,color:#fff
+    class T1 base
+    class T5 fin
+```
+
+| Tramo | Partes | Clases | Horas | Qué se resuelve ahí |
+|---|---|---:|---:|---|
+| **① Cimientos** | 00 · 01 · 02 · 03 · 04 | 29 | 81 | Del dato suelto al esquema defendible y al SQL preciso. Es la base común de las siete rutas. |
+| **② Modelos** | 05 · 06 · 07 | 13 | 40 | Qué ofrece cada familia de motores y qué cobra. Se elige con criterio, no por moda. |
+| **③ Por dentro** | 08 · 09 | 10 | 35 | Cómo el motor sostiene la corrección bajo concurrencia y de dónde sale realmente el tiempo. |
+| **④ A escala** | 10 · 11 · 12 | 15 | 49 | Lo que aparece cuando hay varias máquinas, usuarios reales y obligaciones legales. |
+| **⑤ IA y cierre** | 13 · 14 | 7 | 25 | La base de datos como pieza de un sistema de IA, y la decisión de arquitectura defendida. |
+
+### Las 15 partes
+
+Nivel: 🟢 fundamentos · 🔵 intermedio · 🟣 avanzado — un círculo por clase.
+
+| | Parte | Tema | Qué sabrás hacer al terminarla | Clases | Horas | Nivel | Tras |
+|:---:|:---:|---|---|---:|---:|---|:---:|
+| 🪜 | [**00**](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | Crear una base, consultarla y cambiarla sin destruir datos — y decidir cuándo **no** hace falta una | 10 | 20 | 🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢 | — |
+| 🧱 | [**01**](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | Trazar una consulta del cliente al disco y montar un entorno donde cada afirmación se pueda repetir | 4 | 12 | 🟢🟢🟢🟢 | 00 |
+| 📐 | [**02**](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | Convertir un enunciado ambiguo en un esquema en BCFN que puedas **defender** con dependencias funcionales | 5 | 16 | 🟢🟢🟢 🔵🔵 | 00, 01 |
+| 🔗 | [**03**](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | Leer una consulta como expresión del álgebra y declarar la integridad en vez de confiarla a la aplicación | 4 | 13 | 🟢🟢 🔵🔵 | 02 |
+| 🔎 | [**04**](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | Escribir SQL cuya semántica no te sorprenda: reuniones, agregación, ventanas y nulos | 6 | 20 | 🟢🟢 🔵🔵🔵🔵 | 03 |
+| 🐘 | [**05**](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | Saber, línea a línea, qué es norma y qué te ata a un producto concreto | 4 | 12 | 🔵🔵🔵🔵 | 04 |
+| 📄 | [**06**](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | Decidir dónde poner la frontera de consistencia, y qué se pierde exactamente al meter una caché | 4 | 13 | 🔵🔵🔵🔵 | 02, 04 |
+| 🕸️ | [**07**](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | Justificar con la carga de trabajo cuándo salir del relacional — y cuándo no hace falta | 5 | 15 | 🔵🔵🔵 🟣🟣 | 06 |
+| 🔒 | [**08**](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | Reproducir una anomalía de aislamiento en dos sesiones y explicar cómo se vuelve de una caída | 5 | 18 | 🔵 🟣🟣🟣🟣 | 04 |
+| 🗂️ | [**09**](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | Refutar una hipótesis de rendimiento con un plan de ejecución en la mano, no con una intuición | 5 | 17 | 🔵🔵 🟣🟣🟣 | 01, 04 |
+| 🌐 | [**10**](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | Enunciar CAP sin la versión de póster y elegir la consistencia que tu caso necesita de verdad | 5 | 17 | 🟣🟣🟣🟣🟣 | 08 |
+| 🛡️ | [**11**](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | Restaurar un respaldo cronometrado, migrar sin caída y tratar el dato personal como requisito de diseño | 6 | 19 | 🟢 🔵🔵🔵 🟣🟣 | 08 |
+| 📊 | [**12**](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | Modelar un almacén declarando el grano y mover datos entre sistemas sin perderlos ni duplicarlos | 4 | 13 | 🔵🔵 🟣🟣 | 07, 09 |
+| 🧠 | [**13**](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | Medir el *recall* de tu recuperación antes de culpar al modelo de lo que no supo responder | 4 | 13 | 🔵 🟣🟣🟣 | 07 |
+| 🏛️ | [**14**](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | Elegir motores por evidencia, dejarlo por escrito y defenderlo ante preguntas hostiles | 3 | 12 | 🟣🟣🟣 | 10, 11, 12, 13 |
 
 Cada parte tiene su **portada**, y ahí es donde empieza el trabajo: de qué trata,
 qué hay que traer sabido, qué sabrás hacer al terminar, una ficha explicada por
 clase, los errores frecuentes que desmonta, su vocabulario y la bibliografía
 completa de la parte.
 
-➡️ El índice completo está en [`classes/README.md`](classes/README.md), los 306
-términos en el [glosario](GLOSARIO.md), y el currículo canónico —con el resumen y
-los prerrequisitos de cada clase— en [`curriculum.yaml`](curriculum.yaml).
+➡️ El índice de las 74 clases está en [`classes/README.md`](classes/README.md),
+los 306 términos en el [glosario](GLOSARIO.md), el método de estudio en la
+[guía](docs/GUIA-DE-ESTUDIO.md), y el currículo canónico —con el resumen y los
+prerrequisitos de cada clase— en [`curriculum.yaml`](curriculum.yaml).
 
 ## 🎓 Modelo pedagógico
 
@@ -463,7 +521,7 @@ artefacto generado quedó desactualizado. **Nada llega a `main` en rojo.**
 
 | | Workflow | Qué cubre |
 |:---:|---|---|
-| 🧪 | [ci.yml](.github/workflows/ci.yml) | Validador del repositorio, generadores en modo `--check`, equivalencia entre motores, los siete laboratorios y 143 pruebas sobre Python 3.11, 3.12 y 3.13 |
+| 🧪 | [ci.yml](.github/workflows/ci.yml) | Validador del repositorio, generadores en modo `--check`, equivalencia entre motores, los siete laboratorios y 150 pruebas sobre Python 3.11, 3.12 y 3.13 |
 | 🚀 | [pages.yml](.github/workflows/pages.yml) | Regenera y despliega las 131 páginas del sitio a GitHub Pages |
 | 🔗 | [enlaces.yml](.github/workflows/enlaces.yml) | Comprueba en red las 120 fuentes y los 347 enlaces `doc:` de motores, en agenda propia para no teñir de rojo un `push` |
 | 🛡️ | [codeql.yml](.github/workflows/codeql.yml) | Análisis estático de los generadores, que producen HTML y podrían inyectar |
@@ -475,7 +533,7 @@ python scripts/validate_repository.py       # estructura, fuentes, motores, enla
 python scripts/build_classes.py --check     # ¿quedaron README de clase sin regenerar?
 python scripts/generate_site.py --check     # ¿quedó el sitio desactualizado?
 python scripts/verificar_equivalencia.py    # SQLite y DuckDB, sin servicios
-python -m pytest                            # 143 pruebas
+python -m pytest                            # 150 pruebas
 npx markdownlint-cli2 "**/*.md"             # estilo de Markdown
 ```
 

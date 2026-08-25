@@ -115,32 +115,35 @@ flowchart LR
 
 <!-- recorrido:fin -->
 
-Las 14 partes, 230 horas. Es la única ruta completa, y con razón: no puedes elegir entre
+Las 15 partes, 230 horas. Es la única ruta completa, y con razón: no puedes elegir entre
 modelos que no conoces.
 
+- 📚 [Parte 00 — Primeros pasos: del archivo a la base de datos](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md).
+  Aunque la domines, [009 — Cuándo NO necesitas una base de datos](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/009-cuando-no-necesitas-una-base-de-datos/README.md) y [010 — El mapa de los motores](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md)
+  son el criterio que la Parte 14 te va a pedir defender.
 - 📚 [Parte 01 — Fundamentos](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) ·
-  [01 — Modelado](../classes/part-02-modelado-conceptual-y-requisitos/README.md) ·
-  [02 — Modelo relacional](../classes/part-03-modelo-relacional-y-algebra/README.md) ·
-  [03 — SQL](../classes/part-04-sql-en-profundidad/README.md) ·
-  [04 — Motores y dialectos](../classes/part-05-motores-relacionales-y-dialectos/README.md).
-- 📚 [05 — Documentos y clave-valor](../classes/part-06-documentos-y-clave-valor/README.md) ·
-  [06 — Grafos, columnas, tiempo y búsqueda](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md).
+  [02 — Modelado](../classes/part-02-modelado-conceptual-y-requisitos/README.md) ·
+  [03 — Modelo relacional](../classes/part-03-modelo-relacional-y-algebra/README.md) ·
+  [04 — SQL](../classes/part-04-sql-en-profundidad/README.md) ·
+  [05 — Motores y dialectos](../classes/part-05-motores-relacionales-y-dialectos/README.md).
+- 📚 [06 — Documentos y clave-valor](../classes/part-06-documentos-y-clave-valor/README.md) ·
+  [07 — Grafos, columnas, tiempo y búsqueda](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md).
   Aquí se construye el criterio para no elegir por moda.
-- 📚 [07 — Transacciones](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) ·
-  [08 — Almacenamiento, índices y planes](../classes/part-09-almacenamiento-indices-y-planes/README.md).
-- 📚 [09 — Distribución, réplica y consistencia](../classes/part-10-distribucion-replica-y-consistencia/README.md).
+- 📚 [08 — Transacciones](../classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) ·
+  [09 — Almacenamiento, índices y planes](../classes/part-09-almacenamiento-indices-y-planes/README.md).
+- 📚 [10 — Distribución, réplica y consistencia](../classes/part-10-distribucion-replica-y-consistencia/README.md).
   El corazón del rol:
-  [045 — CAP, PACELC y lo que realmente se elige](../classes/part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md),
-  [046 — Modelos de consistencia y garantías de sesión](../classes/part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md)
-  y [047 — Consenso y transacciones distribuidas](../classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/README.md).
-- 📚 [10 — Operación, seguridad y gobierno](../classes/part-11-operacion-seguridad-y-gobierno/README.md) ·
-  [11 — Analítica, integración y streaming](../classes/part-12-analitica-integracion-y-streaming/README.md) ·
-  [12 — Vectores, recuperación y RAG](../classes/part-13-vectores-recuperacion-y-rag/README.md).
-- 📚 [13 — Arquitectura y proyecto final](../classes/part-14-arquitectura-y-proyecto-final/README.md).
+  [055 — CAP, PACELC y lo que realmente se elige](../classes/part-10-distribucion-replica-y-consistencia/055-cap-pacelc-y-lo-que-realmente-se-elige/README.md),
+  [056 — Modelos de consistencia y garantías de sesión](../classes/part-10-distribucion-replica-y-consistencia/056-modelos-de-consistencia-y-garantias-de-sesion/README.md)
+  y [057 — Consenso y transacciones distribuidas](../classes/part-10-distribucion-replica-y-consistencia/057-consenso-y-transacciones-distribuidas/README.md).
+- 📚 [11 — Operación, seguridad y gobierno](../classes/part-11-operacion-seguridad-y-gobierno/README.md) ·
+  [12 — Analítica, integración y streaming](../classes/part-12-analitica-integracion-y-streaming/README.md) ·
+  [13 — Vectores, recuperación y RAG](../classes/part-13-vectores-recuperacion-y-rag/README.md).
+- 📚 [14 — Arquitectura y proyecto final](../classes/part-14-arquitectura-y-proyecto-final/README.md).
   Donde se cierra todo:
-  [062 — Persistencia políglota por evidencia](../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md),
-  [063 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md)
-  y [064 — Proyecto final: diseñar, medir y defender](../classes/part-14-arquitectura-y-proyecto-final/074-proyecto-final-disenar-medir-y-defender/README.md).
+  [072 — Persistencia políglota por evidencia](../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md),
+  [073 — Registro de decisiones y costo total](../classes/part-14-arquitectura-y-proyecto-final/073-registro-de-decisiones-y-costo-total/README.md)
+  y [074 — Proyecto final: diseñar, medir y defender](../classes/part-14-arquitectura-y-proyecto-final/074-proyecto-final-disenar-medir-y-defender/README.md).
 
 Laboratorios de la ruta:
 
@@ -214,7 +217,7 @@ para el rol; para tu mercado, contrasta ofertas reales.
 
 ## 🚀 Siguientes pasos
 
-1. Recorre las 14 partes; si vienes con experiencia, no te saltes la 05 y la 06: son las que
+1. Recorre las 15 partes; si vienes con experiencia, no te saltes la 05 y la 06: son las que
    evitan el sesgo relacional.
 2. Haz la Parte 10 con lápiz y papel: escribe qué garantía necesita cada caso de uso que
    conoces.

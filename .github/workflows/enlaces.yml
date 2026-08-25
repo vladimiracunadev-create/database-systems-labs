@@ -41,8 +41,12 @@ jobs:
           {
             echo "### 🔗 Estado de las fuentes y de la documentación de motores"
             echo ""
+            echo "OK = alcanzable · PROTEGIDO = existe pero rechaza clientes"
+            echo "automáticos · CADENA = existe pero su cadena TLS está incompleta ·"
+            echo "ROTO = hay que sustituir la fuente (y solo esto tumba el trabajo)."
+            echo ""
             echo '```text'
-            tail -n 5 enlaces.log || echo "sin salida"
+            tail -n 12 enlaces.log || echo "sin salida"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

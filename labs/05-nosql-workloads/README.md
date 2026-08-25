@@ -86,7 +86,7 @@ Redis, comprueba el comportamiento de `EXPIRE` y la expiración perezosa frente 
 ## 🎓 Dónde encaja
 
 - **Clases:** [024–027](../../classes/part-06-documentos-y-clave-valor/README.md) y
-  [029 — Columnas anchas: modelar desde la consulta](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/README.md).
+  [039 — Columnas anchas: modelar desde la consulta](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/039-columnas-anchas-modelar-desde-la-consulta/README.md).
 - **Rutas:** [Ingeniero de datos](../../rutas/ingenieria-de-datos.md),
   [Ingeniero de IA aplicada y recuperación](../../rutas/ia-y-recuperacion.md),
   [Desarrollador de aplicaciones](../../rutas/desarrollo-de-aplicaciones.md).
