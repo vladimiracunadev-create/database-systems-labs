@@ -244,34 +244,34 @@ flowchart LR
 ```
 
 | Tramo | Partes | Clases | Horas | Qué se resuelve ahí |
-|---|---|---:|---:|---|
-| **① Cimientos** | 00 · 01 · 02 · 03 · 04 | 29 | 81 | Del dato suelto al esquema defendible y al SQL preciso. Es la base común de las siete rutas. |
-| **② Modelos** | 05 · 06 · 07 | 13 | 40 | Qué ofrece cada familia de motores y qué cobra. Se elige con criterio, no por moda. |
-| **③ Por dentro** | 08 · 09 | 10 | 35 | Cómo el motor sostiene la corrección bajo concurrencia y de dónde sale realmente el tiempo. |
-| **④ A escala** | 10 · 11 · 12 | 15 | 49 | Lo que aparece cuando hay varias máquinas, usuarios reales y obligaciones legales. |
-| **⑤ IA y cierre** | 13 · 14 | 7 | 25 | La base de datos como pieza de un sistema de IA, y la decisión de arquitectura defendida. |
+|---|---|:---:|---:|---|
+| **① Cimientos** | 00 · 01 · 02 · 03 · 04 | **001–029** (29) | 81 | Del dato suelto al esquema defendible y al SQL preciso. Es la base común de las siete rutas. |
+| **② Modelos** | 05 · 06 · 07 | **030–042** (13) | 40 | Qué ofrece cada familia de motores y qué cobra. Se elige con criterio, no por moda. |
+| **③ Por dentro** | 08 · 09 | **043–052** (10) | 35 | Cómo el motor sostiene la corrección bajo concurrencia y de dónde sale realmente el tiempo. |
+| **④ A escala** | 10 · 11 · 12 | **053–067** (15) | 49 | Lo que aparece cuando hay varias máquinas, usuarios reales y obligaciones legales. |
+| **⑤ IA y cierre** | 13 · 14 | **068–074** (7) | 25 | La base de datos como pieza de un sistema de IA, y la decisión de arquitectura defendida. |
 
 ### Las 15 partes
 
 Nivel: 🟢 fundamentos · 🔵 intermedio · 🟣 avanzado — un círculo por clase.
 
 | | Parte | Tema | Qué sabrás hacer al terminarla | Clases | Horas | Nivel | Tras |
-|:---:|:---:|---|---|---:|---:|---|:---:|
-| 🪜 | [**00**](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | Crear una base, consultarla y cambiarla sin destruir datos — y decidir cuándo **no** hace falta una | 10 | 20 | 🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢 | — |
-| 🧱 | [**01**](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | Trazar una consulta del cliente al disco y montar un entorno donde cada afirmación se pueda repetir | 4 | 12 | 🟢🟢🟢🟢 | 00 |
-| 📐 | [**02**](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | Convertir un enunciado ambiguo en un esquema en BCFN que puedas **defender** con dependencias funcionales | 5 | 16 | 🟢🟢🟢 🔵🔵 | 00, 01 |
-| 🔗 | [**03**](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | Leer una consulta como expresión del álgebra y declarar la integridad en vez de confiarla a la aplicación | 4 | 13 | 🟢🟢 🔵🔵 | 02 |
-| 🔎 | [**04**](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | Escribir SQL cuya semántica no te sorprenda: reuniones, agregación, ventanas y nulos | 6 | 20 | 🟢🟢 🔵🔵🔵🔵 | 03 |
-| 🐘 | [**05**](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | Saber, línea a línea, qué es norma y qué te ata a un producto concreto | 4 | 12 | 🔵🔵🔵🔵 | 04 |
-| 📄 | [**06**](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | Decidir dónde poner la frontera de consistencia, y qué se pierde exactamente al meter una caché | 4 | 13 | 🔵🔵🔵🔵 | 02, 04 |
-| 🕸️ | [**07**](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | Justificar con la carga de trabajo cuándo salir del relacional — y cuándo no hace falta | 5 | 15 | 🔵🔵🔵 🟣🟣 | 06 |
-| 🔒 | [**08**](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | Reproducir una anomalía de aislamiento en dos sesiones y explicar cómo se vuelve de una caída | 5 | 18 | 🔵 🟣🟣🟣🟣 | 04 |
-| 🗂️ | [**09**](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | Refutar una hipótesis de rendimiento con un plan de ejecución en la mano, no con una intuición | 5 | 17 | 🔵🔵 🟣🟣🟣 | 01, 04 |
-| 🌐 | [**10**](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | Enunciar CAP sin la versión de póster y elegir la consistencia que tu caso necesita de verdad | 5 | 17 | 🟣🟣🟣🟣🟣 | 08 |
-| 🛡️ | [**11**](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | Restaurar un respaldo cronometrado, migrar sin caída y tratar el dato personal como requisito de diseño | 6 | 19 | 🟢 🔵🔵🔵 🟣🟣 | 08 |
-| 📊 | [**12**](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | Modelar un almacén declarando el grano y mover datos entre sistemas sin perderlos ni duplicarlos | 4 | 13 | 🔵🔵 🟣🟣 | 07, 09 |
-| 🧠 | [**13**](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | Medir el *recall* de tu recuperación antes de culpar al modelo de lo que no supo responder | 4 | 13 | 🔵 🟣🟣🟣 | 07 |
-| 🏛️ | [**14**](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | Elegir motores por evidencia, dejarlo por escrito y defenderlo ante preguntas hostiles | 3 | 12 | 🟣🟣🟣 | 10, 11, 12, 13 |
+|:---:|:---:|---|---|:---:|---:|---|:---:|
+| 🪜 | [**00**](classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md) | Primeros pasos: del archivo a la base de datos | Crear una base, consultarla y cambiarla sin destruir datos — y decidir cuándo **no** hace falta una | **001–010** (10) | 20 | 🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢 | — |
+| 🧱 | [**01**](classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md) | Fundamentos, sistemas y método | Trazar una consulta del cliente al disco y montar un entorno donde cada afirmación se pueda repetir | **011–014** (4) | 12 | 🟢🟢🟢🟢 | 00 |
+| 📐 | [**02**](classes/part-02-modelado-conceptual-y-requisitos/README.md) | Modelado conceptual y requisitos | Convertir un enunciado ambiguo en un esquema en BCFN que puedas **defender** con dependencias funcionales | **015–019** (5) | 16 | 🟢🟢🟢 🔵🔵 | 00, 01 |
+| 🔗 | [**03**](classes/part-03-modelo-relacional-y-algebra/README.md) | Modelo relacional y álgebra | Leer una consulta como expresión del álgebra y declarar la integridad en vez de confiarla a la aplicación | **020–023** (4) | 13 | 🟢🟢 🔵🔵 | 02 |
+| 🔎 | [**04**](classes/part-04-sql-en-profundidad/README.md) | SQL en profundidad | Escribir SQL cuya semántica no te sorprenda: reuniones, agregación, ventanas y nulos | **024–029** (6) | 20 | 🟢🟢 🔵🔵🔵🔵 | 03 |
+| 🐘 | [**05**](classes/part-05-motores-relacionales-y-dialectos/README.md) | Motores relacionales y dialectos | Saber, línea a línea, qué es norma y qué te ata a un producto concreto | **030–033** (4) | 12 | 🔵🔵🔵🔵 | 04 |
+| 📄 | [**06**](classes/part-06-documentos-y-clave-valor/README.md) | Documentos y clave-valor | Decidir dónde poner la frontera de consistencia, y qué se pierde exactamente al meter una caché | **034–037** (4) | 13 | 🔵🔵🔵🔵 | 02, 04 |
+| 🕸️ | [**07**](classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md) | Grafos, columnas, tiempo y búsqueda | Justificar con la carga de trabajo cuándo salir del relacional — y cuándo no hace falta | **038–042** (5) | 15 | 🔵🔵🔵 🟣🟣 | 06 |
+| 🔒 | [**08**](classes/part-08-transacciones-concurrencia-y-recuperacion/README.md) | Transacciones, concurrencia y recuperación | Reproducir una anomalía de aislamiento en dos sesiones y explicar cómo se vuelve de una caída | **043–047** (5) | 18 | 🔵 🟣🟣🟣🟣 | 04 |
+| 🗂️ | [**09**](classes/part-09-almacenamiento-indices-y-planes/README.md) | Almacenamiento, índices y planes | Refutar una hipótesis de rendimiento con un plan de ejecución en la mano, no con una intuición | **048–052** (5) | 17 | 🔵🔵 🟣🟣🟣 | 01, 04 |
+| 🌐 | [**10**](classes/part-10-distribucion-replica-y-consistencia/README.md) | Distribución, réplica y consistencia | Enunciar CAP sin la versión de póster y elegir la consistencia que tu caso necesita de verdad | **053–057** (5) | 17 | 🟣🟣🟣🟣🟣 | 08 |
+| 🛡️ | [**11**](classes/part-11-operacion-seguridad-y-gobierno/README.md) | Operación, seguridad y gobierno | Restaurar un respaldo cronometrado, migrar sin caída y tratar el dato personal como requisito de diseño | **058–063** (6) | 19 | 🟢 🔵🔵🔵 🟣🟣 | 08 |
+| 📊 | [**12**](classes/part-12-analitica-integracion-y-streaming/README.md) | Analítica, integración y streaming | Modelar un almacén declarando el grano y mover datos entre sistemas sin perderlos ni duplicarlos | **064–067** (4) | 13 | 🔵🔵 🟣🟣 | 07, 09 |
+| 🧠 | [**13**](classes/part-13-vectores-recuperacion-y-rag/README.md) | Vectores, recuperación y RAG | Medir el *recall* de tu recuperación antes de culpar al modelo de lo que no supo responder | **068–071** (4) | 13 | 🔵 🟣🟣🟣 | 07 |
+| 🏛️ | [**14**](classes/part-14-arquitectura-y-proyecto-final/README.md) | Arquitectura y proyecto final | Elegir motores por evidencia, dejarlo por escrito y defenderlo ante preguntas hostiles | **072–074** (3) | 12 | 🟣🟣🟣 | 10, 11, 12, 13 |
 
 Cada parte tiene su **portada**, y ahí es donde empieza el trabajo: de qué trata,
 qué hay que traer sabido, qué sabrás hacer al terminar, una ficha explicada por
