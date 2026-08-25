@@ -83,7 +83,7 @@ correcto o injusto.
 
 - **Clases:** de la [001](../../classes/part-01-fundamentos-datos-sistemas-y-metodo/011-que-resuelve-un-sistema-de-bases-de-datos/README.md)
   a la [019](../../classes/part-04-sql-en-profundidad/029-nulos-y-logica-de-tres-valores/README.md), y
-  [051 — Inyección SQL](../../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md).
+  [061 — Inyección SQL](../../classes/part-11-operacion-seguridad-y-gobierno/061-inyeccion-sql-y-parametrizacion/README.md).
 - **Rutas:** todas. Es el único laboratorio que aparece en las siete.
 - **Certificaciones:** el dominio de conceptos relacionales del
   [DP-900](../../certificaciones/dp-900.md) se cubre entero aquí.

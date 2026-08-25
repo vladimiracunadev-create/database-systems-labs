@@ -113,31 +113,33 @@ flowchart LR
 
 <!-- recorrido:fin -->
 
-9 partes, 151 horas estimadas.
+10 partes, 151 horas estimadas.
 
-1. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
+1. 📚 [**Parte 00 — Primeros pasos: del archivo a la base de datos**](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md)
+   (10 clases · 20 h). La rampa de entrada. Para este rol la clase que más rinde es [010 — El mapa de los motores](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/010-el-mapa-de-los-motores/README.md): el criterio con el que después se eligen destino y formato.
+2. 📚 [**Parte 01 — Fundamentos**](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md)
    (4 clases · 12 h).
-2. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
+3. 📚 [**Parte 02 — Modelado conceptual**](../classes/part-02-modelado-conceptual-y-requisitos/README.md)
    (5 clases · 16 h). El significado antes que el formato.
-3. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
+4. 📚 [**Parte 03 — Modelo relacional y álgebra**](../classes/part-03-modelo-relacional-y-algebra/README.md)
    (4 clases · 13 h).
-4. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
+5. 📚 [**Parte 04 — SQL en profundidad**](../classes/part-04-sql-en-profundidad/README.md)
    (6 clases · 20 h). Tu herramienta diaria; no la aprendas a medias.
-5. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
+6. 📚 [**Parte 07 — Grafos, columnas, tiempo y búsqueda**](../classes/part-07-grafos-columnas-tiempo-y-busqueda/README.md)
    (5 clases · 15 h). Especialmente
-   [030 — Series temporales](../classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/README.md)
-   y [032 — Analítica columnar y vectorización](../classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md).
-6. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
+   [040 — Series temporales](../classes/part-07-grafos-columnas-tiempo-y-busqueda/040-series-temporales-cardinalidad-y-retencion/README.md)
+   y [042 — Analítica columnar y vectorización](../classes/part-07-grafos-columnas-tiempo-y-busqueda/042-analitica-columnar-y-vectorizacion/README.md).
+7. 📚 [**Parte 10 — Distribución, réplica y consistencia**](../classes/part-10-distribucion-replica-y-consistencia/README.md)
    (5 clases · 17 h). Sin esto, «eventualmente consistente» es una excusa y no un modelo.
-7. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
+8. 📚 [**Parte 12 — Analítica, integración y streaming**](../classes/part-12-analitica-integracion-y-streaming/README.md)
    (4 clases · 13 h). El corazón del rol:
-   [054 — OLTP frente a OLAP](../classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md),
-   [055 — Modelado dimensional](../classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md),
-   [056 — ETL, ELT y captura de cambios](../classes/part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md)
-   y [057 — Streaming, tiempo de evento y ventanas](../classes/part-12-analitica-integracion-y-streaming/067-streaming-tiempo-de-evento-y-ventanas/README.md).
-8. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
+   [064 — OLTP frente a OLAP](../classes/part-12-analitica-integracion-y-streaming/064-oltp-frente-a-olap/README.md),
+   [065 — Modelado dimensional](../classes/part-12-analitica-integracion-y-streaming/065-modelado-dimensional/README.md),
+   [066 — ETL, ELT y captura de cambios](../classes/part-12-analitica-integracion-y-streaming/066-integracion-etl-elt-y-captura-de-cambios/README.md)
+   y [067 — Streaming, tiempo de evento y ventanas](../classes/part-12-analitica-integracion-y-streaming/067-streaming-tiempo-de-evento-y-ventanas/README.md).
+9. 📚 [**Parte 13 — Vectores, recuperación y RAG**](../classes/part-13-vectores-recuperacion-y-rag/README.md)
    (4 clases · 13 h). Cada vez más tuberías terminan alimentando una búsqueda semántica.
-9. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
+10. 📚 [**Parte 14 — Arquitectura y proyecto final**](../classes/part-14-arquitectura-y-proyecto-final/README.md)
    (3 clases · 12 h).
 
 Laboratorios de la ruta:

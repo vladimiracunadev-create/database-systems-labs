@@ -1,7 +1,7 @@
 # Diagnóstico inicial
 
 **No tiene calificación y no sirve para juzgarte: sirve para elegir por dónde entrar.** Un
-programa de 210 horas empezado en el punto equivocado se abandona; empezado en el correcto, se
+programa de 230 horas empezado en el punto equivocado se abandona; empezado en el correcto, se
 termina.
 
 Respóndelo **sin buscar nada** y por escrito. Si una respuesta te sale en dos líneas, está

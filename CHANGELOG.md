@@ -9,6 +9,49 @@ clases para explicarse a sí mismo de principio a fin— y el hito 2.1, en el qu
 el núcleo ejecutable pasa de dos laboratorios a cinco y el validador deja de ser
 el único componente sin pruebas.
 
+### Añadido — coherencia y documentación
+
+- **[Guía de estudio](docs/GUIA-DE-ESTUDIO.md)** enlazada desde la portada, y
+  sección **Programa** reescrita: cinco tramos con su mapa, qué se resuelve en
+  cada uno, y una tabla que ya no dice solo cuántas clases tiene cada parte sino
+  **qué sabrás hacer al terminarla**, con su nivel y su prerrequisito.
+- **La parte 00 entra en las siete rutas.** El currículo ya la incluía y la
+  insignia —generada— la contaba, pero el cuerpo de las siete guías se había
+  quedado una parte corto: ninguna la mencionaba y `rutas/README.md` seguía
+  diciendo que todas empiezan por la parte 01.
+- **Página de documentación del sitio agrupada** por la pregunta que responde
+  cada documento —empezar, practicar, evaluarse, cómo está construido, seguridad,
+  historia— en lugar de veintiún enlaces en fila, con un párrafo de entrada para
+  quien llega por primera vez.
+- **Estado `CADENA` en el comprobador de enlaces** y clasificación del motivo
+  real de cada fallo de red. `db-engines.com` sirve una cadena TLS a la que le
+  falta un intermedio: los navegadores lo recuperan solos, OpenSSL no. Se
+  informaba como enlace roto, y no lo era. Ahora se declara aparte y no tumba el
+  trabajo; un certificado caducado o un dominio sin DNS siguen siendo `ROTO`.
+- **7 pruebas nuevas** (`tests/test_numeracion.py` y ampliación de
+  `tests/test_coherencia.py`, 150 en total) que comprueban que la etiqueta de un
+  enlace coincide con su destino, que cada guía de ruta recorre las partes que
+  declara, que la tabla de tramos suma lo que suman sus partes, que la insignia
+  del glosario está al día, y que ningún documento presenta como actuales las
+  cifras del programa anterior.
+
+### Corregido — coherencia
+
+- **73 referencias cruzadas mentían.** Al insertar la parte 00 se renumeraron las
+  74 clases y los scripts actualizaron las **rutas** de los enlaces, pero no su
+  **texto**: quedaron 55 etiquetas de clase diciendo «017 — Agregación» sobre un
+  enlace a `027-agregacion…`, y 18 etiquetas de parte diciendo «Parte 13» sobre
+  `part-14-…`. Los enlaces funcionaban y la validación pasaba; el material
+  mentía al lector en cada referencia. Corregidas tomando el destino como verdad.
+- **Conteos del programa anterior presentados como actuales**: `rutas/README.md`
+  decía 64 clases y 210 horas, `assessments/diagnostic.md` hablaba de un programa
+  de 210 horas y la clase 071 usaba «64 clases» en su ejemplo. Las apariciones
+  del CHANGELOG y del ROADMAP se conservan: narran lo que pasó.
+- **El «About» de GitHub**, que anunciaba las cifras de la versión 2.0 a todo el
+  que llegaba. No vive en el árbol de ficheros, así que ningún `grep` lo alcanza
+  y ninguna revisión lo mira; ahora `docs/ARCHITECTURE.md` lo documenta como la
+  excepción que hay que comprobar a mano.
+
 ### Añadido — capa pedagógica
 
 - **Glosario del programa** ([`GLOSARIO.md`](GLOSARIO.md), generado desde

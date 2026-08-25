@@ -81,7 +81,7 @@ aprende.
 
 - **Clases:** [024–027](../../classes/part-06-documentos-y-clave-valor/README.md),
   [028](../../classes/part-07-grafos-columnas-tiempo-y-busqueda/038-grafos-de-propiedades-y-recorridos/README.md),
-  [062 — Persistencia políglota por evidencia](../../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md).
+  [072 — Persistencia políglota por evidencia](../../classes/part-14-arquitectura-y-proyecto-final/072-persistencia-poliglota-por-evidencia/README.md).
 - **Rutas:** [Arquitecto de datos](../../rutas/arquitectura.md),
   [Ingeniero de datos](../../rutas/ingenieria-de-datos.md).
 - **Certificaciones:** el dominio de datos no relacionales del

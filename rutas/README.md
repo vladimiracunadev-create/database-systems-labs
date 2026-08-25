@@ -1,12 +1,15 @@
 # 🧭 Rutas por rol
 
-El programa tiene 64 clases y 210 horas; **no todas son para todos a la vez**. Estas rutas
+El programa tiene 74 clases y 230 horas; **no todas son para todos a la vez**. Estas rutas
 ordenan el recorrido según el cargo al que apuntas: qué partes hacer, en qué orden, qué
 clases no puedes saltarte, con qué laboratorios practicar y qué tienes que poder demostrar
 al terminar.
 
-Todas empiezan por la [Parte 01 — Fundamentos](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md):
-es el cimiento común, y saltárselo se paga tres partes más adelante.
+Todas empiezan por la [Parte 00 — Primeros pasos: del archivo a la base de datos](../classes/part-00-primeros-pasos-del-archivo-a-la-base-de-datos/README.md)
+y la [Parte 01 — Fundamentos](../classes/part-01-fundamentos-datos-sistemas-y-metodo/README.md):
+son el cimiento común, y saltárselas se paga tres partes más adelante. Si ya escribes SQL
+a diario puedes recorrer la Parte 00 rápido, pero no saltártela: las clases 006, 009 y 010
+son las que más se dan por sabidas y menos se dominan.
 
 > Leyenda: 📚 partes y clases · 🧪 laboratorio · 🎓 credencial · 📈 mercado.
 
@@ -52,7 +55,7 @@ ejecución, réplica, objetivos de servicio y migraciones.
 Decidir qué motor, qué modelo y qué garantías, con la medición y el registro de decisión que
 permiten defenderlo y revertirlo.
 
-- 📚 Las 14 partes
+- 📚 Las 15 partes
 - 🧪 Laboratorios 02, 04 y 06
 - 🎯 Nivel avanzado · cargos: arquitecto de datos, arquitecto de soluciones, ingeniero de staff
 - 📖 **[Guía de carrera completa →](arquitectura.md)**

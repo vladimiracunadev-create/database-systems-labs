@@ -13,11 +13,28 @@ enlace roto. Por eso el script distingue tres resultados:
 
     OK        el recurso respondio 2xx, o 3xx hacia otra ubicacion
     PROTEGIDO respondio 401/403/405/429: existe, pero rechaza clientes automaticos
-    ROTO      404/410, error de red o 5xx sostenido
+    CADENA    el servidor existe y responde TLS, pero envia una cadena incompleta
+              que este cliente no puede completar
+    ROTO      404/410, certificado invalido, dominio sin DNS o 5xx sostenido
 
 Solo ROTO devuelve codigo de salida distinto de cero. Se ejecuta a mano antes
 de publicar una actualizacion del catalogo y, de forma programada, en el
 workflow `enlaces.yml`.
+
+Tres precauciones que nacieron de falsos positivos reales:
+
+- El almacen de certificados se toma de `certifi` cuando esta instalado, que va
+  mas al dia que el del sistema en una imagen de CI o en un Windows sin
+  actualizar.
+- El estado CADENA separa el caso de db-engines.com: el servidor responde, su
+  certificado es valido y un navegador abre la pagina, pero la cadena que envia
+  omite un intermedio. Windows y los navegadores lo recuperan solos por AIA;
+  OpenSSL no lo hace y aborta. Informarlo como roto mandaba a buscar una fuente
+  sustituta que no hacia falta; informarlo como OK habria escondido que la
+  comprobacion no llego a completarse. Se declara, y no tumba el trabajo.
+- El detalle del error dice *que* fallo. `URLError` cubre a la vez un dominio
+  que no resuelve, un puerto cerrado y un certificado que no se puede verificar;
+  informar los tres con la misma palabra obliga a diagnosticar a mano cada vez.
 
 Uso:
     python scripts/check_external_links.py                  # los dos registros
@@ -30,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import socket
 import ssl
 import sys
 import urllib.error
@@ -52,6 +70,53 @@ AGENTE = (
 PROTEGIDO = {401, 403, 405, 429}
 
 
+def contexto_tls() -> ssl.SSLContext:
+    """Contexto con el almacen de certificados mas reciente que haya disponible.
+
+    `certifi` publica el almacen de Mozilla al dia. Cuando esta instalado se usa
+    ese; si no, se cae al del sistema, que en una imagen de CI antigua o en un
+    Windows sin actualizar puede no traer las raices que emiten los sitios que
+    este repositorio cita. Verificar siempre: en ningun caso se desactiva la
+    comprobacion del certificado, porque eso convertiria el comprobador en uno
+    que no comprueba.
+    """
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
+# El unico fallo de verificacion que no acusa al servidor de tener el
+# certificado mal: le falta un eslabon intermedio que el cliente no puede
+# descargar. Un certificado caducado, con el nombre cambiado o autofirmado si
+# es un problema real y tiene que salir en rojo.
+CADENA_INCOMPLETA = "unable to get local issuer certificate"
+
+
+def clasificar_error_de_red(error: Exception) -> tuple[str, str]:
+    """(estado, detalle) para un fallo de conexion.
+
+    `URLError` envuelve causas que exigen acciones distintas: si al servidor le
+    falta un intermedio, la fuente esta viva y no hay nada que sustituir; si el
+    dominio no resuelve, hay que buscar otra.
+    """
+    causa = getattr(error, "reason", None)
+    if isinstance(causa, ssl.SSLCertVerificationError):
+        if CADENA_INCOMPLETA in str(causa):
+            return ("CADENA", "falta un intermedio")
+        return ("ROTO", f"TLS {causa.verify_message or causa.reason}")
+    if isinstance(causa, socket.gaierror):
+        return ("ROTO", "dominio sin DNS")
+    if isinstance(causa, (TimeoutError, socket.timeout)):
+        return ("ROTO", "tiempo agotado")
+    if isinstance(causa, ConnectionRefusedError):
+        return ("ROTO", "conexion rechazada")
+    if isinstance(causa, Exception):
+        return ("ROTO", type(causa).__name__)
+    return ("ROTO", type(error).__name__)
+
+
 def consultar(url: str, timeout: int) -> tuple[str, str]:
     """Devuelve (estado, detalle) para una URL."""
     peticion = urllib.request.Request(
@@ -59,7 +124,7 @@ def consultar(url: str, timeout: int) -> tuple[str, str]:
         headers={"User-Agent": AGENTE, "Accept": "*/*"},
         method="GET",
     )
-    contexto = ssl.create_default_context()
+    contexto = contexto_tls()
     try:
         with urllib.request.urlopen(peticion, timeout=timeout, context=contexto) as respuesta:
             return ("OK", str(respuesta.status))
@@ -73,7 +138,7 @@ def consultar(url: str, timeout: int) -> tuple[str, str]:
             return ("OK", f"{error.code} redirige")
         return ("ROTO", str(error.code))
     except (urllib.error.URLError, TimeoutError, ssl.SSLError, OSError) as error:
-        return ("ROTO", type(error).__name__)
+        return clasificar_error_de_red(error)
 
 
 def enlaces_de_motores() -> list[tuple[str, str]]:
@@ -110,19 +175,28 @@ def main() -> int:
     if args.solo != "fuentes" and not args.kind:
         objetivos += enlaces_de_motores()
 
-    resumen = {"OK": 0, "PROTEGIDO": 0, "ROTO": 0}
+    resumen = {"OK": 0, "PROTEGIDO": 0, "CADENA": 0, "ROTO": 0}
     rotos: list[str] = []
+    cadenas: list[str] = []
 
     for identificador, url in objetivos:
         estado, detalle = consultar(url, args.timeout)
         resumen[estado] += 1
         if estado == "ROTO":
             rotos.append(f"{identificador} [{detalle}] {url}")
+        elif estado == "CADENA":
+            cadenas.append(f"{identificador} [{detalle}] {url}")
         print(f"{estado:<9} {detalle:<18} {identificador}", flush=True)
 
+    if cadenas:
+        print("\nCadena TLS incompleta —el recurso existe y un navegador lo abre; "
+              "el servidor omite un intermedio que este cliente no puede "
+              "descargar, asi que la comprobacion no llega a completarse:")
+        for linea in cadenas:
+            print(f"  {linea}")
     print(
         f"\nOK={resumen['OK']} PROTEGIDO={resumen['PROTEGIDO']} "
-        f"ROTO={resumen['ROTO']} TOTAL={len(objetivos)}"
+        f"CADENA={resumen['CADENA']} ROTO={resumen['ROTO']} TOTAL={len(objetivos)}"
     )
     if rotos:
         print("\nEnlaces rotos:", file=sys.stderr)

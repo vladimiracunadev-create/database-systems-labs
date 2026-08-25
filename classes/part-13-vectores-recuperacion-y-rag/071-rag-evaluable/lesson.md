@@ -70,7 +70,7 @@ Sin él, cualquier afirmación sobre la calidad del sistema es una impresión.
 
 ## Ejemplo trabajado
 
-RAG sobre este programa: 64 clases fragmentadas, preguntas de estudiantes.
+RAG sobre este programa: 74 clases fragmentadas, preguntas de estudiantes.
 
 **Conjunto de evaluación:**
 
